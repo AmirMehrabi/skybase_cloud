@@ -41,7 +41,7 @@
                 <!-- Right Buttons -->
                 <div class="flex items-center gap-3">
                     <a href="{{ url('/dashboard') }}" class="hidden sm:inline-flex text-sm font-medium text-gray-700 hover:text-gray-900 px-4 py-2">Login</a>
-                    <a href="#trial" class="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Start Free Trial</a>
+                    <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">Start Free Trial</a>
                 </div>
             </div>
         </div>
@@ -58,8 +58,8 @@
                     SkyBase Cloud helps WISPs and ISPs manage authentication, monitor routers, and provision customers from one secure, scalable platform. Replace manual MikroTik configuration and self-hosted Radius servers with a reliable cloud solution.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-                    <a href="#trial" class="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto">Start Free Trial</a>
-                    <a href="#demo" class="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors w-full sm:w-auto">Book a Demo</a>
+                    <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors w-full sm:w-auto">Start Free Trial</a>
+                    <a href="#demo" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors w-full sm:w-auto">Book a Demo</a>
                 </div>
                 <p class="text-sm text-gray-500">
                     Built for real ISPs. Designed for MikroTik networks. Trusted globally.
@@ -452,8 +452,8 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="#trial" class="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">View Pricing</a>
-                <a href="#trial" class="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Start Free Trial</a>
+                <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">View Pricing</a>
+                <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">Start Free Trial</a>
             </div>
         </div>
     </section>
@@ -478,8 +478,8 @@
                 <p class="text-xl text-blue-100 mb-8">Join ISPs using SkyBase Cloud to simplify operations and improve reliability.</p>
 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <a href="#trial" class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Start Free Trial</a>
-                    <a href="#demo" class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-white border-2 border-white rounded-lg hover:bg-white hover:text-blue-600 transition-colors">Book a Demo</a>
+                    <a href="#trial" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">Start Free Trial</a>
+                    <a href="#demo" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white border-2 border-white rounded-xl hover:bg-white hover:text-blue-600 transition-colors">Book a Demo</a>
                 </div>
             </div>
         </div>
