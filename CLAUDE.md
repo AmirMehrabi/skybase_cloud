@@ -243,4 +243,30 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - IMPORTANT: Always use `search-docs` tool for version-specific Tailwind CSS documentation and updated code examples. Never rely on training data.
 - IMPORTANT: Activate `tailwindcss-development` every time you're working with a Tailwind CSS or styling-related task.
 
+=== ui/conventions rules ===
+
+# UI Development Conventions
+
+## Module Structure
+
+- Keep pages for each module isolated in dedicated directories under `resources/views/modules/`.
+- For a module route like `/customers`, the CRUD pages should be organized as:
+  - `resources/views/modules/customers/index.blade.php` — list/index page
+  - `resources/views/modules/customers/create.blade.php` — create form page
+  - `resources/views/modules/customers/edit.blade.php` — edit form page
+  - `resources/views/modules/customers/show.blade.php` — single item details page (if needed)
+- Follow this structure consistently for all modules (e.g., `orders`, `products`, `users`, etc.).
+
+## Reusable Input Components
+
+- Create reusable form input components in `resources/views/components/` directory.
+- All form inputs (`<input>`, `<textarea>`, `<select>`, checkboxes, radio buttons, etc.) must be created as reusable Blade components.
+- Reuse these components globally in create and edit pages to maintain consistency and reduce duplication.
+- Examples of component paths:
+  - `resources/views/components/input/text.blade.php`
+  - `resources/views/components/input/textarea.blade.php`
+  - `resources/views/components/input/select.blade.php`
+  - `resources/views/components/input/checkbox.blade.php`
+- Always check for existing input components before creating new ones.
+
 </laravel-boost-guidelines>
