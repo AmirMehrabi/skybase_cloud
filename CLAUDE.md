@@ -269,4 +269,14 @@ protected function isAccessible(User $user, ?string $path = null): bool
   - `resources/views/components/input/checkbox.blade.php`
 - Always check for existing input components before creating new ones.
 
+## Navigation & Header Components
+
+- Navbars, header links, and navigation menus must be created as reusable Blade components in `resources/views/components/`.
+- All pages across the application should use the same navigation structure to ensure consistency.
+- Examples of component paths:
+  - `resources/views/components/navbar.blade.php` — main navigation bar
+  - `resources/views/components/header.blade.php` — page header with links
+  - `resources/views/components/sidebar.blade.php` — sidebar navigation (if applicable)
+- Always reuse existing navigation components rather than duplicating navbar/header code in individual pages.
+
 </laravel-boost-guidelines>
