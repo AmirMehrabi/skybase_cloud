@@ -73,3 +73,20 @@ Route::prefix('routers')->name('routers.')->group(function () {
     Route::get('/{router}/ip-pools', [RouterController::class, 'ipPools'])->name('ip-pools');
     Route::get('/{router}/logs', [RouterController::class, 'logs'])->name('logs');
 });
+
+// IP Address Management (IPAM) Routes
+Route::prefix('ipam')->name('ipam.')->group(function () {
+    Route::get('/', fn() => view('ipam.dashboard'))->name('dashboard');
+
+    Route::prefix('pools')->name('pools.')->group(function () {
+        Route::get('/', fn() => view('ipam.pools.index'))->name('index');
+        Route::get('/create', fn() => view('ipam.pools.create'))->name('create');
+        Route::get('/{pool}', fn($pool) => view('ipam.pools.show', compact('pool')))->name('show');
+        Route::get('/{pool}/edit', fn($pool) => view('ipam.pools.edit', compact('pool')))->name('edit');
+    });
+
+    Route::prefix('ips')->name('ips.')->group(function () {
+        Route::get('/', fn() => view('ipam.ips.index'))->name('index');
+        Route::get('/{ip}', fn($ip) => view('ipam.ips.show', compact('ip')))->name('show');
+    });
+});
