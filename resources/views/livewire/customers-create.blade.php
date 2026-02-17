@@ -10,7 +10,7 @@
     </div>
 
     <!-- Section 1: Basic Information -->
-    <x-ui-card title="Basic Information">
+    <x-ui.card title="Basic Information">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Customer Type -->
             <div class="lg:col-span-3">
@@ -88,10 +88,10 @@
                 />
             @endif
         </div>
-    </x-ui-card>
+    </x-ui.card>
 
     <!-- Section 2: Contact Information -->
-    <x-ui-card title="Contact Information">
+    <x-ui.card title="Contact Information">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <x-ui.input.text
                 label="Email Address"
@@ -128,10 +128,10 @@
                 hint="For notifications and support"
             />
         </div>
-    </x-ui-card>
+    </x-ui.card>
 
     <!-- Section 3: Address Information -->
-    <x-ui-card title="Address Information">
+    <x-ui.card title="Address Information">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <x-ui.input.textarea
                 label="Address Line 1"
@@ -202,10 +202,10 @@
                 </div>
             </div>
         </div>
-    </x-ui-card>
+    </x-ui.card>
 
     <!-- Section 4: Service Assignment -->
-    <x-ui-card title="Service Assignment">
+    <x-ui.card title="Service Assignment">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <x-ui.input.select
                 label="Service Plan"
@@ -296,10 +296,10 @@
                 wire:model="billingCycle"
             />
         </div>
-    </x-ui-card>
+    </x-ui.card>
 
     <!-- Section 5: Financial Settings -->
-    <x-ui-card title="Financial Settings">
+    <x-ui.card title="Financial Settings">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <x-ui.input.text
                 label="Initial Balance"
@@ -348,10 +348,10 @@
                 />
             </div>
         </div>
-    </x-ui-card>
+    </x-ui.card>
 
     <!-- Section 6: Status -->
-    <x-ui-card title="Status & Activation">
+    <x-ui.card title="Status & Activation">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <x-ui.input.select
                 label="Initial Status"
@@ -369,13 +369,13 @@
                 />
             </div>
         </div>
-    </x-ui-card>
+    </x-ui.card>
 
     <!-- Sticky Bottom Action Bar -->
     <div class="fixed bottom-0 right-0 left-0 lg:left-64 bg-white border-t border-gray-200 shadow-lg p-4 z-40">
         <div class="flex items-center justify-end gap-3">
             <a href="{{ route('customers.index') }}">
-                <x-ui-button variant="secondary" size="md">
+                <x-ui.button variant="secondary" size="md">
                     Cancel
                 </x-ui-button>
             </a>

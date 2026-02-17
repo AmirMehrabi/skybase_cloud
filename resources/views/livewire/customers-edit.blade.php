@@ -14,7 +14,7 @@
                 <p class="text-sm text-gray-500 mt-1">CUS-2024-0001 • Last updated: Feb 20, 2024 at 2:30 PM</p>
             </div>
         </div>
-        <x-ui-badge :status="$status">
+        <x-ui.badge :status="$status">
             {{ ucfirst($status) }}
         </x-ui-badge>
     </div>
@@ -23,7 +23,7 @@
         <!-- Main Form (3 columns) -->
         <div class="lg:col-span-3 space-y-6">
             <!-- Section 1: Basic Information -->
-            <x-ui-card title="Basic Information">
+            <x-ui.card title="Basic Information">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-3">
                         <x-ui.input.radio
@@ -45,20 +45,20 @@
 
                     <x-ui.input.text label="National ID" name="national_id" wire:model="nationalId" />
                 </div>
-            </x-ui-card>
+            </x-ui.card>
 
             <!-- Section 2: Contact Information -->
-            <x-ui-card title="Contact Information">
+            <x-ui.card title="Contact Information">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <x-ui.input.text label="Email" type="email" name="email" wire:model="email" required />
                     <x-ui.input.text label="Phone" name="phone" wire:model="phone" />
                     <x-ui.input.text label="Mobile" name="mobile" wire:model="mobile" required />
                     <x-ui.input.text label="WhatsApp" name="whatsapp" wire:model="whatsappNumber" />
                 </div>
-            </x-ui-card>
+            </x-ui.card>
 
             <!-- Section 3: Service Assignment -->
-            <x-ui-card title="Service Assignment">
+            <x-ui.card title="Service Assignment">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <x-ui.input.select
                         label="Service Plan"
@@ -95,10 +95,10 @@
 
                     <x-ui.input.text label="PPPoE Password" type="password" name="pppoe_password" wire:model="pppoePassword" />
                 </div>
-            </x-ui-card>
+            </x-ui.card>
 
             <!-- Section 4: Financial Settings -->
-            <x-ui-card title="Financial Settings">
+            <x-ui.card title="Financial Settings">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <x-ui.input.text label="Initial Balance" type="number" step="0.01" name="initial_balance" wire:model="initialBalance" />
                     <x-ui.input.text label="Credit Limit" type="number" step="0.01" name="credit_limit" wire:model="creditLimit" />
@@ -106,10 +106,10 @@
                         <x-ui.input.checkbox label="Tax Exempt" name="tax_exempt" wire:model="taxExempt" />
                     </div>
                 </div>
-            </x-ui-card>
+            </x-ui.card>
 
             <!-- Section 5: Status -->
-            <x-ui-card title="Status">
+            <x-ui.card title="Status">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <x-ui.input.select
                         label="Status"
@@ -118,12 +118,12 @@
                         wire:model="status"
                     />
                 </div>
-            </x-ui-card>
+            </x-ui.card>
         </div>
 
         <!-- Quick Actions Sidebar (1 column) -->
         <div class="lg:col-span-1">
-            <x-ui-card title="Quick Actions" :padding="'p-4'">
+            <x-ui.card title="Quick Actions" :padding="'p-4'">
                 <div class="space-y-3">
                     <button wire:click="suspendService" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl hover:bg-yellow-50 transition-colors group">
                         <div class="w-10 h-10 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center group-hover:bg-yellow-200">
@@ -173,9 +173,9 @@
                         </div>
                     </a>
                 </div>
-            </x-ui-card>
+            </x-ui.card>
 
-            <x-ui-card title="Account Info" :padding="'p-4'">
+            <x-ui.card title="Account Info" :padding="'p-4'">
                 <div class="space-y-3 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-500">Customer Code</span>
@@ -190,7 +190,7 @@
                         <span class="font-medium text-gray-900">Jan 16, 2024</span>
                     </div>
                 </div>
-            </x-ui-card>
+            </x-ui.card>
         </div>
     </div>
 
@@ -198,7 +198,7 @@
     <div class="fixed bottom-0 right-0 left-0 lg:left-64 bg-white border-t border-gray-200 shadow-lg p-4 z-40">
         <div class="flex items-center justify-end gap-3">
             <a href="{{ route('customers.show', $customerId) }}">
-                <x-ui-button variant="secondary" size="md">
+                <x-ui.button variant="secondary" size="md">
                     Cancel
                 </x-ui-button>
             </a>

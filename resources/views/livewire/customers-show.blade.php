@@ -12,7 +12,7 @@
                 <div>
                     <div class="flex items-center gap-3">
                         <h1 class="text-2xl font-bold">{{ $customer['first_name'] }} {{ $customer['last_name'] }}</h1>
-                        <x-ui-badge :status="$customer['status']">{{ ucfirst($customer['status']) }}</xui-badge>
+                        <x-ui.badge :status="$customer['status']">{{ ucfirst($customer['status']) }}</x-ui.badge>
                     </div>
                     <p class="text-blue-100 text-sm mt-1">{{ $customer['customer_code'] }}</p>
                     <p class="text-blue-100 text-sm">{{ $customer['email'] }} • {{ $customer['mobile'] }}</p>
@@ -84,7 +84,7 @@
                     <!-- Overview Tab -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Basic Info Card -->
-                        <x-ui-card title="Basic Information">
+                        <x-ui.card title="Basic Information">
                             <div class="space-y-3 text-sm">
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Customer Code</span>
@@ -103,10 +103,10 @@
                                     <span class="font-medium text-gray-900 capitalize">{{ $customer['status'] }}</span>
                                 </div>
                             </div>
-                        </x-ui-card>
+                        </x-ui.card>
 
                         <!-- Contact Info Card -->
-                        <x-ui-card title="Contact Information">
+                        <x-ui.card title="Contact Information">
                             <div class="space-y-3 text-sm">
                                 <div>
                                     <span class="text-gray-500 block">Email</span>
@@ -125,10 +125,10 @@
                                     <span class="font-medium text-gray-900">{{ $customer['whatsapp'] }}</span>
                                 </div>
                             </div>
-                        </x-ui-card>
+                        </x-ui.card>
 
                         <!-- Address Info Card -->
-                        <x-ui-card title="Address Information">
+                        <x-ui.card title="Address Information">
                             <div class="space-y-3 text-sm">
                                 <div>
                                     <span class="text-gray-500 block">Address</span>
@@ -149,10 +149,10 @@
                                     <span class="font-medium text-gray-900">{{ $customer['country'] }}</span>
                                 </div>
                             </div>
-                        </x-ui-card>
+                        </x-ui.card>
 
                         <!-- Financial Summary Card -->
-                        <x-ui-card title="Financial Summary">
+                        <x-ui.card title="Financial Summary">
                             <div class="space-y-3 text-sm">
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Balance</span>
@@ -173,10 +173,10 @@
                                     <span class="font-medium text-gray-900">{{ $customer['tax_exempt'] ? 'Yes' : 'No' }}</span>
                                 </div>
                             </div>
-                        </x-ui-card>
+                        </x-ui.card>
 
                         <!-- Network Assignment Card -->
-                        <x-ui-card title="Network Assignment">
+                        <x-ui.card title="Network Assignment">
                             <div class="space-y-3 text-sm">
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Plan</span>
@@ -203,12 +203,12 @@
                                     <span class="font-medium text-gray-900">{{ $customer['pppoe_username'] }}</span>
                                 </div>
                             </div>
-                        </x-ui-card>
+                        </x-ui.card>
                     </div>
 
                 @case('services')
                     <!-- Services Tab -->
-                    <x-ui-card>
+                    <x-ui.card>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
@@ -230,7 +230,7 @@
                                             <td class="px-6 py-4 text-sm text-gray-700">{{ $service['router'] }}</td>
                                             <td class="px-6 py-4 text-sm font-mono text-gray-700">{{ $service['ip'] }}</td>
                                             <td class="px-6 py-4">
-                                                <x-ui-badge :status="$service['status']">{{ ucfirst($service['status']) }}</x-ui-badge>
+                                                <x-ui.badge :status="$service['status']">{{ ucfirst($service['status']) }}</x-ui-badge>
                                             </td>
                                             <td class="px-6 py-4 text-sm text-gray-500">{{ $service['activated_at'] }}</td>
                                             <td class="px-6 py-4 text-sm text-gray-700">{{ $service['data_used'] }}</td>
@@ -239,11 +239,11 @@
                                 </tbody>
                             </table>
                         </div>
-                    </x-ui-card>
+                    </x-ui.card>
 
                 @case('invoices')
                     <!-- Invoices Tab -->
-                    <x-ui-card>
+                    <x-ui.card>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
@@ -262,7 +262,7 @@
                                             <td class="px-6 py-4 text-sm font-semibold text-gray-900">${{ number_format($invoice['amount'], 2) }}</td>
                                             <td class="px-6 py-4 text-sm text-gray-500">{{ $invoice['due_date'] }}</td>
                                             <td class="px-6 py-4">
-                                                <x-ui-badge :status="$invoice['status']">{{ ucfirst($invoice['status']) }}</x-ui-badge>
+                                                <x-ui.badge :status="$invoice['status']">{{ ucfirst($invoice['status']) }}</x-ui-badge>
                                             </td>
                                             <td class="px-6 py-4 text-right">
                                                 <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
@@ -272,12 +272,12 @@
                                 </tbody>
                             </table>
                         </div>
-                    </x-ui-card>
+                    </x-ui.card>
 
                 @case('usage')
                     <!-- Usage Tab -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <x-ui-card title="Monthly Data Usage">
+                        <x-ui.card title="Monthly Data Usage">
                             <div class="h-64 flex items-center justify-center bg-gray-50 rounded-xl">
                                 <div class="text-center">
                                     <svg class="w-16 h-16 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,9 +286,9 @@
                                     <p class="text-sm text-gray-500 mt-2">Data usage chart placeholder</p>
                                 </div>
                             </div>
-                        </x-ui-card>
+                        </x-ui.card>
 
-                        <x-ui-card title="Session History">
+                        <x-ui.card title="Session History">
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
@@ -321,12 +321,12 @@
                                     </div>
                                 </div>
                             </div>
-                        </x-ui-card>
+                        </x-ui.card>
                     </div>
 
                 @case('tickets')
                     <!-- Tickets Tab -->
-                    <x-ui-card>
+                    <x-ui.card>
                         <div class="text-center py-12">
                             <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
                                 <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,11 +342,11 @@
                                 Create Ticket
                             </button>
                         </div>
-                    </x-ui-card>
+                    </x-ui.card>
 
                 @case('activity')
                     <!-- Activity Log Tab -->
-                    <x-ui-card title="Activity Timeline">
+                    <x-ui.card title="Activity Timeline">
                         <div class="space-y-6">
                             @foreach($this->activityLog as $index => $activity)
                                 <div class="flex gap-4">
@@ -390,7 +390,7 @@
                                 </div>
                             @endforeach
                         </div>
-                    </x-ui-card>
+                    </x-ui.card>
             @endswitch
         </div>
     </div>

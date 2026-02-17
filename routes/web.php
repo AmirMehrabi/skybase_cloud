@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CustomerController;
 
 // Landing page
 Route::get('/', function () {
@@ -21,8 +22,8 @@ Route::post('/admin/logout', function () {
 
 // Customer Management Routes
 Route::prefix('customers')->name('customers.')->group(function () {
-    Route::get('/', \App\Livewire\CustomersIndex::class)->name('index');
-    Route::get('/create', \App\Livewire\CustomersCreate::class)->name('create');
-    Route::get('/{id}', \App\Livewire\CustomersShow::class)->name('show');
-    Route::get('/{id}/edit', \App\Livewire\CustomersEdit::class)->name('edit');
+    Route::get('/', [CustomerController::class, 'index'])->name('index');
+    Route::get('/create', [CustomerController::class, 'create'])->name('create');
+    Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [CustomerController::class, 'edit'])->name('edit');
 });

@@ -1,23 +1,5 @@
 @section('title', 'Customers')
 
-<x-slot name="styles">
-    <style>
-        .filter-section {
-            animation: slideDown 0.2s ease-out;
-        }
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
-</x-slot>
-
 <div class="space-y-6">
     <!-- Header Section -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -26,9 +8,9 @@
             <p class="text-sm text-gray-500 mt-1">Manage and monitor your ISP subscribers</p>
         </div>
         <div class="flex items-center gap-3">
-            <x-ui-dropdown align="right">
+            <x-ui.dropdown align="right">
                 <x-slot:trigger>
-                    <x-ui-button variant="secondary" size="md">
+                    <x-ui.button variant="secondary" size="md">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
@@ -36,26 +18,26 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
-                    </x-ui-button>
+                    </x-ui.button>
                 </x-slot:trigger>
                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Export as CSV</a>
                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Export as PDF</a>
                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Export as Excel</a>
-            </x-ui-dropdown>
+            </x-ui.dropdown>
             <a href="{{ route('customers.create') }}">
-                <x-ui-button variant="primary" size="md">
+                <x-ui.button variant="primary" size="md">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
                     New Customer
-                </x-ui-button>
+                </x-ui.button>
             </a>
         </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <x-ui-stat-card
+        <x-ui.stat-card
             title="Total Customers"
             :value="$stats['total']"
             :color="'blue'"
@@ -63,9 +45,9 @@
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
             </svg>
-        </x-ui-stat-card>
+        </x-ui.stat-card>
 
-        <x-ui-stat-card
+        <x-ui.stat-card
             title="Active Customers"
             :value="$stats['active']"
             :color="'green'"
@@ -73,9 +55,9 @@
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-        </x-ui-stat-card>
+        </x-ui.stat-card>
 
-        <x-ui-stat-card
+        <x-ui.stat-card
             title="Suspended"
             :value="$stats['suspended']"
             :color="'yellow'"
@@ -83,9 +65,9 @@
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-        </x-ui-stat-card>
+        </x-ui.stat-card>
 
-        <x-ui-stat-card
+        <x-ui.stat-card
             title="Overdue"
             :value="$stats['overdue']"
             :color="'red'"
@@ -93,11 +75,11 @@
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-        </x-ui-stat-card>
+        </x-ui.stat-card>
     </div>
 
     <!-- Filters Card -->
-    <x-ui-card>
+    <x-ui.card>
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-semibold text-gray-900">Filters</h3>
             @if($search || $status || $plan || $site || $router)
@@ -149,10 +131,10 @@
                 wire:model.live="router"
             />
         </div>
-    </x-ui-card>
+    </x-ui.card>
 
     <!-- Customers Table -->
-    <x-ui-card :padding="'p-0'">
+    <x-ui.card :padding="'p-0'">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -207,13 +189,13 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span class="text-sm font-semibold {{ $customer['balance'] < 0 ? 'text-green-600' : ($customer['balance'] > 0 ? 'text-red-600' : 'text-gray-600') }}">
-                                    {{ number_format($customer['balance'], 2) }}
+                                    ${{ number_format($customer['balance'], 2) }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">
-                                <x-ui-badge :status="$customer['status']">
+                                <x-ui.badge :status="$customer['status']">
                                     {{ ucfirst($customer['status']) }}
-                                </x-ui-badge>
+                                </x-ui.badge>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="text-sm text-gray-500">{{ $customer['created_at'] }}</span>
@@ -231,7 +213,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
                                     </a>
-                                    <x-ui-dropdown align="right">
+                                    <x-ui.dropdown align="right">
                                         <x-slot:trigger>
                                             <button class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -255,7 +237,7 @@
                                                 Delete
                                             </span>
                                         </a>
-                                    </x-ui-dropdown>
+                                    </x-ui.dropdown>
                                 </div>
                             </td>
                         </tr>
@@ -291,5 +273,5 @@
                 </div>
             </div>
         @endif
-    </x-ui-card>
+    </x-ui.card>
 </div>
