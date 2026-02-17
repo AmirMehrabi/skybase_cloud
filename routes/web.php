@@ -18,3 +18,11 @@ Route::post('/admin/logout', function () {
     // In production, use Laravel's built-in authentication
     return redirect('/');
 })->name('admin.logout');
+
+// Customer Management Routes
+Route::prefix('customers')->name('customers.')->group(function () {
+    Route::get('/', \App\Livewire\CustomersIndex::class)->name('index');
+    Route::get('/create', \App\Livewire\CustomersCreate::class)->name('create');
+    Route::get('/{id}', \App\Livewire\CustomersShow::class)->name('show');
+    Route::get('/{id}/edit', \App\Livewire\CustomersEdit::class)->name('edit');
+});
