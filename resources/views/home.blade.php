@@ -17,6 +17,20 @@
 
     <title>SkyBase Cloud - ISP Management Software for MikroTik Networks</title>
 
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+    </style>
+
             @vite(['resources/css/app.css', 'resources/js/app.js'])
 
 </head>
@@ -40,8 +54,8 @@
 
                 <!-- Right Buttons -->
                 <div class="flex items-center gap-4">
-                    <a href="{{ url('/dashboard') }}" class="hidden sm:inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors">Login</a>
-                    <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors">Start Free Trial</a>
+                    <a href="{{ url('/dashboard') }}" class="hidden sm:inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors">Login</a>
+                    <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors">Start Free Trial</a>
                 </div>
             </div>
         </div>
@@ -58,10 +72,10 @@
                     SkyBase Cloud helps WISPs and ISPs manage authentication, monitor routers, and provision customers from one secure, scalable platform. Replace manual MikroTik configuration and self-hosted Radius servers with a reliable cloud solution.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-                    <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors w-full sm:w-auto">Start Free Trial</a>
-                    <a href="#demo" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors w-full sm:w-auto">Book a Demo</a>
+                    <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors w-full sm:w-auto">Start Free Trial</a>
+                    <a href="#demo" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors w-full sm:w-auto">Book a Demo</a>
                 </div>
-                <p class="text-sm text-gray-500">
+                <p class="text-lg text-gray-500">
                     Built for real ISPs. Designed for MikroTik networks. Trusted globally.
                 </p>
             </div>
@@ -73,7 +87,7 @@
                         <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                         </svg>
-                        <p class="text-sm">Dashboard Preview</p>
+                        <p class="text-lg">Dashboard Preview</p>
                         <p class="text-xs mt-1">Router Status · Online Users · Monitoring Graphs</p>
                     </div>
                 </div>
@@ -174,7 +188,7 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-2">Centralized MikroTik Management</h3>
                     <p class="text-gray-600 mb-4">Manage all your MikroTik routers from one dashboard.</p>
-                    <ul class="space-y-2 text-sm text-gray-500">
+                    <ul class="space-y-2 text-lg text-gray-500">
                         <li>• Connect routers via MikroTik API</li>
                         <li>• Monitor router health and performance</li>
                         <li>• View traffic and uptime</li>
@@ -191,7 +205,7 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-2">Cloud Radius Authentication</h3>
                     <p class="text-gray-600 mb-4">Reliable PPPoE and Hotspot authentication without managing your own server.</p>
-                    <ul class="space-y-2 text-sm text-gray-500">
+                    <ul class="space-y-2 text-lg text-gray-500">
                         <li>• Secure customer authentication</li>
                         <li>• Session tracking and accounting</li>
                         <li>• Profile-based speed limits</li>
@@ -208,7 +222,7 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-2">Real-Time Monitoring</h3>
                     <p class="text-gray-600 mb-4">See exactly what is happening in your network.</p>
-                    <ul class="space-y-2 text-sm text-gray-500">
+                    <ul class="space-y-2 text-lg text-gray-500">
                         <li>• Router online/offline status</li>
                         <li>• CPU, memory, and traffic monitoring</li>
                         <li>• Instant alerts when devices go offline</li>
@@ -225,7 +239,7 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-2">Automated Provisioning</h3>
                     <p class="text-gray-600 mb-4">Provision new customers in seconds.</p>
-                    <ul class="space-y-2 text-sm text-gray-500">
+                    <ul class="space-y-2 text-lg text-gray-500">
                         <li>• Automatic Radius user creation</li>
                         <li>• Assign plans and profiles instantly</li>
                         <li>• Activate or suspend customers remotely</li>
@@ -242,7 +256,7 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-2">Multi-User Access Control</h3>
                     <p class="text-gray-600 mb-4">Allow your team to work securely.</p>
-                    <ul class="space-y-2 text-sm text-gray-500">
+                    <ul class="space-y-2 text-lg text-gray-500">
                         <li>• Owner, Admin, Support, Read-Only roles</li>
                         <li>• Secure tenant isolation</li>
                         <li>• Full audit logging</li>
@@ -259,7 +273,7 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-2">White-Label Ready</h3>
                     <p class="text-gray-600 mb-4">SkyBase Cloud adapts to your brand.</p>
-                    <ul class="space-y-2 text-sm text-gray-500">
+                    <ul class="space-y-2 text-lg text-gray-500">
                         <li>• Custom logo</li>
                         <li>• Custom domain</li>
                         <li>• Branded interface for your ISP</li>
@@ -281,32 +295,32 @@
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="border-l-4 border-blue-600 bg-gray-50 rounded-r-2xl p-6">
                     <h3 class="font-semibold text-gray-900 mb-2">Reduce Operational Complexity</h3>
-                    <p class="text-gray-600 text-sm">Replace multiple tools with one unified platform.</p>
+                    <p class="text-gray-600 text-lg">Replace multiple tools with one unified platform.</p>
                 </div>
 
                 <div class="border-l-4 border-blue-600 bg-gray-50 rounded-r-2xl p-6">
                     <h3 class="font-semibold text-gray-900 mb-2">Improve Network Visibility</h3>
-                    <p class="text-gray-600 text-sm">Know immediately when devices fail or customers disconnect.</p>
+                    <p class="text-gray-600 text-lg">Know immediately when devices fail or customers disconnect.</p>
                 </div>
 
                 <div class="border-l-4 border-blue-600 bg-gray-50 rounded-r-2xl p-6">
                     <h3 class="font-semibold text-gray-900 mb-2">Save Engineering Time</h3>
-                    <p class="text-gray-600 text-sm">Automate repetitive tasks and eliminate manual provisioning.</p>
+                    <p class="text-gray-600 text-lg">Automate repetitive tasks and eliminate manual provisioning.</p>
                 </div>
 
                 <div class="border-l-4 border-blue-600 bg-gray-50 rounded-r-2xl p-6">
                     <h3 class="font-semibold text-gray-900 mb-2">Scale Without Infrastructure Headaches</h3>
-                    <p class="text-gray-600 text-sm">No need to manage servers, backups, or Radius infrastructure.</p>
+                    <p class="text-gray-600 text-lg">No need to manage servers, backups, or Radius infrastructure.</p>
                 </div>
 
                 <div class="border-l-4 border-blue-600 bg-gray-50 rounded-r-2xl p-6">
                     <h3 class="font-semibold text-gray-900 mb-2">Increase Network Reliability</h3>
-                    <p class="text-gray-600 text-sm">Detect and resolve problems faster.</p>
+                    <p class="text-gray-600 text-lg">Detect and resolve problems faster.</p>
                 </div>
 
                 <div class="border-l-4 border-blue-600 bg-gray-50 rounded-r-2xl p-6">
                     <h3 class="font-semibold text-gray-900 mb-2">Lower Total Cost of Ownership</h3>
-                    <p class="text-gray-600 text-sm">Pay for what you use. No upfront infrastructure costs.</p>
+                    <p class="text-gray-600 text-lg">Pay for what you use. No upfront infrastructure costs.</p>
                 </div>
             </div>
         </div>
@@ -327,7 +341,7 @@
                         <div class="bg-white border border-gray-200 rounded-2xl p-6 h-full">
                             <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mb-4">1</div>
                             <h3 class="text-lg font-semibold text-gray-900 mb-2">Create Your Account</h3>
-                            <p class="text-gray-600 text-sm">Sign up and create your ISP workspace.</p>
+                            <p class="text-gray-600 text-lg">Sign up and create your ISP workspace.</p>
                         </div>
                     </div>
 
@@ -336,7 +350,7 @@
                         <div class="bg-white border border-gray-200 rounded-2xl p-6 h-full">
                             <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mb-4">2</div>
                             <h3 class="text-lg font-semibold text-gray-900 mb-2">Connect Your Routers</h3>
-                            <p class="text-gray-600 text-sm">Add MikroTik routers using API credentials.</p>
+                            <p class="text-gray-600 text-lg">Add MikroTik routers using API credentials.</p>
                         </div>
                     </div>
 
@@ -345,7 +359,7 @@
                         <div class="bg-white border border-gray-200 rounded-2xl p-6 h-full">
                             <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mb-4">3</div>
                             <h3 class="text-lg font-semibold text-gray-900 mb-2">Start Managing</h3>
-                            <p class="text-gray-600 text-sm">Provision customers, monitor devices, and control your network.</p>
+                            <p class="text-gray-600 text-lg">Provision customers, monitor devices, and control your network.</p>
                         </div>
                     </div>
                 </div>
@@ -362,22 +376,22 @@
 
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                        <p class="text-gray-900 font-medium text-sm">Wireless ISPs (WISPs)</p>
+                        <p class="text-gray-900 font-medium text-lg">Wireless ISPs (WISPs)</p>
                     </div>
                     <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                        <p class="text-gray-900 font-medium text-sm">Fiber ISPs</p>
+                        <p class="text-gray-900 font-medium text-lg">Fiber ISPs</p>
                     </div>
                     <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                        <p class="text-gray-900 font-medium text-sm">MikroTik Networks</p>
+                        <p class="text-gray-900 font-medium text-lg">MikroTik Networks</p>
                     </div>
                     <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                        <p class="text-gray-900 font-medium text-sm">Multi-Router Operators</p>
+                        <p class="text-gray-900 font-medium text-lg">Multi-Router Operators</p>
                     </div>
                     <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                        <p class="text-gray-900 font-medium text-sm">Growing ISPs</p>
+                        <p class="text-gray-900 font-medium text-lg">Growing ISPs</p>
                     </div>
                     <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                        <p class="text-gray-900 font-medium text-sm">MikroTik Hotspots</p>
+                        <p class="text-gray-900 font-medium text-lg">MikroTik Hotspots</p>
                     </div>
                 </div>
             </div>
@@ -405,31 +419,31 @@
 
                 <div class="space-y-4">
                     <div class="grid md:grid-cols-5 gap-4 items-center">
-                        <div class="font-medium text-gray-900 text-sm">Deployment</div>
+                        <div class="font-medium text-gray-900 text-lg">Deployment</div>
                         <div class="md:col-span-2 text-center text-green-600 font-medium">Cloud-native</div>
                         <div class="md:col-span-2 text-center text-gray-500">Self-hosted</div>
                     </div>
 
                     <div class="grid md:grid-cols-5 gap-4 items-center">
-                        <div class="font-medium text-gray-900 text-sm">Setup Time</div>
+                        <div class="font-medium text-gray-900 text-lg">Setup Time</div>
                         <div class="md:col-span-2 text-center text-green-600 font-medium">Minutes</div>
                         <div class="md:col-span-2 text-center text-gray-500">Days/Weeks</div>
                     </div>
 
                     <div class="grid md:grid-cols-5 gap-4 items-center">
-                        <div class="font-medium text-gray-900 text-sm">Scalability</div>
+                        <div class="font-medium text-gray-900 text-lg">Scalability</div>
                         <div class="md:col-span-2 text-center text-green-600 font-medium">Unlimited</div>
                         <div class="md:col-span-2 text-center text-gray-500">Limited by hardware</div>
                     </div>
 
                     <div class="grid md:grid-cols-5 gap-4 items-center">
-                        <div class="font-medium text-gray-900 text-sm">MikroTik Focus</div>
+                        <div class="font-medium text-gray-900 text-lg">MikroTik Focus</div>
                         <div class="md:col-span-2 text-center text-green-600 font-medium">Built for MikroTik</div>
                         <div class="md:col-span-2 text-center text-gray-500">Generic</div>
                     </div>
 
                     <div class="grid md:grid-cols-5 gap-4 items-center">
-                        <div class="font-medium text-gray-900 text-sm">Maintenance</div>
+                        <div class="font-medium text-gray-900 text-lg">Maintenance</div>
                         <div class="md:col-span-2 text-center text-green-600 font-medium">We handle it</div>
                         <div class="md:col-span-2 text-center text-gray-500">You manage it</div>
                     </div>
@@ -452,8 +466,8 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors">View Pricing</a>
-                <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors">Start Free Trial</a>
+                <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors">View Pricing</a>
+                <a href="#trial" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors">Start Free Trial</a>
             </div>
         </div>
     </section>
@@ -492,13 +506,13 @@
                 <!-- Brand -->
                 <div class="col-span-2">
                     <h3 class="text-white font-bold text-lg mb-4">SkyBase Cloud</h3>
-                    <p class="text-sm">Cloud-based ISP management platform for MikroTik networks.</p>
+                    <p class="text-lg">Cloud-based ISP management platform for MikroTik networks.</p>
                 </div>
 
                 <!-- Product -->
                 <div>
                     <h4 class="text-white font-semibold mb-3">Product</h4>
-                    <ul class="space-y-2 text-sm">
+                    <ul class="space-y-2 text-lg">
                         <li><a href="#features" class="hover:text-white">Features</a></li>
                         <li><a href="#pricing" class="hover:text-white">Pricing</a></li>
                         <li><a href="#docs" class="hover:text-white">Documentation</a></li>
@@ -509,7 +523,7 @@
                 <!-- Company -->
                 <div>
                     <h4 class="text-white font-semibold mb-3">Company</h4>
-                    <ul class="space-y-2 text-sm">
+                    <ul class="space-y-2 text-lg">
                         <li><a href="#about" class="hover:text-white">About</a></li>
                         <li><a href="#" class="hover:text-white">Contact</a></li>
                         <li><a href="#" class="hover:text-white">Privacy Policy</a></li>
@@ -520,7 +534,7 @@
                 <!-- Resources -->
                 <div>
                     <h4 class="text-white font-semibold mb-3">Resources</h4>
-                    <ul class="space-y-2 text-sm">
+                    <ul class="space-y-2 text-lg">
                         <li><a href="#" class="hover:text-white">ISP Management Guide</a></li>
                         <li><a href="#" class="hover:text-white">MikroTik Integration</a></li>
                         <li><a href="#" class="hover:text-white">Radius Authentication</a></li>
@@ -531,12 +545,12 @@
             <!-- Contact & Bottom -->
             <div class="pt-8 border-t border-gray-800">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div class="text-sm">
+                    <div class="text-lg">
                         <a href="mailto:support@skybase.cloud" class="hover:text-white">support@skybase.cloud</a>
                         <span class="mx-2">·</span>
                         <a href="https://skybase.cloud" class="hover:text-white">skybase.cloud</a>
                     </div>
-                    <p class="text-sm">© 2026 SkyBase Cloud. All rights reserved.</p>
+                    <p class="text-lg">© 2026 SkyBase Cloud. All rights reserved.</p>
                 </div>
             </div>
         </div>
