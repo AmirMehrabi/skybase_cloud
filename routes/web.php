@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\RouterController;
 use Illuminate\Support\Facades\Route;
 
 // Landing page
@@ -54,4 +55,21 @@ Route::prefix('plans')->name('plans.')->group(function () {
     Route::get('/create', [PlanController::class, 'create'])->name('create');
     Route::get('/{id}', [PlanController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [PlanController::class, 'edit'])->name('edit');
+});
+
+// Router Management Routes
+Route::prefix('routers')->name('routers.')->group(function () {
+    Route::get('/', [RouterController::class, 'index'])->name('index');
+    Route::get('/create', [RouterController::class, 'create'])->name('create');
+    Route::post('/', [RouterController::class, 'store'])->name('store');
+    Route::get('/{router}', [RouterController::class, 'show'])->name('show');
+    Route::get('/{router}/edit', [RouterController::class, 'edit'])->name('edit');
+    Route::put('/{router}', [RouterController::class, 'update'])->name('update');
+    Route::delete('/{router}', [RouterController::class, 'destroy'])->name('destroy');
+    Route::get('/{router}/sessions', [RouterController::class, 'sessions'])->name('sessions');
+    Route::get('/{router}/queues', [RouterController::class, 'queues'])->name('queues');
+    Route::get('/{router}/profiles', [RouterController::class, 'profiles'])->name('profiles');
+    Route::get('/{router}/interfaces', [RouterController::class, 'interfaces'])->name('interfaces');
+    Route::get('/{router}/ip-pools', [RouterController::class, 'ipPools'])->name('ip-pools');
+    Route::get('/{router}/logs', [RouterController::class, 'logs'])->name('logs');
 });

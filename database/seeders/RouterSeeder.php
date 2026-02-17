@@ -1,0 +1,130 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Router;
+use Illuminate\Database\Seeder;
+
+class RouterSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        Router::create([
+            'name' => 'Core-Router-1',
+            'model' => 'CCR1036-12G-4S',
+            'vendor' => 'Mikrotik',
+            'ip_address' => '192.168.1.1',
+            'api_port' => 8728,
+            'api_username' => 'admin',
+            'api_password' => 'admin123',
+            'ssh_port' => 22,
+            'location' => 'Data Center',
+            'site' => 'Main Site',
+            'status' => 'online',
+            'version' => 'v7.12',
+            'uptime' => '25d 18h',
+            'cpu_usage' => 45,
+            'memory_usage' => 62,
+            'active_sessions_count' => 127,
+            'total_customers' => 180,
+            'enable_monitoring' => true,
+            'enable_provisioning' => true,
+            'timeout' => 30,
+        ]);
+
+        Router::create([
+            'name' => 'Edge-Router-1',
+            'model' => 'CCR1016-12G',
+            'vendor' => 'Mikrotik',
+            'ip_address' => '192.168.2.1',
+            'api_port' => 8728,
+            'api_username' => 'admin',
+            'api_password' => 'admin123',
+            'ssh_port' => 22,
+            'location' => 'Tower A',
+            'site' => 'North Tower',
+            'status' => 'online',
+            'version' => 'v7.11',
+            'uptime' => '12d 4h',
+            'cpu_usage' => 28,
+            'memory_usage' => 55,
+            'active_sessions_count' => 85,
+            'total_customers' => 120,
+            'enable_monitoring' => true,
+            'enable_provisioning' => true,
+            'timeout' => 30,
+        ]);
+
+        Router::create([
+            'name' => 'Tower-Router-3',
+            'model' => 'RB4011iGS+',
+            'vendor' => 'Mikrotik',
+            'ip_address' => '192.168.3.1',
+            'api_port' => 8728,
+            'api_username' => 'admin',
+            'api_password' => 'admin123',
+            'ssh_port' => 22,
+            'location' => 'Tower B',
+            'site' => 'South Tower',
+            'status' => 'offline',
+            'version' => 'v7.10',
+            'uptime' => null,
+            'cpu_usage' => 0,
+            'memory_usage' => 0,
+            'active_sessions_count' => 0,
+            'total_customers' => 65,
+            'enable_monitoring' => true,
+            'enable_provisioning' => true,
+            'timeout' => 30,
+        ]);
+
+        Router::create([
+            'name' => 'HQ-Router',
+            'model' => 'CCR2116-12G-4S+',
+            'vendor' => 'Mikrotik',
+            'ip_address' => '192.168.10.1',
+            'api_port' => 8728,
+            'api_username' => 'admin',
+            'api_password' => 'admin123',
+            'ssh_port' => 22,
+            'location' => 'HQ Building',
+            'site' => 'Main Site',
+            'status' => 'online',
+            'version' => 'v7.13',
+            'uptime' => '5d 8h',
+            'cpu_usage' => 72,
+            'memory_usage' => 68,
+            'active_sessions_count' => 42,
+            'total_customers' => 50,
+            'enable_monitoring' => true,
+            'enable_provisioning' => true,
+            'timeout' => 30,
+        ]);
+
+        Router::create([
+            'name' => 'Branch-Router-1',
+            'model' => 'RB750Gr3',
+            'vendor' => 'Mikrotik',
+            'ip_address' => '192.168.20.1',
+            'api_port' => 8728,
+            'api_username' => 'admin',
+            'api_password' => 'admin123',
+            'ssh_port' => 22,
+            'location' => 'Branch Office',
+            'site' => 'East Wing',
+            'status' => 'online',
+            'version' => 'v7.12',
+            'uptime' => '45d 6h',
+            'cpu_usage' => 15,
+            'memory_usage' => 38,
+            'active_sessions_count' => 23,
+            'total_customers' => 35,
+            'enable_monitoring' => true,
+            'enable_provisioning' => true,
+            'timeout' => 30,
+        ]);
+    }
+}
