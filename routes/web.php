@@ -76,17 +76,37 @@ Route::prefix('routers')->name('routers.')->group(function () {
 
 // IP Address Management (IPAM) Routes
 Route::prefix('ipam')->name('ipam.')->group(function () {
-    Route::get('/', fn() => view('ipam.dashboard'))->name('dashboard');
+    Route::get('/', fn () => view('ipam.dashboard'))->name('dashboard');
 
     Route::prefix('pools')->name('pools.')->group(function () {
-        Route::get('/', fn() => view('ipam.pools.index'))->name('index');
-        Route::get('/create', fn() => view('ipam.pools.create'))->name('create');
-        Route::get('/{pool}', fn($pool) => view('ipam.pools.show', compact('pool')))->name('show');
-        Route::get('/{pool}/edit', fn($pool) => view('ipam.pools.edit', compact('pool')))->name('edit');
+        Route::get('/', fn () => view('ipam.pools.index'))->name('index');
+        Route::get('/create', fn () => view('ipam.pools.create'))->name('create');
+        Route::get('/{pool}', fn ($pool) => view('ipam.pools.show', compact('pool')))->name('show');
+        Route::get('/{pool}/edit', fn ($pool) => view('ipam.pools.edit', compact('pool')))->name('edit');
     });
 
     Route::prefix('ips')->name('ips.')->group(function () {
-        Route::get('/', fn() => view('ipam.ips.index'))->name('index');
-        Route::get('/{ip}', fn($ip) => view('ipam.ips.show', compact('ip')))->name('show');
+        Route::get('/', fn () => view('ipam.ips.index'))->name('index');
+        Route::get('/{ip}', fn ($ip) => view('ipam.ips.show', compact('ip')))->name('show');
     });
+});
+
+// Billing Routes
+Route::prefix('billing')->name('billing.')->group(function () {
+    Route::get('/dashboard', fn () => view('billing.dashboard'))->name('dashboard');
+
+    Route::prefix('invoices')->name('invoices.')->group(function () {
+        Route::get('/', fn () => view('billing.invoices.index'))->name('index');
+        Route::get('/create', fn () => view('billing.invoices.create'))->name('create');
+        Route::get('/{invoice}', fn ($invoice) => view('billing.invoices.show', compact('invoice')))->name('show');
+        Route::get('/{invoice}/edit', fn ($invoice) => view('billing.invoices.edit', compact('invoice')))->name('edit');
+    });
+
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/', fn () => view('billing.payments.index'))->name('index');
+        Route::get('/{payment}', fn ($payment) => view('billing.payments.show', compact('payment')))->name('show');
+    });
+
+    Route::get('/credits', fn () => view('billing.credits'))->name('credits');
+    Route::get('/reports', fn () => view('billing.reports'))->name('reports');
 });
