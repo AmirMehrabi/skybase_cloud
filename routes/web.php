@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CustomerController;
+use Illuminate\Support\Facades\Route;
 
 // Landing page
 Route::get('/', function () {
@@ -26,4 +26,23 @@ Route::prefix('customers')->name('customers.')->group(function () {
     Route::get('/create', [CustomerController::class, 'create'])->name('create');
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
     Route::get('/{id}/edit', [CustomerController::class, 'edit'])->name('edit');
+});
+
+// Subscription Management Routes
+Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+    Route::get('/', function () {
+        return view('subscriptions.index');
+    })->name('index');
+
+    Route::get('/create', function () {
+        return view('subscriptions.create');
+    })->name('create');
+
+    Route::get('/{id}', function ($id) {
+        return view('subscriptions.show', compact('id'));
+    })->name('show');
+
+    Route::get('/{id}/edit', function ($id) {
+        return view('subscriptions.edit', compact('id'));
+    })->name('edit');
 });

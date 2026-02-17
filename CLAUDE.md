@@ -247,6 +247,12 @@ protected function isAccessible(User $user, ?string $path = null): bool
 
 # UI Development Conventions
 
+## Frontend Stack
+
+- UI pages must be written using **Blade** and **Alpine.js** only.
+- Do not use or create Livewire components.
+- Keep interactions simple with Alpine.js for dynamic behavior.
+
 ## Module Structure
 
 - Keep pages for each module isolated in dedicated directories under `resources/views/modules/`.
@@ -278,5 +284,17 @@ protected function isAccessible(User $user, ?string $path = null): bool
   - `resources/views/components/header.blade.php` — page header with links
   - `resources/views/components/sidebar.blade.php` — sidebar navigation (if applicable)
 - Always reuse existing navigation components rather than duplicating navbar/header code in individual pages.
+
+## CRUD Development Reference
+
+- When building a new CRUD module, use the **Customer** module as your reference implementation.
+- The Customer module demonstrates the correct patterns for:
+  - Routes configuration in `routes/web.php`
+  - Controller structure in `app/Http/Controllers/CustomerController.php`
+  - Model definition in `app/Models/Customer.php`
+  - Form Request validation in `app/Http/Requests/Customer/`
+  - UI templates in `resources/views/modules/customers/`
+  - Directory structure and file organization
+- Follow the same patterns, naming conventions, and architectural decisions when creating new CRUD modules.
 
 </laravel-boost-guidelines>
