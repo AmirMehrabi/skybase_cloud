@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\PlanController;
 use Illuminate\Support\Facades\Route;
 
 // Landing page
@@ -45,4 +46,12 @@ Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
     Route::get('/{id}/edit', function ($id) {
         return view('subscriptions.edit', compact('id'));
     })->name('edit');
+});
+
+// Plan Management Routes
+Route::prefix('plans')->name('plans.')->group(function () {
+    Route::get('/', [PlanController::class, 'index'])->name('index');
+    Route::get('/create', [PlanController::class, 'create'])->name('create');
+    Route::get('/{id}', [PlanController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [PlanController::class, 'edit'])->name('edit');
 });
