@@ -11,5 +11,6 @@ window.Alpine = Alpine;
 // Import customer data and components (these will register Alpine data)
 import './customers/data.js';
 import './customers/index.js';
+import './customers/show.js';
 
 Alpine.start();
