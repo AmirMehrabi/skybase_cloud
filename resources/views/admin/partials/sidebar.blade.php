@@ -122,8 +122,8 @@
 
     <!-- Bandwidth -->
     <li>
-        <a href="#"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-blue-50 hover:bg-blue-700 hover:text-white">
+        <a href="{{ route('network.bandwidth') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ str_starts_with($currentRoute, 'network.bandwidth') ? 'bg-blue-700 text-white' : 'text-blue-50 hover:bg-blue-700 hover:text-white' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
@@ -133,8 +133,8 @@
 
     <!-- Data Usage -->
     <li>
-        <a href="#"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-blue-50 hover:bg-blue-700 hover:text-white">
+        <a href="{{ route('network.data-usage') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ str_starts_with($currentRoute, 'network.data-usage') ? 'bg-blue-700 text-white' : 'text-blue-50 hover:bg-blue-700 hover:text-white' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
@@ -144,8 +144,8 @@
 
     <!-- Network Status -->
     <li>
-        <a href="#"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-blue-50 hover:bg-blue-700 hover:text-white">
+        <a href="{{ route('network.status') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ str_starts_with($currentRoute, 'network.status') ? 'bg-blue-700 text-white' : 'text-blue-50 hover:bg-blue-700 hover:text-white' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
             </svg>
@@ -160,8 +160,8 @@
 
     <!-- Usage Reports -->
     <li>
-        <a href="#"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-blue-50 hover:bg-blue-700 hover:text-white">
+        <a href="{{ route('reports.usage') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ str_starts_with($currentRoute, 'reports.usage') ? 'bg-blue-700 text-white' : 'text-blue-50 hover:bg-blue-700 hover:text-white' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
@@ -171,8 +171,8 @@
 
     <!-- Financial Reports -->
     <li>
-        <a href="#"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-blue-50 hover:bg-blue-700 hover:text-white">
+        <a href="{{ route('reports.financial') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ str_starts_with($currentRoute, 'reports.financial') ? 'bg-blue-700 text-white' : 'text-blue-50 hover:bg-blue-700 hover:text-white' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>

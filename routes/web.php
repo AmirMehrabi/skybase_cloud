@@ -110,3 +110,16 @@ Route::prefix('billing')->name('billing.')->group(function () {
     Route::get('/credits', fn () => view('billing.credits'))->name('credits');
     Route::get('/reports', fn () => view('billing.reports'))->name('reports');
 });
+
+// Network Routes
+Route::prefix('network')->name('network.')->group(function () {
+    Route::get('/data-usage', fn () => view('network.data-usage'))->name('data-usage');
+    Route::get('/bandwidth', fn () => view('network.bandwidth'))->name('bandwidth');
+    Route::get('/status', fn () => view('network.status'))->name('status');
+});
+
+// Reports Routes
+Route::prefix('reports')->name('reports.')->group(function () {
+    Route::get('/usage', fn () => view('reports.usage'))->name('usage');
+    Route::get('/financial', fn () => view('reports.financial'))->name('financial');
+});

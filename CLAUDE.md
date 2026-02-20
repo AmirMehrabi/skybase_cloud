@@ -32,6 +32,21 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 
+## SKYBASE MULTI-TENANCY RULES (MANDATORY)
+
+- SkyBase uses single-domain tenancy.
+- All tenants operate on cloud.skybase.app.
+- All tenant models MUST include: tenant_id
+
+- ALL queries MUST be scoped by: ->where('tenant_id', tenant()->id) OR use a global scope.
+- NEVER query models without tenant filtering.
+- Central models (NO tenant_id): Tenant (ISP), Central Admin User, Plans Catalog (if global), System Settings
+- Tenant models (MUST have tenant_id): Users, Customers, Subscriptions, Routers, IPAM, Invoices, Payments, RADIUS Users, Reports, Usage Data, Tickets
+-Authentication must: Always ensure logged user belongs to current tenant, Prevent cross-tenant access, Abort(403) if mismatch, Seeder must generate dummy data per tenant.
+-Middleware must:Identify tenant from logged user, Initialize tenancy context before any tenant query
+- NEVER use domain-based tenant resolution.
+-All new models default to tenant-scoped unless explicitly central.
+
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
