@@ -26,14 +26,14 @@ class InitializeTenancy
         if (! $tenant) {
             auth()->logout();
 
-            return redirect()->route('login')->with('error', 'Tenant not found.');
+            return redirect()->route('auth.login')->with('error', 'Tenant not found.');
         }
 
         // Verify the user belongs to the tenant (security check)
         if ($user->tenant_id !== $tenant->id) {
             auth()->logout();
 
-            return redirect()->route('login')->with('error', 'Invalid tenant access.');
+            return redirect()->route('auth.login')->with('error', 'Invalid tenant access.');
         }
 
         // Store the tenant in the app container for global access

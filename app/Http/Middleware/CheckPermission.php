@@ -11,7 +11,7 @@ class CheckPermission
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         if (! auth()->check()) {
-            return redirect()->route('login');
+            return redirect()->route('auth.login');
         }
 
         $user = auth()->user();

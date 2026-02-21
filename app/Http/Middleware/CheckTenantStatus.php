@@ -25,13 +25,13 @@ class CheckTenantStatus
         if (! $tenant) {
             auth()->logout();
 
-            return redirect()->route('login')->with('error', 'Tenant not found.');
+            return redirect()->route('auth.login')->with('error', 'Tenant not found.');
         }
 
         if ($tenant->isSuspended()) {
             auth()->logout();
 
-            return redirect()->route('login')->with('error', 'Your account has been suspended. Please contact support.');
+            return redirect()->route('auth.login')->with('error', 'Your account has been suspended. Please contact support.');
         }
 
         if ($tenant->status === 'pending') {

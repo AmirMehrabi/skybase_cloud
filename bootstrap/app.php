@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'check_tenant_status' => CheckTenantStatus::class,
             'can' => CheckPermission::class,
         ]);
+
+        $middleware->redirectGuestsTo('/auth/login');
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
