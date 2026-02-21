@@ -107,7 +107,7 @@
         <div class="h-full flex flex-col">
             <!-- Logo -->
             <div class="h-[60px] flex items-center px-6 border-b border-blue-700">
-                <a href="{{ route('admin.dashboard') }}" class="text-xl font-semibold text-white">
+                <a href="{{ route('dashboard') }}" class="text-xl font-semibold text-white">
                     {{ config('app.name', 'SkyBill') }}
                 </a>
             </div>
@@ -133,7 +133,7 @@
                 
                 <!-- Logo (Mobile) -->
                 <div class="lg:hidden">
-                    <a href="{{ route('admin.dashboard') }}" class="text-lg font-semibold text-gray-900">
+                    <a href="{{ route('dashboard') }}" class="text-lg font-semibold text-gray-900">
                         {{ config('app.name', 'SkyBill') }}
                     </a>
                 </div>
