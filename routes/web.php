@@ -8,6 +8,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\RouterController;
+use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Route;
 
 // Landing page - redirect authenticated users to dashboard
@@ -41,6 +42,14 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
         Route::put('/{user}', [UserController::class, 'update'])->name('update');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
+    });
+
+    // Settings Routes
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [SettingController::class, 'index'])->name('index');
+        Route::put('/general', [SettingController::class, 'updateGeneral'])->name('update.general');
+        Route::put('/branding', [SettingController::class, 'updateBranding'])->name('update.branding');
+        Route::delete('/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
     });
 
     // Customer Management Routes
