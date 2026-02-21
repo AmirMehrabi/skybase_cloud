@@ -29,9 +29,18 @@ class InitializeTenancy
             return redirect()->route('login')->with('error', 'Tenant not found.');
         }
 
-        tenancy()->initialize($tenant);
+        // Verify the user belongs to the tenant (security check)
+        if ($user->tenant_id !== $tenant->id) {
+            auth()->logout();
 
+            return redirect()->route('login')->with('error', 'Invalid tenant access.');
+        }
+
+        // Store the tenant in the app container for global access
         app()->instance('current_tenant', $tenant);
+
+        // Set a global tenant_id in the request for easy access
+        $request->merge(['_tenant_id' => $tenant->id]);
 
         return $next($request);
     }
