@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Router extends Model
 {
@@ -16,6 +17,7 @@ class Router extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'tenant_id',
         'name',
         'model',
         'vendor',
@@ -57,5 +59,19 @@ class Router extends Model
     public function isOnline(): bool
     {
         return $this->status === 'online';
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('tenant', function ($query) {
+            if (auth()->check() && auth()->user()->tenant_id) {
+                $query->where('tenant_id', auth()->user()->tenant_id);
+            }
+        });
     }
 }

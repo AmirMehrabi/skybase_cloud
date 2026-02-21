@@ -232,7 +232,7 @@
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profile</a>
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Settings</a>
                             <div class="border-t border-gray-200 my-1"></div>
-                            <form method="POST" action="{{ route('admin.logout') }}">
+                            <form method="POST" action="{{ route('auth.logout') }}">
                                 @csrf
                                 <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign Out</button>
                             </form>
