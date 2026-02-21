@@ -17,28 +17,17 @@
     <form method="POST" action="{{ route('auth.login.store') }}" @submit="loading = true">
         @csrf
 
-        <!-- Email -->
-        <div class="space-y-2 mb-4">
-            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-            <div class="relative">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                    <i class="fas fa-envelope"></i>
-                </span>
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value="{{ old('email') }}"
-                    required
-                    autofocus
-                    x-model="email"
-                    class="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-                    placeholder="you@example.com"
-                >
-            </div>
-        </div>
+        <x-input.email
+            id="email"
+            name="email"
+            label="Email Address"
+            placeholder="you@example.com"
+            :required="true"
+            :autofocus="true"
+            icon="envelope"
+            xModel="email"
+        />
 
-        <!-- Password -->
         <div class="space-y-2 mb-4">
             <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
             <div class="relative">

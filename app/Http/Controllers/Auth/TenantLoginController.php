@@ -22,31 +22,35 @@ class TenantLoginController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (! $user) {
-            return back()->withErrors([
-                'email' => 'These credentials do not match our records.',
-            ]);
+            return back()->withInput()
+                ->withErrors([
+                    'email' => 'These credentials do not match our records.',
+                ]);
         }
 
         if ($user->tenant_id) {
             $tenant = $user->tenant;
 
             if (! $tenant) {
-                return back()->withErrors([
-                    'email' => 'Tenant not found. Please contact support.',
-                ]);
+                return back()->withInput()
+                    ->withErrors([
+                        'email' => 'Tenant not found. Please contact support.',
+                    ]);
             }
 
             if ($tenant->isSuspended()) {
-                return back()->withErrors([
-                    'email' => 'Your account has been suspended. Please contact support.',
-                ]);
+                return back()->withInput()
+                    ->withErrors([
+                        'email' => 'Your account has been suspended. Please contact support.',
+                    ]);
             }
         }
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            return back()->withErrors([
-                'email' => 'These credentials do not match our records.',
-            ]);
+            return back()->withInput()
+                ->withErrors([
+                    'email' => 'These credentials do not match our records.',
+                ]);
         }
 
         $request->session()->regenerate();

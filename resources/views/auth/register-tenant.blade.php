@@ -22,52 +22,33 @@
     <form method="POST" action="{{ route('auth.register.store') }}" @submit="loading = true">
         @csrf
 
-        <!-- Company Name -->
-        <div class="space-y-2 mb-4">
-            <label for="company_name" class="block text-sm font-medium text-gray-700">Company Name <span class="text-red-600">*</span></label>
-            <input
-                type="text"
-                id="company_name"
-                name="company_name"
-                value="{{ old('company_name') }}"
-                required
-                x-model="companyName"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-                placeholder="Acme ISP Inc."
-            >
-        </div>
+        <x-input.text
+            id="company_name"
+            name="company_name"
+            label="Company Name"
+            placeholder="Acme ISP Inc."
+            :required="true"
+            xModel="companyName"
+        />
 
-        <!-- Owner Name -->
-        <div class="space-y-2 mb-4">
-            <label for="owner_name" class="block text-sm font-medium text-gray-700">Owner Name <span class="text-red-600">*</span></label>
-            <input
-                type="text"
-                id="owner_name"
-                name="owner_name"
-                value="{{ old('owner_name') }}"
-                required
-                x-model="ownerName"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-                placeholder="John Doe"
-            >
-        </div>
+        <x-input.text
+            id="owner_name"
+            name="owner_name"
+            label="Owner Name"
+            placeholder="John Doe"
+            :required="true"
+            xModel="ownerName"
+        />
 
-        <!-- Email -->
-        <div class="space-y-2 mb-4">
-            <label for="email" class="block text-sm font-medium text-gray-700">Email Address <span class="text-red-600">*</span></label>
-            <input
-                type="email"
-                id="email"
-                name="email"
-                value="{{ old('email') }}"
-                required
-                x-model="email"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-                placeholder="john@example.com"
-            >
-        </div>
+        <x-input.email
+            id="email"
+            name="email"
+            label="Email Address"
+            placeholder="john@example.com"
+            :required="true"
+            xModel="email"
+        />
 
-        <!-- Password -->
         <div class="space-y-2 mb-4">
             <label for="password" class="block text-sm font-medium text-gray-700">Password <span class="text-red-600">*</span></label>
             <input
@@ -83,7 +64,6 @@
             <p class="text-xs text-gray-500">Must be at least 8 characters</p>
         </div>
 
-        <!-- Confirm Password -->
         <div class="space-y-2 mb-4">
             <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm Password <span class="text-red-600">*</span></label>
             <input
@@ -98,83 +78,69 @@
             >
         </div>
 
-        <!-- Phone -->
-        <div class="space-y-2 mb-4">
-            <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
-            <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value="{{ old('phone') }}"
-                x-model="phone"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-                placeholder="+1 234 567 8900"
-            >
-        </div>
+        <x-input.tel
+            id="phone"
+            name="phone"
+            label="Phone Number"
+            placeholder="+1 234 567 8900"
+            xModel="phone"
+        />
 
-        <!-- Country -->
-        <div class="space-y-2 mb-4">
-            <label for="country" class="block text-sm font-medium text-gray-700">Country</label>
-            <select
-                id="country"
-                name="country"
-                x-model="country"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-            >
-                <option value="">Select a country</option>
-                <option value="US">United States</option>
-                <option value="UK">United Kingdom</option>
-                <option value="CA">Canada</option>
-                <option value="AU">Australia</option>
-                <option value="DE">Germany</option>
-                <option value="FR">France</option>
-                <option value="IN">India</option>
-                <option value="BR">Brazil</option>
-                <option value="NG">Nigeria</option>
-                <option value="KE">Kenya</option>
-                <option value="ZA">South Africa</option>
-                <option value="OTHER">Other</option>
-            </select>
-        </div>
+        <x-input.select
+            id="country"
+            name="country"
+            label="Country"
+            placeholder="Select a country"
+            :options="[
+                'US' => 'United States',
+                'UK' => 'United Kingdom',
+                'CA' => 'Canada',
+                'AU' => 'Australia',
+                'DE' => 'Germany',
+                'FR' => 'France',
+                'IN' => 'India',
+                'BR' => 'Brazil',
+                'NG' => 'Nigeria',
+                'KE' => 'Kenya',
+                'ZA' => 'South Africa',
+                'OTHER' => 'Other',
+            ]"
+            xModel="country"
+        />
 
-        <!-- Timezone -->
-        <div class="space-y-2 mb-6">
-            <label for="timezone" class="block text-sm font-medium text-gray-700">Timezone</label>
-            <select
-                id="timezone"
-                name="timezone"
-                x-model="timezone"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-            >
-                <option value="UTC">UTC (Coordinated Universal Time)</option>
-                <option value="America/New_York">Eastern Time (US & Canada)</option>
-                <option value="America/Chicago">Central Time (US & Canada)</option>
-                <option value="America/Denver">Mountain Time (US & Canada)</option>
-                <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
-                <option value="Europe/London">London (GMT)</option>
-                <option value="Europe/Paris">Central European Time</option>
-                <option value="Asia/Kolkata">India Standard Time</option>
-                <option value="Asia/Dubai">Gulf Standard Time</option>
-                <option value="Africa/Nairobi">East Africa Time</option>
-                <option value="Africa/Johannesburg">South Africa Standard Time</option>
-            </select>
-        </div>
+        <x-input.select
+            id="timezone"
+            name="timezone"
+            label="Timezone"
+            :options="[
+                'UTC' => 'UTC (Coordinated Universal Time)',
+                'America/New_York' => 'Eastern Time (US & Canada)',
+                'America/Chicago' => 'Central Time (US & Canada)',
+                'America/Denver' => 'Mountain Time (US & Canada)',
+                'America/Los_Angeles' => 'Pacific Time (US & Canada)',
+                'Europe/London' => 'London (GMT)',
+                'Europe/Paris' => 'Central European Time',
+                'Asia/Kolkata' => 'India Standard Time',
+                'Asia/Dubai' => 'Gulf Standard Time',
+                'Africa/Nairobi' => 'East Africa Time',
+                'Africa/Johannesburg' => 'South Africa Standard Time',
+            ]"
+            xModel="timezone"
+        />
 
-        <!-- Terms -->
-        <div class="mb-6">
-            <label class="flex items-start gap-2">
-                <input type="checkbox" required class="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
-                <span class="text-sm text-gray-700">
-                    I agree to the <a href="#" class="text-blue-600 hover:text-blue-700">Terms of Service</a> and <a href="#" class="text-blue-600 hover:text-blue-700">Privacy Policy</a>
-                </span>
-            </label>
-        </div>
+        <x-input.checkbox
+            id="terms"
+            name="terms"
+            :value="true"
+            :required="true"
+            label='I agree to the <a href="#" class="text-blue-600 hover:text-blue-700">Terms of Service</a> and <a href="#" class="text-blue-600 hover:text-blue-700">Privacy Policy</a>'
+        />
 
         <!-- Submit Button -->
         <button
             type="submit"
             :disabled="loading"
-            class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full py-3 px-4 mt-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
             <span x-show="!loading">Start Free Trial</span>
             <span x-show="loading" x-cloak>

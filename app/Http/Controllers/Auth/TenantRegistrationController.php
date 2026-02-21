@@ -27,7 +27,7 @@ class TenantRegistrationController extends Controller
             $slug = Str::slug($request->company_name).'-'.Str::random(6);
 
             $tenant = Tenant::create([
-                'id' => Str::uuid(),
+                'id' => Str::uuid()->toString(),
                 'name' => $request->owner_name,
                 'slug' => $slug,
                 'company_name' => $request->company_name,
@@ -39,6 +39,10 @@ class TenantRegistrationController extends Controller
                 'trial_ends_at' => now()->addDays(14),
             ]);
 
+            if (! $tenant->exists) {
+                throw new \Exception('Failed to create tenant record.');
+            }
+
             $user = User::create([
                 'tenant_id' => $tenant->id,
                 'name' => $request->owner_name,
@@ -47,6 +51,10 @@ class TenantRegistrationController extends Controller
                 'role' => 'owner',
                 'status' => 'active',
             ]);
+
+            if (! $user->exists) {
+                throw new \Exception('Failed to create user record.');
+            }
 
             $this->createDefaultRoles($tenant->id);
             $this->createDefaultSettings($tenant->id);
@@ -58,9 +66,16 @@ class TenantRegistrationController extends Controller
             return redirect()->route('dashboard')
                 ->with('success', 'Welcome to SkyBase Cloud! Your account has been created with a 14-day trial.');
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            \Log::error('Registration database error: '.$e->getMessage());
+
+            return back()->withInput()
+                ->with('error', 'Registration failed. Please try again.');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::info($e->getMessage());
+            \Log::error('Registration error: '.$e->getMessage());
+
             return back()->withInput()
                 ->with('error', 'Registration failed. Please try again.');
         }
