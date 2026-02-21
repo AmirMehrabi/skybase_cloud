@@ -10,11 +10,11 @@
     'xModel' => null,
 ])
 
-<div class="space-y-2 mb-4">
+<div class="mb-4">
     @if($label)
     <label for="{{ $id }}" class="block text-sm font-medium text-gray-700">
         {{ $label }}
-        @if($required)<span class="text-red-600">*</span>@endif
+        @if($required)<span class="text-red-500">*</span>@endif
     </label>
     @endif
 
@@ -34,7 +34,15 @@
             @if($required) required @endif
             @if($autofocus) autofocus @endif
             @if($xModel) x-model="{{ $xModel }}" @endif
-            class="{{ $icon ? 'pl-10 pr-4' : 'px-4' }} py-3 w-full bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
+            @error($name)
+                class="{{ $icon ? 'pl-10 pr-4' : 'px-4' }} py-3 w-full bg-white border border-red-500 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
+            @else
+                class="{{ $icon ? 'pl-10 pr-4' : 'px-4' }} py-3 w-full bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
+            @enderror
         >
     </div>
+
+    @error($name)
+        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+    @enderror
 </div>

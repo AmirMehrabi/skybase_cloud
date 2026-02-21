@@ -2,10 +2,8 @@
     'id' => null,
     'name' => null,
     'label' => null,
-    'value' => null,
     'checked' => false,
     'help' => null,
-    'xModel' => null,
 ])
 
 <div>
@@ -17,7 +15,6 @@
                 name="{{ $name }}"
                 value="1"
                 {{ $checked ? 'checked' : '' }}
-                @if($xModel) x-model="{{ $xModel }}" @endif
                 class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
             >
         </div>
@@ -30,8 +27,4 @@
             @endif
         </div>
     </div>
-
-    @error($name)
-        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-    @enderror
 </div>
