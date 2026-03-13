@@ -278,7 +278,4 @@
     </div>
 </div>
 
-@scripts
-<script src="{{ asset('js/customers/index.js') }}"></script>
-@endscripts
 @endsection
