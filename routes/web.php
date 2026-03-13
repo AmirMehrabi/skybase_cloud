@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Route;
 // Landing page - redirect authenticated users to dashboard
 Route::get('/', [PagesController::class, 'index'])->name('home');
 
+// Pricing page
+Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
+
 // Authentication Routes (Guest only)
 Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
     Route::get('/register', [TenantRegistrationController::class, 'showRegistrationForm'])->name('register');

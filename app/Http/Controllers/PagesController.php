@@ -17,4 +17,15 @@ class PagesController extends Controller
         // Show home page for guests
         return view('home');
     }
+
+    public function pricing(Request $request)
+    {
+        // Redirect authenticated users to dashboard
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
+        // Show pricing page for guests
+        return view('pricing');
+    }
 }
