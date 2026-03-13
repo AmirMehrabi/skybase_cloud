@@ -46,8 +46,8 @@
 
                 <!-- Center Links (Desktop) -->
                 <div class="hidden md:flex items-center gap-10">
-                    <a href="#features" class="text-gray-600 hover:text-gray-900 text-lg font-medium">Features</a>
-                    <a href="#pricing" class="text-gray-600 hover:text-gray-900 text-lg font-medium">Pricing</a>
+                    <a href="{{ url('/features') }}" class="text-gray-600 hover:text-gray-900 text-lg font-medium">Features</a>
+                    <a href="{{ url('/pricing') }}" class="text-gray-600 hover:text-gray-900 text-lg font-medium">Pricing</a>
                     <a href="#docs" class="text-gray-600 hover:text-gray-900 text-lg font-medium">Docs</a>
                     <a href="#about" class="text-gray-600 hover:text-gray-900 text-lg font-medium">About</a>
                 </div>
@@ -513,8 +513,8 @@
                 <div>
                     <h4 class="text-white font-semibold mb-3">Product</h4>
                     <ul class="space-y-2 text-lg">
-                        <li><a href="#features" class="hover:text-white">Features</a></li>
-                        <li><a href="#pricing" class="hover:text-white">Pricing</a></li>
+                        <li><a href="{{ url('/features') }}" class="hover:text-white">Features</a></li>
+                        <li><a href="{{ url('/pricing') }}" class="hover:text-white">Pricing</a></li>
                         <li><a href="#docs" class="hover:text-white">Documentation</a></li>
                         <li><a href="#" class="hover:text-white">Changelog</a></li>
                     </ul>

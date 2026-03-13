@@ -17,6 +17,9 @@ Route::get('/', [PagesController::class, 'index'])->name('home');
 // Pricing page
 Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 
+// Features page
+Route::get('/features', [PagesController::class, 'features'])->name('features');
+
 // Authentication Routes (Guest only)
 Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
     Route::get('/register', [TenantRegistrationController::class, 'showRegistrationForm'])->name('register');
