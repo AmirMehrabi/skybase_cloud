@@ -1,10 +1,8 @@
-import { customers, stats, filterOptions } from './data.js';
-
 document.addEventListener('alpine:init', () => {
     Alpine.data('customersIndex', () => ({
-        customers: customers,
-        stats: stats,
-        filterOptions: filterOptions,
+        customers: [],
+        stats: { total: 0, active: 0, suspended: 0, overdue: 0 },
+        filterOptions: { statuses: [], plans: [], sites: [], routers: [] },
 
         // Filters
         search: '',
@@ -14,59 +12,102 @@ document.addEventListener('alpine:init', () => {
         router: '',
 
         // Pagination
-        perPage: 10,
+        perPage: 15,
         currentPage: 1,
 
-        // Computed
-        get filteredCustomers() {
-            let filtered = [...this.customers];
-
-            // Search filter
-            if (this.search) {
-                const search = this.search.toLowerCase();
-                filtered = filtered.filter(c =>
-                    c.name.toLowerCase().includes(search) ||
-                    c.customer_code.toLowerCase().includes(search) ||
-                    c.email.toLowerCase().includes(search) ||
-                    c.phone.includes(search)
-                );
-            }
-
-            // Status filter
-            if (this.status) {
-                filtered = filtered.filter(c => c.status === this.status);
-            }
-
-            // Plan filter
-            if (this.plan) {
-                filtered = filtered.filter(c => c.plan === this.plan);
-            }
-
-            // Site filter
-            if (this.site) {
-                filtered = filtered.filter(c => c.site === this.site);
-            }
-
-            // Router filter
-            if (this.router) {
-                filtered = filtered.filter(c => c.router === this.router);
-            }
-
-            return filtered;
+        // Loading state
+        loading: false,
+        pagination: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 15,
+            total: 0,
+            from: 0,
+            to: 0,
         },
 
+        // Initialize
+        async init() {
+            await Promise.all([
+                this.fetchFilterOptions(),
+                this.fetchStats(),
+                this.fetchCustomers(),
+            ]);
+
+            // Watch for filter changes
+            this.$watch('search', () => this.debounceFetch());
+            this.$watch('status', () => this.fetchCustomers());
+            this.$watch('plan', () => this.fetchCustomers());
+            this.$watch('site', () => this.fetchCustomers());
+            this.$watch('router', () => this.fetchCustomers());
+        },
+
+        // API calls
+        async fetchCustomers() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    per_page: this.perPage,
+                    page: this.currentPage,
+                    search: this.search,
+                    status: this.status,
+                    plan: this.plan,
+                    site: this.site,
+                    router: this.router,
+                });
+
+                const response = await fetch(`/customers/data?${params}`);
+                const data = await response.json();
+
+                this.customers = data.customers;
+                this.pagination = data.pagination;
+                this.currentPage = data.pagination.current_page;
+            } catch (error) {
+                console.error('Error fetching customers:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async fetchFilterOptions() {
+            try {
+                const response = await fetch('/customers/filter-options');
+                this.filterOptions = await response.json();
+            } catch (error) {
+                console.error('Error fetching filter options:', error);
+            }
+        },
+
+        async fetchStats() {
+            try {
+                const response = await fetch('/customers/stats');
+                this.stats = await response.json();
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        },
+
+        // Debounce for search input
+        debounceTimer: null,
+        debounceFetch() {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = setTimeout(() => {
+                this.currentPage = 1;
+                this.fetchCustomers();
+            }, 300);
+        },
+
+        // Computed
         get paginatedCustomers() {
-            const start = (this.currentPage - 1) * this.perPage;
-            const end = start + this.perPage;
-            return this.filteredCustomers.slice(start, end);
+            return this.customers;
         },
 
         get totalPages() {
-            return Math.ceil(this.filteredCustomers.length / this.perPage);
+            return this.pagination.last_page;
         },
 
         get totalCustomers() {
-            return this.filteredCustomers.length;
+            return this.pagination.total;
         },
 
         get hasActiveFilters() {
@@ -81,28 +122,36 @@ document.addEventListener('alpine:init', () => {
             this.site = '';
             this.router = '';
             this.currentPage = 1;
+            this.fetchCustomers();
         },
 
         goToPage(page) {
             this.currentPage = page;
+            this.fetchCustomers();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         },
 
         nextPage() {
             if (this.currentPage < this.totalPages) {
                 this.currentPage++;
+                this.fetchCustomers();
             }
         },
 
         prevPage() {
             if (this.currentPage > 1) {
                 this.currentPage--;
+                this.fetchCustomers();
             }
         },
 
         // Helper methods
         formatBalance(amount) {
-            return '$' + amount.toFixed(2);
+            const formatted = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+            }).format(amount);
+            return formatted;
         },
 
         getStatusBadgeClass(status) {
@@ -110,9 +159,9 @@ document.addEventListener('alpine:init', () => {
                 active: 'bg-green-100 text-green-800 border-green-200',
                 pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
                 suspended: 'bg-red-100 text-red-800 border-red-200',
-                terminated: 'bg-gray-100 text-gray-800 border-gray-200',
+                inactive: 'bg-gray-100 text-gray-800 border-gray-200',
             };
-            return classes[status] || classes.terminated;
+            return classes[status] || classes.inactive;
         },
     }));
 });

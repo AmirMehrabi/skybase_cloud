@@ -26,31 +26,34 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Customer Type</label>
                 <div class="flex gap-4">
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" x-model="form.customerType" value="individual" class="h-4 w-4 text-blue-600">
+                        <input type="radio" x-model="form.customer_type" value="individual" class="h-4 w-4 text-blue-600">
                         <span class="text-sm text-gray-700">Individual</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" x-model="form.customerType" value="business" class="h-4 w-4 text-blue-600">
+                        <input type="radio" x-model="form.customer_type" value="business" class="h-4 w-4 text-blue-600">
                         <span class="text-sm text-gray-700">Business</span>
                     </label>
                 </div>
             </div>
 
-            <template x-if="form.customerType === 'individual'">
+            <template x-if="form.customer_type === 'individual'">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">First Name <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.firstName" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    <input type="text" x-model="form.first_name" @input="clearError('first_name')" :class="{'border-red-500': getError('first_name')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    <p x-show="getError('first_name')" x-text="getError('first_name')" class="text-xs text-red-500 mt-1"></p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Last Name <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.lastName" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    <input type="text" x-model="form.last_name" @input="clearError('last_name')" :class="{'border-red-500': getError('last_name')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    <p x-show="getError('last_name')" x-text="getError('last_name')" class="text-xs text-red-500 mt-1"></p>
                 </div>
             </template>
 
-            <template x-if="form.customerType === 'business'">
+            <template x-if="form.customer_type === 'business'">
                 <div class="lg:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Company Name <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.companyName" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    <input type="text" x-model="form.company_name" @input="clearError('company_name')" :class="{'border-red-500': getError('company_name')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    <p x-show="getError('company_name')" x-text="getError('company_name')" class="text-xs text-red-500 mt-1"></p>
                 </div>
             </template>
 
@@ -59,10 +62,10 @@
                 <input type="text" :value="generatedCustomerCode" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2.5 px-3 border">
             </div>
 
-            <template x-if="form.customerType === 'individual'">
+            <template x-if="form.customer_type === 'individual'">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">National ID / SSN</label>
-                    <input type="text" x-model="form.nationalId" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    <input type="text" x-model="form.national_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
                 </div>
             </template>
         </div>
@@ -74,7 +77,8 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Email Address <span class="text-red-500">*</span></label>
-                <input type="email" x-model="form.email" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="email" x-model="form.email" @input="clearError('email')" :class="{'border-red-500': getError('email')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <p x-show="getError('email')" x-text="getError('email')" class="text-xs text-red-500 mt-1"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
@@ -82,7 +86,8 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Mobile Number <span class="text-red-500">*</span></label>
-                <input type="text" x-model="form.mobile" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="text" x-model="form.mobile" @input="clearError('mobile')" :class="{'border-red-500': getError('mobile')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <p x-show="getError('mobile')" x-text="getError('mobile')" class="text-xs text-red-500 mt-1"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label>
@@ -97,15 +102,17 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Address Line 1 <span class="text-red-500">*</span></label>
-                <input type="text" x-model="form.addressLine1" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="text" x-model="form.address_line1" @input="clearError('address_line1')" :class="{'border-red-500': getError('address_line1')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <p x-show="getError('address_line1')" x-text="getError('address_line1')" class="text-xs text-red-500 mt-1"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
-                <input type="text" x-model="form.addressLine2" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="text" x-model="form.address_line2" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">City <span class="text-red-500">*</span></label>
-                <input type="text" x-model="form.city" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="text" x-model="form.city" @input="clearError('city')" :class="{'border-red-500': getError('city')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <p x-show="getError('city')" x-text="getError('city')" class="text-xs text-red-500 mt-1"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">State / Province</label>
@@ -113,7 +120,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
-                <input type="text" x-model="form.postalCode" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="text" x-model="form.postal_code" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Country</label>
@@ -135,7 +142,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Service Plan <span class="text-red-500">*</span></label>
-                <select x-model="form.plan" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+                <select x-model="form.plan" @change="clearError('plan')" :class="{'border-red-500': getError('plan')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                     <option value="">Select a plan</option>
                     <option value="Fiber 50 Mbps">Fiber 50 Mbps - $29.99/mo</option>
                     <option value="Fiber 100 Mbps">Fiber 100 Mbps - $49.99/mo</option>
@@ -143,10 +150,11 @@
                     <option value="Fiber 500 Mbps">Fiber 500 Mbps - $99.99/mo</option>
                     <option value="Fiber 1 Gbps">Fiber 1 Gbps - $149.99/mo</option>
                 </select>
+                <p x-show="getError('plan')" x-text="getError('plan')" class="text-xs text-red-500 mt-1"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Site / Location <span class="text-red-500">*</span></label>
-                <select x-model="form.site" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+                <select x-model="form.site" @change="clearError('site')" :class="{'border-red-500': getError('site')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                     <option value="">Select a site</option>
                     <option value="Downtown Hub">Downtown Hub</option>
                     <option value="Business Park">Business Park</option>
@@ -155,10 +163,11 @@
                     <option value="West Station">West Station</option>
                     <option value="East Center">East Center</option>
                 </select>
+                <p x-show="getError('site')" x-text="getError('site')" class="text-xs text-red-500 mt-1"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Router / NAS <span class="text-red-500">*</span></label>
-                <select x-model="form.router" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+                <select x-model="form.router" @change="clearError('router')" :class="{'border-red-500': getError('router')}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                     <option value="">Select a router</option>
                     <option value="Mikrotik-01">Mikrotik-01 (Downtown)</option>
                     <option value="Mikrotik-02">Mikrotik-02 (Business)</option>
@@ -167,18 +176,19 @@
                     <option value="Cisco-02">Cisco-02 (Business)</option>
                     <option value="Cisco-03">Cisco-03 (North)</option>
                 </select>
+                <p x-show="getError('router')" x-text="getError('router')" class="text-xs text-red-500 mt-1"></p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">PPPoE Username</label>
-                <input type="text" x-model="form.pppoeUsername" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="text" x-model="form.pppoe_username" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">PPPoE Password</label>
-                <input type="password" x-model="form.pppoePassword" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="password" x-model="form.pppoe_password" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Billing Cycle</label>
-                <select x-model="form.billingCycle" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+                <select x-model="form.billing_cycle" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                     <option value="monthly">Monthly</option>
                     <option value="quarterly">Quarterly (3 months)</option>
                     <option value="yearly">Yearly (12 months)</option>
@@ -193,17 +203,17 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Initial Balance</label>
-                <input type="number" step="0.01" x-model="form.initialBalance" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="number" step="0.01" x-model="form.balance" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
                 <p class="text-xs text-gray-500 mt-1">Positive = debit owed, Negative = credit balance</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Credit Limit</label>
-                <input type="number" step="0.01" x-model="form.creditLimit" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                <input type="number" step="0.01" x-model="form.credit_limit" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
                 <p class="text-xs text-gray-500 mt-1">Maximum allowed debt amount</p>
             </div>
             <div class="flex items-center pt-6">
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" x-model="form.taxExempt" class="h-4 w-4 text-blue-600 rounded border-gray-300">
+                    <input type="checkbox" x-model="form.tax_exempt" class="h-4 w-4 text-blue-600 rounded border-gray-300">
                     <span class="text-sm text-gray-700">Tax Exempt</span>
                 </label>
             </div>
@@ -224,7 +234,7 @@
             </div>
             <div class="flex items-center pt-6">
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" x-model="form.autoActivate" class="h-4 w-4 text-blue-600 rounded border-gray-300">
+                    <input type="checkbox" x-model="form.auto_activate" class="h-4 w-4 text-blue-600 rounded border-gray-300">
                     <span class="text-sm text-gray-700">Auto-activate service on save</span>
                 </label>
             </div>

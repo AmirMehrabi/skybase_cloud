@@ -61,9 +61,17 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     // Customer Management Routes
     Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('/', [CustomerController::class, 'index'])->name('index');
+        Route::get('/data', [CustomerController::class, 'data'])->name('data');
+        Route::get('/filter-options', [CustomerController::class, 'filterOptions'])->name('filter-options');
+        Route::get('/stats', [CustomerController::class, 'stats'])->name('stats');
         Route::get('/create', [CustomerController::class, 'create'])->name('create');
-        Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
-        Route::get('/{id}/edit', [CustomerController::class, 'edit'])->name('edit');
+        Route::post('/', [CustomerController::class, 'store'])->name('store');
+        Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
+        Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
+        Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
+        Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
+        Route::post('/{customer}/suspend', [CustomerController::class, 'suspend'])->name('suspend');
+        Route::post('/{customer}/activate', [CustomerController::class, 'activate'])->name('activate');
     });
 
     // Subscription Management Routes

@@ -1,88 +1,134 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('customerCreate', () => ({
         form: {
-            customerType: 'individual',
-            firstName: '',
-            lastName: '',
-            companyName: '',
-            nationalId: '',
+            customer_type: 'individual',
+            first_name: '',
+            last_name: '',
+            company_name: '',
+            national_id: '',
             email: '',
             phone: '',
             mobile: '',
             whatsapp: '',
-            addressLine1: '',
-            addressLine2: '',
+            address_line1: '',
+            address_line2: '',
             city: '',
             state: '',
-            postalCode: '',
+            postal_code: '',
             country: 'United States',
             plan: '',
             site: '',
             router: '',
-            pppoeUsername: '',
-            pppoePassword: '',
-            billingCycle: 'monthly',
-            initialBalance: 0,
-            creditLimit: 0,
-            taxExempt: false,
+            ip_address: '',
+            pppoe_username: '',
+            pppoe_password: '',
+            billing_type: 'prepaid',
+            billing_cycle: 'monthly',
+            balance: 0,
+            credit_limit: 0,
+            tax_exempt: false,
             status: 'pending',
-            autoActivate: false,
+            auto_activate: false,
         },
+
+        errors: {},
+        saving: false,
 
         get generatedCustomerCode() {
-            return 'CUS-2024-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const now = new Date();
+            const year = now.getFullYear().toString().slice(-2);
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0').toUpperCase();
+            return `CUS-${year}${month}${day}-${random}`;
         },
 
-        save() {
-            // Validate
+        async save() {
             if (!this.validate()) {
                 return;
             }
 
-            // In real app, send to API
-            alert('Customer created successfully!');
-            window.location.href = '/customers';
+            this.saving = true;
+            this.errors = {};
+
+            try {
+                const response = await fetch('/customers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    },
+                    body: JSON.stringify(this.form),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    window.location.href = '/customers';
+                } else if (response.status === 422 && data.errors) {
+                    // Validation errors
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        this.errors[field] = Array.isArray(messages) ? messages[0] : messages;
+                    }
+                } else {
+                    alert('Error creating customer: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error creating customer:', error);
+                alert('Error creating customer. Please try again.');
+            } finally {
+                this.saving = false;
+            }
         },
 
-        saveDraft() {
-            alert('Customer saved as draft!');
-            window.location.href = '/customers';
+        async saveDraft() {
+            this.form.status = 'pending';
+            await this.save();
         },
 
         validate() {
-            if (this.form.customerType === 'individual' && !this.form.firstName) {
-                alert('First name is required');
-                return false;
+            this.errors = {};
+
+            if (this.form.customer_type === 'individual' && !this.form.first_name) {
+                this.errors.first_name = 'First name is required';
             }
-            if (this.form.customerType === 'individual' && !this.form.lastName) {
-                alert('Last name is required');
-                return false;
+            if (this.form.customer_type === 'individual' && !this.form.last_name) {
+                this.errors.last_name = 'Last name is required';
             }
-            if (this.form.customerType === 'business' && !this.form.companyName) {
-                alert('Company name is required');
-                return false;
+            if (this.form.customer_type === 'business' && !this.form.company_name) {
+                this.errors.company_name = 'Company name is required';
             }
             if (!this.form.email) {
-                alert('Email is required');
-                return false;
+                this.errors.email = 'Email is required';
             }
             if (!this.form.mobile) {
-                alert('Mobile number is required');
-                return false;
+                this.errors.mobile = 'Mobile number is required';
+            }
+            if (!this.form.address_line1) {
+                this.errors.address_line1 = 'Address is required';
+            }
+            if (!this.form.city) {
+                this.errors.city = 'City is required';
             }
             if (!this.form.plan) {
-                alert('Please select a plan');
-                return false;
+                this.errors.plan = 'Please select a plan';
             }
             if (!this.form.site) {
-                alert('Please select a site');
-                return false;
+                this.errors.site = 'Please select a site';
             }
             if (!this.form.router) {
-                alert('Please select a router');
-                return false;
+                this.errors.router = 'Please select a router';
             }
-            return true;
+
+            return Object.keys(this.errors).length === 0;
+        },
+
+        getError(field) {
+            return this.errors[field] || '';
+        },
+
+        clearError(field) {
+            delete this.errors[field];
         },
     }));
 });
