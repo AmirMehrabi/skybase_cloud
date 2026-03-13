@@ -260,7 +260,4 @@
     </div>
 </div>
 
-@scripts
-<script src="{{ asset('js/customers/create.js') }}"></script>
-@endscripts
 @endsection

@@ -8,9 +8,9 @@ import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 
-// Import customer data and components (these will register Alpine data)
-import './customers/data.js';
+// Import customer components (these will register Alpine data)
 import './customers/index.js';
+import './customers/create.js';
 import './customers/show.js';
 
 Alpine.start();
