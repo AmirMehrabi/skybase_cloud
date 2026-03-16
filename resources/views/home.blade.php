@@ -37,7 +37,7 @@
 <body class="bg-white">
     <!-- Navbar -->
     <nav class="border-b border-gray-200 bg-white sticky top-0 z-50">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div class="flex items-center justify-between h-20">
                 <!-- Logo -->
                 <div class="flex items-center">
@@ -62,8 +62,8 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="bg-gray-50 border-b border-gray-200 py-20 sm:py-24">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+    <section class=" bg-gray-50 border-b border-gray-200 py-20 sm:py-24">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="max-w-4xl mx-auto text-center">
                 <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight mb-6">
                     Cloud Control Plane for MikroTik ISPs
@@ -96,8 +96,8 @@
     </section>
 
     <!-- Problem Section -->
-    <section class="py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+    <section class=" py-20">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="max-w-3xl mx-auto">
                 <h2 class="text-3xl font-bold text-gray-900 text-center mb-4">
                     Running an ISP Should Not Be This Hard
@@ -168,7 +168,7 @@
 
     <!-- Features Section -->
     <section id="features" class="bg-gray-50 py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-bold text-gray-900 mb-4">
                     Everything You Need to Operate Your ISP
@@ -232,7 +232,7 @@
 
                 <!-- Feature 4 -->
                 <div class="bg-white border border-gray-200 rounded-2xl p-6">
-                    <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
+                    <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center mb-4 ">
                         <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
@@ -285,8 +285,8 @@
     </section>
 
     <!-- Benefits Section -->
-    <section class="py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+    <section class=" py-20">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-bold text-gray-900 mb-4">Built for Reliability and Scale</h2>
                 <p class="text-lg text-gray-600">Why ISPs choose SkyBase Cloud</p>
@@ -327,14 +327,14 @@
     </section>
 
     <!-- How It Works Section -->
-    <section class="bg-gray-50 py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+    <section class=" bg-gray-50 py-20">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-bold text-gray-900 mb-4">Get Started in Minutes</h2>
                 <p class="text-lg text-gray-600">Three simple steps to transform your ISP operations</p>
             </div>
 
-            <div class="max-w-4xl mx-auto">
+            <div class=" mx-auto">
                 <div class="flex flex-col md:flex-row gap-8">
                     <!-- Step 1 -->
                     <div class="flex-1">
@@ -368,9 +368,9 @@
     </section>
 
     <!-- Target Audience Section -->
-    <section class="py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl mx-auto text-center">
+    <section class=" py-20">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
+            <div class="mx-auto text-center">
                 <h2 class="text-3xl font-bold text-gray-900 mb-4">Designed for WISPs, ISPs, and Network Operators</h2>
                 <p class="text-lg text-gray-600 mb-8">SkyBase Cloud is ideal for:</p>
 
@@ -399,14 +399,14 @@
     </section>
 
     <!-- Comparison Section -->
-    <section class="bg-gray-50 py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+    <section class=" bg-gray-50 py-20">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="text-center mb-12">
                 <h2 class="text-3xl font-bold text-gray-900 mb-4">Why Choose SkyBase Cloud</h2>
                 <p class="text-lg text-gray-600">Unlike traditional ISP management software</p>
             </div>
 
-            <div class="max-w-4xl mx-auto">
+            <div class="mx-auto">
                 <div class="grid md:grid-cols-5 gap-4 items-center mb-8">
                     <div class="md:col-span-1"></div>
                     <div class="md:col-span-2 bg-blue-600 text-white rounded-2xl p-4 text-center font-semibold">
@@ -458,7 +458,7 @@
 
     <!-- Pricing Preview Section -->
     <section id="pricing" class="py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="text-center mb-12">
                 <h2 class="text-3xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
                 <p class="text-lg text-gray-600">Flexible pricing based on the size of your network</p>
@@ -466,16 +466,16 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors">View Pricing</a>
+                <a href="{{ route('pricing') }}" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors">View Pricing</a>
                 <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors">Start Free Trial</a>
             </div>
         </div>
     </section>
 
     <!-- Trust Section -->
-    <section class="bg-gray-50 py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl mx-auto text-center">
+    <section class=" bg-gray-50 py-20">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
+            <div class="mx-auto text-center">
                 <h2 class="text-3xl font-bold text-gray-900 mb-6">Built for Real-World ISP Operations</h2>
                 <p class="text-lg text-gray-600 leading-relaxed">
                     SkyBase Cloud is built by network engineers with real experience running ISP infrastructure. The platform is designed for reliability, security, and scalability.
@@ -485,9 +485,9 @@
     </section>
 
     <!-- Final CTA Section -->
-    <section class="bg-blue-600 py-20">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl mx-auto text-center">
+    <section class=" bg-blue-600 py-20">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
+            <div class="mx-auto text-center">
                 <h2 class="text-3xl font-bold text-white mb-4">Start Managing Your ISP the Modern Way</h2>
                 <p class="text-xl text-blue-100 mb-8">Join ISPs using SkyBase Cloud to simplify operations and improve reliability.</p>
 
@@ -501,7 +501,7 @@
 
     <!-- Footer -->
     <footer class="bg-gray-900 text-gray-400 py-12">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
             <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
                 <!-- Brand -->
                 <div class="col-span-2">
