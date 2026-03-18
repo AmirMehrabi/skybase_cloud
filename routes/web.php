@@ -86,8 +86,11 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     Route::prefix('plans')->name('plans.')->group(function () {
         Route::get('/', [PlanController::class, 'index'])->name('index');
         Route::get('/create', [PlanController::class, 'create'])->name('create');
-        Route::get('/{id}', [PlanController::class, 'show'])->name('show');
-        Route::get('/{id}/edit', [PlanController::class, 'edit'])->name('edit');
+        Route::post('/', [PlanController::class, 'store'])->name('store');
+        Route::get('/{plan}', [PlanController::class, 'show'])->name('show');
+        Route::get('/{plan}/edit', [PlanController::class, 'edit'])->name('edit');
+        Route::put('/{plan}', [PlanController::class, 'update'])->name('update');
+        Route::delete('/{plan}', [PlanController::class, 'destroy'])->name('destroy');
     });
 
     // Router Management Routes

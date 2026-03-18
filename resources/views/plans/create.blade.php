@@ -2,10 +2,6 @@
 
 @section('title', 'Create Plan')
 
-@php
-$plan = [];
-@endphp
-
 @section('content')
 <div class="space-y-6">
     <!-- Header -->
@@ -24,7 +20,7 @@ $plan = [];
     </nav>
 
     <!-- Form -->
-    <form action="{{ route('plans.index') }}" method="POST">
+    <form action="{{ route('plans.store') }}" method="POST">
         @csrf
         @include('plans.partials.form')
     </form>

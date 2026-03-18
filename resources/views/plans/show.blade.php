@@ -2,42 +2,6 @@
 
 @section('title', 'Plan Details')
 
-@php
-$plan = [
-    'id' => 1,
-    'name' => 'Home 50 Mbps',
-    'internal_name' => 'home_50',
-    'description' => 'Standard residential internet plan',
-    'status' => 'active',
-    'visibility' => 'public',
-    'type' => 'pppoe',
-    'category' => 'Residential',
-    'download_speed' => 50,
-    'upload_speed' => 10,
-    'burst_download' => 80,
-    'burst_upload' => 20,
-    'bandwidth_unit' => 'Mbps',
-    'data_limit' => 500,
-    'data_unit' => 'GB',
-    'unlimited' => false,
-    'price' => 25.00,
-    'currency' => 'USD',
-    'billing_cycle' => 'monthly',
-    'setup_fee' => 10.00,
-    'tax_profile' => 'Standard VAT',
-    'router_profile' => 'Mikrotik PPPoE Basic',
-    'ip_pool' => 'Dynamic Pool',
-    'priority' => 5,
-    'contract_required' => false,
-    'contract_duration' => 0,
-    'available_from' => '2025-01-01',
-    'available_to' => null,
-    'notes' => 'Best for normal home usage',
-    'subscribers' => 124,
-    'created_at' => '2025-01-01',
-    'updated_at' => '2025-02-01',
-];
-
 function getStatusBadgeClass($status)
 {
     $classes = [
@@ -95,7 +59,7 @@ function getVisibilityBadgeClass($visibility)
 
             <!-- Quick Actions -->
             <div class="flex items-center gap-3">
-                <a href="{{ route('plans.edit', $id) }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <a href="{{ route('plans.edit', $plan['id']) }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
@@ -198,7 +162,7 @@ function getVisibilityBadgeClass($visibility)
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Description</dt>
-                    <dd class="text-sm text-gray-900 max-w-xs text-right">{{ $plan['description'] }}</dd>
+                    <dd class="text-sm text-gray-900 max-w-xs text-right">{{ $plan['description'] ?? '-' }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Status</dt>
@@ -228,15 +192,15 @@ function getVisibilityBadgeClass($visibility)
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Router Profile</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $plan['router_profile'] }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ $plan['router_profile'] ?? '-' }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">IP Pool</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $plan['ip_pool'] }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ $plan['ip_pool'] ?? '-' }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Priority</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $plan['priority'] }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ $plan['priority'] ?? '-' }}</dd>
                 </div>
             </dl>
         </div>
@@ -258,11 +222,11 @@ function getVisibilityBadgeClass($visibility)
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Burst Download</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $plan['burst_download'] }} {{ $plan['bandwidth_unit'] }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ $plan['burst_download'] ?? '-' }} {{ $plan['burst_download'] ? $plan['bandwidth_unit'] : '' }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Burst Upload</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $plan['burst_upload'] }} {{ $plan['bandwidth_unit'] }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ $plan['burst_upload'] ?? '-' }} {{ $plan['burst_upload'] ? $plan['bandwidth_unit'] : '' }}</dd>
                 </div>
             </dl>
         </div>
@@ -318,7 +282,7 @@ function getVisibilityBadgeClass($visibility)
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Tax Profile</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ $plan['tax_profile'] }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ $plan['tax_profile'] ?? '-' }}</dd>
                 </div>
             </dl>
         </div>
@@ -358,7 +322,13 @@ function getVisibilityBadgeClass($visibility)
             <dl class="space-y-4">
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Available From</dt>
-                    <dd class="text-sm font-medium text-gray-900">{{ \Carbon\Carbon::parse($plan['available_from'])->format('M d, Y') }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">
+                        @if($plan['available_from'])
+                            {{ \Carbon\Carbon::parse($plan['available_from'])->format('M d, Y') }}
+                        @else
+                            <span class="text-gray-400">No start date</span>
+                        @endif
+                    </dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Available To</dt>
@@ -379,7 +349,7 @@ function getVisibilityBadgeClass($visibility)
                 <h3 class="text-lg font-semibold text-gray-900">Notes</h3>
                 <p class="text-sm text-gray-500 mt-1">Additional information</p>
             </div>
-            <p class="text-sm text-gray-900">{{ $plan['notes'] }}</p>
+            <p class="text-sm text-gray-900">{{ $plan['notes'] ?? '-' }}</p>
         </div>
 
         <!-- Metadata -->
