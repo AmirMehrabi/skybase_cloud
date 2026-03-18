@@ -28,13 +28,14 @@ class StoreRouterRequest extends FormRequest
             'ip_address' => ['required', 'ip', 'unique:routers,ip_address'],
             'api_port' => ['required', 'integer', 'min:1', 'max:65535'],
             'api_username' => ['nullable', 'string', 'max:255'],
-            'api_password' => ['nullable', 'string', 'max:255'],
+            'api_password' => ['nullable', 'string', 'max:255', 'sometimes'],
             'ssh_port' => ['required', 'integer', 'min:1', 'max:65535'],
             'location' => ['nullable', 'string', 'max:255'],
             'site' => ['nullable', 'string', 'max:255'],
             'timeout' => ['nullable', 'integer', 'min:1', 'max:300'],
             'enable_monitoring' => ['nullable', 'boolean'],
             'enable_provisioning' => ['nullable', 'boolean'],
+            'tenant_id' => ['nullable', 'exists:tenants,id'],
         ];
     }
 

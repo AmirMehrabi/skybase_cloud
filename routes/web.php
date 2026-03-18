@@ -97,6 +97,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     // Router Management Routes
     Route::prefix('routers')->name('routers.')->group(function () {
         Route::get('/', [RouterController::class, 'index'])->name('index');
+        Route::get('/data', [RouterController::class, 'data'])->name('data');
+        Route::get('/filter-options', [RouterController::class, 'filterOptions'])->name('filter-options');
+        Route::get('/stats', [RouterController::class, 'stats'])->name('stats');
         Route::get('/create', [RouterController::class, 'create'])->name('create');
         Route::post('/', [RouterController::class, 'store'])->name('store');
         Route::get('/{router}', [RouterController::class, 'show'])->name('show');

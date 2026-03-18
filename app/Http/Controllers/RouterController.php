@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Router\StoreRouterRequest;
 use App\Http\Requests\Router\UpdateRouterRequest;
 use App\Models\Router;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class RouterController extends Controller
@@ -15,9 +16,68 @@ class RouterController extends Controller
      */
     public function index(): View
     {
-        $routers = Router::latest()->get();
+        return view('routers.index');
+    }
 
-        return view('routers.index', compact('routers'));
+    /**
+     * Get paginated routers data for AJAX requests.
+     */
+    public function data(Request $request): JsonResponse
+    {
+        $filters = $request->only(['search', 'status', 'vendor', 'site']);
+
+        $routers = Router::filter($filters)
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->input('per_page', 15))
+            ->through(fn ($router) => [
+                'id' => $router->id,
+                'name' => $router->name,
+                'model' => $router->model,
+                'vendor' => $router->vendor,
+                'ip_address' => $router->ip_address,
+                'api_port' => $router->api_port,
+                'ssh_port' => $router->ssh_port,
+                'location' => $router->location,
+                'site' => $router->site,
+                'status' => $router->status ?? 'offline',
+                'version' => $router->version,
+                'uptime' => $router->uptime,
+                'cpu_usage' => $router->cpu_usage ?? 0,
+                'memory_usage' => $router->memory_usage ?? 0,
+                'active_sessions_count' => $router->active_sessions_count ?? 0,
+                'total_customers' => $router->total_customers ?? 0,
+                'enable_monitoring' => $router->enable_monitoring,
+                'enable_provisioning' => $router->enable_provisioning,
+                'created_at' => $router->created_at?->format('M d, Y'),
+            ]);
+
+        return response()->json([
+            'routers' => $routers->items(),
+            'pagination' => [
+                'current_page' => $routers->currentPage(),
+                'last_page' => $routers->lastPage(),
+                'per_page' => $routers->perPage(),
+                'total' => $routers->total(),
+                'from' => $routers->firstItem(),
+                'to' => $routers->lastItem(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get filter options for the routers index page.
+     */
+    public function filterOptions(): JsonResponse
+    {
+        return response()->json(Router::getFilterOptions());
+    }
+
+    /**
+     * Get router statistics.
+     */
+    public function stats(): JsonResponse
+    {
+        return response()->json(Router::getStats());
     }
 
     /**
@@ -31,12 +91,28 @@ class RouterController extends Controller
     /**
      * Store a newly created router in storage.
      */
-    public function store(StoreRouterRequest $request): RedirectResponse
+    public function store(StoreRouterRequest $request): JsonResponse
     {
-        Router::create($request->validated());
+        $validated = $request->validated();
 
-        return redirect()->route('routers.index')
-            ->with('success', 'Router created successfully.');
+        // Set tenant if not provided
+        if (auth()->check() && empty($validated['tenant_id'])) {
+            $validated['tenant_id'] = auth()->user()->tenant_id;
+        }
+
+        // Set default values
+        $validated['status'] = $validated['status'] ?? 'offline';
+        $validated['cpu_usage'] = 0;
+        $validated['memory_usage'] = 0;
+        $validated['active_sessions_count'] = 0;
+        $validated['total_customers'] = 0;
+
+        $router = Router::create($validated);
+
+        return response()->json([
+            'message' => 'Router created successfully.',
+            'router' => $router,
+        ], 201);
     }
 
     /**
@@ -44,7 +120,9 @@ class RouterController extends Controller
      */
     public function show(Router $router): View
     {
-        return view('routers.show', compact('router'));
+        $this->authorizeTenantAccess($router);
+
+        return view('routers.show', ['router' => $router]);
     }
 
     /**
@@ -52,29 +130,55 @@ class RouterController extends Controller
      */
     public function edit(Router $router): View
     {
-        return view('routers.edit', compact('router'));
+        $this->authorizeTenantAccess($router);
+
+        return view('routers.edit', ['router' => $router]);
     }
 
     /**
      * Update the specified router in storage.
      */
-    public function update(UpdateRouterRequest $request, Router $router): RedirectResponse
+    public function update(UpdateRouterRequest $request, Router $router): JsonResponse
     {
-        $router->update($request->validated());
+        $this->authorizeTenantAccess($router);
 
-        return redirect()->route('routers.show', $router)
-            ->with('success', 'Router updated successfully.');
+        $validated = $request->validated();
+
+        // Only update password if provided
+        if (empty($validated['api_password'])) {
+            unset($validated['api_password']);
+        }
+
+        $router->update($validated);
+
+        return response()->json([
+            'message' => 'Router updated successfully.',
+            'router' => $router->fresh(),
+        ]);
     }
 
     /**
      * Remove the specified router from storage.
      */
-    public function destroy(Router $router): RedirectResponse
+    public function destroy(Router $router): JsonResponse
     {
+        $this->authorizeTenantAccess($router);
+
         $router->delete();
 
-        return redirect()->route('routers.index')
-            ->with('success', 'Router deleted successfully.');
+        return response()->json([
+            'message' => 'Router deleted successfully.',
+        ]);
+    }
+
+    /**
+     * Ensure the user has access to the router's tenant.
+     */
+    protected function authorizeTenantAccess(Router $router): void
+    {
+        if (auth()->check() && auth()->user()->tenant_id && $router->tenant_id !== auth()->user()->tenant_id) {
+            abort(403, 'You do not have access to this router.');
+        }
     }
 
     /**
