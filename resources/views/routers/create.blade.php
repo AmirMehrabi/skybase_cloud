@@ -37,18 +37,14 @@
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
-                    Router Name <span class="text-red-500">*</span>
-                </label>
-                <input
-                    type="text"
+                <x-input.text
                     id="name"
                     name="name"
-                    x-model="form.name"
-                    :class="{'input-error': errors.name}"
+                    label="Router Name"
                     placeholder="e.g., Core-Router-1"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    :required="true"
+                    xModel="form.name"
+                />
                 <p x-show="errors.name" x-text="errors.name" class="error-message"></p>
             </div>
 
@@ -61,7 +57,7 @@
                     name="vendor"
                     x-model="form.vendor"
                     :class="{'input-error': errors.vendor}"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
+                    class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
                 >
                     <option value="">Select vendor</option>
                     <option value="Mikrotik">Mikrotik</option>
@@ -73,44 +69,35 @@
             </div>
 
             <div>
-                <label for="model" class="block text-sm font-medium text-gray-700 mb-2">Model</label>
-                <input
-                    type="text"
+                <x-input.text
                     id="model"
                     name="model"
-                    x-model="form.model"
-                    :class="{'input-error': errors.model}"
+                    label="Model"
                     placeholder="e.g., CCR1036-12G-4S"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    xModel="form.model"
+                />
                 <p x-show="errors.model" x-text="errors.model" class="error-message"></p>
             </div>
 
             <div>
-                <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <input
-                    type="text"
+                <x-input.text
                     id="location"
                     name="location"
-                    x-model="form.location"
-                    :class="{'input-error': errors.location}"
+                    label="Location"
                     placeholder="e.g., Data Center"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    xModel="form.location"
+                />
                 <p x-show="errors.location" x-text="errors.location" class="error-message"></p>
             </div>
 
             <div>
-                <label for="site" class="block text-sm font-medium text-gray-700 mb-2">Site</label>
-                <input
-                    type="text"
+                <x-input.text
                     id="site"
                     name="site"
-                    x-model="form.site"
-                    :class="{'input-error': errors.site}"
+                    label="Site"
                     placeholder="e.g., Main Site"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    xModel="form.site"
+                />
                 <p x-show="errors.site" x-text="errors.site" class="error-message"></p>
             </div>
         </div>
@@ -121,76 +108,64 @@
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Connection Settings</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-                <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-2">
-                    IP Address <span class="text-red-500">*</span>
-                </label>
-                <input
-                    type="text"
+                <x-input.text
                     id="ip_address"
                     name="ip_address"
-                    x-model="form.ip_address"
-                    :class="{'input-error': errors.ip_address}"
+                    label="IP Address"
                     placeholder="192.168.1.1"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    :required="true"
+                    xModel="form.ip_address"
+                />
                 <p x-show="errors.ip_address" x-text="errors.ip_address" class="error-message"></p>
             </div>
 
             <div>
-                <label for="api_port" class="block text-sm font-medium text-gray-700 mb-2">
-                    API Port <span class="text-red-500">*</span>
-                </label>
-                <input
-                    type="number"
+                <x-input.number
                     id="api_port"
                     name="api_port"
-                    x-model="form.api_port"
-                    :class="{'input-error': errors.api_port}"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    label="API Port"
+                    :required="true"
+                    :value="8728"
+                    :min="1"
+                    :max="65535"
+                    xModel="form.api_port"
+                />
                 <p x-show="errors.api_port" x-text="errors.api_port" class="error-message"></p>
             </div>
 
             <div>
-                <label for="ssh_port" class="block text-sm font-medium text-gray-700 mb-2">
-                    SSH Port <span class="text-red-500">*</span>
-                </label>
-                <input
-                    type="number"
+                <x-input.number
                     id="ssh_port"
                     name="ssh_port"
-                    x-model="form.ssh_port"
-                    :class="{'input-error': errors.ssh_port}"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    label="SSH Port"
+                    :required="true"
+                    :value="22"
+                    :min="1"
+                    :max="65535"
+                    xModel="form.ssh_port"
+                />
                 <p x-show="errors.ssh_port" x-text="errors.ssh_port" class="error-message"></p>
             </div>
 
             <div>
-                <label for="api_username" class="block text-sm font-medium text-gray-700 mb-2">API Username</label>
-                <input
-                    type="text"
+                <x-input.text
                     id="api_username"
                     name="api_username"
-                    x-model="form.api_username"
-                    :class="{'input-error': errors.api_username}"
+                    label="API Username"
                     placeholder="admin"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    xModel="form.api_username"
+                />
                 <p x-show="errors.api_username" x-text="errors.api_username" class="error-message"></p>
             </div>
 
             <div>
-                <label for="api_password" class="block text-sm font-medium text-gray-700 mb-2">API Password</label>
-                <input
-                    type="password"
+                <x-input.password
                     id="api_password"
                     name="api_password"
-                    x-model="form.api_password"
-                    :class="{'input-error': errors.api_password}"
+                    label="API Password"
                     placeholder="Enter API password"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
+                    xModel="form.api_password"
+                />
                 <p x-show="errors.api_password" x-text="errors.api_password" class="error-message"></p>
             </div>
         </div>
@@ -201,43 +176,37 @@
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Advanced Settings</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-                <label for="timeout" class="block text-sm font-medium text-gray-700 mb-2">Timeout (seconds)</label>
-                <input
-                    type="number"
+                <x-input.number
                     id="timeout"
                     name="timeout"
-                    x-model="form.timeout"
-                    :class="{'input-error': errors.timeout}"
-                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                >
-                <p class="text-xs text-gray-500 mt-1">Connection timeout in seconds</p>
+                    label="Timeout (seconds)"
+                    :value="30"
+                    :min="1"
+                    :max="300"
+                    help="Connection timeout in seconds"
+                    xModel="form.timeout"
+                />
                 <p x-show="errors.timeout" x-text="errors.timeout" class="error-message"></p>
             </div>
 
             <div class="flex items-center pt-6">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        name="enable_monitoring"
-                        value="1"
-                        x-model="form.enable_monitoring"
-                        class="h-4 w-4 text-blue-600 rounded border-gray-300"
-                    >
-                    <span class="text-sm text-gray-700">Enable Monitoring</span>
-                </label>
+                <x-input.checkbox
+                    id="enable_monitoring"
+                    name="enable_monitoring"
+                    label="Enable Monitoring"
+                    :checked="true"
+                    xModel="form.enable_monitoring"
+                />
             </div>
 
             <div class="flex items-center pt-6">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        name="enable_provisioning"
-                        value="1"
-                        x-model="form.enable_provisioning"
-                        class="h-4 w-4 text-blue-600 rounded border-gray-300"
-                    >
-                    <span class="text-sm text-gray-700">Enable Provisioning</span>
-                </label>
+                <x-input.checkbox
+                    id="enable_provisioning"
+                    name="enable_provisioning"
+                    label="Enable Provisioning"
+                    :checked="true"
+                    xModel="form.enable_provisioning"
+                />
             </div>
         </div>
     </div>
