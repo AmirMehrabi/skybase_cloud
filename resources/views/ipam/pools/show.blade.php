@@ -3,99 +3,7 @@
 @section('title', 'IP Pool Details')
 
 @php
-// Dummy pool data
-$pool = [
-    'id' => 1,
-    'name' => 'Main Office Network',
-    'router' => 'MikroTik RouterBOARD-3011',
-    'site' => 'Downtown Office',
-    'network_address' => '10.10.0.0',
-    'cidr' => 24,
-    'gateway' => '10.10.0.1',
-    'dns_primary' => '8.8.8.8',
-    'dns_secondary' => '8.8.4.4',
-    'vlan_id' => 100,
-    'type' => 'mixed',
-    'total_ips' => 254,
-    'used_ips' => 198,
-    'reserved_ips' => 12,
-    'available_ips' => 44,
-    'status' => 'active',
-    'created_at' => '2024-01-15',
-];
-
-// Generate dummy IP addresses
-$ipAddresses = [];
-for ($i = 1; $i <= 254; $i++) {
-    $ip = "10.10.0.{$i}";
-
-    // Skip gateway
-    if ($i == 1) {
-        $status = 'reserved';
-        $customer = null;
-        $subscription = null;
-        $mac = null;
-        $assignedAt = null;
-        $notes = 'Gateway';
-    } elseif ($i <= 10) {
-        $status = 'reserved';
-        $customer = null;
-        $subscription = null;
-        $mac = null;
-        $assignedAt = null;
-        $notes = 'Infrastructure';
-    } elseif ($i == 254) {
-        $status = 'reserved';
-        $customer = null;
-        $subscription = null;
-        $mac = null;
-        $assignedAt = null;
-        $notes = 'Broadcast';
-    } elseif (in_array($i, [11, 12, 13])) {
-        $status = 'blocked';
-        $customer = null;
-        $subscription = null;
-        $mac = null;
-        $assignedAt = null;
-        $notes = 'Blocked - Abuse';
-    } elseif (in_array($i, [14, 15, 16, 17, 18, 19, 20])) {
-        $status = 'reserved';
-        $customer = 'Reserved for VIP';
-        $subscription = null;
-        $mac = null;
-        $assignedAt = null;
-        $notes = 'Reserved';
-    } elseif ($i <= 100) {
-        $status = 'assigned';
-        $customer = 'Customer ' . chr(65 + ($i % 26));
-        $subscription = 'SUB-2024-' . str_pad($i, 3, '0', STR_PAD_LEFT);
-        $mac = 'AA:BB:CC:' . str_pad(dechex($i), 2, '0', STR_PAD_LEFT) . ':DD:EE';
-        $assignedAt = '2024-01-' . str_pad(($i % 28) + 1, 2, '0', STR_PAD_LEFT);
-        $notes = '';
-    } else {
-        $status = 'available';
-        $customer = null;
-        $subscription = null;
-        $mac = null;
-        $assignedAt = null;
-        $notes = '';
-    }
-
-    $ipAddresses[] = [
-        'id' => $i,
-        'ip_address' => $ip,
-        'pool_name' => $pool['name'],
-        'router' => $pool['router'],
-        'status' => $status,
-        'customer_name' => $customer,
-        'subscription_code' => $subscription,
-        'mac_address' => $mac,
-        'assigned_at' => $assignedAt,
-        'notes' => $notes,
-    ];
-}
-
-$usagePercent = round(($pool['used_ips'] / $pool['total_ips']) * 100);
+$usagePercent = $pool->usage_percentage;
 $usageColor = $usagePercent >= 90 ? 'red' : ($usagePercent >= 80 ? 'yellow' : 'green');
 
 function getIpStatusBadge($status)
@@ -140,9 +48,9 @@ function getIpRowBg($status)
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
                 <div class="flex items-center gap-3 mb-2">
-                    <h1 class="text-2xl font-bold">{{ $pool['name'] }}</h1>
+                    <h1 class="text-2xl font-bold">{{ $pool->name }}</h1>
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/20 border border-white/30">
-                        {{ ucfirst($pool['type']) }}
+                        {{ ucfirst($pool->type) }}
                     </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-4 text-sm text-blue-100">
@@ -150,32 +58,35 @@ function getIpRowBg($status)
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
                         </svg>
-                        {{ $pool['router'] }}
+                        {{ $pool->router?->name ?? 'No Router' }}
                     </span>
+                    @if($pool->site)
                     <span class="flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
-                        {{ $pool['site'] }}
+                        {{ $pool->site }}
+                    </span>
+                    @endif
                     </span>
                     <span class="flex items-center gap-1 font-mono">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
-                        {{ $pool['network_address'] }}/{{ $pool['cidr'] }}
+                        {{ $pool->cidr_notation }}
                     </span>
                     <span class="flex items-center gap-1 font-mono">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        {{ $pool['gateway'] }}
+                        {{ $pool->gateway }}
                     </span>
                 </div>
             </div>
 
             <div class="flex items-center gap-3">
-                <a href="{{ route('ipam.pools.edit', $pool['id']) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-medium rounded-lg transition-colors">
+                <a href="{{ route('ipam.pools.edit', $pool->id) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-medium rounded-lg transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
@@ -209,7 +120,7 @@ function getIpRowBg($status)
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <p class="text-xs font-medium text-gray-500">Total IPs</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($pool['total_ips']) }}</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($pool->total_ips) }}</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,7 +135,7 @@ function getIpRowBg($status)
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <p class="text-xs font-medium text-gray-500">Used</p>
-                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ number_format($pool['used_ips']) }}</p>
+                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ number_format($pool->used_ips) }}</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,7 +150,7 @@ function getIpRowBg($status)
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <p class="text-xs font-medium text-gray-500">Reserved</p>
-                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ number_format($pool['reserved_ips']) }}</p>
+                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ number_format($pool->reserved_ips) }}</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-yellow-50 text-yellow-600 border border-yellow-100 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +165,7 @@ function getIpRowBg($status)
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <p class="text-xs font-medium text-gray-500">Available</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">{{ number_format($pool['available_ips']) }}</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1">{{ number_format($pool->available_ips) }}</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 border border-green-100 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,51 +207,53 @@ function getIpRowBg($status)
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($ipAddresses as $ip)
-                        <tr class="hover:bg-gray-50 transition-colors duration-150 {{ getIpRowBg($ip['status']) }}">
+                        <tr class="hover:bg-gray-50 transition-colors duration-150 {{ getIpRowBg($ip->status) }}">
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <a href="{{ route('ipam.ips.show', $ip['ip_address']) }}" class="text-sm font-mono font-medium text-blue-600 hover:text-blue-800">
-                                    {{ $ip['ip_address'] }}
-                                </a>
-                                @if($ip['notes'])
-                                    <div class="text-xs text-gray-500 mt-0.5">{{ $ip['notes'] }}</div>
+                                <span class="text-sm font-mono font-medium text-blue-600">
+                                    {{ $ip->ip_address }}
+                                </span>
+                                @if($ip->notes)
+                                    <div class="text-xs text-gray-500 mt-0.5">{{ $ip->notes }}</div>
                                 @endif
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getIpStatusBadge($ip['status']) }}">
-                                    {{ ucfirst($ip['status']) }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getIpStatusBadge($ip->status) }}">
+                                    {{ ucfirst($ip->status) }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $ip['customer_name'] ?? '-' }}</div>
+                                <div class="text-sm text-gray-900">{{ $ip->customer?->name ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <div class="text-sm text-gray-900 font-mono">{{ $ip['subscription_code'] ?? '-' }}</div>
+                                <div class="text-sm text-gray-900 font-mono">{{ $ip->subscription_code ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <div class="text-sm text-gray-900 font-mono">{{ $ip['mac_address'] ?? '-' }}</div>
+                                <div class="text-sm text-gray-900 font-mono">{{ $ip->mac_address ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $ip['assigned_at'] ?? '-' }}</div>
+                                <div class="text-sm text-gray-900">{{ $ip->assigned_at?->format('Y-m-d') ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-right">
-                                @if($ip['status'] === 'available')
+                                @if($ip->status === 'available')
                                     <div class="flex items-center justify-end gap-1">
-                                        <button @click="assignIp('{{ $ip['ip_address'] }}')" class="text-green-600 hover:text-green-800 text-xs font-medium">Assign</button>
-                                        <button @click="reserveIp('{{ $ip['ip_address'] }}')" class="text-yellow-600 hover:text-yellow-800 text-xs font-medium">Reserve</button>
-                                        <button @click="blockIp('{{ $ip['ip_address'] }}')" class="text-red-600 hover:text-red-800 text-xs font-medium">Block</button>
+                                        <button @click="assignIp('{{ $ip->ip_address }}')" class="text-green-600 hover:text-green-800 text-xs font-medium">Assign</button>
+                                        <button @click="reserveIp('{{ $ip->ip_address }}')" class="text-yellow-600 hover:text-yellow-800 text-xs font-medium">Reserve</button>
+                                        <button @click="blockIp('{{ $ip->ip_address }}')" class="text-red-600 hover:text-red-800 text-xs font-medium">Block</button>
                                     </div>
-                                @elseif($ip['status'] === 'assigned')
+                                @elseif($ip->status === 'assigned')
                                     <div class="flex items-center justify-end gap-1">
-                                        <button class="text-blue-600 hover:text-blue-800 text-xs font-medium">View Customer</button>
-                                        <button @click="releaseIp('{{ $ip['ip_address'] }}')" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
+                                        @if($ip->customer)
+                                        <a href="{{ route('customers.show', $ip->customer->id) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">View Customer</a>
+                                        @endif
+                                        <button @click="releaseIp('{{ $ip->ip_address }}')" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
                                     </div>
-                                @elseif($ip['status'] === 'reserved')
+                                @elseif($ip->status === 'reserved')
                                     <div class="flex items-center justify-end gap-1">
-                                        <button @click="assignIp('{{ $ip['ip_address'] }}')" class="text-green-600 hover:text-green-800 text-xs font-medium">Assign</button>
-                                        <button @click="releaseIp('{{ $ip['ip_address'] }}')" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
+                                        <button @click="assignIp('{{ $ip->ip_address }}')" class="text-green-600 hover:text-green-800 text-xs font-medium">Assign</button>
+                                        <button @click="releaseIp('{{ $ip->ip_address }}')" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
                                     </div>
-                                @elseif($ip['status'] === 'blocked')
-                                    <button @click="unblockIp('{{ $ip['ip_address'] }}')" class="text-blue-600 hover:text-blue-800 text-xs font-medium">Unblock</button>
+                                @elseif($ip->status === 'blocked')
+                                    <button @click="unblockIp('{{ $ip->ip_address }}')" class="text-blue-600 hover:text-blue-800 text-xs font-medium">Unblock</button>
                                 @endif
                             </td>
                         </tr>
@@ -348,6 +261,13 @@ function getIpRowBg($status)
                 </tbody>
             </table>
         </div>
+
+        {{-- Pagination --}}
+        @if($ipAddresses->hasPages())
+            <div class="mt-4">
+                {{ $ipAddresses->appends(request()->query())->links() }}
+            </div>
+        @endif
     </div>
 </div>
 

@@ -3,81 +3,6 @@
 @section('title', 'IP Pools')
 
 @php
-// Dummy Data for IP Pools
-$ipPools = [
-    [
-        'id' => 1,
-        'name' => 'Main Office Network',
-        'router' => 'MikroTik RouterBOARD-3011',
-        'site' => 'Downtown Office',
-        'network_address' => '10.10.0.0',
-        'cidr' => 24,
-        'gateway' => '10.10.0.1',
-        'vlan_id' => 100,
-        'type' => 'mixed',
-        'total_ips' => 254,
-        'used_ips' => 198,
-        'reserved_ips' => 12,
-        'available_ips' => 44,
-        'status' => 'active',
-        'created_at' => '2024-01-15',
-    ],
-    [
-        'id' => 2,
-        'name' => 'Guest WiFi Network',
-        'router' => 'Ubiquiti EdgeRouter 12',
-        'site' => 'Main Street Location',
-        'network_address' => '192.168.100.0',
-        'cidr' => 24,
-        'gateway' => '192.168.100.1',
-        'vlan_id' => 200,
-        'type' => 'dynamic',
-        'total_ips' => 254,
-        'used_ips' => 45,
-        'reserved_ips' => 5,
-        'available_ips' => 204,
-        'status' => 'active',
-        'created_at' => '2024-02-01',
-    ],
-    [
-        'id' => 3,
-        'name' => 'Server Farm Network',
-        'router' => 'Cisco ISR 4431',
-        'site' => 'Tech Park Building A',
-        'network_address' => '172.16.0.0',
-        'cidr' => 24,
-        'gateway' => '172.16.0.1',
-        'vlan_id' => 300,
-        'type' => 'static',
-        'total_ips' => 254,
-        'used_ips' => 238,
-        'reserved_ips' => 10,
-        'available_ips' => 6,
-        'status' => 'exhausted',
-        'created_at' => '2024-01-10',
-    ],
-    [
-        'id' => 4,
-        'name' => 'IoT Devices Network',
-        'router' => 'TP-Link ER707-M2',
-        'site' => 'West Street',
-        'network_address' => '10.20.0.0',
-        'cidr' => 24,
-        'gateway' => '10.20.0.1',
-        'vlan_id' => 400,
-        'type' => 'dynamic',
-        'total_ips' => 254,
-        'used_ips' => 87,
-        'reserved_ips' => 8,
-        'available_ips' => 159,
-        'status' => 'active',
-        'created_at' => '2024-03-01',
-    ],
-];
-
-$routers = ['MikroTik RouterBOARD-3011', 'Ubiquiti EdgeRouter 12', 'Cisco ISR 4431', 'TP-Link ER707-M2'];
-$sites = ['Downtown Office', 'Main Street Location', 'Tech Park Building A', 'West Street'];
-
 function getPoolStatusBadge($status)
 {
     $classes = [
@@ -156,8 +81,8 @@ function getUsageColor($percentage)
                     <label class="block text-xs font-medium text-gray-700 mb-1">Router</label>
                     <select class="block w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         <option value="">All Routers</option>
-                        @foreach($routers as $router)
-                            <option value="{{ $router }}">{{ $router }}</option>
+                        @foreach($routers as $id => $name)
+                            <option value="{{ $id }}">{{ $name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -223,6 +148,7 @@ function getUsageColor($percentage)
 
     <!-- Pools Table -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        @if($ipPools->count() > 0)
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50 sticky top-0">
@@ -244,48 +170,48 @@ function getUsageColor($percentage)
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($ipPools as $pool)
                         @php
-                            $usagePercent = round(($pool['used_ips'] / $pool['total_ips']) * 100);
+                            $usagePercent = round($pool->usage_percentage);
                             $usageColor = getUsageColor($usagePercent);
                         @endphp
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="px-4 py-4 whitespace-nowrap">
                                 <div class="flex items-center gap-2">
-                                    <a href="{{ route('ipam.pools.show', $pool['id']) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
-                                        {{ $pool['name'] }}
+                                    <a href="{{ route('ipam.pools.show', $pool) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
+                                        {{ $pool->name }}
                                     </a>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border {{ getPoolTypeBadge($pool['type']) }}">
-                                        {{ ucfirst($pool['type']) }}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border {{ getPoolTypeBadge($pool->type) }}">
+                                        {{ ucfirst($pool->type) }}
                                     </span>
                                 </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $pool['router'] }}</div>
+                                <div class="text-sm text-gray-900">{{ $pool->router?->name ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $pool['site'] }}</div>
+                                <div class="text-sm text-gray-900">{{ $pool->site ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                                    {{ $pool['network_address'] }}/{{ $pool['cidr'] }}
+                                    {{ $pool->cidr_notation }}
                                 </span>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900 font-mono">{{ $pool['gateway'] }}</div>
+                                <div class="text-sm text-gray-900 font-mono">{{ $pool->gateway ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">VLAN {{ $pool['vlan_id'] }}</div>
+                                <div class="text-sm text-gray-900">{{ $pool->vlan_id ? 'VLAN ' . $pool->vlan_id : '-' }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ number_format($pool['total_ips']) }}</div>
+                                <div class="text-sm text-gray-900">{{ number_format($pool->total_ips) }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ number_format($pool['used_ips']) }}</div>
+                                <div class="text-sm text-gray-900">{{ number_format($pool->used_ips) }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ number_format($pool['available_ips']) }}</div>
+                                <div class="text-sm text-gray-900">{{ number_format($pool->available_ips) }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="w-full max-w-[120px]">
+                                <div class="w-full max-w-30">
                                     <div class="flex items-center justify-between text-xs mb-1">
                                         <span class="text-gray-600">{{ $usagePercent }}%</span>
                                     </div>
@@ -295,8 +221,8 @@ function getUsageColor($percentage)
                                 </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getPoolStatusBadge($pool['status']) }}">
-                                    {{ ucfirst($pool['status']) }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getPoolStatusBadge($pool->status) }}">
+                                    {{ ucfirst($pool->status) }}
                                 </span>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
@@ -316,15 +242,19 @@ function getUsageColor($percentage)
                                          x-transition:leave-end="transform opacity-0 scale-95"
                                          class="absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white border border-gray-200 py-1 z-50"
                                          style="display: none;">
-                                        <a href="{{ route('ipam.pools.show', $pool['id']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">View Pool</a>
-                                        <a href="{{ route('ipam.pools.edit', $pool['id']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Edit Pool</a>
-                                        @if($pool['status'] === 'active')
+                                        <a href="{{ route('ipam.pools.show', $pool) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">View Pool</a>
+                                        <a href="{{ route('ipam.pools.edit', $pool) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Edit Pool</a>
+                                        @if($pool->status === 'active')
                                             <a href="#" class="block px-4 py-2 text-sm text-yellow-600 hover:bg-gray-50">Disable</a>
                                         @else
                                             <a href="#" class="block px-4 py-2 text-sm text-green-600 hover:bg-gray-50">Enable</a>
                                         @endif
                                         <div class="border-t border-gray-200 my-1"></div>
-                                        <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Delete Pool</a>
+                                        <form action="{{ route('ipam.pools.destroy', $pool) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this IP pool?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Delete Pool</button>
+                                        </form>
                                     </div>
                                 </div>
                             </td>
@@ -333,6 +263,20 @@ function getUsageColor($percentage)
                 </tbody>
             </table>
         </div>
+        @else
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No IP pools found</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by creating a new IP pool.</p>
+            <div class="mt-6">
+                <a href="{{ route('ipam.pools.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Create IP Pool
+                </a>
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 

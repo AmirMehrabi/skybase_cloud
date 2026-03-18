@@ -2,53 +2,11 @@
 
 @section('title', 'Edit IP Pool')
 
-@php
-// Dummy pool data
-$pool = [
-    'id' => 1,
-    'name' => 'Main Office Network',
-    'router' => 'MikroTik RouterBOARD-3011',
-    'site' => 'Downtown Office',
-    'network_address' => '10.10.0.0',
-    'cidr' => 24,
-    'gateway' => '10.10.0.1',
-    'dns_primary' => '8.8.8.8',
-    'dns_secondary' => '8.8.4.4',
-    'vlan_id' => 100,
-    'type' => 'mixed',
-    'status' => 'active',
-];
-
-$routers = [
-    'MikroTik RouterBOARD-3011',
-    'Ubiquiti EdgeRouter 12',
-    'Cisco ISR 4431',
-    'TP-Link ER707-M2',
-    'Juniper MX204',
-];
-
-$cidrOptions = [
-    8 => '8 (16,777,214 IPs)',
-    16 => '16 (65,534 IPs)',
-    20 => '20 (4,094 IPs)',
-    21 => '21 (2,046 IPs)',
-    22 => '22 (1,022 IPs)',
-    23 => '23 (510 IPs)',
-    24 => '24 (254 IPs)',
-    25 => '25 (126 IPs)',
-    26 => '26 (62 IPs)',
-    27 => '27 (30 IPs)',
-    28 => '28 (14 IPs)',
-    29 => '29 (6 IPs)',
-    30 => '30 (2 IPs)',
-];
-@endphp
-
 @section('content')
 <div class="space-y-6" x-data="editPoolForm()">
     <!-- Header -->
     <div class="flex items-center gap-4">
-        <a href="{{ route('ipam.pools.show', $pool['id']) }}" class="inline-flex items-center text-gray-500 hover:text-gray-700">
+        <a href="{{ route('ipam.pools.show', $pool->id) }}" class="inline-flex items-center text-gray-500 hover:text-gray-700">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
@@ -63,7 +21,28 @@ $cidrOptions = [
         </div>
     </div>
 
-    <form @submit.prevent="submitForm" class="space-y-6">
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div class="flex">
+            <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
+                <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <form action="{{ route('ipam.pools.update', $pool->id) }}" method="POST" class="space-y-6">
+        @csrf
+        @method('PUT')
+
         <!-- Section 1: Basic Info -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -75,47 +54,88 @@ $cidrOptions = [
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Pool Name -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Pool Name <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.name" required value="{{ $pool['name'] }}" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
+                <x-input.text
+                    id="name"
+                    name="name"
+                    label="Pool Name"
+                    :value="$pool->name"
+                    required
+                    xModel="form.name"
+                />
 
                 <!-- Router -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Router <span class="text-red-500">*</span></label>
-                    <select x-model="form.router" required class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <label for="router_id" class="block text-sm font-medium text-gray-700">
+                        Router <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        id="router_id"
+                        name="router_id"
+                        x-model="form.routerId"
+                        required
+                        class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
                         <option value="">Select Router</option>
-                        @foreach($routers as $router)
-                            <option value="{{ $router }}" {{ $pool['router'] === $router ? 'selected' : '' }}>{{ $router }}</option>
+                        @foreach($routers as $id => $name)
+                            <option value="{{ $id }}" {{ $pool->router_id == $id ? 'selected' : '' }}>{{ $name }}</option>
                         @endforeach
                     </select>
+                    @error('router_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Site -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Site <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.site" required value="{{ $pool['site'] }}" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
+                <x-input.text
+                    id="site"
+                    name="site"
+                    label="Site"
+                    :value="$pool->site"
+                    :options="collect($sites)->map(fn($s) => ['value' => $s, 'label' => $s])->toArray()"
+                    list="sites"
+                    xModel="form.site"
+                />
 
                 <!-- Pool Type -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Pool Type <span class="text-red-500">*</span></label>
-                    <select x-model="form.type" required class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <label for="type" class="block text-sm font-medium text-gray-700">
+                        Pool Type <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        id="type"
+                        name="type"
+                        x-model="form.type"
+                        required
+                        class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
                         <option value="">Select Type</option>
-                        <option value="dynamic" {{ $pool['type'] === 'dynamic' ? 'selected' : '' }}>Dynamic (DHCP/PPPoE)</option>
-                        <option value="static" {{ $pool['type'] === 'static' ? 'selected' : '' }}>Static (Manual Assignment)</option>
-                        <option value="mixed" {{ $pool['type'] === 'mixed' ? 'selected' : '' }}>Mixed (Both)</option>
+                        <option value="dynamic" {{ $pool->type === 'dynamic' ? 'selected' : '' }}>Dynamic (DHCP/PPPoE)</option>
+                        <option value="static" {{ $pool->type === 'static' ? 'selected' : '' }}>Static (Manual Assignment)</option>
+                        <option value="mixed" {{ $pool->type === 'mixed' ? 'selected' : '' }}>Mixed (Both)</option>
                     </select>
                     <p class="mt-1 text-xs text-gray-500">Dynamic pools are auto-assigned, Static pools require manual assignment</p>
+                    @error('type')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Status -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select x-model="form.status" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="active" {{ $pool['status'] === 'active' ? 'selected' : '' }}>Active</option>
-                        <option value="disabled" {{ $pool['status'] === 'disabled' ? 'selected' : '' }}>Disabled</option>
+                    <label for="status" class="block text-sm font-medium text-gray-700">
+                        Status
+                    </label>
+                    <select
+                        id="status"
+                        name="status"
+                        x-model="form.status"
+                        class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                        <option value="active" {{ $pool->status === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="disabled" {{ $pool->status === 'disabled' ? 'selected' : '' }}>Disabled</option>
                     </select>
+                    @error('status')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -131,45 +151,65 @@ $cidrOptions = [
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Network Address -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Network Address <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.networkAddress" @input="calculatePreview" required value="{{ $pool['network_address'] }}" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-mono">
-                </div>
+                <x-input.ip-address
+                    id="network_address"
+                    name="network_address"
+                    label="Network Address"
+                    :value="$pool->network_address"
+                    required
+                    xModel="form.networkAddress"
+                    xModelDebounce="300"
+                />
 
                 <!-- CIDR -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">CIDR Prefix <span class="text-red-500">*</span></label>
-                    <select x-model="form.cidr" @change="calculatePreview" required class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Select CIDR</option>
-                        @foreach($cidrOptions as $cidr => $label)
-                            <option value="{{ $cidr }}" {{ $pool['cidr'] == $cidr ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                <x-input.cidr
+                    id="cidr"
+                    name="cidr"
+                    label="CIDR Prefix"
+                    :value="$pool->cidr"
+                    required
+                    xModel="form.cidr"
+                    xChange="calculatePreview"
+                />
 
                 <!-- Gateway IP -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Gateway IP <span class="text-red-500">*</span></label>
-                    <input type="text" x-model="form.gateway" required value="{{ $pool['gateway'] }}" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-mono">
-                </div>
+                <x-input.ip-address
+                    id="gateway"
+                    name="gateway"
+                    label="Gateway IP"
+                    :value="$pool->gateway"
+                    required
+                    xModel="form.gateway"
+                />
 
                 <!-- VLAN ID -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">VLAN ID</label>
-                    <input type="number" x-model="form.vlanId" min="1" max="4094" value="{{ $pool['vlan_id'] }}" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                </div>
+                <x-input.number
+                    id="vlan_id"
+                    name="vlan_id"
+                    label="VLAN ID"
+                    :value="$pool->vlan_id"
+                    min="1"
+                    max="4094"
+                    xModel="form.vlanId"
+                />
 
                 <!-- Primary DNS -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Primary DNS</label>
-                    <input type="text" x-model="form.dnsPrimary" value="{{ $pool['dns_primary'] }}" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-mono">
-                </div>
+                <x-input.ip-address
+                    id="dns_primary"
+                    name="dns_primary"
+                    label="Primary DNS"
+                    :value="$pool->dns_primary"
+                    xModel="form.dnsPrimary"
+                />
 
                 <!-- Secondary DNS -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Secondary DNS</label>
-                    <input type="text" x-model="form.dnsSecondary" value="{{ $pool['dns_secondary'] }}" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-mono">
-                </div>
+                <x-input.ip-address
+                    id="dns_secondary"
+                    name="dns_secondary"
+                    label="Secondary DNS"
+                    :value="$pool->dns_secondary"
+                    xModel="form.dnsSecondary"
+                />
             </div>
 
             <!-- Live Preview -->
@@ -210,46 +250,40 @@ $cidrOptions = [
 
             <div class="space-y-4">
                 <!-- Allow Static Assignments -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-900">Allow Static Assignments</h4>
-                        <p class="text-xs text-gray-500 mt-1">Enable manual IP assignment from this pool</p>
-                    </div>
-                    <button type="button" @click="form.allowStatic = !form.allowStatic" :class="form.allowStatic ? 'bg-blue-600' : 'bg-gray-300'" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        <span class="sr-only">Toggle static assignments</span>
-                        <span :class="form.allowStatic ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                    </button>
-                </div>
+                <x-input.switch
+                    id="allow_static"
+                    name="allow_static"
+                    label="Allow Static Assignments"
+                    help="Enable manual IP assignment from this pool"
+                    :checked="$pool->allow_static"
+                    xModel="form.allowStatic"
+                />
 
                 <!-- Auto Assign on Provision -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-900">Auto Assign on Provision</h4>
-                        <p class="text-xs text-gray-500 mt-1">Automatically assign IPs when creating subscriptions</p>
-                    </div>
-                    <button type="button" @click="form.autoAssign = !form.autoAssign" :class="form.autoAssign ? 'bg-blue-600' : 'bg-gray-300'" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        <span class="sr-only">Toggle auto assign</span>
-                        <span :class="form.autoAssign ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                    </button>
-                </div>
+                <x-input.switch
+                    id="auto_assign"
+                    name="auto_assign"
+                    label="Auto Assign on Provision"
+                    help="Automatically assign IPs when creating subscriptions"
+                    :checked="$pool->auto_assign"
+                    xModel="form.autoAssign"
+                />
 
                 <!-- Block Reserved Range -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-900">Block Reserved Range</h4>
-                        <p class="text-xs text-gray-500 mt-1">Reserve first 10 IPs for infrastructure</p>
-                    </div>
-                    <button type="button" @click="form.blockReserved = !form.blockReserved" :class="form.blockReserved ? 'bg-blue-600' : 'bg-gray-300'" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        <span class="sr-only">Toggle block reserved</span>
-                        <span :class="form.blockReserved ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                    </button>
-                </div>
+                <x-input.switch
+                    id="block_reserved"
+                    name="block_reserved"
+                    label="Block Reserved Range"
+                    help="Reserve first 10 IPs for infrastructure"
+                    :checked="$pool->block_reserved"
+                    xModel="form.blockReserved"
+                />
             </div>
         </div>
 
         <!-- Form Actions -->
         <div class="flex items-center justify-end gap-3 bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <a href="{{ route('ipam.pools.show', $pool['id']) }}" class="inline-flex items-center gap-2 px-6 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+            <a href="{{ route('ipam.pools.show', $pool->id) }}" class="inline-flex items-center gap-2 px-6 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
                 Cancel
             </a>
             <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
@@ -267,20 +301,20 @@ $cidrOptions = [
 function editPoolForm() {
     return {
         form: {
-            name: '{{ $pool['name'] }}',
-            router: '{{ $pool['router'] }}',
-            site: '{{ $pool['site'] }}',
-            type: '{{ $pool['type'] }}',
-            status: '{{ $pool['status'] }}',
-            networkAddress: '{{ $pool['network_address'] }}',
-            cidr: {{ $pool['cidr'] }},
-            gateway: '{{ $pool['gateway'] }}',
-            vlanId: {{ $pool['vlan_id'] }},
-            dnsPrimary: '{{ $pool['dns_primary'] }}',
-            dnsSecondary: '{{ $pool['dns_secondary'] }}',
-            allowStatic: true,
-            autoAssign: true,
-            blockReserved: true,
+            name: '{{ $pool->name }}',
+            routerId: '{{ $pool->router_id }}',
+            site: '{{ $pool->site }}',
+            type: '{{ $pool->type }}',
+            status: '{{ $pool->status }}',
+            networkAddress: '{{ $pool->network_address }}',
+            cidr: {{ $pool->cidr }},
+            gateway: '{{ $pool->gateway }}',
+            vlanId: '{{ $pool->vlan_id }}',
+            dnsPrimary: '{{ $pool->dns_primary }}',
+            dnsSecondary: '{{ $pool->dns_secondary }}',
+            allowStatic: {{ $pool->allow_static ? 'true' : 'false' }},
+            autoAssign: {{ $pool->auto_assign ? 'true' : 'false' }},
+            blockReserved: {{ $pool->block_reserved ? 'true' : 'false' }},
         },
         preview: {
             network: '-',
@@ -297,14 +331,15 @@ function editPoolForm() {
                 const usableIps = totalIps <= 2 ? totalIps : totalIps - 2;
 
                 this.preview.network = `${this.form.networkAddress}/${this.form.cidr}`;
-                this.preview.usableIps = usableIps.toLocaleString();
+                this.preview.usableIps = Math.min(usableIps, 254).toLocaleString();
 
                 const parts = this.form.networkAddress.split('.').map(Number);
                 if (usableIps === totalIps) {
                     this.preview.range = `${this.form.networkAddress}`;
                 } else {
                     const lastIp = [...parts];
-                    lastIp[3] = parts[3] + usableIps + 1;
+                    const displayUsableIps = Math.min(usableIps, 254);
+                    lastIp[3] = parts[3] + displayUsableIps;
                     this.preview.range = `${this.form.networkAddress.replace(/\.0$/, '.1')} - ${lastIp.join('.')}`;
                 }
             } else {
@@ -312,10 +347,6 @@ function editPoolForm() {
                 this.preview.usableIps = '-';
                 this.preview.range = '-';
             }
-        },
-        submitForm() {
-            alert('Pool updated successfully!');
-            window.location.href = '{{ route("ipam.pools.show", $pool['id']) }}';
         }
     }
 }

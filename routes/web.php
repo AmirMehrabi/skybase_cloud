@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\IpamController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\RouterController;
@@ -112,13 +113,16 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
 
     // IP Address Management (IPAM) Routes
     Route::prefix('ipam')->name('ipam.')->group(function () {
-        Route::get('/', fn () => view('ipam.dashboard'))->name('dashboard');
+        Route::get('/', [IpamController::class, 'dashboard'])->name('dashboard');
 
         Route::prefix('pools')->name('pools.')->group(function () {
-            Route::get('/', fn () => view('ipam.pools.index'))->name('index');
-            Route::get('/create', fn () => view('ipam.pools.create'))->name('create');
-            Route::get('/{pool}', fn ($pool) => view('ipam.pools.show', compact('pool')))->name('show');
-            Route::get('/{pool}/edit', fn ($pool) => view('ipam.pools.edit', compact('pool')))->name('edit');
+            Route::get('/', [IpamController::class, 'index'])->name('index');
+            Route::get('/create', [IpamController::class, 'create'])->name('create');
+            Route::post('/', [IpamController::class, 'store'])->name('store');
+            Route::get('/{pool}', [IpamController::class, 'show'])->name('show');
+            Route::get('/{pool}/edit', [IpamController::class, 'edit'])->name('edit');
+            Route::put('/{pool}', [IpamController::class, 'update'])->name('update');
+            Route::delete('/{pool}', [IpamController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('ips')->name('ips.')->group(function () {

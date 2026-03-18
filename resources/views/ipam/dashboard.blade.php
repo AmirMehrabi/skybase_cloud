@@ -3,94 +3,6 @@
 @section('title', 'IPAM Dashboard')
 
 @php
-// Dummy Data for IP Pools
-$ipPools = [
-    [
-        'id' => 1,
-        'name' => 'Main Office Network',
-        'router' => 'MikroTik RouterBOARD-3011',
-        'site' => 'Downtown Office',
-        'network_address' => '10.10.0.0',
-        'cidr' => 24,
-        'gateway' => '10.10.0.1',
-        'dns_primary' => '8.8.8.8',
-        'dns_secondary' => '8.8.4.4',
-        'vlan_id' => 100,
-        'type' => 'mixed',
-        'total_ips' => 254,
-        'used_ips' => 198,
-        'reserved_ips' => 12,
-        'available_ips' => 44,
-        'status' => 'active',
-        'created_at' => '2024-01-15',
-    ],
-    [
-        'id' => 2,
-        'name' => 'Guest WiFi Network',
-        'router' => 'Ubiquiti EdgeRouter 12',
-        'site' => 'Main Street Location',
-        'network_address' => '192.168.100.0',
-        'cidr' => 24,
-        'gateway' => '192.168.100.1',
-        'dns_primary' => '1.1.1.1',
-        'dns_secondary' => '1.0.0.1',
-        'vlan_id' => 200,
-        'type' => 'dynamic',
-        'total_ips' => 254,
-        'used_ips' => 45,
-        'reserved_ips' => 5,
-        'available_ips' => 204,
-        'status' => 'active',
-        'created_at' => '2024-02-01',
-    ],
-    [
-        'id' => 3,
-        'name' => 'Server Farm Network',
-        'router' => 'Cisco ISR 4431',
-        'site' => 'Tech Park Building A',
-        'network_address' => '172.16.0.0',
-        'cidr' => 24,
-        'gateway' => '172.16.0.1',
-        'dns_primary' => '8.8.8.8',
-        'dns_secondary' => '8.8.4.4',
-        'vlan_id' => 300,
-        'type' => 'static',
-        'total_ips' => 254,
-        'used_ips' => 238,
-        'reserved_ips' => 10,
-        'available_ips' => 6,
-        'status' => 'exhausted',
-        'created_at' => '2024-01-10',
-    ],
-    [
-        'id' => 4,
-        'name' => 'IoT Devices Network',
-        'router' => 'TP-Link ER707-M2',
-        'site' => 'West Street',
-        'network_address' => '10.20.0.0',
-        'cidr' => 24,
-        'gateway' => '10.20.0.1',
-        'dns_primary' => '8.8.8.8',
-        'dns_secondary' => '8.8.4.4',
-        'vlan_id' => 400,
-        'type' => 'dynamic',
-        'total_ips' => 254,
-        'used_ips' => 87,
-        'reserved_ips' => 8,
-        'available_ips' => 159,
-        'status' => 'active',
-        'created_at' => '2024-03-01',
-    ],
-];
-
-// Calculate totals
-$totalPools = count($ipPools);
-$totalIPs = array_sum(array_column($ipPools, 'total_ips'));
-$usedIPs = array_sum(array_column($ipPools, 'used_ips'));
-$availableIPs = array_sum(array_column($ipPools, 'available_ips'));
-$reservedIPs = array_sum(array_column($ipPools, 'reserved_ips'));
-$exhaustedPools = count(array_filter($ipPools, fn($p) => $p['status'] === 'exhausted'));
-
 function getPoolStatusBadge($status)
 {
     $classes = [
@@ -189,7 +101,7 @@ function getUsageColor($percentage)
                     <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($availableIPs) }}</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 border border-green-100 flex items-center justify-center">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                 </div>
@@ -228,13 +140,10 @@ function getUsageColor($percentage)
     </div>
 
     <!-- Warning Section -->
-    @php
-        $warningPools = array_filter($ipPools, fn($p) => ($p['used_ips'] / $p['total_ips']) * 100 > 80);
-    @endphp
-    @if(count($warningPools) > 0)
+    @if($warningPools->count() > 0)
     <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
         <div class="flex items-start gap-3">
-            <svg class="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
             </svg>
             <div class="flex-1">
@@ -243,10 +152,10 @@ function getUsageColor($percentage)
                 <ul class="mt-2 space-y-1">
                     @foreach($warningPools as $pool)
                         @php
-                            $usagePercent = round(($pool['used_ips'] / $pool['total_ips']) * 100);
+                            $usagePercent = round($pool->usage_percentage);
                         @endphp
                         <li class="text-sm text-yellow-700 flex items-center gap-2">
-                            <span class="font-medium">{{ $pool['name'] }}</span>
+                            <span class="font-medium">{{ $pool->name }}</span>
                             <span class="text-yellow-600">({{ $usagePercent }}% used)</span>
                         </li>
                     @endforeach
@@ -263,6 +172,7 @@ function getUsageColor($percentage)
             <a href="{{ route('ipam.pools.index') }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">View All Pools →</a>
         </div>
 
+        @if($pools->count() > 0)
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50 sticky top-0">
@@ -277,23 +187,23 @@ function getUsageColor($percentage)
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($ipPools as $pool)
+                    @foreach($pools->take(10) as $pool)
                         @php
-                            $usagePercent = round(($pool['used_ips'] / $pool['total_ips']) * 100);
+                            $usagePercent = round($pool->usage_percentage);
                             $usageColor = getUsageColor($usagePercent);
                         @endphp
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <a href="{{ route('ipam.pools.show', $pool['id']) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
-                                    {{ $pool['name'] }}
+                                <a href="{{ route('ipam.pools.show', $pool) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
+                                    {{ $pool->name }}
                                 </a>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $pool['router'] }}</div>
+                                <div class="text-sm text-gray-900">{{ $pool->router?->name ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                                    {{ $pool['network_address'] }}/{{ $pool['cidr'] }}
+                                    {{ $pool->cidr_notation }}
                                 </span>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
@@ -307,21 +217,35 @@ function getUsageColor($percentage)
                                 </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ number_format($pool['used_ips']) }} / {{ number_format($pool['total_ips']) }}</div>
+                                <div class="text-sm text-gray-900">{{ number_format($pool->used_ips) }} / {{ number_format($pool->total_ips) }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getPoolStatusBadge($pool['status']) }}">
-                                    {{ ucfirst($pool['status']) }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getPoolStatusBadge($pool->status) }}">
+                                    {{ ucfirst($pool->status) }}
                                 </span>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
-                                <a href="{{ route('ipam.pools.show', $pool['id']) }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">View</a>
+                                <a href="{{ route('ipam.pools.show', $pool) }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">View</a>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
+        @else
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No IP pools</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by creating a new IP pool.</p>
+            <div class="mt-6">
+                <a href="{{ route('ipam.pools.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Create IP Pool
+                </a>
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
