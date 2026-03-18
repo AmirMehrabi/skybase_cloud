@@ -2,6 +2,7 @@
 
 @section('title', 'Plan Details')
 
+@php
 function getStatusBadgeClass($status)
 {
     $classes = [
