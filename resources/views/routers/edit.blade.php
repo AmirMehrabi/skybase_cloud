@@ -26,57 +26,52 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <x-input.text
-                    id="name"
-                    name="name"
+                <x-ui.input.text
                     label="Router Name"
+                    name="name"
                     placeholder="e.g., Core-Router-1"
                     :required="true"
                     :value="old('name', $router->name)"
+                    :error="$errors->first('name')"
                 />
 
-                <div>
-                    <label for="vendor" class="block text-sm font-medium text-gray-700 mb-2">
-                        Vendor <span class="text-red-500">*</span>
-                    </label>
-                    <select
-                        id="vendor"
-                        name="vendor"
-                        class="mt-1 block w-full rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 bg-white @error('vendor') border-red-500 @enderror @unless($errors->has('vendor')) border-gray-300 @enderror"
-                    >
-                        <option value="">Select vendor</option>
-                        <option value="Mikrotik" {{ old('vendor', $router->vendor) === 'Mikrotik' ? 'selected' : '' }}>Mikrotik</option>
-                        <option value="Cisco" {{ old('vendor', $router->vendor) === 'Cisco' ? 'selected' : '' }}>Cisco</option>
-                        <option value="Juniper" {{ old('vendor', $router->vendor) === 'Juniper' ? 'selected' : '' }}>Juniper</option>
-                        <option value="Huawei" {{ old('vendor', $router->vendor) === 'Huawei' ? 'selected' : '' }}>Huawei</option>
-                    </select>
-                    @error('vendor')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                <x-ui.input.select
+                    label="Vendor"
+                    name="vendor"
+                    :options="[
+                        'Mikrotik' => 'Mikrotik',
+                        'Cisco' => 'Cisco',
+                        'Juniper' => 'Juniper',
+                        'Huawei' => 'Huawei',
+                    ]"
+                    :value="old('vendor', $router->vendor)"
+                    placeholder="Select vendor"
+                    :required="true"
+                    :error="$errors->first('vendor')"
+                />
 
-                <x-input.text
-                    id="model"
-                    name="model"
+                <x-ui.input.text
                     label="Model"
+                    name="model"
                     placeholder="e.g., CCR1036-12G-4S"
                     :value="old('model', $router->model)"
+                    :error="$errors->first('model')"
                 />
 
-                <x-input.text
-                    id="location"
-                    name="location"
+                <x-ui.input.text
                     label="Location"
+                    name="location"
                     placeholder="e.g., Data Center"
                     :value="old('location', $router->location)"
+                    :error="$errors->first('location')"
                 />
 
-                <x-input.text
-                    id="site"
-                    name="site"
+                <x-ui.input.text
                     label="Site"
+                    name="site"
                     placeholder="e.g., Main Site"
                     :value="old('site', $router->site)"
+                    :error="$errors->first('site')"
                 />
             </div>
         </div>
@@ -85,48 +80,48 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Connection Settings</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <x-input.text
-                    id="ip_address"
-                    name="ip_address"
+                <x-ui.input.text
+                    type="text"
                     label="IP Address"
+                    name="ip_address"
                     placeholder="192.168.1.1"
                     :required="true"
                     :value="old('ip_address', $router->ip_address)"
+                    :error="$errors->first('ip_address')"
                 />
 
-                <x-input.number
-                    id="api_port"
-                    name="api_port"
+                <x-ui.input.text
+                    type="number"
                     label="API Port"
-                    :required="true"
+                    name="api_port"
                     :value="old('api_port', $router->api_port)"
-                    :min="1"
-                    :max="65535"
+                    :error="$errors->first('api_port')"
+                    hint="Default: 8728"
                 />
 
-                <x-input.number
-                    id="ssh_port"
-                    name="ssh_port"
+                <x-ui.input.text
+                    type="number"
                     label="SSH Port"
-                    :required="true"
+                    name="ssh_port"
                     :value="old('ssh_port', $router->ssh_port)"
-                    :min="1"
-                    :max="65535"
+                    :error="$errors->first('ssh_port')"
+                    hint="Default: 22"
                 />
 
-                <x-input.text
-                    id="api_username"
-                    name="api_username"
+                <x-ui.input.text
                     label="API Username"
+                    name="api_username"
                     placeholder="admin"
                     :value="old('api_username', $router->api_username)"
+                    :error="$errors->first('api_username')"
                 />
 
-                <x-input.password
-                    id="api_password"
-                    name="api_password"
+                <x-ui.input.text
+                    type="password"
                     label="API Password"
+                    name="api_password"
                     placeholder="Leave blank to keep current"
+                    :error="$errors->first('api_password')"
                 />
             </div>
         </div>
@@ -135,31 +130,30 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Advanced Settings</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <x-input.number
-                    id="timeout"
-                    name="timeout"
+                <x-ui.input.text
+                    type="number"
                     label="Timeout (seconds)"
+                    name="timeout"
                     :value="old('timeout', $router->timeout ?? 30)"
-                    :min="1"
-                    :max="300"
-                    help="Connection timeout in seconds"
+                    :error="$errors->first('timeout')"
+                    hint="Connection timeout in seconds"
                 />
 
                 <div class="flex items-center pt-6">
-                    <x-input.checkbox
-                        id="enable_monitoring"
-                        name="enable_monitoring"
+                    <x-ui.input.checkbox
                         label="Enable Monitoring"
+                        name="enable_monitoring"
                         :checked="old('enable_monitoring', $router->enable_monitoring ?? true)"
+                        :error="$errors->first('enable_monitoring')"
                     />
                 </div>
 
                 <div class="flex items-center pt-6">
-                    <x-input.checkbox
-                        id="enable_provisioning"
-                        name="enable_provisioning"
+                    <x-ui.input.checkbox
                         label="Enable Provisioning"
+                        name="enable_provisioning"
                         :checked="old('enable_provisioning', $router->enable_provisioning ?? true)"
+                        :error="$errors->first('enable_provisioning')"
                     />
                 </div>
             </div>
