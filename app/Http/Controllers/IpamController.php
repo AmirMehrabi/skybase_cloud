@@ -19,7 +19,12 @@ class IpamController extends Controller
      */
     public function dashboard(): View
     {
-        $tenantId = tenant()->id;
+        // Get tenant ID directly from authenticated user instead of helper
+        $tenantId = auth()->user()?->tenant_id;
+
+        if (! $tenantId) {
+            abort(403, 'No tenant context found.');
+        }
 
         // Get statistics
         $totalPools = IpPool::where('tenant_id', $tenantId)->count();
@@ -56,7 +61,7 @@ class IpamController extends Controller
      */
     public function index(): View
     {
-        $tenantId = tenant()->id;
+        $tenantId = auth()->user()->tenant_id;
 
         $ipPools = IpPool::where('tenant_id', $tenantId)
             ->with('router')
@@ -80,7 +85,7 @@ class IpamController extends Controller
      */
     public function create(): View
     {
-        $tenantId = tenant()->id;
+        $tenantId = auth()->user()->tenant_id;
 
         $routers = Router::where('tenant_id', $tenantId)
             ->orderBy('name')
@@ -106,7 +111,7 @@ class IpamController extends Controller
             DB::beginTransaction();
 
             $poolData = $request->validated();
-            $poolData['tenant_id'] = tenant()->id;
+            $poolData['tenant_id'] = auth()->user()->tenant_id;
 
             // Calculate total IPs based on CIDR
             $cidr = $poolData['cidr'];
@@ -161,7 +166,7 @@ class IpamController extends Controller
         // Verify tenant ownership
         $this->authorizeTenantAccess($pool);
 
-        $tenantId = tenant()->id;
+        $tenantId = auth()->user()->tenant_id;
 
         $routers = Router::where('tenant_id', $tenantId)
             ->orderBy('name')

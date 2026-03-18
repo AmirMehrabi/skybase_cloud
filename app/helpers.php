@@ -8,6 +8,10 @@ if (! function_exists('tenant')) {
      */
     function tenant(): ?Tenant
     {
+        if (! app()->bound('current_tenant')) {
+            return null;
+        }
+
         return app('current_tenant');
     }
 }

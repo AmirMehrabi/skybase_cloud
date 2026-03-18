@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('ip_addresses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->nullable()->constrained('tenants')->nullOnDelete();
+            $table->string('tenant_id')->nullable();
             $table->foreignId('ip_pool_id')->constrained('ip_pools')->cascadeOnDelete();
 
             // IP Address
@@ -38,6 +38,7 @@ return new class extends Migration
             $table->softDeletes();
 
             // Indexes
+            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('set null');
             $table->index(['tenant_id', 'status']);
             $table->index(['ip_pool_id', 'status']);
             $table->index(['tenant_id', 'customer_id']);

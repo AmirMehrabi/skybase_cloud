@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('ip_pools', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->foreignId('tenant_id')->nullable()->constrained('tenants')->nullOnDelete();
+            $table->string('tenant_id')->nullable();
             $table->foreignId('router_id')->nullable()->constrained('routers')->nullOnDelete();
 
             // Network Configuration
@@ -47,6 +47,7 @@ return new class extends Migration
             $table->softDeletes();
 
             // Indexes
+            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('set null');
             $table->index(['tenant_id', 'status']);
             $table->index(['tenant_id', 'router_id']);
             $table->unique(['tenant_id', 'network_address', 'cidr'], 'unique_pool_per_tenant');
