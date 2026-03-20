@@ -2,14 +2,8 @@
 
 @section('title', 'Create New Customer')
 
-@push('styles')
-<style>
-    [x-cloak] { display: none !important; }
-</style>
-@endpush
-
 @section('content')
-<div class="space-y-6 pb-24" x-data="customerCreate()" x-cloak>
+<div class="space-y-6 pb-24" x-data="customerCreateForm()">
     <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
@@ -18,75 +12,95 @@
         </div>
     </div>
 
-    <form action="{{ route('customers.store') }}" method="POST" @submit.prevent="submit">
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div class="flex">
+            <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
+                <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <form action="{{ route('customers.store') }}" method="POST" class="space-y-6">
         @csrf
+        <input type="hidden" name="billing_type" value="postpaid">
 
         <!-- Section 1: Basic Information -->
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Customer Type -->
                 <div class="lg:col-span-3">
-                    <x-ui.input.radio
-                        label="Customer Type"
-                        name="customer_type"
-                        :options="{'individual': 'Individual', 'business': 'Business'}"
-                        value="individual"
-                        x-model="form.customer_type"
-                        required
-                    />
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Customer Type <span class="text-red-500">*</span></label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="customer_type" value="individual" x-model="form.customer_type" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" required>
+                            <span class="text-sm text-gray-700">Individual</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="customer_type" value="business" x-model="form.customer_type" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                            <span class="text-sm text-gray-700">Business</span>
+                        </label>
+                    </div>
+                    @error('customer_type')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
+                <!-- Individual Fields -->
                 <template x-if="form.customer_type === 'individual'">
-                    <div class="flex gap-6 w-full">
-                        <div class="flex-1">
-                            <x-ui.input.text
-                                label="First Name"
-                                name="first_name"
-                                x-model="form.first_name"
-                                :error="getError('first_name')"
-                                required
-                            />
+                    <div class="contents">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+                            <input type="text" name="first_name" id="first_name" x-model="form.first_name" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                            @error('first_name')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
-                        <div class="flex-1">
-                            <x-ui.input.text
-                                label="Last Name"
-                                name="last_name"
-                                x-model="form.last_name"
-                                :error="getError('last_name')"
-                                required
-                            />
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name <span class="text-red-500">*</span></label>
+                            <input type="text" name="last_name" id="last_name" x-model="form.last_name" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                            @error('last_name')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
                 </template>
 
+                <!-- Business Fields -->
                 <template x-if="form.customer_type === 'business'">
                     <div class="lg:col-span-2">
-                        <x-ui.input.text
-                            label="Company Name"
-                            name="company_name"
-                            x-model="form.company_name"
-                            :error="getError('company_name')"
-                            required
-                        />
+                        <label for="company_name" class="block text-sm font-medium text-gray-700 mb-1">Company Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="company_name" id="company_name" x-model="form.company_name" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                        @error('company_name')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </template>
 
+                <!-- Customer Code (Auto-generated) -->
                 <div>
-                    <x-ui.input.text
-                        label="Customer Code"
-                        name="customer_code"
-                        :value="generatedCustomerCode"
-                        readonly
-                    />
+                    <label for="customer_code" class="block text-sm font-medium text-gray-700 mb-1">Customer Code</label>
+                    <input type="text" id="customer_code" :value="generatedCustomerCode" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
                 </div>
 
+                <!-- National ID -->
                 <template x-if="form.customer_type === 'individual'">
                     <div>
-                        <x-ui.input.text
-                            label="National ID / SSN"
-                            name="national_id"
-                            x-model="form.national_id"
-                        />
+                        <label for="national_id" class="block text-sm font-medium text-gray-700 mb-1">National ID / SSN</label>
+                        <input type="text" name="national_id" id="national_id" x-model="form.nationalId" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        @error('national_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </template>
             </div>
@@ -97,37 +111,32 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
-                    <x-ui.input.text
-                        label="Email Address"
-                        name="email"
-                        type="email"
-                        x-model="form.email"
-                        :error="getError('email')"
-                        required
-                    />
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address <span class="text-red-500">*</span></label>
+                    <input type="email" name="email" id="email" x-model="form.email" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                    @error('email')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="Phone Number"
-                        name="phone"
-                        x-model="form.phone"
-                    />
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <input type="text" name="phone" id="phone" x-model="form.phone" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('phone')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="Mobile Number"
-                        name="mobile"
-                        x-model="form.mobile"
-                        :error="getError('mobile')"
-                        required
-                    />
+                    <label for="mobile" class="block text-sm font-medium text-gray-700 mb-1">Mobile Number <span class="text-red-500">*</span></label>
+                    <input type="text" name="mobile" id="mobile" x-model="form.mobile" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                    @error('mobile')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="WhatsApp Number"
-                        name="whatsapp"
-                        x-model="form.whatsapp"
-                    />
+                    <label for="whatsapp" class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+                    <input type="text" name="whatsapp" id="whatsapp" x-model="form.whatsapp" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('whatsapp')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -137,59 +146,53 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2">
-                    <x-ui.input.text
-                        label="Address Line 1"
-                        name="address_line1"
-                        x-model="form.address_line1"
-                        :error="getError('address_line1')"
-                        required
-                    />
+                    <label for="address_line1" class="block text-sm font-medium text-gray-700 mb-1">Address Line 1 <span class="text-red-500">*</span></label>
+                    <input type="text" name="address_line1" id="address_line1" x-model="form.addressLine1" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                    @error('address_line1')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="Address Line 2"
-                        name="address_line2"
-                        x-model="form.address_line2"
-                    />
+                    <label for="address_line2" class="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+                    <input type="text" name="address_line2" id="address_line2" x-model="form.addressLine2" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('address_line2')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="City"
-                        name="city"
-                        x-model="form.city"
-                        :error="getError('city')"
-                        required
-                    />
+                    <label for="city" class="block text-sm font-medium text-gray-700 mb-1">City <span class="text-red-500">*</span></label>
+                    <input type="text" name="city" id="city" x-model="form.city" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                    @error('city')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="State / Province"
-                        name="state"
-                        x-model="form.state"
-                    />
+                    <label for="state" class="block text-sm font-medium text-gray-700 mb-1">State / Province</label>
+                    <input type="text" name="state" id="state" x-model="form.state" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('state')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="Postal Code"
-                        name="postal_code"
-                        x-model="form.postal_code"
-                    />
+                    <label for="postal_code" class="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                    <input type="text" name="postal_code" id="postal_code" x-model="form.postalCode" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('postal_code')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.select
-                        label="Country"
-                        name="country"
-                        :options="{
-                            'United States': 'United States',
-                            'Canada': 'Canada',
-                            'United Kingdom': 'United Kingdom',
-                            'Germany': 'Germany',
-                            'France': 'France',
-                            'Australia': 'Australia'
-                        }"
-                        x-model="form.country"
-                        required
-                    />
+                    <label for="country" class="block text-sm font-medium text-gray-700 mb-1">Country <span class="text-red-500">*</span></label>
+                    <select name="country" id="country" x-model="form.country" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="United States">United States</option>
+                        <option value="Canada">Canada</option>
+                        <option value="United Kingdom">United Kingdom</option>
+                        <option value="Germany">Germany</option>
+                        <option value="France">France</option>
+                        <option value="Australia">Australia</option>
+                    </select>
+                    @error('country')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -199,51 +202,53 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Service Assignment</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
-                    <x-ui.input.select
-                        label="Service Plan"
-                        name="plan_id"
-                        :options="@json($plans->pluck('name', 'id')->map(fn($name, $id) => $name . ' - $' . $plans->find($id)->price . '/' . $plans->find($id)->billing_cycle))"
-                        x-model="form.plan_id"
-                        :error="getError('plan_id')"
-                        required
-                    />
+                    <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-1">Service Plan <span class="text-red-500">*</span></label>
+                    <select name="plan_id" id="plan_id" x-model="form.planId" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="">Select a plan</option>
+                        @foreach($plans as $plan)
+                            <option value="{{ $plan->id }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
+                        @endforeach
+                    </select>
+                    @error('plan_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.select
-                        label="Router / NAS"
-                        name="router_id"
-                        :options="@json($routers->pluck('name', 'id')->map(fn($name, $id) => $name . ' (' . $routers->find($id)->vendor . ' ' . $routers->find($id)->model . ')'))"
-                        x-model="form.router_id"
-                        :error="getError('router_id')"
-                        required
-                    />
+                    <label for="router_id" class="block text-sm font-medium text-gray-700 mb-1">Router / NAS <span class="text-red-500">*</span></label>
+                    <select name="router_id" id="router_id" x-model="form.routerId" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="">Select a router</option>
+                        @foreach($routers as $router)
+                            <option value="{{ $router->id }}">{{ $router->name }} ({{ $router->vendor }} {{ $router->model }})</option>
+                        @endforeach
+                    </select>
+                    @error('router_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="PPPoE Username"
-                        name="pppoe_username"
-                        x-model="form.pppoe_username"
-                    />
+                    <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username</label>
+                    <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoeUsername" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('pppoe_username')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.password
-                        label="PPPoE Password"
-                        name="pppoe_password"
-                        x-model="form.pppoe_password"
-                    />
+                    <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Password</label>
+                    <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoePassword" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('pppoe_password')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.select
-                        label="Billing Cycle"
-                        name="billing_cycle"
-                        :options="{
-                            'monthly': 'Monthly',
-                            'quarterly': 'Quarterly (3 months)',
-                            'yearly': 'Yearly (12 months)'
-                        }"
-                        x-model="form.billing_cycle"
-                        required
-                    />
+                    <label for="billing_cycle" class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle <span class="text-red-500">*</span></label>
+                    <select name="billing_cycle" id="billing_cycle" x-model="form.billingCycle" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly (3 months)</option>
+                        <option value="yearly">Yearly (12 months)</option>
+                    </select>
+                    @error('billing_cycle')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -253,31 +258,29 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Financial Settings</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
-                    <x-ui.input.text
-                        label="Initial Balance"
-                        name="balance"
-                        type="number"
-                        step="0.01"
-                        x-model="form.balance"
-                        hint="Positive = debit owed, Negative = credit balance"
-                    />
+                    <label for="balance" class="block text-sm font-medium text-gray-700 mb-1">Initial Balance</label>
+                    <input type="number" step="0.01" name="balance" id="balance" x-model="form.balance" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <p class="text-xs text-gray-500 mt-1">Positive = debit owed, Negative = credit balance</p>
+                    @error('balance')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
-                    <x-ui.input.text
-                        label="Credit Limit"
-                        name="credit_limit"
-                        type="number"
-                        step="0.01"
-                        x-model="form.credit_limit"
-                        hint="Maximum allowed debt amount"
-                    />
+                    <label for="credit_limit" class="block text-sm font-medium text-gray-700 mb-1">Credit Limit</label>
+                    <input type="number" step="0.01" name="credit_limit" id="credit_limit" x-model="form.creditLimit" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <p class="text-xs text-gray-500 mt-1">Maximum allowed debt amount</p>
+                    @error('credit_limit')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div class="flex items-center pt-6">
-                    <x-ui.input.checkbox
-                        label="Tax Exempt"
-                        name="tax_exempt"
-                        x-model="form.tax_exempt"
-                    />
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="tax_exempt" value="1" x-model="form.taxExempt" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700">Tax Exempt</span>
+                    </label>
+                    @error('tax_exempt')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -287,43 +290,39 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Status & Activation</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <x-ui.input.select
-                        label="Initial Status"
-                        name="status"
-                        :options="{
-                            'pending': 'Pending Activation',
-                            'active': 'Active',
-                            'suspended': 'Suspended'
-                        }"
-                        x-model="form.status"
-                        required
-                    />
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Initial Status <span class="text-red-500">*</span></label>
+                    <select name="status" id="status" x-model="form.status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="pending">Pending Activation</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                    @error('status')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div class="flex items-center pt-6">
-                    <x-ui.input.checkbox
-                        label="Auto-activate service on save"
-                        name="auto_activate"
-                        x-model="form.auto_activate"
-                    />
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="auto_activate" value="1" x-model="form.autoActivate" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700">Auto-activate service on save</span>
+                    </label>
+                    @error('auto_activate')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
         </div>
 
-        <!-- Sticky Bottom Action Bar -->
+        <!-- Form Actions -->
         <div class="fixed bottom-0 right-0 left-0 lg:left-64 bg-white border-t border-gray-200 shadow-lg p-4 z-40">
             <div class="flex items-center justify-end gap-3">
-                <a href="/customers" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">
+                <a href="{{ route('customers.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">
                     Cancel
                 </a>
-                <button type="submit" :disabled="submitting" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg x-show="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    <svg x-show="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span x-text="submitting ? 'Creating...' : 'Create Customer'"></span>
+                    Create Customer
                 </button>
             </div>
         </div>
@@ -332,87 +331,41 @@
 
 @push('scripts')
 <script>
-function customerCreate() {
+function customerCreateForm() {
     return {
         form: {
-            customer_type: 'individual',
-            first_name: '',
-            last_name: '',
-            company_name: '',
-            national_id: '',
-            email: '',
-            phone: '',
-            mobile: '',
-            whatsapp: '',
-            address_line1: '',
-            address_line2: '',
-            city: '',
-            state: '',
-            postal_code: '',
-            country: 'United States',
-            plan_id: '',
-            router_id: '',
-            pppoe_username: '',
-            pppoe_password: '',
-            billing_type: 'postpaid',
-            billing_cycle: 'monthly',
-            balance: '0',
-            credit_limit: '0',
-            tax_exempt: false,
-            status: 'pending',
-            auto_activate: false
+            customer_type: '{{ old('customer_type', 'individual') }}',
+            first_name: '{{ old('first_name') }}',
+            last_name: '{{ old('last_name') }}',
+            company_name: '{{ old('company_name') }}',
+            nationalId: '{{ old('national_id') }}',
+            email: '{{ old('email') }}',
+            phone: '{{ old('phone') }}',
+            mobile: '{{ old('mobile') }}',
+            whatsapp: '{{ old('whatsapp') }}',
+            addressLine1: '{{ old('address_line1') }}',
+            addressLine2: '{{ old('address_line2') }}',
+            city: '{{ old('city') }}',
+            state: '{{ old('state') }}',
+            postalCode: '{{ old('postal_code') }}',
+            country: '{{ old('country', 'United States') }}',
+            planId: '{{ old('plan_id') }}',
+            routerId: '{{ old('router_id') }}',
+            pppoeUsername: '{{ old('pppoe_username') }}',
+            pppoePassword: '{{ old('pppoe_password') }}',
+            billingType: '{{ old('billing_type', 'postpaid') }}',
+            billingCycle: '{{ old('billing_cycle', 'monthly') }}',
+            balance: '{{ old('balance', '0') }}',
+            creditLimit: '{{ old('credit_limit', '0') }}',
+            taxExempt: {{ old('tax_exempt', 'false') }},
+            status: '{{ old('status', 'pending') }}',
+            autoActivate: {{ old('auto_activate', 'false') }}
         },
-        errors: {},
-        submitting: false,
-
         get generatedCustomerCode() {
             const prefix = 'CUS';
             const timestamp = new Date().toISOString().slice(2, 10).replace(/-/g, '');
             const random = Math.random().toString(36).substring(2, 6).toUpperCase();
             return `${prefix}-${timestamp}-${random}`;
-        },
-
-        getError(field) {
-            return this.errors[field] || null;
-        },
-
-        clearError(field) {
-            delete this.errors[field];
-        },
-
-        async submit() {
-            this.submitting = true;
-            this.errors = {};
-
-            const formData = new FormData(document.querySelector('form'));
-            formData.append('auto_activate', this.form.auto_activate ? '1' : '0');
-            formData.append('tax_exempt', this.form.tax_exempt ? '1' : '0');
-
-            try {
-                const response = await fetch('{{ route('customers.store') }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    window.location.href = '/customers';
-                } else if (response.status === 422 && data.errors) {
-                    this.errors = data.errors;
-                } else {
-                    alert(data.message || 'An error occurred while creating the customer.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred while creating the customer.');
-            } finally {
-                this.submitting = false;
-            }
         }
     };
 }
