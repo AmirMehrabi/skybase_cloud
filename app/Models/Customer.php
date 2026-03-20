@@ -31,8 +31,10 @@ class Customer extends Model
         'postal_code',
         'country',
         'plan',
+        'plan_id',
         'site',
         'router',
+        'router_id',
         'ip_address',
         'pppoe_username',
         'pppoe_password',
@@ -58,6 +60,16 @@ class Customer extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
+    public function router(): BelongsTo
+    {
+        return $this->belongsTo(Router::class);
     }
 
     public function scopeFilter($query, array $filters)

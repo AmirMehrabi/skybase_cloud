@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Customer;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCustomerRequest extends FormRequest
@@ -17,7 +18,7 @@ class StoreCustomerRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -37,9 +38,11 @@ class StoreCustomerRequest extends FormRequest
             'state' => 'nullable|string|max:255',
             'postal_code' => 'nullable|string|max:255',
             'country' => 'required|string|max:255',
-            'plan' => 'required|string|max:255',
-            'site' => 'required|string|max:255',
-            'router' => 'required|string|max:255',
+            'plan' => 'nullable|string|max:255',
+            'plan_id' => 'required|exists:plans,id',
+            'site' => 'nullable|string|max:255',
+            'router' => 'nullable|string|max:255',
+            'router_id' => 'required|exists:routers,id',
             'ip_address' => 'nullable|ip|max:255',
             'pppoe_username' => 'nullable|string|max:255',
             'pppoe_password' => 'nullable|string|max:255',
@@ -67,9 +70,10 @@ class StoreCustomerRequest extends FormRequest
             'mobile.required' => 'The mobile number field is required.',
             'address_line1.required' => 'The address field is required.',
             'city.required' => 'The city field is required.',
-            'plan.required' => 'Please select a service plan.',
-            'site.required' => 'Please select a site/location.',
-            'router.required' => 'Please select a router/NAS.',
+            'plan_id.required' => 'Please select a service plan.',
+            'plan_id.exists' => 'The selected service plan is invalid.',
+            'router_id.required' => 'Please select a router/NAS.',
+            'router_id.exists' => 'The selected router/NAS is invalid.',
         ];
     }
 

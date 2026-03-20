@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Models\Customer;
+use App\Models\Plan;
+use App\Models\Router;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -77,7 +79,10 @@ class CustomerController extends Controller
      */
     public function create(): View
     {
-        return view('customers.create');
+        $plans = Plan::active()->ordered()->get(['id', 'name', 'price', 'billing_cycle']);
+        $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
+
+        return view('customers.create', compact('plans', 'routers'));
     }
 
     /**
@@ -92,6 +97,18 @@ class CustomerController extends Controller
             $validated['name'] = trim($validated['first_name'].' '.$validated['last_name']);
         } else {
             $validated['name'] = $validated['company_name'];
+        }
+
+        // Store plan and router names for backwards compatibility
+        if (! empty($validated['plan_id'])) {
+            $plan = Plan::find($validated['plan_id']);
+            $validated['plan'] = $plan?->name;
+        }
+
+        if (! empty($validated['router_id'])) {
+            $router = Router::find($validated['router_id']);
+            $validated['router'] = $router?->name;
+            $validated['site'] = $router?->site ?? $validated['site'] ?? null;
         }
 
         // Handle auto-activation
