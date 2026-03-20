@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSubscriptionRequest;
 use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\Router;
@@ -74,43 +75,19 @@ class SubscriptionController extends Controller
     {
         $customerId = $request->query('customer_id');
         $customer = $customerId ? Customer::findOrFail($customerId) : null;
-
+        $customers = Customer::get();
         $plans = Plan::active()->ordered()->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
 
-        return view('subscriptions.create', compact('customer', 'plans', 'routers'));
+        return view('subscriptions.create', compact('customer', 'customers', 'plans', 'routers'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreSubscriptionRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'plan_id' => 'required|exists:plans,id',
-            'router_id' => 'required|exists:routers,id',
-            'site' => 'nullable|string|max:255',
-            'ip_address' => 'nullable|ip|max:255',
-            'pppoe_username' => 'nullable|string|max:255',
-            'pppoe_password' => 'nullable|string|max:255',
-            'billing_cycle' => 'required|in:monthly,quarterly,yearly',
-            'status' => 'required|in:pending,active,suspended,cancelled',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after:start_date',
-            'notes' => 'nullable|string',
-            // Line items
-            'items' => 'required|array|min:1',
-            'items.*.item_type' => 'required|string|in:plan,additional_service,setup_fee',
-            'items.*.description' => 'required|string|max:255',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.discount_amount' => 'nullable|numeric|min:0',
-            'items.*.discount_type' => 'nullable|in:fixed,percentage',
-            'items.*.tax_percentage' => 'nullable|numeric|min:0|max:100',
-            'items.*.recurring' => 'required|boolean',
-            'items.*.billing_cycle' => 'nullable|in:monthly,quarterly,yearly,onetime',
-        ]);
+        $validated = $request->validated();
 
         $validated['tenant_id'] = auth()->user()->tenant_id ?? null;
         $validated['subscription_code'] = Subscription::generateSubscriptionCode();

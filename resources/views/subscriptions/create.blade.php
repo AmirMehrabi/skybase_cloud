@@ -36,7 +36,7 @@
     </div>
     @endif
 
-    <form action="{{ route('subscriptions.store') }}" method="POST" class="space-y-6">
+    <form action="{{ route('subscriptions.store') }}" method="POST" class="space-y-6" @submit.prevent="submit">
         @csrf
 
         <!-- Section 1: Customer & Service Assignment -->
@@ -188,10 +188,6 @@
                         Total: <span class="text-blue-600" x-text="'$' + formatCurrency(items[0].total)"></span>
                     </div>
                 </div>
-                <input type="hidden" name="items[0][item_type]" value="plan">
-                <input type="hidden" name="items[0][quantity]" value="1">
-                <input type="hidden" name="items[0][recurring]" value="1">
-                <input type="hidden" name="items[0][billing_cycle]" x-model="items[0].billing_cycle">
             </div>
 
             <!-- Additional Service Items -->
@@ -543,6 +539,99 @@ function subscriptionCreateForm() {
 
         formatCurrency(value) {
             return parseFloat(value || 0).toFixed(2);
+        },
+
+        async submit() {
+            this.submitting = true;
+
+            const form = document.querySelector('form');
+
+            // Build form data from Alpine.js state
+            const formData = new FormData();
+
+            // Add basic fields
+            if (this.form.customer_id) formData.append('customer_id', this.form.customer_id);
+            if (this.form.plan_id) formData.append('plan_id', this.form.plan_id);
+            if (this.form.router_id) formData.append('router_id', this.form.router_id);
+            if (this.form.site) formData.append('site', this.form.site);
+            if (this.form.ip_address) formData.append('ip_address', this.form.ip_address);
+            if (this.form.pppoe_username) formData.append('pppoe_username', this.form.pppoe_username);
+            if (this.form.pppoe_password) formData.append('pppoe_password', this.form.pppoe_password);
+            if (this.form.billing_cycle) formData.append('billing_cycle', this.form.billing_cycle);
+            if (this.form.status) formData.append('status', this.form.status);
+            if (this.form.start_date) formData.append('start_date', this.form.start_date);
+            if (this.form.end_date) formData.append('end_date', this.form.end_date);
+            if (this.form.notes) formData.append('notes', this.form.notes);
+
+            // Add plan line item
+            formData.append('items[0][item_type]', 'plan');
+            formData.append('items[0][description]', this.items[0].description || '');
+            formData.append('items[0][quantity]', '1');
+            formData.append('items[0][unit_price]', this.items[0].unit_price || '0');
+            formData.append('items[0][discount_amount]', this.items[0].discount_amount || '0');
+            formData.append('items[0][discount_type]', this.items[0].discount_type || 'none');
+            formData.append('items[0][tax_percentage]', this.items[0].tax_percentage || '0');
+            formData.append('items[0][tax_amount]', this.items[0].tax_amount || '0');
+            formData.append('items[0][subtotal]', this.items[0].subtotal || '0');
+            formData.append('items[0][total]', this.items[0].total || '0');
+            formData.append('items[0][recurring]', '1');
+            formData.append('items[0][billing_cycle]', this.items[0].billing_cycle || 'monthly');
+
+            // Add additional items
+            this.additionalItems.forEach((item, index) => {
+                const itemIndex = index + 1;
+                formData.append(`items[${itemIndex}][item_type]`, 'additional_service');
+                formData.append(`items[${itemIndex}][description]`, item.description || '');
+                formData.append(`items[${itemIndex}][quantity]`, '1');
+                formData.append(`items[${itemIndex}][unit_price]`, item.unit_price || '0');
+                formData.append(`items[${itemIndex}][discount_amount]`, item.discount_amount || '0');
+                formData.append(`items[${itemIndex}][discount_type]`, item.discount_type || 'none');
+                formData.append(`items[${itemIndex}][tax_percentage]`, item.tax_percentage || '0');
+                formData.append(`items[${itemIndex}][tax_amount]`, item.tax_amount || '0');
+                formData.append(`items[${itemIndex}][subtotal]`, item.subtotal || '0');
+                formData.append(`items[${itemIndex}][total]`, item.total || '0');
+                formData.append(`items[${itemIndex}][recurring]`, item.recurring ? '1' : '0');
+                formData.append(`items[${itemIndex}][billing_cycle]`, item.billing_cycle || 'monthly');
+            });
+
+            // Debug: log formData
+            console.log('Submitting data:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+
+            try {
+                const response = await fetch('{{ route('subscriptions.store') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Redirect to subscriptions index on success
+                    window.location.href = '{{ route('subscriptions.index') }}';
+                } else if (response.status === 422 && data.errors) {
+                    // Display validation errors
+                    const errorContainer = document.querySelector('.bg-red-50');
+                    if (errorContainer) {
+                        errorContainer.classList.remove('hidden');
+                        const errorList = errorContainer.querySelector('ul');
+                        errorList.innerHTML = Object.values(data.errors).flat().map(error => `<li>${error}</li>`).join('');
+                    }
+                } else {
+                    alert(data.message || 'An error occurred while creating the subscription.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while creating the subscription.');
+            } finally {
+                this.submitting = false;
+            }
         }
     };
 }

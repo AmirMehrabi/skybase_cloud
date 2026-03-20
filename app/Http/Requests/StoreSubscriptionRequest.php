@@ -42,7 +42,7 @@ class StoreSubscriptionRequest extends FormRequest
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.discount_amount' => 'nullable|numeric|min:0',
-            'items.*.discount_type' => 'nullable|in:fixed,percentage',
+            'items.*.discount_type' => 'nullable|in:none,fixed,percentage',
             'items.*.tax_percentage' => 'nullable|numeric|min:0|max:100',
             'items.*.recurring' => 'required|boolean',
             'items.*.billing_cycle' => 'nullable|in:monthly,quarterly,yearly,onetime',
