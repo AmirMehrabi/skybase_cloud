@@ -99,24 +99,6 @@ class CustomerController extends Controller
             $validated['name'] = $validated['company_name'];
         }
 
-        // Store plan and router names for backwards compatibility
-        if (! empty($validated['plan_id'])) {
-            $plan = Plan::find($validated['plan_id']);
-            $validated['plan'] = $plan?->name;
-        }
-
-        if (! empty($validated['router_id'])) {
-            $router = Router::find($validated['router_id']);
-            $validated['router'] = $router?->name;
-            $validated['site'] = $router?->site ?? $validated['site'] ?? null;
-        }
-
-        // Handle auto-activation
-        if ($request->boolean('auto_activate') || $validated['status'] === 'active') {
-            $validated['activation_date'] = now();
-            $validated['status'] = 'active';
-        }
-
         // Set tenant if not provided
         if (auth()->check() && empty($validated['tenant_id'])) {
             $validated['tenant_id'] = auth()->user()->tenant_id;
@@ -126,6 +108,7 @@ class CustomerController extends Controller
 
         return response()->json([
             'message' => 'Customer created successfully.',
+            'redirect_to' => route('subscriptions.create', ['customer_id' => $customer->id]),
             'customer' => $customer,
         ], 201);
     }

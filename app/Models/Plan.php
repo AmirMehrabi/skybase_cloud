@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Customer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -59,6 +58,11 @@ class Plan extends Model
         return $this->hasMany(Tenant::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
@@ -90,9 +94,10 @@ class Plan extends Model
 
     public function getSubscribersCountAttribute(): int
     {
-        return Customer::query()
+        return Subscription::query()
             ->withoutGlobalScopes()
-            ->where('plan', $this->name)
+            ->where('plan_id', $this->id)
+            ->where('status', 'active')
             ->count();
     }
 }

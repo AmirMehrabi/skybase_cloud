@@ -10,6 +10,7 @@ use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 // Landing page - redirect authenticated users to dashboard
@@ -77,10 +78,18 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
 
     // Subscription Management Routes
     Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
-        Route::get('/', fn () => view('subscriptions.index'))->name('index');
-        Route::get('/create', fn () => view('subscriptions.create'))->name('create');
-        Route::get('/{id}', fn ($id) => view('subscriptions.show', compact('id')))->name('show');
-        Route::get('/{id}/edit', fn ($id) => view('subscriptions.edit', compact('id')))->name('edit');
+        Route::get('/', [SubscriptionController::class, 'index'])->name('index');
+        Route::get('/data', [SubscriptionController::class, 'data'])->name('data');
+        Route::get('/stats', [SubscriptionController::class, 'stats'])->name('stats');
+        Route::get('/create', [SubscriptionController::class, 'create'])->name('create');
+        Route::post('/', [SubscriptionController::class, 'store'])->name('store');
+        Route::get('/{subscription}', [SubscriptionController::class, 'show'])->name('show');
+        Route::get('/{subscription}/edit', [SubscriptionController::class, 'edit'])->name('edit');
+        Route::put('/{subscription}', [SubscriptionController::class, 'update'])->name('update');
+        Route::delete('/{subscription}', [SubscriptionController::class, 'destroy'])->name('destroy');
+        Route::post('/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->name('suspend');
+        Route::post('/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('activate');
+        Route::post('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
     });
 
     // Plan Management Routes

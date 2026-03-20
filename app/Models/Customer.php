@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
@@ -30,21 +31,11 @@ class Customer extends Model
         'state',
         'postal_code',
         'country',
-        'plan',
-        'plan_id',
-        'site',
-        'router',
-        'router_id',
-        'ip_address',
-        'pppoe_username',
-        'pppoe_password',
         'status',
         'billing_type',
-        'billing_cycle',
         'balance',
         'credit_limit',
         'tax_exempt',
-        'activation_date',
     ];
 
     protected function casts(): array
@@ -53,7 +44,6 @@ class Customer extends Model
             'balance' => 'decimal:2',
             'credit_limit' => 'decimal:2',
             'tax_exempt' => 'boolean',
-            'activation_date' => 'datetime',
         ];
     }
 
@@ -62,14 +52,14 @@ class Customer extends Model
         return $this->belongsTo(Tenant::class);
     }
 
-    public function plan(): BelongsTo
+    public function subscriptions(): HasMany
     {
-        return $this->belongsTo(Plan::class);
+        return $this->hasMany(Subscription::class);
     }
 
-    public function router(): BelongsTo
+    public function activeSubscription(): ?Subscription
     {
-        return $this->belongsTo(Router::class);
+        return $this->subscriptions()->active()->latest()->first();
     }
 
     public function scopeFilter($query, array $filters)
@@ -84,12 +74,6 @@ class Customer extends Model
             });
         })->when($filters['status'] ?? null, function ($query, $status) {
             $query->where('status', $status);
-        })->when($filters['plan'] ?? null, function ($query, $plan) {
-            $query->where('plan', $plan);
-        })->when($filters['site'] ?? null, function ($query, $site) {
-            $query->where('site', $site);
-        })->when($filters['router'] ?? null, function ($query, $router) {
-            $query->where('router', $router);
         });
     }
 
@@ -103,9 +87,9 @@ class Customer extends Model
         $query->where('status', 'suspended');
     }
 
-    public function scopePending($query)
+    public function scopeInactive($query)
     {
-        $query->where('status', 'pending');
+        $query->where('status', 'inactive');
     }
 
     public function getFullNameAttribute(): string
@@ -144,12 +128,6 @@ class Customer extends Model
                 $customer->tenant_id = auth()->user()->tenant_id;
             }
         });
-
-        static::updating(function ($customer) {
-            if ($customer->isDirty('status') && $customer->status === 'active' && ! $customer->activation_date) {
-                $customer->activation_date = now();
-            }
-        });
     }
 
     public static function generateCustomerCode(): string
@@ -165,33 +143,9 @@ class Customer extends Model
     {
         return [
             'statuses' => [
-                ['value' => 'pending', 'label' => 'Pending'],
                 ['value' => 'active', 'label' => 'Active'],
-                ['value' => 'suspended', 'label' => 'Suspended'],
                 ['value' => 'inactive', 'label' => 'Inactive'],
-            ],
-            'plans' => [
-                ['value' => 'Fiber 50 Mbps', 'label' => 'Fiber 50 Mbps'],
-                ['value' => 'Fiber 100 Mbps', 'label' => 'Fiber 100 Mbps'],
-                ['value' => 'Fiber 200 Mbps', 'label' => 'Fiber 200 Mbps'],
-                ['value' => 'Fiber 500 Mbps', 'label' => 'Fiber 500 Mbps'],
-                ['value' => 'Fiber 1 Gbps', 'label' => 'Fiber 1 Gbps'],
-            ],
-            'sites' => [
-                ['value' => 'Downtown Hub', 'label' => 'Downtown Hub'],
-                ['value' => 'Business Park', 'label' => 'Business Park'],
-                ['value' => 'North Tower', 'label' => 'North Tower'],
-                ['value' => 'South Station', 'label' => 'South Station'],
-                ['value' => 'West Station', 'label' => 'West Station'],
-                ['value' => 'East Center', 'label' => 'East Center'],
-            ],
-            'routers' => [
-                ['value' => 'Mikrotik-01', 'label' => 'Mikrotik-01'],
-                ['value' => 'Mikrotik-02', 'label' => 'Mikrotik-02'],
-                ['value' => 'Mikrotik-03', 'label' => 'Mikrotik-03'],
-                ['value' => 'Cisco-01', 'label' => 'Cisco-01'],
-                ['value' => 'Cisco-02', 'label' => 'Cisco-02'],
-                ['value' => 'Cisco-03', 'label' => 'Cisco-03'],
+                ['value' => 'suspended', 'label' => 'Suspended'],
             ],
         ];
     }
@@ -203,6 +157,7 @@ class Customer extends Model
         return [
             'total' => (clone $query)->count(),
             'active' => (clone $query)->active()->count(),
+            'inactive' => (clone $query)->inactive()->count(),
             'suspended' => (clone $query)->suspended()->count(),
             'overdue' => (clone $query)->whereColumn('balance', '>', 'credit_limit')->count(),
         ];
