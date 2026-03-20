@@ -238,4 +238,46 @@ class SubscriptionController extends Controller
             'message' => 'Subscription cancelled successfully.',
         ]);
     }
+
+    /**
+     * Check if a PPPoE username is already taken.
+     */
+    public function checkPppoeUsername(Request $request): JsonResponse
+    {
+        $request->validate([
+            'username' => 'required|string|max:255',
+        ]);
+
+        $username = $request->query('username');
+        $tenantId = auth()->user()?->tenant_id;
+        $subscriptionId = $request->query('exclude_subscription_id');
+
+        // Check if username exists in current tenant's subscriptions
+        $query = Subscription::where('pppoe_username', $username)
+            ->where('status', '!=', 'cancelled')
+            ->when($tenantId, function ($query) use ($tenantId) {
+                return $query->where('tenant_id', $tenantId);
+            })
+            ->when($subscriptionId, function ($query) use ($subscriptionId) {
+                return $query->where('id', '!=', $subscriptionId);
+            });
+
+        $existingSubscription = $query->first();
+
+        if (! $existingSubscription) {
+            return response()->json([
+                'available' => true,
+                'username' => $username,
+                'message' => 'Username is available',
+            ]);
+        }
+
+        return response()->json([
+            'available' => false,
+            'username' => $username,
+            'subscription_code' => $existingSubscription->subscription_code,
+            'customer' => $existingSubscription->customer->full_name ?? null,
+            'message' => 'Username is already taken by '.($existingSubscription->customer->full_name ?? 'another customer'),
+        ]);
+    }
 }

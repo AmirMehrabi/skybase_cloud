@@ -7,7 +7,9 @@ use App\Http\Requests\UpdateIpPoolRequest;
 use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Router;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -302,6 +304,56 @@ class IpamController extends Controller
                 'notes' => $notes,
             ]);
         }
+    }
+
+    /**
+     * Check if an IP address is available for assignment.
+     */
+    public function checkIp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ip' => 'required|ip',
+        ]);
+
+        $ip = $request->query('ip');
+        $tenantId = auth()->user()?->tenant_id;
+
+        // Check if IP exists in any pool
+        $ipAddress = IpAddress::where('ip_address', $ip)
+            ->when($tenantId, function ($query) use ($tenantId) {
+                return $query->where('tenant_id', $tenantId);
+            })
+            ->first();
+
+        if (! $ipAddress) {
+            return response()->json([
+                'available' => true,
+                'ip' => $ip,
+                'message' => 'IP is available',
+            ]);
+        }
+
+        // IP exists, check its status
+        if ($ipAddress->status === 'assigned') {
+            $customer = $ipAddress->customer;
+
+            return response()->json([
+                'available' => false,
+                'ip' => $ip,
+                'status' => $ipAddress->status,
+                'customer' => $customer ? $customer->full_name : null,
+                'subscription_code' => $ipAddress->subscription_code,
+                'message' => 'IP is currently assigned',
+            ]);
+        }
+
+        // IP is available (available, reserved, or blocked)
+        return response()->json([
+            'available' => \in_array($ipAddress->status, ['available', 'reserved', 'blocked']),
+            'ip' => $ip,
+            'status' => $ipAddress->status,
+            'message' => "IP is {$ipAddress->status}",
+        ]);
     }
 
     /**

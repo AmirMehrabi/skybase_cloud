@@ -183,7 +183,31 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username <span class="text-red-500">*</span></label>
-                        <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" placeholder="e.g., customer001" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        <div class="relative">
+                            <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" @input="validatePppoeUsername" placeholder="e.g., customer001" :class="'block w-full rounded-lg sm:text-sm py-2 px-3 pr-10 border ' + (pppoeValidation.isValid ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-500' : pppoeValidation.isError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500')">
+                            <!-- Validation status indicator -->
+                            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <template x-if="form.pppoe_username && pppoeValidation.isChecking">
+                                    <svg class="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </template>
+                                <template x-if="form.pppoe_username && !pppoeValidation.isChecking && pppoeValidation.isValid">
+                                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </template>
+                                <template x-if="form.pppoe_username && !pppoeValidation.isChecking && pppoeValidation.isError">
+                                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="mt-1 space-y-1">
+                            <p x-show="pppoeValidation.message" :class="'text-sm ' + (pppoeValidation.isError ? 'text-red-600' : 'text-gray-500')" x-text="pppoeValidation.message"></p>
+                        </div>
                         @error('pppoe_username')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -295,14 +319,58 @@
                     </div>
                 </div>
 
-                <!-- Optional IP Address field (for reference) -->
+                <!-- IP Address field with validation -->
                 <div class="mt-4">
-                    <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">IP Address (Optional)</label>
-                    <input type="text" name="ip_address" id="ip_address" x-model="form.ip_address" placeholder="192.168.1.100" class="block w-full max-w-md rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <div class="flex items-center justify-between mb-1">
+                        <label for="ip_address" class="block text-sm font-medium text-gray-700">IP Address</label>
+                        <!-- Next available IP suggestion -->
+                        <template x-if="form.ip_pool_id && nextAvailableIp && !form.ip_address">
+                            <button type="button" @click="form.ip_address = nextAvailableIp" class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200 hover:bg-green-100 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Suggest: <span x-text="nextAvailableIp" class="font-mono"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div class="relative">
+                        <input type="text" name="ip_address" id="ip_address" x-model="form.ip_address" @input="validateIpAddress" placeholder="192.168.1.100" :class="'block w-full max-w-md rounded-lg sm:text-sm py-2 px-3 pr-24 border ' + (ipValidation.isValid ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-500' : ipValidation.isError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500')">
+                        <!-- Validation status indicator -->
+                        <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <template x-if="form.ip_address && ipValidation.isChecking">
+                                <svg class="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </template>
+                            <template x-if="form.ip_address && !ipValidation.isChecking && ipValidation.isValid">
+                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </template>
+                            <template x-if="form.ip_address && !ipValidation.isChecking && ipValidation.isError">
+                                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </template>
+                        </div>
+                    </div>
+                    <!-- Validation messages -->
+                    <div class="mt-1 space-y-1">
+                        <p x-show="ipValidation.message" :class="'text-sm ' + (ipValidation.isError ? 'text-red-600' : 'text-gray-500')" x-text="ipValidation.message"></p>
+                        <p x-show="!form.ip_address" class="text-xs text-gray-500">Leave blank to auto-assign from pool, or specify a particular IP</p>
+                        <template x-if="form.ip_address && ipValidation.isError && ipValidation.errorType === 'in_use'">
+                            <p class="text-xs text-orange-600">
+                                <svg class="w-3 h-3 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                                This IP is currently assigned. You can still use it, but it may cause conflicts.
+                            </p>
+                        </template>
+                    </div>
                     @error('ip_address')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-xs text-gray-500">Leave blank to auto-assign from pool, or specify a particular IP</p>
                 </div>
             </div>
         </div>
@@ -615,6 +683,44 @@ function subscriptionCreateForm() {
 
         submitting: false,
 
+        // IP validation state
+        ipValidation: {
+            isValid: false,
+            isError: false,
+            isChecking: false,
+            message: '',
+            errorType: null // 'format', 'out_of_range', 'in_use'
+        },
+
+        // PPPoE username validation state
+        pppoeValidation: {
+            isValid: false,
+            isError: false,
+            isChecking: false,
+            message: '',
+            errorType: null // 'taken'
+        },
+
+        // Computed: Selected IP Pool
+        get selectedIpPool() {
+            if (!this.form.ip_pool_id) return null;
+            return this.ipPools.find(pool => pool.id == this.form.ip_pool_id);
+        },
+
+        // Computed: Next available IP from pool
+        get nextAvailableIp() {
+            if (!this.selectedIpPool || !this.selectedIpPool.available_ips) return null;
+
+            // For now, return a placeholder
+            // In production, you'd call an API to get the actual next available IP
+            const network = this.selectedIpPool.network_address;
+            const cidr = this.selectedIpPool.cidr;
+
+            // Simple suggestion based on network (this is a placeholder)
+            // You should implement an API endpoint to get the real next available IP
+            return this.suggestNextIp(network, cidr);
+        },
+
         init() {
             // Pre-fill customer if provided
             @if($customer)
@@ -722,6 +828,188 @@ function subscriptionCreateForm() {
 
         formatCurrency(value) {
             return parseFloat(value || 0).toFixed(2);
+        },
+
+        // IP Address validation
+        async validateIpAddress() {
+            const ip = this.form.ip_address.trim();
+
+            if (!ip) {
+                this.ipValidation = {
+                    isValid: false,
+                    isError: false,
+                    isChecking: false,
+                    message: '',
+                    errorType: null
+                };
+                return;
+            }
+
+            // Check IP format
+            const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+            if (!ipPattern.test(ip)) {
+                this.ipValidation = {
+                    isValid: false,
+                    isError: true,
+                    isChecking: false,
+                    message: 'Invalid IP address format',
+                    errorType: 'format'
+                };
+                return;
+            }
+
+            // Check if within pool range (if pool is selected)
+            if (this.selectedIpPool) {
+                const inRange = this.isIpInRange(ip, this.selectedIpPool);
+                if (!inRange) {
+                    this.ipValidation = {
+                        isValid: false,
+                        isError: true,
+                        isChecking: false,
+                        message: `IP is not in the ${this.selectedIpPool.cidr_notation} range`,
+                        errorType: 'out_of_range'
+                    };
+                    return;
+                }
+            }
+
+            // Check if IP is already assigned (API call)
+            this.ipValidation.isChecking = true;
+            this.ipValidation.message = 'Checking IP availability...';
+
+            try {
+                const response = await fetch(`/api/ip-pools/check-ip?ip=${encodeURIComponent(ip)}`, {
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.available === false) {
+                    this.ipValidation = {
+                        isValid: true, // Still valid, just in use
+                        isError: true,
+                        isChecking: false,
+                        message: `This IP is assigned to ${data.customer || 'another customer'}`,
+                        errorType: 'in_use'
+                    };
+                } else {
+                    this.ipValidation = {
+                        isValid: true,
+                        isError: false,
+                        isChecking: false,
+                        message: 'IP is available',
+                        errorType: null
+                    };
+                }
+            } catch (error) {
+                // If API fails, just validate format
+                console.warn('Could not check IP availability:', error);
+                this.ipValidation = {
+                    isValid: true,
+                    isError: false,
+                    isChecking: false,
+                    message: 'IP format is valid',
+                    errorType: null
+                };
+            }
+        },
+
+        async validatePppoeUsername() {
+            const username = this.form.pppoe_username.trim();
+
+            if (!username) {
+                this.pppoeValidation = {
+                    isValid: false,
+                    isError: false,
+                    isChecking: false,
+                    message: '',
+                    errorType: null
+                };
+                return;
+            }
+
+            // Basic validation: username should be at least 3 characters
+            if (username.length < 3) {
+                this.pppoeValidation = {
+                    isValid: false,
+                    isError: true,
+                    isChecking: false,
+                    message: 'Username must be at least 3 characters',
+                    errorType: 'format'
+                };
+                return;
+            }
+
+            this.pppoeValidation.isChecking = true;
+            this.pppoeValidation.message = 'Checking username availability...';
+
+            try {
+                const response = await fetch(`/api/subscriptions/check-pppoe-username?username=${encodeURIComponent(username)}`, {
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.available === false) {
+                    this.pppoeValidation = {
+                        isValid: false,
+                        isError: true,
+                        isChecking: false,
+                        message: data.message,
+                        errorType: 'taken'
+                    };
+                } else {
+                    this.pppoeValidation = {
+                        isValid: true,
+                        isError: false,
+                        isChecking: false,
+                        message: 'Username is available',
+                        errorType: null
+                    };
+                }
+            } catch (error) {
+                // If API fails, just validate format
+                console.warn('Could not check username availability:', error);
+                this.pppoeValidation = {
+                    isValid: true,
+                    isError: false,
+                    isChecking: false,
+                    message: 'Username format is valid',
+                    errorType: null
+                };
+            }
+        },
+
+        isIpInRange(ip, pool) {
+            const ipNum = this.ipToNumber(ip);
+            const networkNum = this.ipToNumber(pool.network_address);
+            const cidr = pool.cidr;
+            const mask = cidr === 0 ? 0 : ~0 << (32 - cidr);
+
+            return (ipNum & mask) === (networkNum & mask);
+        },
+
+        ipToNumber(ip) {
+            return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+        },
+
+        suggestNextIp(network, cidr) {
+            // Simple suggestion: increment the last octet of the network address
+            // This is a placeholder - in production, query the database for the real next available IP
+            const parts = network.split('.');
+            if (parts.length === 4) {
+                const lastOctet = parseInt(parts[3], 10) + 1;
+                if (lastOctet <= 254) {
+                    return `${parts[0]}.${parts[1]}.${parts[2]}.${lastOctet}`;
+                }
+            }
+            return null;
         },
 
         async submit() {
