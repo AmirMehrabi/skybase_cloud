@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubscriptionRequest;
 use App\Models\Customer;
+use App\Models\IpPool;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
@@ -78,8 +79,9 @@ class SubscriptionController extends Controller
         $customers = Customer::get();
         $plans = Plan::active()->ordered()->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
+        $ipPools = IpPool::active()->with('router')->get();
 
-        return view('subscriptions.create', compact('customer', 'customers', 'plans', 'routers'));
+        return view('subscriptions.create', compact('customer', 'customers', 'plans', 'routers', 'ipPools'));
     }
 
     /**

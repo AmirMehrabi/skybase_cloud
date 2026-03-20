@@ -110,23 +110,199 @@
             </div>
         </div>
 
-        <!-- Section 2: PPPoE Credentials -->
+        <!-- Section 2: WAN Connection & IP Management -->
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">PPPoE Credentials</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div>
-                    <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username</label>
-                    <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
-                    @error('pppoe_username')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">WAN Connection & IP Management</h3>
+
+            <!-- Connection Type Selector -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">Connection Type <span class="text-red-500">*</span></label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- PPPoE Option -->
+                    <label class="relative cursor-pointer" @click="form.connection_type = 'pppoe'">
+                        <input type="radio" name="connection_type" value="pppoe" x-model="form.connection_type" class="peer sr-only">
+                        <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900">PPPoE</h4>
+                                    <p class="text-xs text-gray-500">Username/Password auth</p>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- DHCP Option -->
+                    <label class="relative cursor-pointer" @click="form.connection_type = 'dhcp'">
+                        <input type="radio" name="connection_type" value="dhcp" x-model="form.connection_type" class="peer sr-only">
+                        <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900">DHCP</h4>
+                                    <p class="text-xs text-gray-500">MAC-based assignment</p>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- Static IP Option -->
+                    <label class="relative cursor-pointer" @click="form.connection_type = 'static'">
+                        <input type="radio" name="connection_type" value="static" x-model="form.connection_type" class="peer sr-only">
+                        <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900">Static IP</h4>
+                                    <p class="text-xs text-gray-500">Fixed IP assignment</p>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
                 </div>
-                <div>
-                    <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Password</label>
-                    <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoe_password" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
-                    @error('pppoe_password')
+                @error('connection_type')
+                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- PPPoE Credentials (shown only for PPPoE) -->
+            <div x-show="form.connection_type === 'pppoe'" x-transition class="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <h4 class="text-sm font-semibold text-gray-900 mb-3">PPPoE Credentials</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username <span class="text-red-500">*</span></label>
+                        <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" placeholder="e.g., customer001" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        @error('pppoe_username')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Password <span class="text-red-500">*</span></label>
+                        <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoe_password" placeholder="••••••••" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        @error('pppoe_password')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+            <!-- DHCP MAC Address (shown only for DHCP) -->
+            <div x-show="form.connection_type === 'dhcp'" x-transition class="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <h4 class="text-sm font-semibold text-gray-900 mb-3">DHCP Configuration</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="mac_address" class="block text-sm font-medium text-gray-700 mb-1">MAC Address <span class="text-red-500">*</span></label>
+                        <input type="text" name="mac_address" id="mac_address" x-model="form.mac_address" placeholder="00:1A:2B:3C:4D:5E" maxlength="17" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border uppercase">
+                        @error('mac_address')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-1 text-xs text-gray-500">Format: XX:XX:XX:XX:XX:XX</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-gray-600 pt-6">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>MAC address binding required for DHCP assignment</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IP Management -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-medium text-gray-700">IP Management</label>
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Choose how IP addresses are managed</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Router Managed -->
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="ip_management" value="router" x-model="form.ip_management" class="peer sr-only">
+                        <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900">Router Managed</h4>
+                                    <p class="text-xs text-gray-500 mt-1">Router/NAS handles IP assignment via RADIUS or DHCP. No tracking in SkyBase.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- System Managed -->
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="ip_management" value="system" x-model="form.ip_management" class="peer sr-only">
+                        <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900">System Managed</h4>
+                                    <p class="text-xs text-gray-500 mt-1">SkyBase tracks and assigns IPs from IP pools. Full inventory management.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- IP Pool Selection (shown only for System Managed) -->
+            <div x-show="form.ip_management === 'system'" x-transition class="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <h4 class="text-sm font-semibold text-gray-900 mb-3">IP Pool Assignment</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="ip_pool_id" class="block text-sm font-medium text-gray-700 mb-1">IP Pool <span class="text-red-500">*</span></label>
+                        <select name="ip_pool_id" id="ip_pool_id" x-model="form.ip_pool_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                            <option value="">Select IP Pool</option>
+                            @foreach($ipPools ?? [] as $pool)
+                                <option value="{{ $pool->id }}" data-available="{{ $pool->available_ips }}">
+                                    {{ $pool->name }} ({{ $pool->cidr_notation }}) - {{ $pool->available_ips }} available
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('ip_pool_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div x-show="form.ip_pool_id" class="flex items-center gap-2 text-sm pt-6">
+                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="text-gray-600" x-text="form.ip_pool_id ? selectedIpPool?.available_ips + ' IPs available' : 'Select a pool to see availability'"></span>
+                    </div>
+                </div>
+
+                <!-- Optional IP Address field (for reference) -->
+                <div class="mt-4">
+                    <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">IP Address (Optional)</label>
+                    <input type="text" name="ip_address" id="ip_address" x-model="form.ip_address" placeholder="192.168.1.100" class="block w-full max-w-md rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('ip_address')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <p class="mt-1 text-xs text-gray-500">Leave blank to auto-assign from pool, or specify a particular IP</p>
                 </div>
             </div>
         </div>
@@ -399,6 +575,10 @@ function subscriptionCreateForm() {
             plan_id: '',
             router_id: '',
             site: '',
+            connection_type: 'pppoe',
+            ip_management: null,
+            ip_pool_id: '',
+            mac_address: '',
             ip_address: '',
             pppoe_username: '',
             pppoe_password: '',
@@ -412,6 +592,9 @@ function subscriptionCreateForm() {
             totalTax: 0,
             total: 0
         },
+
+        // IP pools data
+        ipPools: @json( $ipPools ),
 
         // Plan line item (always present)
         items: [{
@@ -554,9 +737,16 @@ function subscriptionCreateForm() {
             if (this.form.plan_id) formData.append('plan_id', this.form.plan_id);
             if (this.form.router_id) formData.append('router_id', this.form.router_id);
             if (this.form.site) formData.append('site', this.form.site);
+
+            // Connection type and IP management
+            formData.append('connection_type', this.form.connection_type || 'pppoe');
+            if (this.form.mac_address) formData.append('mac_address', this.form.mac_address);
+            if (this.form.ip_management) formData.append('ip_management', this.form.ip_management);
+            if (this.form.ip_pool_id) formData.append('ip_pool_id', this.form.ip_pool_id);
             if (this.form.ip_address) formData.append('ip_address', this.form.ip_address);
             if (this.form.pppoe_username) formData.append('pppoe_username', this.form.pppoe_username);
             if (this.form.pppoe_password) formData.append('pppoe_password', this.form.pppoe_password);
+
             if (this.form.billing_cycle) formData.append('billing_cycle', this.form.billing_cycle);
             if (this.form.status) formData.append('status', this.form.status);
             if (this.form.start_date) formData.append('start_date', this.form.start_date);
