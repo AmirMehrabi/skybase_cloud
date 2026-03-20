@@ -2,8 +2,14 @@
 
 @section('title', 'Create New Customer')
 
+@push('styles')
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+@endpush
+
 @section('content')
-<div class="space-y-6 pb-24" x-data="customerCreateForm()">
+<div class="space-y-6 pb-24" x-data="customerCreateForm()" x-cloak>
     <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
@@ -262,6 +268,7 @@
 <script>
 function customerCreateForm() {
     return {
+        submitting: false,
         form: {
             customer_type: '{{ old('customer_type', 'individual') }}',
             first_name: '{{ old('first_name') }}',
@@ -339,4 +346,5 @@ function customerCreateForm() {
     };
 }
 </script>
+@endpush
 @endsection

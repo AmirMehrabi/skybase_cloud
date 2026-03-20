@@ -98,7 +98,7 @@
         
         @stack('styles')
     </head>
-<body class="bg-white" style="direction: {{ $direction }};">
+<body class="bg-whites" style="direction: {{ $direction }};">
     <!-- Mobile Sidebar Overlay -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 hidden lg:hidden"></div>
     
@@ -243,7 +243,7 @@
         </header>
         
         <!-- Main Content -->
-        <main class="pt-[75px] px-6 md:px-12 pb-8">
+        <main class="pt-[75px] s px-6 md:px-12 pb-8">
             @yield('content')
         </main>
     </div>
