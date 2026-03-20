@@ -19,7 +19,11 @@ class Subscription extends Model
         'plan_id',
         'router_id',
         'site',
+        'connection_type',
         'ip_address',
+        'mac_address',
+        'ip_pool_id',
+        'ip_management',
         'pppoe_username',
         'pppoe_password',
         'base_price',
@@ -70,6 +74,16 @@ class Subscription extends Model
     public function router(): BelongsTo
     {
         return $this->belongsTo(Router::class);
+    }
+
+    public function ipPool(): BelongsTo
+    {
+        return $this->belongsTo(IpPool::class);
+    }
+
+    public function ipAddress()
+    {
+        return $this->hasOne(IpAddress::class, 'subscription_code', 'subscription_code');
     }
 
     public function items(): HasMany
@@ -130,6 +144,114 @@ class Subscription extends Model
     public function getIsExpiredAttribute(): bool
     {
         return $this->end_date && $this->end_date->isPast();
+    }
+
+    /**
+     * Check if this is a PPPoE connection.
+     */
+    public function isPppoe(): bool
+    {
+        return $this->connection_type === 'pppoe';
+    }
+
+    /**
+     * Check if this is a DHCP connection.
+     */
+    public function isDhcp(): bool
+    {
+        return $this->connection_type === 'dhcp';
+    }
+
+    /**
+     * Check if this is a Static IP connection.
+     */
+    public function isStatic(): bool
+    {
+        return $this->connection_type === 'static';
+    }
+
+    /**
+     * Check if IP is system-managed.
+     */
+    public function isSystemManagedIp(): bool
+    {
+        return $this->ip_management === 'system';
+    }
+
+    /**
+     * Check if IP is router-managed.
+     */
+    public function isRouterManagedIp(): bool
+    {
+        return $this->ip_management === 'router';
+    }
+
+    /**
+     * Assign an IP address from the pool.
+     */
+    public function assignIpAddress(?string $specificIp = null): ?IpAddress
+    {
+        if (! $this->ip_pool_id || $this->ip_management !== 'system') {
+            return null;
+        }
+
+        $pool = $this->ipPool;
+
+        if ($specificIp) {
+            // Assign specific IP
+            $ip = $pool->ipAddresses()->where('ip_address', $specificIp)->first();
+
+            if (! $ip || ! $ip->isAvailable()) {
+                return null;
+            }
+
+            $ip->assignTo($this->customer, $this->mac_address, $this->subscription_code);
+            $this->update(['ip_address' => $specificIp]);
+
+            return $ip;
+        }
+
+        // Auto-assign next available IP
+        $ip = $pool->availableAddresses()->first();
+
+        if (! $ip) {
+            return null;
+        }
+
+        $ip->assignTo($this->customer, $this->mac_address, $this->subscription_code);
+        $this->update(['ip_address' => $ip->ip_address]);
+
+        // Update pool statistics
+        $pool->updateStatistics();
+
+        return $ip;
+    }
+
+    /**
+     * Release the assigned IP address.
+     */
+    public function releaseIpAddress(): bool
+    {
+        if (! $this->ip_address || $this->ip_management !== 'system') {
+            return false;
+        }
+
+        $ip = $this->ipAddress;
+
+        if (! $ip) {
+            return false;
+        }
+
+        $ip->release();
+
+        // Update pool statistics
+        if ($this->ip_pool_id) {
+            $this->ipPool->updateStatistics();
+        }
+
+        $this->update(['ip_address' => null]);
+
+        return true;
     }
 
     public function activate(): void

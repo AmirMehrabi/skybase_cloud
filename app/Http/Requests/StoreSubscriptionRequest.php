@@ -22,14 +22,24 @@ class StoreSubscriptionRequest extends FormRequest
      */
     public function rules(): array
     {
+        $connectionType = $this->input('connection_type', 'pppoe');
+        $ipManagement = $this->input('ip_management');
+
         return [
             'customer_id' => 'required|exists:customers,id',
             'plan_id' => 'required|exists:plans,id',
             'router_id' => 'required|exists:routers,id',
             'site' => 'nullable|string|max:255',
+            'connection_type' => 'required|in:pppoe,dhcp,static',
+            // PPPoE credentials (required for PPPoE)
+            'pppoe_username' => $connectionType === 'pppoe' ? 'required|string|max:255' : 'nullable|string|max:255',
+            'pppoe_password' => $connectionType === 'pppoe' ? 'required|string|max:255' : 'nullable|string|max:255',
+            // MAC address (required for DHCP)
+            'mac_address' => $connectionType === 'dhcp' ? 'required|mac_address' : 'nullable|mac_address',
+            // IP management
+            'ip_management' => 'nullable|in:system,router',
+            'ip_pool_id' => $ipManagement === 'system' ? 'required|exists:ip_pools,id' : 'nullable|exists:ip_pools,id',
             'ip_address' => 'nullable|ip|max:255',
-            'pppoe_username' => 'nullable|string|max:255',
-            'pppoe_password' => 'nullable|string|max:255',
             'billing_cycle' => 'required|in:monthly,quarterly,yearly',
             'status' => 'required|in:pending,active,suspended,cancelled',
             'start_date' => 'nullable|date',
@@ -63,6 +73,13 @@ class StoreSubscriptionRequest extends FormRequest
             'plan_id.exists' => 'The selected plan is invalid.',
             'router_id.required' => 'Please select a router/NAS.',
             'router_id.exists' => 'The selected router is invalid.',
+            'connection_type.required' => 'Please select a connection type.',
+            'connection_type.in' => 'Invalid connection type selected.',
+            'pppoe_username.required' => 'PPPoE username is required for PPPoE connections.',
+            'pppoe_password.required' => 'PPPoE password is required for PPPoE connections.',
+            'mac_address.required' => 'MAC address is required for DHCP connections.',
+            'ip_pool_id.required' => 'Please select an IP pool for system-managed IPs.',
+            'ip_pool_id.exists' => 'The selected IP pool is invalid.',
             'items.required' => 'Please add at least one line item.',
             'items.*.description.required' => 'Each line item must have a description.',
         ];
