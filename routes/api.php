@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth')->prefix('api')->group(function () {
+Route::middleware('auth')->group(function () {
     // IPAM API Routes
     Route::prefix('ip-pools')->name('api.ip-pools.')->group(function () {
         Route::get('/check-ip', [IpamController::class, 'checkIp'])->name('check-ip');

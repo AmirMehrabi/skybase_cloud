@@ -81,6 +81,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/', [SubscriptionController::class, 'index'])->name('index');
         Route::get('/data', [SubscriptionController::class, 'data'])->name('data');
         Route::get('/stats', [SubscriptionController::class, 'stats'])->name('stats');
+        Route::get('/check-pppoe-username', [SubscriptionController::class, 'checkPppoeUsername'])->name('check-pppoe-username');
         Route::get('/create', [SubscriptionController::class, 'create'])->name('create');
         Route::post('/', [SubscriptionController::class, 'store'])->name('store');
         Route::get('/{subscription}', [SubscriptionController::class, 'show'])->name('show');
@@ -126,6 +127,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     // IP Address Management (IPAM) Routes
     Route::prefix('ipam')->name('ipam.')->group(function () {
         Route::get('/', [IpamController::class, 'dashboard'])->name('dashboard');
+        Route::get('/check-ip', [IpamController::class, 'checkIp'])->name('check-ip');
 
         Route::prefix('pools')->name('pools.')->group(function () {
             Route::get('/', [IpamController::class, 'index'])->name('index');

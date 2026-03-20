@@ -878,7 +878,8 @@ function subscriptionCreateForm() {
             this.ipValidation.message = 'Checking IP availability...';
 
             try {
-                const response = await fetch(`/api/ip-pools/check-ip?ip=${encodeURIComponent(ip)}`, {
+                const response = await fetch(`/ipam/check-ip?ip=${encodeURIComponent(ip)}`, {
+                    credentials: 'same-origin',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json'
@@ -947,7 +948,8 @@ function subscriptionCreateForm() {
             this.pppoeValidation.message = 'Checking username availability...';
 
             try {
-                const response = await fetch(`/api/subscriptions/check-pppoe-username?username=${encodeURIComponent(username)}`, {
+                const response = await fetch(`/subscriptions/check-pppoe-username?username=${encodeURIComponent(username)}`, {
+                    credentials: 'same-origin',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json'
