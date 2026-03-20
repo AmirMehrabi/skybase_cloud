@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Models\Customer;
-use App\Models\Plan;
-use App\Models\Router;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -79,10 +77,7 @@ class CustomerController extends Controller
      */
     public function create(): View
     {
-        $plans = Plan::active()->ordered()->get(['id', 'name', 'price', 'billing_cycle']);
-        $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
-
-        return view('customers.create', compact('plans', 'routers'));
+        return view('customers.create');
     }
 
     /**

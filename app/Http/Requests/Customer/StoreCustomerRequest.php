@@ -38,21 +38,10 @@ class StoreCustomerRequest extends FormRequest
             'state' => 'nullable|string|max:255',
             'postal_code' => 'nullable|string|max:255',
             'country' => 'required|string|max:255',
-            'plan' => 'nullable|string|max:255',
-            'plan_id' => 'required|exists:plans,id',
-            'site' => 'nullable|string|max:255',
-            'router' => 'nullable|string|max:255',
-            'router_id' => 'required|exists:routers,id',
-            'ip_address' => 'nullable|ip|max:255',
-            'pppoe_username' => 'nullable|string|max:255',
-            'pppoe_password' => 'nullable|string|max:255',
             'billing_type' => 'required|in:prepaid,postpaid',
-            'billing_cycle' => 'required|in:monthly,quarterly,yearly',
-            'balance' => 'required|numeric|min:-99999999.99|max:99999999.99',
-            'credit_limit' => 'required|numeric|min:0|max:99999999.99',
+            'balance' => 'nullable|numeric|min:-99999999.99|max:99999999.99',
+            'credit_limit' => 'nullable|numeric|min:0|max:99999999.99',
             'tax_exempt' => 'boolean',
-            'status' => 'required|in:pending,active,inactive,suspended',
-            'auto_activate' => 'boolean',
         ];
     }
 
@@ -70,10 +59,6 @@ class StoreCustomerRequest extends FormRequest
             'mobile.required' => 'The mobile number field is required.',
             'address_line1.required' => 'The address field is required.',
             'city.required' => 'The city field is required.',
-            'plan_id.required' => 'Please select a service plan.',
-            'plan_id.exists' => 'The selected service plan is invalid.',
-            'router_id.required' => 'Please select a router/NAS.',
-            'router_id.exists' => 'The selected router/NAS is invalid.',
         ];
     }
 
@@ -84,7 +69,6 @@ class StoreCustomerRequest extends FormRequest
     {
         $this->merge([
             'tax_exempt' => $this->boolean('tax_exempt'),
-            'auto_activate' => $this->boolean('auto_activate'),
         ]);
     }
 }

@@ -197,66 +197,20 @@
             </div>
         </div>
 
-        <!-- Section 4: Service Assignment -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Service Assignment</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div>
-                    <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-1">Service Plan <span class="text-red-500">*</span></label>
-                    <select name="plan_id" id="plan_id" x-model="form.planId" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
-                        <option value="">Select a plan</option>
-                        @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
-                        @endforeach
-                    </select>
-                    @error('plan_id')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label for="router_id" class="block text-sm font-medium text-gray-700 mb-1">Router / NAS <span class="text-red-500">*</span></label>
-                    <select name="router_id" id="router_id" x-model="form.routerId" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
-                        <option value="">Select a router</option>
-                        @foreach($routers as $router)
-                            <option value="{{ $router->id }}">{{ $router->name }} ({{ $router->vendor }} {{ $router->model }})</option>
-                        @endforeach
-                    </select>
-                    @error('router_id')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username</label>
-                    <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoeUsername" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
-                    @error('pppoe_username')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Password</label>
-                    <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoePassword" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
-                    @error('pppoe_password')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label for="billing_cycle" class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle <span class="text-red-500">*</span></label>
-                    <select name="billing_cycle" id="billing_cycle" x-model="form.billingCycle" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly (3 months)</option>
-                        <option value="yearly">Yearly (12 months)</option>
-                    </select>
-                    @error('billing_cycle')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 5: Financial Settings -->
+        <!-- Section 4: Financial Settings -->
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Financial Settings</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <label for="billing_type" class="block text-sm font-medium text-gray-700 mb-1">Billing Type <span class="text-red-500">*</span></label>
+                    <select name="billing_type" id="billing_type" x-model="form.billingType" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="prepaid">Prepaid</option>
+                        <option value="postpaid">Postpaid</option>
+                    </select>
+                    @error('billing_type')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
                 <div>
                     <label for="balance" class="block text-sm font-medium text-gray-700 mb-1">Initial Balance</label>
                     <input type="number" step="0.01" name="balance" id="balance" x-model="form.balance" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
@@ -273,41 +227,16 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
-                <div class="flex items-center pt-6">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="tax_exempt" value="1" x-model="form.taxExempt" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                        <span class="text-sm text-gray-700">Tax Exempt</span>
-                    </label>
-                    @error('tax_exempt')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 6: Status -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Status & Activation</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Initial Status <span class="text-red-500">*</span></label>
-                    <select name="status" id="status" x-model="form.status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
-                        <option value="pending">Pending Activation</option>
-                        <option value="active">Active</option>
-                        <option value="suspended">Suspended</option>
-                    </select>
-                    @error('status')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div class="flex items-center pt-6">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="auto_activate" value="1" x-model="form.autoActivate" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                        <span class="text-sm text-gray-700">Auto-activate service on save</span>
-                    </label>
-                    @error('auto_activate')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                <div class="lg:col-span-3 flex items-center gap-6">
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="tax_exempt" value="1" x-model="form.taxExempt" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm text-gray-700">Tax Exempt</span>
+                        </label>
+                        @error('tax_exempt')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
             </div>
         </div>
@@ -322,7 +251,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    Create Customer
+                    Create Customer & Add Subscription
                 </button>
             </div>
         </div>
@@ -349,26 +278,65 @@ function customerCreateForm() {
             state: '{{ old('state') }}',
             postalCode: '{{ old('postal_code') }}',
             country: '{{ old('country', 'United States') }}',
-            planId: '{{ old('plan_id') }}',
-            routerId: '{{ old('router_id') }}',
-            pppoeUsername: '{{ old('pppoe_username') }}',
-            pppoePassword: '{{ old('pppoe_password') }}',
             billingType: '{{ old('billing_type', 'postpaid') }}',
-            billingCycle: '{{ old('billing_cycle', 'monthly') }}',
             balance: '{{ old('balance', '0') }}',
             creditLimit: '{{ old('credit_limit', '0') }}',
-            taxExempt: {{ old('tax_exempt', 'false') }},
-            status: '{{ old('status', 'pending') }}',
-            autoActivate: {{ old('auto_activate', 'false') }}
+            taxExempt: {{ old('tax_exempt', 'false') }}
         },
         get generatedCustomerCode() {
             const prefix = 'CUS';
             const timestamp = new Date().toISOString().slice(2, 10).replace(/-/g, '');
             const random = Math.random().toString(36).substring(2, 6).toUpperCase();
             return `${prefix}-${timestamp}-${random}`;
+        },
+
+        async submit() {
+            this.submitting = true;
+
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('{{ route('customers.store') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.redirect_to) {
+                        window.location.href = data.redirect_to;
+                    }
+                } else if (response.status === 422 && data.errors) {
+                    // Display validation errors
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        const input = document.querySelector(`[name="${field}"]`);
+                        if (input) {
+                            input.classList.add('border-red-500');
+                            const existingError = input.parentElement.querySelector('.text-red-600');
+                            if (existingError) existingError.remove();
+                            const error = document.createElement('p');
+                            error.className = 'mt-1 text-sm text-red-600';
+                            error.textContent = messages[0];
+                            input.parentElement.appendChild(error);
+                        }
+                    }
+                } else {
+                    alert(data.message || 'An error occurred while creating the customer.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while creating the customer.');
+            } finally {
+                this.submitting = false;
+            }
         }
     };
 }
 </script>
-@endpush
 @endsection

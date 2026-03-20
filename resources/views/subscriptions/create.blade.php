@@ -2,624 +2,550 @@
 
 @section('title', 'Create Subscription')
 
+@push('styles')
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+@endpush
+
 @section('content')
-<div x-data="{
-    formStep: 1,
-    loading: false
-}" class="min-h-screen pb-24">
-    <div class="space-y-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="{{ route('subscriptions.index') }}" class="inline-flex items-center text-gray-500 hover:text-gray-700">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                </a>
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Create Subscription</h1>
-                    <p class="text-sm text-gray-500 mt-1">Add a new customer subscription</p>
-                </div>
-            </div>
+<div class="space-y-6 pb-24" x-data="subscriptionCreateForm()" x-cloak>
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Create Subscription</h1>
+            <p class="text-sm text-gray-500 mt-1">Add a new subscription with service plan and line items</p>
         </div>
-
-        <!-- Progress Steps -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-medium">1</div>
-                    <span class="text-sm font-medium text-gray-900">Customer & Plan</span>
-                </div>
-                <div class="flex-1 h-1 mx-4 bg-gray-200 rounded">
-                    <div class="h-full bg-blue-600 rounded" style="width: 100%"></div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 text-sm font-medium">2</div>
-                    <span class="text-sm font-medium text-gray-500">Network</span>
-                </div>
-                <div class="flex-1 h-1 mx-4 bg-gray-200 rounded"></div>
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 text-sm font-medium">3</div>
-                    <span class="text-sm font-medium text-gray-500">Contract</span>
-                </div>
-                <div class="flex-1 h-1 mx-4 bg-gray-200 rounded"></div>
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 text-sm font-medium">4</div>
-                    <span class="text-sm font-medium text-gray-500">Billing</span>
-                </div>
-                <div class="flex-1 h-1 mx-4 bg-gray-200 rounded"></div>
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 text-sm font-medium">5</div>
-                    <span class="text-sm font-medium text-gray-500">Data & Quota</span>
-                </div>
-            </div>
-        </div>
-
-        <form action="#" method="POST" class="space-y-6">
-            @csrf
-            <!-- SECTION 1: Customer & Plan -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Customer & Plan Information</h3>
-                    <p class="text-sm text-gray-500 mt-1">Select customer and service plan details</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Customer -->
-                    <div class="lg:col-span-2">
-                        <div class="space-y-1.5">
-                            <label for="customer_id" class="block text-sm font-medium text-gray-700">
-                                Customer
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="customer_id"
-                                name="customer_id"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
-                            >
-                                <option value="">Search and select a customer</option>
-                                <option value="cust-001">Acme Corporation (CUST-001)</option>
-                                <option value="cust-002">Smith Residence (CUST-002)</option>
-                                <option value="cust-003">Tech Startup Inc (CUST-003)</option>
-                                <option value="cust-004">Downtown Cafe (CUST-004)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Plan -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="plan_id" class="block text-sm font-medium text-gray-700">
-                                Service Plan
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="plan_id"
-                                name="plan_id"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
-                            >
-                                <option value="">Select a plan</option>
-                                <option value="home-25">Home Fiber 25 - $34.99/mo</option>
-                                <option value="home-50">Home Fiber 50 - $49.99/mo</option>
-                                <option value="home-100">Home Fiber 100 - $69.99/mo</option>
-                                <option value="business-100">Fiber Business 100 - $89.99/mo</option>
-                                <option value="business-200">Business Fiber 200 - $149.99/mo</option>
-                                <option value="pro-500">Fiber Pro 500 - $299.99/mo</option>
-                                <option value="enterprise-1g">Enterprise Fiber 1G - $899.99/mo</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Billing Cycle -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="billing_cycle" class="block text-sm font-medium text-gray-700">
-                                Billing Cycle
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="billing_cycle"
-                                name="billing_cycle"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
-                            >
-                                <option value="">Select billing cycle</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly (3 months)</option>
-                                <option value="yearly">Yearly (12 months)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Price -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="monthly_price" class="block text-sm font-medium text-gray-700">
-                                Monthly Price
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                id="monthly_price"
-                                name="monthly_price"
-                                step="0.01"
-                                placeholder="0.00"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Installation Fee -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="installation_fee" class="block text-sm font-medium text-gray-700">Installation Fee</label>
-                            <input
-                                type="number"
-                                id="installation_fee"
-                                name="installation_fee"
-                                step="0.01"
-                                placeholder="0.00"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Discount -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="discount_percentage" class="block text-sm font-medium text-gray-700">Discount Percentage</label>
-                            <input
-                                type="number"
-                                id="discount_percentage"
-                                name="discount_percentage"
-                                step="0.01"
-                                placeholder="0.00"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                            <p class="text-sm text-gray-500">Applied to monthly price</p>
-                        </div>
-                    </div>
-
-                    <!-- Tax -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="tax_percentage" class="block text-sm font-medium text-gray-700">Tax Percentage</label>
-                            <input
-                                type="number"
-                                id="tax_percentage"
-                                name="tax_percentage"
-                                step="0.01"
-                                placeholder="0.00"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 2: Network Configuration -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Network Configuration</h3>
-                    <p class="text-sm text-gray-500 mt-1">Configure network and connection settings</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Site -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="site" class="block text-sm font-medium text-gray-700">
-                                Site/Location
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                id="site"
-                                name="site"
-                                placeholder="e.g., Downtown Office, West Street"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Router -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="router_id" class="block text-sm font-medium text-gray-700">
-                                Router/Device
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="router_id"
-                                name="router_id"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
-                            >
-                                <option value="">Select router</option>
-                                <option value="mikrotik-3011">MikroTik RouterBOARD-3011</option>
-                                <option value="tp-link-er605">TP-Link ER605</option>
-                                <option value="cisco-4431">Cisco ISR 4431</option>
-                                <option value="ubiquiti-er12">Ubiquiti EdgeRouter 12</option>
-                                <option value="juniper-mx204">Juniper MX204</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- IP Pool -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="ip_pool_id" class="block text-sm font-medium text-gray-700">IP Pool</label>
-                            <select
-                                id="ip_pool_id"
-                                name="ip_pool_id"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
-                            >
-                                <option value="">Select IP pool</option>
-                                <option value="pool-192">192.168.1.0/24</option>
-                                <option value="pool-10">10.0.0.0/24</option>
-                                <option value="pool-172">172.16.0.0/24</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Static IP -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="ip_address" class="block text-sm font-medium text-gray-700">Static IP Address</label>
-                            <input
-                                type="ip"
-                                id="ip_address"
-                                name="ip_address"
-                                placeholder="192.168.1.100"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- MAC Address -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="mac_address" class="block text-sm font-medium text-gray-700">MAC Address</label>
-                            <input
-                                type="text"
-                                id="mac_address"
-                                name="mac_address"
-                                placeholder="AA:BB:CC:DD:EE:FF"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                            <p class="text-sm text-gray-500">Format: XX:XX:XX:XX:XX:XX</p>
-                        </div>
-                    </div>
-
-                    <!-- PPPoE Username -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="pppoe_username" class="block text-sm font-medium text-gray-700">
-                                PPPoE Username
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                id="pppoe_username"
-                                name="pppoe_username"
-                                placeholder="Enter PPPoE username"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- PPPoE Password -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="pppoe_password" class="block text-sm font-medium text-gray-700">
-                                PPPoE Password
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="password"
-                                id="pppoe_password"
-                                name="pppoe_password"
-                                placeholder="Enter PPPoE password"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 3: Contract Information -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Contract Information</h3>
-                    <p class="text-sm text-gray-500 mt-1">Set contract terms and conditions</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Contract Start Date -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="contract_start" class="block text-sm font-medium text-gray-700">
-                                Contract Start Date
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="date"
-                                id="contract_start"
-                                name="contract_start"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Contract End Date -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="contract_end" class="block text-sm font-medium text-gray-700">
-                                Contract End Date
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="date"
-                                id="contract_end"
-                                name="contract_end"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Early Termination Fee -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="termination_fee" class="block text-sm font-medium text-gray-700">Early Termination Fee</label>
-                            <input
-                                type="number"
-                                id="termination_fee"
-                                name="termination_fee"
-                                step="0.01"
-                                placeholder="0.00"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Auto Renew -->
-                    <div class="flex items-center justify-between pt-6">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Auto Renew Contract</label>
-                            <p class="text-xs text-gray-500 mt-1">Automatically renew when contract expires</p>
-                        </div>
-                        <button type="button" x-data="{ checked: true }" @click="checked = !checked" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" :class="checked ? 'bg-blue-600' : 'bg-gray-200'">
-                            <span class="sr-only">Use setting</span>
-                            <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="checked ? 'translate-x-5' : 'translate-x-0'"></span>
-                            <input type="hidden" name="auto_renew" :value="checked ? '1' : '0'">
-                        </button>
-                    </div>
-
-                    <!-- Notes -->
-                    <div class="lg:col-span-2">
-                        <div class="space-y-1.5">
-                            <label for="contract_notes" class="block text-sm font-medium text-gray-700">Contract Notes</label>
-                            <textarea
-                                id="contract_notes"
-                                name="contract_notes"
-                                placeholder="Enter any special terms or conditions..."
-                                rows="3"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            ></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 4: Billing Configuration -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Billing Configuration</h3>
-                    <p class="text-sm text-gray-500 mt-1">Configure billing and invoice settings</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Start Date -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="start_date" class="block text-sm font-medium text-gray-700">
-                                Service Start Date
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="date"
-                                id="start_date"
-                                name="start_date"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Next Billing Date -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="next_billing_date" class="block text-sm font-medium text-gray-700">
-                                Next Billing Date
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="date"
-                                id="next_billing_date"
-                                name="next_billing_date"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Invoice Generation Day -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="invoice_day" class="block text-sm font-medium text-gray-700">Invoice Generation Day</label>
-                            <select
-                                id="invoice_day"
-                                name="invoice_day"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white"
-                            >
-                                <option value="">Select day</option>
-                                <option value="1">1st of the month</option>
-                                <option value="5">5th of the month</option>
-                                <option value="10">10th of the month</option>
-                                <option value="15">15th of the month</option>
-                                <option value="20">20th of the month</option>
-                                <option value="25">25th of the month</option>
-                                <option value="last">Last day of the month</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Prorated Billing -->
-                    <div class="flex items-center justify-between pt-6">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Prorated Billing</label>
-                            <p class="text-xs text-gray-500 mt-1">Calculate partial month charges</p>
-                        </div>
-                        <button type="button" x-data="{ checked: false }" @click="checked = !checked" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" :class="checked ? 'bg-blue-600' : 'bg-gray-200'">
-                            <span class="sr-only">Use setting</span>
-                            <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="checked ? 'translate-x-5' : 'translate-x-0'"></span>
-                            <input type="hidden" name="prorated_billing" :value="checked ? '1' : '0'">
-                        </button>
-                    </div>
-
-                    <!-- Send Invoice Automatically -->
-                    <div class="flex items-center justify-between pt-6">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Send Invoice Automatically</label>
-                            <p class="text-xs text-gray-500 mt-1">Email invoice to customer on billing date</p>
-                        </div>
-                        <button type="button" x-data="{ checked: true }" @click="checked = !checked" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" :class="checked ? 'bg-blue-600' : 'bg-gray-200'">
-                            <span class="sr-only">Use setting</span>
-                            <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="checked ? 'translate-x-5' : 'translate-x-0'"></span>
-                            <input type="hidden" name="auto_send_invoice" :value="checked ? '1' : '0'">
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 5: Data & Quota -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Data & Quota Settings</h3>
-                    <p class="text-sm text-gray-500 mt-1">Configure data limits and speeds</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Data Quota -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="data_quota" class="block text-sm font-medium text-gray-700">Data Quota (GB)</label>
-                            <input
-                                type="number"
-                                id="data_quota"
-                                name="data_quota"
-                                placeholder="1000"
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                            <p class="text-sm text-gray-500">Enter 0 for unlimited</p>
-                        </div>
-                    </div>
-
-                    <!-- Speed Download -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="speed_download" class="block text-sm font-medium text-gray-700">
-                                Download Speed (Mbps)
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                id="speed_download"
-                                name="speed_download"
-                                placeholder="100"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Speed Upload -->
-                    <div>
-                        <div class="space-y-1.5">
-                            <label for="speed_upload" class="block text-sm font-medium text-gray-700">
-                                Upload Speed (Mbps)
-                                <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                id="speed_upload"
-                                name="speed_upload"
-                                placeholder="50"
-                                required
-                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Burst Mode -->
-                    <div class="flex items-center justify-between pt-6">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Burst Mode</label>
-                            <p class="text-xs text-gray-500 mt-1">Allow temporary speed boost</p>
-                        </div>
-                        <button type="button" x-data="{ checked: false }" @click="checked = !checked" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" :class="checked ? 'bg-blue-600' : 'bg-gray-200'">
-                            <span class="sr-only">Use setting</span>
-                            <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="checked ? 'translate-x-5' : 'translate-x-0'"></span>
-                            <input type="hidden" name="burst_mode" :value="checked ? '1' : '0'">
-                        </button>
-                    </div>
-
-                    <!-- Throttle After Quota -->
-                    <div class="flex items-center justify-between pt-6">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Throttle After Quota Exceeded</label>
-                            <p class="text-xs text-gray-500 mt-1">Reduce speed when data limit reached</p>
-                        </div>
-                        <button type="button" x-data="{ checked: true }" @click="checked = !checked" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" :class="checked ? 'bg-blue-600' : 'bg-gray-200'">
-                            <span class="sr-only">Use setting</span>
-                            <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="checked ? 'translate-x-5' : 'translate-x-0'"></span>
-                            <input type="hidden" name="throttle_over_quota" :value="checked ? '1' : '0'">
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </form>
     </div>
 
-    <!-- Sticky Action Bar -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 lg:left-64">
-        <div class="max-w-7xl mx-auto px-6 py-4">
-            <div class="flex items-center justify-end gap-4">
-                <a href="{{ route('subscriptions.index') }}" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div class="flex">
+            <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
+                <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <form action="{{ route('subscriptions.store') }}" method="POST" class="space-y-6">
+        @csrf
+
+        <!-- Section 1: Customer & Service Assignment -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Customer & Service Assignment</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Customer -->
+                <div class="lg:col-span-1">
+                    <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">Customer <span class="text-red-500">*</span></label>
+                    @if($customer)
+                        <input type="text" :value="'{{ $customer->full_name }} ({{ $customer->customer_code }})'" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
+                        <input type="hidden" name="customer_id" value="{{ $customer->id }}">
+                    @else
+                        <select name="customer_id" id="customer_id" x-model="form.customer_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                            <option value="">Select a customer</option>
+                            @foreach($customers ?? [] as $cust)
+                                <option value="{{ $cust->id }}">{{ $cust->full_name }} ({{ $cust->customer_code }})</option>
+                            @endforeach
+                        </select>
+                    @endif
+                    @error('customer_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Plan -->
+                <div>
+                    <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-1">Service Plan <span class="text-red-500">*</span></label>
+                    <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="">Select a plan</option>
+                        @foreach($plans as $plan)
+                            <option value="{{ $plan->id }}" data-price="{{ $plan->price }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
+                        @endforeach
+                    </select>
+                    @error('plan_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Router / NAS -->
+                <div>
+                    <label for="router_id" class="block text-sm font-medium text-gray-700 mb-1">Router / NAS <span class="text-red-500">*</span></label>
+                    <select name="router_id" id="router_id" x-model="form.router_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="">Select a router</option>
+                        @foreach($routers as $router)
+                            <option value="{{ $router->id }}" data-site="{{ $router->site }}">{{ $router->name }} ({{ $router->vendor }} {{ $router->model }})</option>
+                        @endforeach
+                    </select>
+                    @error('router_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Site (auto-filled from router) -->
+                <div>
+                    <label for="site" class="block text-sm font-medium text-gray-700 mb-1">Site</label>
+                    <input type="text" name="site" id="site" x-model="form.site" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('site')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- IP Address -->
+                <div>
+                    <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
+                    <input type="text" name="ip_address" id="ip_address" x-model="form.ip_address" placeholder="192.168.1.100" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('ip_address')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: PPPoE Credentials -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">PPPoE Credentials</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username</label>
+                    <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('pppoe_username')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Password</label>
+                    <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoe_password" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('pppoe_password')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Line Items -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Line Items</h3>
+                    <p class="text-sm text-gray-500 mt-1">Configure pricing, discounts, and taxes for each item</p>
+                </div>
+            </div>
+
+            <!-- Plan Line Item (Always Present) -->
+            <div class="border border-gray-200 rounded-xl p-4 mb-4 bg-blue-50">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-semibold text-gray-900">Service Plan</h4>
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Primary</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <input type="text" x-model="items[0].description" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2 text-gray-500">$</span>
+                            <input type="number" step="0.01" x-model="items[0].unit_price" @input="calculateItemTotal(0)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-7 pr-3 border">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
+                        <div class="flex gap-2">
+                            <input type="number" step="0.01" x-model="items[0].discount_amount" @input="calculateItemTotal(0)" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                            <select x-model="items[0].discount_type" @change="calculateItemTotal(0)" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                                <option value="none">None</option>
+                                <option value="fixed">$</option>
+                                <option value="percentage">%</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tax (%)</label>
+                        <div class="relative">
+                            <input type="number" step="0.01" x-model="items[0].tax_percentage" @input="calculateItemTotal(0)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                            <span class="absolute right-3 top-2 text-gray-500">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                    <div class="text-sm text-gray-600">
+                        Subtotal: <span class="font-semibold" x-text="'$' + formatCurrency(items[0].subtotal)"></span>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        Tax: <span class="font-semibold" x-text="'$' + formatCurrency(items[0].tax_amount)"></span>
+                    </div>
+                    <div class="text-sm font-semibold text-gray-900">
+                        Total: <span class="text-blue-600" x-text="'$' + formatCurrency(items[0].total)"></span>
+                    </div>
+                </div>
+                <input type="hidden" name="items[0][item_type]" value="plan">
+                <input type="hidden" name="items[0][quantity]" value="1">
+                <input type="hidden" name="items[0][recurring]" value="1">
+                <input type="hidden" name="items[0][billing_cycle]" x-model="items[0].billing_cycle">
+            </div>
+
+            <!-- Additional Service Items -->
+            <template x-for="(item, index) in additionalItems" :key="index">
+                <div class="border border-gray-200 rounded-xl p-4 mb-4 relative">
+                    <button type="button" @click="removeAdditionalItem(index)" class="absolute top-2 right-2 text-red-500 hover:text-red-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="lg:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <input type="text" x-model="item.description" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <input type="number" step="0.01" x-model="item.unit_price" @input="calculateAdditionalItemTotal(index)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-7 pr-3 border">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
+                            <div class="flex gap-2">
+                                <input type="number" step="0.01" x-model="item.discount_amount" @input="calculateAdditionalItemTotal(index)" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                                <select x-model="item.discount_type" @change="calculateAdditionalItemTotal(index)" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                                    <option value="none">None</option>
+                                    <option value="fixed">$</option>
+                                    <option value="percentage">%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tax (%)</label>
+                            <div class="relative">
+                                <input type="number" step="0.01" x-model="item.tax_percentage" @input="calculateAdditionalItemTotal(index)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                                <span class="absolute right-3 top-2 text-gray-500">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle</label>
+                            <select x-model="item.billing_cycle" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="yearly">Yearly</option>
+                                <option value="onetime">One-time</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 cursor-pointer pt-6">
+                                <input type="checkbox" x-model="item.recurring" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">Recurring</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                        <div class="text-sm text-gray-600">
+                            Subtotal: <span class="font-semibold" x-text="'$' + formatCurrency(item.subtotal)"></span>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            Tax: <span class="font-semibold" x-text="'$' + formatCurrency(item.tax_amount)"></span>
+                        </div>
+                        <div class="text-sm font-semibold text-gray-900">
+                            Total: <span class="text-blue-600" x-text="'$' + formatCurrency(item.total)"></span>
+                        </div>
+                    </div>
+                    <input type="hidden" :name="'items[' + (index + 1) + '][item_type]'" value="additional_service">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][quantity]'" value="1">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][description]'" x-model="item.description">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][unit_price]'" x-model="item.unit_price">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][discount_amount]'" x-model="item.discount_amount">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][discount_type]'" x-model="item.discount_type">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][tax_percentage]'" x-model="item.tax_percentage">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][tax_amount]'" x-model="item.tax_amount">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][subtotal]'" x-model="item.subtotal">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][total]'" x-model="item.total">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][recurring]'" x-model="item.recurring">
+                    <input type="hidden" :name="'items[' + (index + 1) + '][billing_cycle]'" x-model="item.billing_cycle">
+                </div>
+            </template>
+
+            <!-- Add Additional Item Button -->
+            <button type="button" @click="addAdditionalItem()" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors">
+                <svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Add Additional Service
+            </button>
+
+            <!-- Hidden inputs for plan item -->
+            <input type="hidden" name="items[0][item_type]" value="plan">
+            <input type="hidden" name="items[0][quantity]" value="1">
+            <input type="hidden" name="items[0][description]" x-model="items[0].description">
+            <input type="hidden" name="items[0][unit_price]" x-model="items[0].unit_price">
+            <input type="hidden" name="items[0][discount_amount]" x-model="items[0].discount_amount">
+            <input type="hidden" name="items[0][discount_type]" x-model="items[0].discount_type">
+            <input type="hidden" name="items[0][tax_percentage]" x-model="items[0].tax_percentage">
+            <input type="hidden" name="items[0][tax_amount]" x-model="items[0].tax_amount">
+            <input type="hidden" name="items[0][subtotal]" x-model="items[0].subtotal">
+            <input type="hidden" name="items[0][total]" x-model="items[0].total">
+            <input type="hidden" name="items[0][recurring]" value="1">
+            <input type="hidden" name="items[0][billing_cycle]" x-model="items[0].billing_cycle">
+        </div>
+
+        <!-- Section 4: Summary & Total -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Summary</h3>
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Subtotal:</span>
+                    <span class="font-medium" x-text="'$' + formatCurrency(form.subtotal)"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Total Discount:</span>
+                    <span class="font-medium text-red-600" x-text="'-$' + formatCurrency(form.totalDiscount)"></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Total Tax:</span>
+                    <span class="font-medium" x-text="'$' + formatCurrency(form.totalTax)"></span>
+                </div>
+                <div class="border-t border-gray-200 pt-2 mt-2">
+                    <div class="flex justify-between">
+                        <span class="text-base font-semibold text-gray-900">Total Monthly:</span>
+                        <span class="text-xl font-bold text-blue-600" x-text="'$' + formatCurrency(form.total)"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Billing & Dates -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Billing & Schedule</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                    <label for="billing_cycle" class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle <span class="text-red-500">*</span></label>
+                    <select name="billing_cycle" id="billing_cycle" x-model="form.billing_cycle" @change="updateBillingCycle()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly (3 months)</option>
+                        <option value="yearly">Yearly (12 months)</option>
+                    </select>
+                    @error('billing_cycle')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Initial Status <span class="text-red-500">*</span></label>
+                    <select name="status" id="status" x-model="form.status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="pending">Pending Activation</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                    @error('status')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input type="date" name="start_date" id="start_date" x-model="form.start_date" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('start_date')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="date" name="end_date" id="end_date" x-model="form.end_date" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('end_date')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+            <div class="mt-4">
+                <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea name="notes" id="notes" x-model="form.notes" rows="3" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" placeholder="Any additional notes about this subscription..."></textarea>
+                @error('notes')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="fixed bottom-0 right-0 left-0 lg:left-64 bg-white border-t border-gray-200 shadow-lg p-4 z-40">
+            <div class="flex items-center justify-end gap-3">
+                <a href="{{ route('subscriptions.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">
                     Cancel
                 </a>
-                <button type="button" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-                    </svg>
-                    Save Draft
-                </button>
-                <button type="submit" form="#" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="submit" :disabled="submitting" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg x-show="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    Create & Activate Subscription
+                    <svg x-show="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span x-text="submitting ? 'Creating...' : 'Create Subscription'"></span>
                 </button>
             </div>
         </div>
-    </div>
+    </form>
 </div>
+
+@push('scripts')
+<script>
+function subscriptionCreateForm() {
+    return {
+        // Basic form data
+        form: {
+            customer_id: '{{ $customer?->id ?? '' }}',
+            plan_id: '',
+            router_id: '',
+            site: '',
+            ip_address: '',
+            pppoe_username: '',
+            pppoe_password: '',
+            billing_cycle: 'monthly',
+            status: 'pending',
+            start_date: '',
+            end_date: '',
+            notes: '',
+            subtotal: 0,
+            totalDiscount: 0,
+            totalTax: 0,
+            total: 0
+        },
+
+        // Plan line item (always present)
+        items: [{
+            description: '',
+            unit_price: 0,
+            discount_amount: 0,
+            discount_type: 'none',
+            tax_percentage: 0,
+            subtotal: 0,
+            tax_amount: 0,
+            total: 0,
+            recurring: true,
+            billing_cycle: 'monthly'
+        }],
+
+        // Additional service items
+        additionalItems: [],
+
+        submitting: false,
+
+        init() {
+            // Pre-fill customer if provided
+            @if($customer)
+            this.updateCustomerInfo('{{ $customer->full_name }}', '{{ $customer->id }}');
+            @endif
+        },
+
+        updatePlanPrice() {
+            const planSelect = document.getElementById('plan_id');
+            const selectedOption = planSelect.options[planSelect.selectedIndex];
+            const price = parseFloat(selectedOption?.dataset.price || 0);
+
+            this.items[0].unit_price = price;
+            this.items[0].description = selectedOption?.text.split(' - ')[0] || '';
+            this.calculateItemTotal(0);
+            this.calculateFormTotal();
+        },
+
+        updateCustomerInfo(name, id) {
+            this.form.customer_id = id;
+        },
+
+        updateBillingCycle() {
+            this.items[0].billing_cycle = this.form.billing_cycle;
+            this.additionalItems.forEach(item => {
+                if (item.recurring) {
+                    item.billing_cycle = this.form.billing_cycle;
+                }
+            });
+        },
+
+        calculateItemTotal(index) {
+            const item = this.items[index];
+            const lineTotal = item.unit_price * 1; // quantity is always 1 for plans
+
+            let discount = 0;
+            if (item.discount_type === 'fixed') {
+                discount = item.discount_amount;
+            } else if (item.discount_type === 'percentage') {
+                discount = lineTotal * (item.discount_amount / 100);
+            }
+
+            const subtotal = Math.max(0, lineTotal - discount);
+            const tax = subtotal * (item.tax_percentage / 100);
+
+            item.subtotal = subtotal;
+            item.tax_amount = tax;
+            item.total = subtotal + tax;
+
+            this.calculateFormTotal();
+        },
+
+        calculateAdditionalItemTotal(index) {
+            const item = this.additionalItems[index];
+            const lineTotal = item.unit_price * 1;
+
+            let discount = 0;
+            if (item.discount_type === 'fixed') {
+                discount = item.discount_amount;
+            } else if (item.discount_type === 'percentage') {
+                discount = lineTotal * (item.discount_amount / 100);
+            }
+
+            const subtotal = Math.max(0, lineTotal - discount);
+            const tax = subtotal * (item.tax_percentage / 100);
+
+            item.subtotal = subtotal;
+            item.tax_amount = tax;
+            item.total = subtotal + tax;
+
+            this.calculateFormTotal();
+        },
+
+        calculateFormTotal() {
+            const allItems = [this.items[0], ...this.additionalItems];
+
+            this.form.subtotal = allItems.reduce((sum, item) => sum + item.subtotal, 0);
+            this.form.totalDiscount = allItems.reduce((sum, item) => {
+                if (item.discount_type === 'fixed') return sum + item.discount_amount;
+                return sum;
+            }, 0);
+            this.form.totalTax = allItems.reduce((sum, item) => sum + item.tax_amount, 0);
+            this.form.total = allItems.reduce((sum, item) => sum + item.total, 0);
+        },
+
+        addAdditionalItem() {
+            this.additionalItems.push({
+                description: '',
+                unit_price: 0,
+                discount_amount: 0,
+                discount_type: 'none',
+                tax_percentage: 0,
+                subtotal: 0,
+                tax_amount: 0,
+                total: 0,
+                recurring: true,
+                billing_cycle: this.form.billing_cycle
+            });
+        },
+
+        removeAdditionalItem(index) {
+            this.additionalItems.splice(index, 1);
+            this.calculateFormTotal();
+        },
+
+        formatCurrency(value) {
+            return parseFloat(value || 0).toFixed(2);
+        }
+    };
+}
+</script>
+@endpush
 @endsection

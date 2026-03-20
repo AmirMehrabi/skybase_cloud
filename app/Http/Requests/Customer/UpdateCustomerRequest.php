@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Customer;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateCustomerRequest extends FormRequest
@@ -17,7 +18,7 @@ class UpdateCustomerRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -39,18 +40,10 @@ class UpdateCustomerRequest extends FormRequest
             'state' => 'nullable|string|max:255',
             'postal_code' => 'nullable|string|max:255',
             'country' => 'required|string|max:255',
-            'plan' => 'required|string|max:255',
-            'site' => 'required|string|max:255',
-            'router' => 'required|string|max:255',
-            'ip_address' => 'nullable|ip|max:255',
-            'pppoe_username' => 'nullable|string|max:255',
-            'pppoe_password' => 'nullable|string|max:255',
             'billing_type' => 'required|in:prepaid,postpaid',
-            'billing_cycle' => 'required|in:monthly,quarterly,yearly',
-            'balance' => 'required|numeric|min:-99999999.99|max:99999999.99',
-            'credit_limit' => 'required|numeric|min:0|max:99999999.99',
+            'balance' => 'nullable|numeric|min:-99999999.99|max:99999999.99',
+            'credit_limit' => 'nullable|numeric|min:0|max:99999999.99',
             'tax_exempt' => 'boolean',
-            'status' => 'required|in:pending,active,inactive,suspended',
         ];
     }
 
@@ -68,9 +61,6 @@ class UpdateCustomerRequest extends FormRequest
             'mobile.required' => 'The mobile number field is required.',
             'address_line1.required' => 'The address field is required.',
             'city.required' => 'The city field is required.',
-            'plan.required' => 'Please select a service plan.',
-            'site.required' => 'Please select a site/location.',
-            'router.required' => 'Please select a router/NAS.',
         ];
     }
 
