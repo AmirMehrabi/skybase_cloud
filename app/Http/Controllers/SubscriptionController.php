@@ -34,19 +34,21 @@ class SubscriptionController extends Controller
             ->with(['customer', 'plan', 'router'])
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('per_page', 15))
-            ->through(fn ($subscription) => [
-                'id' => $subscription->id,
-                'subscription_code' => $subscription->subscription_code,
-                'customer_name' => $subscription->customer->full_name ?? 'N/A',
-                'customer_email' => $subscription->customer->email ?? 'N/A',
-                'plan' => $subscription->plan?->name ?? 'N/A',
-                'router' => $subscription->router?->name ?? 'N/A',
-                'status' => $subscription->status,
-                'total_price' => (float) $subscription->total_price,
-                'billing_cycle' => $subscription->billing_cycle,
-                'activation_date' => $subscription->activation_date?->format('M d, Y'),
-                'created_at' => $subscription->created_at?->format('M d, Y'),
-            ]);
+            ->through(
+                fn($subscription) => [
+                    'id' => $subscription->id,
+                    'subscription_code' => $subscription->subscription_code,
+                    'customer_name' => $subscription->customer->full_name ?? 'N/A',
+                    'customer_email' => $subscription->customer->email ?? 'N/A',
+                    'plan' => $subscription->plan?->name ?? 'N/A',
+                    'router' => $subscription->router?->name ?? 'N/A',
+                    'status' => $subscription->status,
+                    'total_price' => (float) $subscription->total_price,
+                    'billing_cycle' => $subscription->billing_cycle,
+                    'activation_date' => $subscription->activation_date?->format('M d, Y'),
+                    'created_at' => $subscription->created_at?->format('M d, Y'),
+                ],
+            );
 
         return response()->json([
             'subscriptions' => $subscriptions->items(),
@@ -77,7 +79,9 @@ class SubscriptionController extends Controller
         $customerId = $request->query('customer_id');
         $customer = $customerId ? Customer::findOrFail($customerId) : null;
         $customers = Customer::get();
-        $plans = Plan::active()->ordered()->get(['id', 'name', 'price', 'billing_cycle']);
+        $plans = Plan::active()
+            ->ordered()
+            ->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
         $ipPools = IpPool::active()->with('router')->get();
 
@@ -131,10 +135,13 @@ class SubscriptionController extends Controller
         // Update subscription total
         $subscription->update(['total_price' => $totalPrice]);
 
-        return response()->json([
-            'message' => 'Subscription created successfully.',
-            'subscription' => $subscription->load('customer', 'plan', 'router'),
-        ], 201);
+        return response()->json(
+            [
+                'message' => 'Subscription created successfully.',
+                'subscription' => $subscription->load('customer', 'plan', 'router'),
+            ],
+            201,
+        );
     }
 
     /**
@@ -153,7 +160,9 @@ class SubscriptionController extends Controller
     public function edit(Subscription $subscription): View
     {
         $subscription->load(['items']);
-        $plans = Plan::active()->ordered()->get(['id', 'name', 'price', 'billing_cycle']);
+        $plans = Plan::active()
+            ->ordered()
+            ->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
 
         return view('subscriptions.edit', compact('subscription', 'plans', 'routers'));
@@ -179,7 +188,7 @@ class SubscriptionController extends Controller
         ]);
 
         // Handle activation
-        if (isset($validated['status']) && $validated['status'] === 'active' && ! $subscription->activation_date) {
+        if (isset($validated['status']) && $validated['status'] === 'active' && !$subscription->activation_date) {
             $validated['activation_date'] = now();
         }
 
@@ -264,7 +273,7 @@ class SubscriptionController extends Controller
 
         $existingSubscription = $query->first();
 
-        if (! $existingSubscription) {
+        if (!$existingSubscription) {
             return response()->json([
                 'available' => true,
                 'username' => $username,
@@ -277,7 +286,7 @@ class SubscriptionController extends Controller
             'username' => $username,
             'subscription_code' => $existingSubscription->subscription_code,
             'customer' => $existingSubscription->customer->full_name ?? null,
-            'message' => 'Username is already taken by '.($existingSubscription->customer->full_name ?? 'another customer'),
+            'message' => 'Username is already taken by ' . ($existingSubscription->customer->full_name ?? 'another customer'),
         ]);
     }
 }
