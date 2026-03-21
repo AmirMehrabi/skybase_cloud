@@ -12,34 +12,7 @@ class Subscription extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = [
-        'tenant_id',
-        'customer_id',
-        'subscription_code',
-        'plan_id',
-        'router_id',
-        'site',
-        'connection_type',
-        'ip_address',
-        'mac_address',
-        'ip_pool_id',
-        'ip_management',
-        'pppoe_username',
-        'pppoe_password',
-        'base_price',
-        'discount_amount',
-        'discount_type',
-        'tax_amount',
-        'total_price',
-        'billing_cycle',
-        'status',
-        'start_date',
-        'end_date',
-        'activation_date',
-        'suspended_at',
-        'cancelled_at',
-        'notes',
-    ];
+    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes'];
 
     protected function casts(): array
     {
@@ -113,21 +86,23 @@ class Subscription extends Model
 
     public function scopeFilter($query, array $filters)
     {
-        $query->when($filters['search'] ?? null, function ($query, $search) {
-            $query->where(function ($query) use ($search) {
-                $query->where('subscription_code', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
+        $query
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('subscription_code', 'like', "%{$search}%")->orWhereHas('customer', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
                     });
+                });
+            })
+            ->when($filters['status'] ?? null, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->when($filters['plan'] ?? null, function ($query, $plan) {
+                $query->where('plan_id', $plan);
+            })
+            ->when($filters['customer'] ?? null, function ($query, $customer) {
+                $query->where('customer_id', $customer);
             });
-        })->when($filters['status'] ?? null, function ($query, $status) {
-            $query->where('status', $status);
-        })->when($filters['plan'] ?? null, function ($query, $plan) {
-            $query->where('plan_id', $plan);
-        })->when($filters['customer'] ?? null, function ($query, $customer) {
-            $query->where('customer_id', $customer);
-        });
     }
 
     public function scopeForCustomer($query, $customerId)
@@ -137,8 +112,7 @@ class Subscription extends Model
 
     public function getIsActiveAttribute(): bool
     {
-        return $this->status === 'active' &&
-               (! $this->end_date || $this->end_date->isFuture());
+        return $this->status === 'active' && (!$this->end_date || $this->end_date->isFuture());
     }
 
     public function getIsExpiredAttribute(): bool
@@ -191,7 +165,7 @@ class Subscription extends Model
      */
     public function assignIpAddress(?string $specificIp = null): ?IpAddress
     {
-        if (! $this->ip_pool_id || $this->ip_management !== 'system') {
+        if (!$this->ip_pool_id || $this->ip_management !== 'system') {
             return null;
         }
 
@@ -201,7 +175,7 @@ class Subscription extends Model
             // Assign specific IP
             $ip = $pool->ipAddresses()->where('ip_address', $specificIp)->first();
 
-            if (! $ip || ! $ip->isAvailable()) {
+            if (!$ip || !$ip->isAvailable()) {
                 return null;
             }
 
@@ -214,7 +188,7 @@ class Subscription extends Model
         // Auto-assign next available IP
         $ip = $pool->availableAddresses()->first();
 
-        if (! $ip) {
+        if (!$ip) {
             return null;
         }
 
@@ -232,13 +206,13 @@ class Subscription extends Model
      */
     public function releaseIpAddress(): bool
     {
-        if (! $this->ip_address || $this->ip_management !== 'system') {
+        if (!$this->ip_address || $this->ip_management !== 'system') {
             return false;
         }
 
         $ip = $this->ipAddress;
 
-        if (! $ip) {
+        if (!$ip) {
             return false;
         }
 
@@ -306,7 +280,7 @@ class Subscription extends Model
         });
 
         static::updating(function ($subscription) {
-            if ($subscription->isDirty('status') && $subscription->status === 'active' && ! $subscription->activation_date) {
+            if ($subscription->isDirty('status') && $subscription->status === 'active' && !$subscription->activation_date) {
                 $subscription->activation_date = now();
             }
         });
