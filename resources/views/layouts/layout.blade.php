@@ -111,9 +111,9 @@
             <div class="border-t border-gray-800 pt-8">
                 <div class="flex flex-col items-center justify-between gap-4 md:flex-row">
                     <div class="text-lg">
-                        <a href="mailto:support@skybase.cloud" class="hover:text-white">support@skybase.cloud</a>
+                        <a href="mailto:support@skybase.app" class="hover:text-white">support@skybase.app</a>
                         <span class="mx-2">.</span>
-                        <a href="https://skybase.cloud" class="hover:text-white">skybase.cloud</a>
+                        <a href="https://skybase.app" class="hover:text-white">skybase.app</a>
                     </div>
                     <p class="text-lg">&copy; 2026 SkyBase Cloud. All rights reserved.</p>
                 </div>

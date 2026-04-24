@@ -345,7 +345,7 @@
             <!-- Enterprise CTA -->
             <div class="mt-12 text-center">
                 <p class="text-lg text-gray-600 mb-4">Need more than 2,400 subscribers?</p>
-                <a href="mailto:sales@skybase.cloud" class="inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
+                <a href="mailto:sales@skybase.app" class="inline-flex items-center justify-center px-8 py-3 text-lg font-semibold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
                     Contact Sales for Enterprise Pricing
                 </a>
             </div>
@@ -502,7 +502,7 @@
                             <span>Full platform features</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.cloud" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
                         Contact Sales
                     </a>
                 </div>
@@ -545,7 +545,7 @@
                             <span>Deployment assistance</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.cloud" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors">
+                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors">
                         Contact Sales
                     </a>
                 </div>
@@ -585,7 +585,7 @@
                             <span>Custom configuration</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.cloud" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
                         Contact Sales
                     </a>
                 </div>
@@ -625,7 +625,7 @@
                             <span>On-site training</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.cloud" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
                         Contact Sales
                     </a>
                 </div>
@@ -665,7 +665,7 @@
                             <span>SLA guarantee</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.cloud" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
                         Contact Sales
                     </a>
                 </div>
@@ -704,7 +704,7 @@
                             <span>Dedicated infrastructure</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.cloud" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">
+                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">
                         Contact Sales
                     </a>
                 </div>
@@ -857,7 +857,7 @@
                     <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-blue-800 bg-white rounded-2xl hover:bg-gray-50 transition-colors">
                         Start Free Trial
                     </a>
-                    <a href="mailto:sales@skybase.cloud" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white border-2 border-white rounded-2xl hover:bg-white hover:text-blue-600 transition-colors">
+                    <a href="mailto:sales@skybase.app" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white border-2 border-white rounded-2xl hover:bg-white hover:text-blue-600 transition-colors">
                         Contact Sales
                     </a>
                 </div>
