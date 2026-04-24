@@ -906,7 +906,7 @@
                 </p>
 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white bg-white rounded-2xl hover:bg-gray-50 transition-colors">
+                    <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-blue-800 bg-white rounded-2xl hover:bg-gray-50 transition-colors">
                         Start Free Trial
                     </a>
                     <a href="mailto:sales@skybase.cloud" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white border-2 border-white rounded-2xl hover:bg-white hover:text-blue-600 transition-colors">

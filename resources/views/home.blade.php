@@ -64,9 +64,9 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class=" bg-gradient-to-b from-blue-900 via-blue-700 to-blue-600 py-20 lg:py-32">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="max-w-4xl mx-auto text-left">
+    <section class=" bg-gradient-to-b from-blue-900 via-blue-700 to-blue-600 py-20 lg:py-16">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7/8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="max-w-4xl mx-auto text-left flex flex-col items-start justify-center">
                 <h1 class="text-4xl sm:text-5xl font-bold text-white leading-tight mb-6">
                     Cloud Control Plane for MikroTik ISPs
                 </h1>
