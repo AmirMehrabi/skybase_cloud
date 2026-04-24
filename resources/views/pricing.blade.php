@@ -1,66 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="description" content="Explore SkyBase pricing for ISP management software. Start free with our cloud platform or deploy on-premise for full infrastructure control.">
-    <meta name="keywords" content="ISP pricing, MikroTik pricing, WISP pricing, cloud ISP management, on-premise ISP software">
-    <meta name="author" content="SkyBase Cloud">
+@extends('layouts.layout')
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="SkyBase Pricing | Cloud & On-Premise ISP Management Platform">
-    <meta property="og:description" content="Explore SkyBase pricing for ISP management software. Start free with our cloud platform or deploy on-premise for full infrastructure control.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ url('/pricing') }}">
-    <meta property="og:image" content="{{ asset('images/og-image.png') }}">
+@section('title', 'SkyBase Pricing | Cloud & On-Premise ISP Management Platform')
+@section('meta_description', 'Explore SkyBase pricing for ISP management software. Start free with our cloud platform or deploy on-premise for full infrastructure control.')
+@section('meta_keywords', 'ISP pricing, MikroTik pricing, WISP pricing, cloud ISP management, on-premise ISP software')
+@section('og_title', 'SkyBase Pricing | Cloud & On-Premise ISP Management Platform')
+@section('og_description', 'Explore SkyBase pricing for ISP management software. Start free with our cloud platform or deploy on-premise for full infrastructure control.')
+@section('og_url', url('/pricing'))
 
-    <title>SkyBase Pricing | Cloud & On-Premise ISP Management Platform</title>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            font-family: 'Manrope', sans-serif;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Space Grotesk', sans-serif;
-        }
-    </style>
-
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="bg-white">
-    <!-- Navbar -->
-    <nav class="border-b border-gray-200 bg-white sticky top-0 z-50">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20">
-                <!-- Logo -->
-                <div class="flex items-center">
-                    <a href="{{ url('/') }}" class="text-3xl font-bold text-gray-900">SkyBase Cloud</a>
-                </div>
-
-                <!-- Center Links (Desktop) -->
-                <div class="hidden md:flex items-center gap-10">
-                    <a href="{{ url('/') }}#features" class="text-gray-600 hover:text-gray-900 text-lg font-medium">Features</a>
-                    <a href="{{ url('/pricing') }}" class="text-blue-600 text-lg font-medium">Pricing</a>
-                    <a href="{{ url('/') }}#docs" class="text-gray-600 hover:text-gray-900 text-lg font-medium">Docs</a>
-                    <a href="{{ url('/') }}#about" class="text-gray-600 hover:text-gray-900 text-lg font-medium">About</a>
-                </div>
-
-                <!-- Right Buttons -->
-                <div class="flex items-center gap-4">
-                    <a href="{{ route('auth.login') }}" class="hidden sm:inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors">Login</a>
-                    <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors">Register</a>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
+@section('content')
+<!-- Hero Section -->
     <section class="bg-gray-50 border-b border-gray-200 py-16 sm:py-20">
         <div class="mx-auto px-4 sm:px-6 lg:px-8">
             <div class="max-w-4xl mx-auto text-center">
@@ -917,65 +865,11 @@
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-400 py-12">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
-                <!-- Brand -->
-                <div class="col-span-2">
-                    <h3 class="text-white font-bold text-lg mb-4">SkyBase Cloud</h3>
-                    <p class="text-lg">Cloud-based ISP management platform for MikroTik networks.</p>
-                </div>
+@endsection
 
-                <!-- Product -->
-                <div>
-                    <h4 class="text-white font-semibold mb-3">Product</h4>
-                    <ul class="space-y-2 text-lg">
-                        <li><a href="{{ url('/') }}#features" class="hover:text-white">Features</a></li>
-                        <li><a href="{{ url('/pricing') }}" class="hover:text-white">Pricing</a></li>
-                        <li><a href="{{ url('/') }}#docs" class="hover:text-white">Documentation</a></li>
-                        <li><a href="#" class="hover:text-white">Changelog</a></li>
-                    </ul>
-                </div>
-
-                <!-- Company -->
-                <div>
-                    <h4 class="text-white font-semibold mb-3">Company</h4>
-                    <ul class="space-y-2 text-lg">
-                        <li><a href="{{ url('/') }}#about" class="hover:text-white">About</a></li>
-                        <li><a href="#" class="hover:text-white">Contact</a></li>
-                        <li><a href="#" class="hover:text-white">Privacy Policy</a></li>
-                        <li><a href="#" class="hover:text-white">Terms of Service</a></li>
-                    </ul>
-                </div>
-
-                <!-- Resources -->
-                <div>
-                    <h4 class="text-white font-semibold mb-3">Resources</h4>
-                    <ul class="space-y-2 text-lg">
-                        <li><a href="#" class="hover:text-white">ISP Management Guide</a></li>
-                        <li><a href="#" class="hover:text-white">MikroTik Integration</a></li>
-                        <li><a href="#" class="hover:text-white">Radius Authentication</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Contact & Bottom -->
-            <div class="pt-8 border-t border-gray-800">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div class="text-lg">
-                        <a href="mailto:support@skybase.cloud" class="hover:text-white">support@skybase.cloud</a>
-                        <span class="mx-2">·</span>
-                        <a href="https://skybase.cloud" class="hover:text-white">skybase.cloud</a>
-                    </div>
-                    <p class="text-lg">© 2026 SkyBase Cloud. All rights reserved.</p>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Alpine.js Pricing Calculator -->
-    <script>
+@push('scripts')
+<!-- Alpine.js Pricing Calculator -->
+<script>
         function pricingCalculator() {
             return {
                 subscribers: 150,
@@ -999,5 +893,4 @@
             }
         }
     </script>
-</body>
-</html>
+@endpush
