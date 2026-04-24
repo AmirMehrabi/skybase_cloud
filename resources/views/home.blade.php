@@ -28,16 +28,301 @@
             </div>
 
             <!-- Dashboard Preview -->
-            <div class="mt-16 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 max-w-full w-full mx-auto">
-                <div class="bg-gray-100 rounded aspect-video flex items-center justify-center">
-                    <div class="text-center text-gray-400">
-                        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                        </svg>
-                        <p class="text-lg">Dashboard Preview</p>
-                        <p class="text-xs mt-1">Router Status · Online Users · Monitoring Graphs</p>
+            <div class="mt-16 mx-auto w-full max-w-full">
+                <div class="rounded-[2.25rem] border border-slate-700/60 bg-slate-900 p-3 shadow-[0_30px_80px_rgba(15,23,42,0.45)] ring-1 ring-white/10">
+                    <div class="overflow-hidden rounded-[1.7rem] border border-slate-800 bg-slate-950">
+                        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/95 px-4 py-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="h-2.5 w-2.5 rounded-full bg-rose-400"></span>
+                                <span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span>
+                                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+                            </div>
+                            <div class="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-400">
+                                SkyBase dashboard
+                            </div>
+                        </div>
+
+                        <div class="aspect-[16/10] overflow-hidden bg-slate-100">
+                            <div class="scale-[0.58] origin-top-left p-4 sm:scale-[0.62] lg:scale-[0.64]">
+                                <div class="w-[155%] space-y-4 rounded-[2rem] bg-slate-100 p-4">
+                                    <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 text-white shadow-sm">
+                                        <div class="grid gap-6 px-5 py-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(240px,1fr)] lg:items-end">
+                                            <div class="space-y-4">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-sky-100 ring-1 ring-inset ring-white/15">
+                                                        Tenant dashboard
+                                                    </span>
+                                                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                                                        Active
+                                                    </span>
+                                                    <span class="inline-flex items-center rounded-full bg-amber-400/15 px-3 py-1 text-[10px] font-medium text-amber-100 ring-1 ring-inset ring-amber-300/30">
+                                                        Trial ends in 9 days
+                                                    </span>
+                                                </div>
+
+                                                <div class="space-y-2">
+                                                    <p class="text-xs font-medium text-sky-100/80">Welcome back</p>
+                                                    <h3 class="text-2xl font-semibold tracking-tight sm:text-3xl">North Ridge Wireless</h3>
+                                                    <p class="max-w-2xl text-xs leading-5 text-slate-200 sm:text-sm">
+                                                        A live operations view of subscribers, service health, routers, and IP capacity scoped to a single tenant.
+                                                    </p>
+                                                </div>
+
+                                                <div class="flex flex-wrap gap-2">
+                                                    <span class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-900">Add customer</span>
+                                                    <span class="inline-flex items-center rounded-xl bg-sky-400/15 px-3 py-2 text-xs font-semibold text-white ring-1 ring-inset ring-sky-200/20">Create subscription</span>
+                                                    <span class="inline-flex items-center rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white ring-1 ring-inset ring-white/15">Add router</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="grid gap-3 rounded-[24px] border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:grid-cols-2">
+                                                <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+                                                    <p class="text-[10px] font-medium uppercase tracking-[0.22em] text-slate-300">Active subscribers</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-white">1,248</p>
+                                                    <p class="mt-2 text-xs leading-5 text-slate-300">+32 this month</p>
+                                                </div>
+                                                <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+                                                    <p class="text-[10px] font-medium uppercase tracking-[0.22em] text-slate-300">Routers online</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-white">18 / 19</p>
+                                                    <p class="mt-2 text-xs leading-5 text-slate-300">One site needs attention</p>
+                                                </div>
+                                                <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+                                                    <p class="text-[10px] font-medium uppercase tracking-[0.22em] text-slate-300">MRR</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-white">$48.2k</p>
+                                                    <p class="mt-2 text-xs leading-5 text-slate-300">Recurring revenue snapshot</p>
+                                                </div>
+                                                <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+                                                    <p class="text-[10px] font-medium uppercase tracking-[0.22em] text-slate-300">IP capacity</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-white">74%</p>
+                                                    <p class="mt-2 text-xs leading-5 text-slate-300">Pool usage across sites</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="grid grid-cols-2 gap-3 xl:grid-cols-5">
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p class="text-xs font-medium text-slate-500">Payments due</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">87</p>
+                                                </div>
+                                                <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">Focus</span>
+                                            </div>
+                                            <p class="mt-2 text-xs leading-5 text-slate-600">Accounts pending billing follow-up.</p>
+                                        </div>
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p class="text-xs font-medium text-slate-500">Offline towers</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">1</p>
+                                                </div>
+                                                <span class="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-200">Alert</span>
+                                            </div>
+                                            <p class="mt-2 text-xs leading-5 text-slate-600">One backhaul node lost telemetry.</p>
+                                        </div>
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p class="text-xs font-medium text-slate-500">New installs</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">14</p>
+                                                </div>
+                                                <span class="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-200">Focus</span>
+                                            </div>
+                                            <p class="mt-2 text-xs leading-5 text-slate-600">Scheduled for this service week.</p>
+                                        </div>
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p class="text-xs font-medium text-slate-500">Suspended</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">23</p>
+                                                </div>
+                                                <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">Review</span>
+                                            </div>
+                                            <p class="mt-2 text-xs leading-5 text-slate-600">Needs collections or support follow-up.</p>
+                                        </div>
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p class="text-xs font-medium text-slate-500">Open tickets</p>
+                                                    <p class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">9</p>
+                                                </div>
+                                                <span class="inline-flex rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-200">Queue</span>
+                                            </div>
+                                            <p class="mt-2 text-xs leading-5 text-slate-600">Support workload is steady.</p>
+                                        </div>
+                                    </section>
+
+                                    <section class="grid grid-cols-[minmax(0,1.25fr)_minmax(220px,0.75fr)] gap-4">
+                                        <div class="space-y-4">
+                                            <div class="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                                                <div class="flex items-center justify-between">
+                                                    <div>
+                                                        <h4 class="text-sm font-semibold text-slate-900">Service mix</h4>
+                                                        <p class="text-xs text-slate-500">Subscription and connection breakdown.</p>
+                                                    </div>
+                                                    <span class="text-xs font-semibold text-sky-700">View subscriptions</span>
+                                                </div>
+
+                                                <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                                                    <div class="rounded-2xl bg-slate-50 p-4">
+                                                        <div class="flex items-center justify-between">
+                                                            <p class="text-xs font-semibold text-slate-800">Subscription statuses</p>
+                                                            <span class="text-[10px] font-medium text-slate-500">1,248 total</span>
+                                                        </div>
+                                                        <div class="mt-3 space-y-3">
+                                                            <div class="space-y-1.5">
+                                                                <div class="flex items-center justify-between text-[11px]">
+                                                                    <span class="font-medium text-slate-700">Active</span>
+                                                                    <span class="text-slate-500">82%</span>
+                                                                </div>
+                                                                <div class="h-2 rounded-full bg-slate-200">
+                                                                    <div class="h-2 w-[82%] rounded-full bg-emerald-500"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="space-y-1.5">
+                                                                <div class="flex items-center justify-between text-[11px]">
+                                                                    <span class="font-medium text-slate-700">Pending</span>
+                                                                    <span class="text-slate-500">11%</span>
+                                                                </div>
+                                                                <div class="h-2 rounded-full bg-slate-200">
+                                                                    <div class="h-2 w-[11%] rounded-full bg-amber-500"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="space-y-1.5">
+                                                                <div class="flex items-center justify-between text-[11px]">
+                                                                    <span class="font-medium text-slate-700">Suspended</span>
+                                                                    <span class="text-slate-500">7%</span>
+                                                                </div>
+                                                                <div class="h-2 rounded-full bg-slate-200">
+                                                                    <div class="h-2 w-[7%] rounded-full bg-rose-500"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="rounded-2xl bg-slate-50 p-4">
+                                                        <div class="flex items-center justify-between">
+                                                            <p class="text-xs font-semibold text-slate-800">Connection types</p>
+                                                            <span class="text-[10px] font-medium text-slate-500">Provisioning footprint</span>
+                                                        </div>
+                                                        <div class="mt-3 space-y-3">
+                                                            <div class="rounded-2xl border border-slate-200 bg-white p-3">
+                                                                <div class="flex items-center justify-between">
+                                                                    <span class="text-xs font-semibold text-slate-900">PPPoE</span>
+                                                                    <span class="text-sm font-semibold text-slate-900">58%</span>
+                                                                </div>
+                                                                <div class="mt-2 h-2 rounded-full bg-slate-200">
+                                                                    <div class="h-2 w-[58%] rounded-full bg-sky-500"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="rounded-2xl border border-slate-200 bg-white p-3">
+                                                                <div class="flex items-center justify-between">
+                                                                    <span class="text-xs font-semibold text-slate-900">Hotspot</span>
+                                                                    <span class="text-sm font-semibold text-slate-900">27%</span>
+                                                                </div>
+                                                                <div class="mt-2 h-2 rounded-full bg-slate-200">
+                                                                    <div class="h-2 w-[27%] rounded-full bg-violet-500"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="rounded-2xl border border-slate-200 bg-white p-3">
+                                                                <div class="flex items-center justify-between">
+                                                                    <span class="text-xs font-semibold text-slate-900">Static</span>
+                                                                    <span class="text-sm font-semibold text-slate-900">15%</span>
+                                                                </div>
+                                                                <div class="mt-2 h-2 rounded-full bg-slate-200">
+                                                                    <div class="h-2 w-[15%] rounded-full bg-emerald-500"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-4">
+                                            <div class="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                                                <div class="flex items-center justify-between">
+                                                    <div>
+                                                        <h4 class="text-sm font-semibold text-slate-900">Router health</h4>
+                                                        <p class="text-xs text-slate-500">Live device posture.</p>
+                                                    </div>
+                                                    <span class="text-xs font-semibold text-sky-700">View routers</span>
+                                                </div>
+                                                <div class="mt-4 space-y-3">
+                                                    <div class="rounded-2xl border border-slate-200 p-3">
+                                                        <div class="flex items-center justify-between">
+                                                            <div>
+                                                                <p class="text-xs font-semibold text-slate-900">Tower-A Core</p>
+                                                                <p class="mt-1 text-[10px] text-slate-500">172 active sessions</p>
+                                                            </div>
+                                                            <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">Online</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="rounded-2xl border border-slate-200 p-3">
+                                                        <div class="flex items-center justify-between">
+                                                            <div>
+                                                                <p class="text-xs font-semibold text-slate-900">Hilltop Relay</p>
+                                                                <p class="mt-1 text-[10px] text-slate-500">Telemetry stale for 4m</p>
+                                                            </div>
+                                                            <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">Warning</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="rounded-2xl border border-slate-200 p-3">
+                                                        <div class="flex items-center justify-between">
+                                                            <div>
+                                                                <p class="text-xs font-semibold text-slate-900">Backbone POP</p>
+                                                                <p class="mt-1 text-[10px] text-slate-500">Peak throughput 6.2 Gbps</p>
+                                                            </div>
+                                                            <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">Online</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                                                <div class="flex items-center justify-between">
+                                                    <div>
+                                                        <h4 class="text-sm font-semibold text-slate-900">Recent activity</h4>
+                                                        <p class="text-xs text-slate-500">Operational timeline.</p>
+                                                    </div>
+                                                    <span class="text-xs font-semibold text-sky-700">Manage users</span>
+                                                </div>
+                                                <div class="mt-4 space-y-3">
+                                                    <div class="flex gap-3">
+                                                        <div class="mt-0.5 h-9 w-9 rounded-2xl bg-sky-50 ring-1 ring-inset ring-sky-200"></div>
+                                                        <div>
+                                                            <p class="text-xs font-semibold text-slate-900">New customer activated</p>
+                                                            <p class="mt-1 text-[11px] leading-4 text-slate-600">Fiber 200 plan provisioned automatically.</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex gap-3">
+                                                        <div class="mt-0.5 h-9 w-9 rounded-2xl bg-emerald-50 ring-1 ring-inset ring-emerald-200"></div>
+                                                        <div>
+                                                            <p class="text-xs font-semibold text-slate-900">Payment settled</p>
+                                                            <p class="mt-1 text-[11px] leading-4 text-slate-600">Monthly invoice marked paid via gateway.</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex gap-3">
+                                                        <div class="mt-0.5 h-9 w-9 rounded-2xl bg-rose-50 ring-1 ring-inset ring-rose-200"></div>
+                                                        <div>
+                                                            <p class="text-xs font-semibold text-slate-900">Router alert received</p>
+                                                            <p class="mt-1 text-[11px] leading-4 text-slate-600">Backhaul packet loss crossed threshold.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <div class="mx-auto h-5 w-36 rounded-b-[999px] bg-slate-800 shadow-[0_16px_35px_rgba(15,23,42,0.25)]"></div>
+                <div class="mx-auto h-10 w-24 rounded-b-3xl bg-gradient-to-b from-slate-700 via-slate-800 to-slate-950"></div>
+                <div class="mx-auto h-4 w-48 rounded-full bg-slate-950/60 blur-sm"></div>
             </div>
         </div>
     </section>
