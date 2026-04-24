@@ -4,8 +4,10 @@ use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantCo
 use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
@@ -22,6 +24,11 @@ Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 
 // Features page
 Route::get('/features', [PagesController::class, 'features'])->name('features');
+
+// Contact page
+Route::get('/contact', [PagesController::class, 'contact'])->name('contact.show');
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+Route::post('/demo-requests', [DemoRequestController::class, 'store'])->name('demo-requests.store');
 
 // Authentication Routes (Guest only)
 Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {

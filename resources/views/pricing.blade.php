@@ -8,6 +8,7 @@
 @section('og_url', url('/pricing'))
 
 @section('content')
+<div x-data="demoRequestModal()">
 <!-- Hero Section -->
     <section class="bg-gray-50 border-b border-gray-200 py-16 sm:py-20">
         <div class="mx-auto px-4 sm:px-6 lg:px-8">
@@ -502,9 +503,9 @@
                             <span>Full platform features</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
-                        Contact Sales
-                    </a>
+                    <button type="button" @click="open('Basic')" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                        Demo Request
+                    </button>
                 </div>
 
                 <!-- Standard Plan (Most Popular) -->
@@ -545,9 +546,9 @@
                             <span>Deployment assistance</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors">
-                        Contact Sales
-                    </a>
+                    <button type="button" @click="open('Standard')" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors">
+                        Demo Request
+                    </button>
                 </div>
 
                 <!-- Advanced Plan -->
@@ -585,9 +586,9 @@
                             <span>Custom configuration</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
-                        Contact Sales
-                    </a>
+                    <button type="button" @click="open('Advanced')" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                        Demo Request
+                    </button>
                 </div>
 
                 <!-- Professional Plan -->
@@ -625,9 +626,9 @@
                             <span>On-site training</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
-                        Contact Sales
-                    </a>
+                    <button type="button" @click="open('Professional')" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                        Demo Request
+                    </button>
                 </div>
 
                 <!-- Premium Plan -->
@@ -665,9 +666,9 @@
                             <span>SLA guarantee</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
-                        Contact Sales
-                    </a>
+                    <button type="button" @click="open('Premium')" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-800 transition-colors">
+                        Demo Request
+                    </button>
                 </div>
 
                 <!-- Enterprise Plan -->
@@ -704,13 +705,21 @@
                             <span>Dedicated infrastructure</span>
                         </li>
                     </ul>
-                    <a href="mailto:sales@skybase.app" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">
-                        Contact Sales
-                    </a>
+                    <button type="button" @click="open('Enterprise')" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">
+                        Demo Request
+                    </button>
                 </div>
             </div>
         </div>
     </section>
+
+    @if (session('demo_request_success'))
+        <section class="bg-green-50">
+            <div class="mx-auto max-w-7xl px-4 py-4 text-sm font-medium text-green-800 sm:px-6 lg:px-8">
+                {{ session('demo_request_success') }}
+            </div>
+        </section>
+    @endif
 
     <!-- Feature Comparison Table -->
     <section class="py-16 bg-white">
@@ -865,6 +874,144 @@
         </div>
     </section>
 
+    <div
+        x-cloak
+        x-show="show"
+        x-on:keydown.escape.window="close()"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style="display: none;"
+    >
+        <div x-show="show" x-transition.opacity class="absolute inset-0 bg-gray-950/50 backdrop-blur-sm" @click="close()"></div>
+        <div x-show="show" x-transition class="relative z-10 w-full max-w-3xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+            <div class="flex items-start justify-between border-b border-gray-200 px-6 py-5 sm:px-8">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">On-Premise Demo</p>
+                    <h3 class="mt-2 text-2xl font-bold text-gray-900">Tell us about your business</h3>
+                    <p class="mt-2 text-sm leading-6 text-gray-600">We use this to tailor the demo around your current operations and growth plans.</p>
+                </div>
+                <button type="button" @click="close()" class="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                </button>
+            </div>
+
+            <form action="{{ route('demo-requests.store') }}" method="POST" class="px-6 py-6 sm:px-8">
+                @csrf
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <x-ui.input.text
+                        name="requested_plan"
+                        label="Requested plan"
+                        :value="old('requested_plan')"
+                        error="{{ $errors->demoRequest->first('requested_plan') }}"
+                        x-model="plan"
+                        readonly
+                        required
+                    />
+                    <x-ui.input.text
+                        name="business_name"
+                        label="Business name"
+                        :value="old('business_name')"
+                        error="{{ $errors->demoRequest->first('business_name') }}"
+                        placeholder="SkyNet Fiber"
+                        required
+                    />
+                    <x-ui.input.text
+                        name="contact_name"
+                        label="Contact name"
+                        :value="old('contact_name')"
+                        error="{{ $errors->demoRequest->first('contact_name') }}"
+                        placeholder="Jane Doe"
+                        required
+                    />
+                    <x-ui.input.text
+                        name="email"
+                        type="email"
+                        label="Work email"
+                        :value="old('email')"
+                        error="{{ $errors->demoRequest->first('email') }}"
+                        placeholder="jane@company.com"
+                        required
+                    />
+                    <x-ui.input.text
+                        name="phone"
+                        type="tel"
+                        label="Phone number"
+                        :value="old('phone')"
+                        error="{{ $errors->demoRequest->first('phone') }}"
+                        placeholder="+1 555 123 4567"
+                    />
+                    <x-ui.input.text
+                        name="country"
+                        label="Country"
+                        :value="old('country')"
+                        error="{{ $errors->demoRequest->first('country') }}"
+                        placeholder="France"
+                        required
+                    />
+                    <x-ui.input.text
+                        name="company_website"
+                        type="url"
+                        label="Company website"
+                        :value="old('company_website')"
+                        error="{{ $errors->demoRequest->first('company_website') }}"
+                        placeholder="https://example.com"
+                    />
+                    <x-ui.input.text
+                        name="customer_count"
+                        type="number"
+                        label="How many customers?"
+                        :value="old('customer_count')"
+                        error="{{ $errors->demoRequest->first('customer_count') }}"
+                        placeholder="350"
+                        min="1"
+                        required
+                    />
+                    <x-ui.input.text
+                        name="current_system"
+                        label="Current setup"
+                        :value="old('current_system')"
+                        error="{{ $errors->demoRequest->first('current_system') }}"
+                        placeholder="Spreadsheets, custom ERP, billing suite..."
+                    />
+                    <x-ui.input.select
+                        name="deployment_timeline"
+                        label="Deployment timeline"
+                        :value="old('deployment_timeline')"
+                        :options="[
+                            'Immediately' => 'Immediately',
+                            'This month' => 'This month',
+                            'This quarter' => 'This quarter',
+                            'Just exploring' => 'Just exploring',
+                        ]"
+                        error="{{ $errors->demoRequest->first('deployment_timeline') }}"
+                        placeholder="Choose a timeline"
+                    />
+                </div>
+
+                <div class="mt-5">
+                    <x-ui.input.textarea
+                        name="message"
+                        label="Anything else we should know?"
+                        :value="old('message')"
+                        error="{{ $errors->demoRequest->first('message') }}"
+                        placeholder="Share deployment goals, integrations, or any priorities for the walkthrough."
+                        rows="4"
+                    />
+                </div>
+
+                <div class="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm leading-6 text-gray-500">Your submission is saved in our database and sent to our Telegram sales channel.</p>
+                    <div class="flex gap-3">
+                        <button type="button" @click="close()" class="inline-flex items-center justify-center rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-400 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" class="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">Request Demo</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -889,6 +1036,20 @@
                 get perUserCost() {
                     if (this.selectedPlan.price === 0) return '0.00';
                     return (this.selectedPlan.price / this.selectedPlan.limit).toFixed(2);
+                }
+            }
+        }
+
+        function demoRequestModal() {
+            return {
+                show: @json($errors->demoRequest->any()),
+                plan: @js(old('requested_plan', 'Standard')),
+                open(selectedPlan) {
+                    this.plan = selectedPlan;
+                    this.show = true;
+                },
+                close() {
+                    this.show = false;
                 }
             }
         }

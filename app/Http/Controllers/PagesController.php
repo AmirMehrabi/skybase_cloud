@@ -2,41 +2,45 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 
 class PagesController extends Controller
 {
-    public function index(Request $request)
+    public function index(): View|RedirectResponse
     {
-        // Redirect authenticated users to dashboard
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
 
-        // Show home page for guests
         return view('home');
     }
 
-    public function pricing(Request $request)
+    public function pricing(): View|RedirectResponse
     {
-        // Redirect authenticated users to dashboard
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
 
-        // Show pricing page for guests
         return view('pricing');
     }
 
-    public function features(Request $request)
+    public function features(): View|RedirectResponse
     {
-        // Redirect authenticated users to dashboard
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
 
-        // Show features page for guests
         return view('features');
+    }
+
+    public function contact(): View|RedirectResponse
+    {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('contact');
     }
 }
