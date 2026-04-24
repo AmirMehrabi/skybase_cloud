@@ -77,8 +77,6 @@
                     <a href="{{ url('/') }}" class="rounded-full px-4 py-2 text-sm font-semibold transition-colors {{ $isHomePage ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">Home</a>
                     <a href="{{ url('/features') }}" class="rounded-full px-4 py-2 text-sm font-semibold transition-colors {{ $isFeaturesPage ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">Features</a>
                     <a href="{{ url('/pricing') }}" class="rounded-full px-4 py-2 text-sm font-semibold transition-colors {{ $isPricingPage ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">Pricing</a>
-                    <a href="{{ url('/') }}#docs" class="rounded-full px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900">Docs</a>
-                    <a href="{{ url('/') }}#about" class="rounded-full px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900">About</a>
                     <a href="{{ url('/') }}#contact" class="rounded-full px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900">Contact</a>
                 </div>
 
@@ -122,8 +120,6 @@
                         <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}" class="rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors {{ $isHomePage ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300' }}">Home</a>
                         <a x-on:click="mobileMenuOpen = false" href="{{ url('/features') }}" class="rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors {{ $isFeaturesPage ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300' }}">Features</a>
                         <a x-on:click="mobileMenuOpen = false" href="{{ url('/pricing') }}" class="rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors {{ $isPricingPage ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300' }}">Pricing</a>
-                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}#docs" class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300">Docs</a>
-                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}#about" class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300">About</a>
                         <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}#contact" class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300">Contact</a>
                     </div>
 
