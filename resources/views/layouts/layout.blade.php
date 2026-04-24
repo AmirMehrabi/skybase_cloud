@@ -48,12 +48,25 @@
     @stack('styles')
 </head>
 <body class="@yield('body_class', 'bg-white')">
-    <nav x-data="{ mobileMenuOpen: false }" x-on:keydown.escape.window="mobileMenuOpen = false" class="sticky top-0 z-50 border-b border-gray-200/80 bg-white/95 backdrop-blur">
+    <nav
+        x-data="{ mobileMenuOpen: false, isCompact: window.scrollY > 24 }"
+        x-init="window.addEventListener('scroll', () => { isCompact = window.scrollY > 24; }, { passive: true })"
+        x-on:keydown.escape.window="mobileMenuOpen = false"
+        class="sticky top-0 z-50 border-b border-gray-200/80 bg-white/95 backdrop-blur"
+    >
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex min-h-20 items-center justify-between gap-4 py-4">
+            <div
+                class="flex items-center justify-between gap-4 transition-all duration-200"
+                x-bind:class="isCompact ? 'min-h-16 py-2.5' : 'min-h-20 py-4'"
+            >
                 <div class="flex items-center gap-3">
                     <a href="{{ url('/') }}" class="text-3xl font-bold text-gray-900">
-                        <img src="{{ asset('assets/images/logo/logo-black.png') }}" class="max-w-36" alt="SkyBase Cloud logo">
+                        <img
+                            src="{{ asset('assets/images/logo/logo-black.png') }}"
+                            class="transition-all duration-200"
+                            x-bind:class="isCompact ? 'max-w-30' : 'max-w-36'"
+                            alt="SkyBase Cloud logo"
+                        >
                     </a>
                     <div class="hidden rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 lg:inline-flex">
                         Cloud ISP Platform
@@ -74,7 +87,8 @@
                     <a href="{{ route('auth.register') }}" class="hidden items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:inline-flex">Register</a>
                     <button
                         type="button"
-                        class="inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 md:hidden"
+                        class="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 transition-all duration-200 hover:border-gray-400 hover:bg-gray-50 md:hidden"
+                        x-bind:class="isCompact ? 'h-10 w-10' : 'h-12 w-12'"
                         x-on:click="mobileMenuOpen = ! mobileMenuOpen"
                         x-bind:aria-expanded="mobileMenuOpen.toString()"
                         aria-controls="mobile-navigation"
