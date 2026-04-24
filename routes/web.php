@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
@@ -37,9 +38,7 @@ Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('aut
 Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     // Tenant User Management
     Route::prefix('settings/users')->name('admin.tenant.users.')->group(function () {
