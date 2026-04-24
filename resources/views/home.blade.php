@@ -41,7 +41,9 @@
             <div class="flex items-center justify-between h-20">
                 <!-- Logo -->
                 <div class="flex items-center">
-                    <a href="{{ url('/') }}" class="text-3xl font-bold text-gray-900">SkyBase Cloud</a>
+                    <a href="{{ url('/') }}" class="text-3xl font-bold text-gray-900">
+                        <img src="{{ asset("assets/images/logo/logo-black.png") }}" class="max-w-36" alt="">
+                    </a>
                 </div>
 
                 <!-- Center Links (Desktop) -->
@@ -62,26 +64,26 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class=" bg-gray-50 border-b border-gray-200 py-20 sm:py-24">
-        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl">
-            <div class="max-w-4xl mx-auto text-center">
-                <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight mb-6">
+    <section class=" bg-gradient-to-b from-blue-900 via-blue-700 to-blue-600 py-20 lg:py-32">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8  max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="max-w-4xl mx-auto text-left">
+                <h1 class="text-4xl sm:text-5xl font-bold text-white leading-tight mb-6">
                     Cloud Control Plane for MikroTik ISPs
                 </h1>
-                <p class="text-xl text-gray-600 mb-8 leading-relaxed">
+                <p class="text-xl text-white mb-8 leading-relaxed">
                     SkyBase Cloud helps WISPs and ISPs manage authentication, monitor routers, and provision customers from one secure, scalable platform. Replace manual MikroTik configuration and self-hosted Radius servers with a reliable cloud solution.
                 </p>
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+                <div class="flex flex-col sm:flex-row items-center justify-start gap-4 mb-8">
                     <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-2xl hover:bg-blue-700 transition-colors w-full sm:w-auto">Start Free Trial</a>
                     <a href="#demo" class="inline-flex items-center justify-center px-6 py-3 text-lg font-medium text-gray-700 bg-white border border-gray-300 rounded-2xl hover:bg-gray-50 transition-colors w-full sm:w-auto">Book a Demo</a>
                 </div>
-                <p class="text-lg text-gray-500">
+                <p class="text-lg text-gray-50">
                     Built for real ISPs. Designed for MikroTik networks. Trusted globally.
                 </p>
             </div>
 
             <!-- Dashboard Preview -->
-            <div class="mt-16 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 max-w-5xl mx-auto">
+            <div class="mt-16 bg-white border border-gray-200 rounded-2xl shadow-sm p-4 max-w-full w-full mx-auto">
                 <div class="bg-gray-100 rounded aspect-video flex items-center justify-center">
                     <div class="text-center text-gray-400">
                         <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
