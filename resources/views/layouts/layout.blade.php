@@ -1,4 +1,5 @@
 @php
+    $isHomePage = request()->is('/');
     $isFeaturesPage = request()->is('features');
     $isPricingPage = request()->is('pricing');
 @endphp
@@ -25,6 +26,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         body {
             font-family: 'Manrope', sans-serif;
         }
@@ -43,25 +48,79 @@
     @stack('styles')
 </head>
 <body class="@yield('body_class', 'bg-white')">
-    <nav class="sticky top-0 z-50 border-b border-gray-200 bg-white">
+    <nav x-data="{ mobileMenuOpen: false }" x-on:keydown.escape.window="mobileMenuOpen = false" class="sticky top-0 z-50 border-b border-gray-200/80 bg-white/95 backdrop-blur">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex h-20 items-center justify-between">
-                <div class="flex items-center">
+            <div class="flex min-h-20 items-center justify-between gap-4 py-4">
+                <div class="flex items-center gap-3">
                     <a href="{{ url('/') }}" class="text-3xl font-bold text-gray-900">
                         <img src="{{ asset('assets/images/logo/logo-black.png') }}" class="max-w-36" alt="SkyBase Cloud logo">
                     </a>
+                    <div class="hidden rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 lg:inline-flex">
+                        Cloud ISP Platform
+                    </div>
                 </div>
 
-                <div class="hidden items-center gap-10 md:flex">
-                    <a href="{{ url('/features') }}" class="text-lg font-medium {{ $isFeaturesPage ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900' }}">Features</a>
-                    <a href="{{ url('/pricing') }}" class="text-lg font-medium {{ $isPricingPage ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900' }}">Pricing</a>
-                    <a href="{{ url('/') }}#docs" class="text-lg font-medium text-gray-600 hover:text-gray-900">Docs</a>
-                    <a href="{{ url('/') }}#about" class="text-lg font-medium text-gray-600 hover:text-gray-900">About</a>
+                <div class="hidden items-center rounded-full border border-gray-200 bg-gray-50/80 p-1 md:flex">
+                    <a href="{{ url('/') }}" class="rounded-full px-4 py-2 text-sm font-semibold transition-colors {{ $isHomePage ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">Home</a>
+                    <a href="{{ url('/features') }}" class="rounded-full px-4 py-2 text-sm font-semibold transition-colors {{ $isFeaturesPage ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">Features</a>
+                    <a href="{{ url('/pricing') }}" class="rounded-full px-4 py-2 text-sm font-semibold transition-colors {{ $isPricingPage ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">Pricing</a>
+                    <a href="{{ url('/') }}#docs" class="rounded-full px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900">Docs</a>
+                    <a href="{{ url('/') }}#about" class="rounded-full px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900">About</a>
+                    <a href="{{ url('/') }}#contact" class="rounded-full px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-gray-900">Contact</a>
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <a href="{{ route('auth.login') }}" class="hidden items-center justify-center rounded-2xl border border-gray-300 bg-white px-6 py-3 text-lg font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:inline-flex">Login</a>
-                    <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-lg font-medium text-white transition-colors hover:bg-blue-700">Register</a>
+                    <a href="{{ route('auth.login') }}" class="hidden items-center justify-center rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 lg:inline-flex">Login</a>
+                    <a href="{{ route('auth.register') }}" class="hidden items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:inline-flex">Register</a>
+                    <button
+                        type="button"
+                        class="inline-flex h-12 w-12 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 md:hidden"
+                        x-on:click="mobileMenuOpen = ! mobileMenuOpen"
+                        x-bind:aria-expanded="mobileMenuOpen.toString()"
+                        aria-controls="mobile-navigation"
+                        aria-label="Toggle navigation menu"
+                    >
+                        <svg x-show="! mobileMenuOpen" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+                        </svg>
+                        <svg x-show="mobileMenuOpen" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div
+                id="mobile-navigation"
+                x-show="mobileMenuOpen"
+                x-cloak
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 -translate-y-2"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-2"
+                x-on:click.outside="mobileMenuOpen = false"
+                class="border-t border-gray-200 py-4 md:hidden"
+            >
+                <div class="space-y-4 rounded-[2rem] border border-gray-200 bg-gray-50 p-4 shadow-sm">
+                    <div class="grid grid-cols-2 gap-3">
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}" class="rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors {{ $isHomePage ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300' }}">Home</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/features') }}" class="rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors {{ $isFeaturesPage ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300' }}">Features</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/pricing') }}" class="rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors {{ $isPricingPage ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300' }}">Pricing</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}#docs" class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300">Docs</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}#about" class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300">About</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}#contact" class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-300">Contact</a>
+                    </div>
+
+                    <div class="rounded-3xl bg-white p-4 ring-1 ring-gray-200">
+                        <p class="text-sm font-semibold text-gray-900">Get started with SkyBase Cloud</p>
+                        <p class="mt-1 text-sm leading-6 text-gray-600">Launch your tenant, review pricing, or sign back in from one place.</p>
+                        <div class="mt-4 flex flex-col gap-3">
+                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700">Register</a>
+                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.login') }}" class="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50">Login</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
