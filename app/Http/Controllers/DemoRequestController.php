@@ -11,17 +11,23 @@ class DemoRequestController extends Controller
 {
     public function store(StoreDemoRequestRequest $request, TelegramLeadNotifier $telegramLeadNotifier): RedirectResponse
     {
+        $validated = $request->validated();
+        $sourcePage = $validated['source_page'] ?? 'pricing';
+
         $demoRequest = DemoRequest::query()->create([
-            ...$request->validated(),
-            'source_page' => 'pricing',
+            ...$validated,
+            'source_page' => $sourcePage,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
 
         $telegramLeadNotifier->notifyDemoRequest($demoRequest);
 
-        return redirect()
-            ->route('pricing')
+        $redirect = $sourcePage === 'home'
+            ? redirect(url()->previous().'#demo')
+            : redirect()->route('pricing');
+
+        return $redirect
             ->with('demo_request_success', 'Thanks. Your demo request has been received and our team will follow up soon.');
     }
 }

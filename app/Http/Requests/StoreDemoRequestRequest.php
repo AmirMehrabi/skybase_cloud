@@ -27,6 +27,7 @@ class StoreDemoRequestRequest extends FormRequest
             'current_system' => ['nullable', 'string', 'max:255'],
             'deployment_timeline' => ['nullable', 'string', 'max:255'],
             'message' => ['nullable', 'string', 'max:5000'],
+            'source_page' => ['nullable', 'string', 'max:255'],
         ];
     }
 
