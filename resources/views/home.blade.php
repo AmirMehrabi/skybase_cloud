@@ -9,10 +9,12 @@
 @section('body_class', 'bg-[#f6f1e8] text-slate-950')
 
 @php
+    $whatsappUrl = 'https://wa.me/33758351473?text='.rawurlencode('Hi SkyBase, I would like help with my ISP setup.');
+
     $proofPoints = [
-        'Setup help included',
+        'Free plan up to 40 subscribers',
         'Built for MikroTik',
-        '24/7 WhatsApp support',
+        'WhatsApp: +33 7 58 35 14 73',
     ];
 
     $operations = [
@@ -54,18 +56,24 @@
         ],
     ];
 
+    $pricingPlans = [
+        ['name' => 'Free', 'price' => '$0', 'limit' => 'Up to 40 subscribers', 'note' => 'Perfect for small ISPs getting started'],
+        ['name' => 'Starter', 'price' => '$69', 'limit' => 'Up to 150 subscribers', 'note' => 'For growing ISPs'],
+        ['name' => 'Growth', 'price' => '$129', 'limit' => 'Up to 300 subscribers', 'note' => 'Best value for scaling ISPs'],
+    ];
+
     $pricingHighlights = [
-        'Simple monthly plans',
-        'No server purchase required',
-        'Start small and upgrade as you grow',
-        'Setup guidance included in your demo',
+        'No contracts',
+        'Cancel anytime',
+        'No setup fees',
+        'Cloud hosting included',
     ];
 
     $faqs = [
         ['question' => 'Is this only for MikroTik networks?', 'answer' => 'SkyBase is designed around MikroTik ISP workflows, including PPPoE, Hotspot, Radius users, router visibility, and customer provisioning.'],
         ['question' => 'Can a small ISP use it?', 'answer' => 'Yes. The landing flow, pricing, and onboarding are meant for small and growing operators that want less infrastructure and fewer manual steps.'],
         ['question' => 'What happens during the demo?', 'answer' => 'We review your current setup, customer count, routers, authentication flow, pricing fit, and the simplest path to your first working tenant.'],
-        ['question' => 'Do you really support through WhatsApp?', 'answer' => 'Yes. The page now makes WhatsApp support a core promise because quick human help is a major buying reason for ISP operators.'],
+        ['question' => 'Can I contact you on WhatsApp?', 'answer' => 'Yes. Message us on +33 7 58 35 14 73 for demo scheduling, onboarding questions, and product support.'],
     ];
 @endphp
 
@@ -89,16 +97,16 @@
                 </p>
 
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <a href="#demo" class="group inline-flex items-center justify-center rounded-full bg-[#f5c542] px-7 py-4 text-base font-bold text-slate-950 shadow-[0_20px_50px_rgba(245,197,66,0.28)] transition hover:-translate-y-0.5 hover:bg-[#ffd95d]">
-                        Book WhatsApp Demo
+                    <a href="{{ route('auth.register') }}" class="group inline-flex items-center justify-center rounded-full bg-[#f5c542] px-7 py-4 text-base font-bold text-slate-950 shadow-[0_20px_50px_rgba(245,197,66,0.28)] transition hover:-translate-y-0.5 hover:bg-[#ffd95d]">
+                        Start Trial
                         <span class="ml-2 transition group-hover:translate-x-1">-&gt;</span>
                     </a>
                     <a href="{{ route('pricing') }}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-7 py-4 text-base font-bold text-white backdrop-blur transition hover:bg-white hover:text-slate-950">
-                        View Simple Pricing
+                        View Pricing
                     </a>
                 </div>
 
-                <p class="mt-4 text-sm font-medium text-teal-50/75">Free demo. No credit card. We help you choose the simplest setup.</p>
+                <p class="mt-4 text-sm font-medium text-teal-50/75">Start a free trial, compare pricing, or message us on WhatsApp for help choosing the right plan.</p>
 
                 <div class="mt-8 flex flex-wrap gap-3">
                     @foreach($proofPoints as $proofPoint)
@@ -152,8 +160,8 @@
                             <div class="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5">
                                 <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-700">WhatsApp support</p>
                                 <p class="mt-3 text-lg font-bold text-slate-950">Need help connecting router #1?</p>
-                                <p class="mt-2 text-sm leading-6 text-slate-700">Share your setup and get practical onboarding guidance from the team.</p>
-                                <a href="#demo" class="mt-5 inline-flex rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">Request help</a>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">Message +33 7 58 35 14 73 for setup help, onboarding questions, or demo scheduling.</p>
+                                <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="mt-5 inline-flex rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">Message WhatsApp</a>
                             </div>
                         </div>
                     </div>
@@ -206,7 +214,7 @@
                     <p class="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Product walkthrough</p>
                     <h2 class="mt-4 text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl">Keep the daily ISP work obvious.</h2>
                 </div>
-                <p class="max-w-md text-lg leading-8 text-slate-600">SkyBase focuses on the daily workflows that matter most: customers, Radius, monitoring, pricing clarity, and fast support.</p>
+                <p class="max-w-md text-lg leading-8 text-slate-600">Manage the core ISP workflows in one place: customers, Radius authentication, router monitoring, billing follow-up, and support tasks.</p>
             </div>
 
             <div class="mt-10 grid gap-5 lg:grid-cols-3">
@@ -233,9 +241,21 @@
     <section id="pricing" class="bg-[#102f34] py-16 text-white sm:py-20">
         <div class="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_0.8fr] lg:px-8 lg:items-center">
             <div>
-                <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Simple pricing story</p>
-                <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">If price matters, make it easy to understand.</h2>
-                <p class="mt-5 max-w-2xl text-lg leading-8 text-teal-50/80">SkyBase should sell the idea that operators can start small, avoid infrastructure costs, and grow without switching systems.</p>
+                <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Simple cloud pricing</p>
+                <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">Start free. Upgrade only when your subscriber base grows.</h2>
+                <p class="mt-5 max-w-2xl text-lg leading-8 text-teal-50/80">Cloud plans start at $0/month for up to 40 subscribers. Paid plans begin at $69/month and include cloud hosting, automatic updates, and core ISP management features.</p>
+
+                <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                    @foreach($pricingPlans as $pricingPlan)
+                        <div class="rounded-2xl border border-white/10 bg-white/10 p-4">
+                            <p class="text-sm font-bold text-white">{{ $pricingPlan['name'] }}</p>
+                            <p class="mt-2 text-2xl font-bold text-[#f5c542]">{{ $pricingPlan['price'] }}<span class="text-sm font-semibold text-teal-50/70"> / month</span></p>
+                            <p class="mt-2 text-xs font-semibold text-teal-50">{{ $pricingPlan['limit'] }}</p>
+                            <p class="mt-1 text-xs leading-5 text-teal-50/70">{{ $pricingPlan['note'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+
                 <div class="mt-8 grid gap-3 sm:grid-cols-2">
                     @foreach($pricingHighlights as $pricingHighlight)
                         <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold text-teal-50">{{ $pricingHighlight }}</div>
@@ -244,16 +264,16 @@
             </div>
 
             <div class="rounded-[2rem] border border-white/10 bg-white p-7 text-slate-950 shadow-2xl">
-                <p class="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Transparent plans</p>
-                <h3 class="mt-4 text-3xl font-bold tracking-tight">Start with a plan that fits your subscriber base.</h3>
-                <p class="mt-4 text-base leading-7 text-slate-600">Review clear monthly options, then confirm the best fit during your demo. No server purchase, no surprise infrastructure project, and no pressure to overbuy.</p>
+                <p class="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Popular cloud plans</p>
+                <h3 class="mt-4 text-3xl font-bold tracking-tight">Clear monthly pricing for growing MikroTik ISPs.</h3>
+                <p class="mt-4 text-base leading-7 text-slate-600">Choose a plan by subscriber count, start without setup fees, and move to the next tier when your network grows.</p>
                 <div class="mt-6 rounded-2xl bg-[#f6f1e8] p-5">
-                    <p class="text-sm font-semibold text-slate-500">Simple promise</p>
-                    <p class="mt-2 text-2xl font-bold">Start small. Upgrade when your subscriber base grows.</p>
+                    <p class="text-sm font-semibold text-slate-500">Starts from</p>
+                    <p class="mt-2 text-2xl font-bold">$0/month for up to 40 subscribers</p>
                 </div>
                 <div class="mt-6 flex flex-col gap-3 sm:flex-row">
                     <a href="{{ route('pricing') }}" class="inline-flex flex-1 items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">View Pricing</a>
-                    <a href="#demo" class="inline-flex flex-1 items-center justify-center rounded-full bg-[#f5c542] px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-[#ffd95d]">Ask on WhatsApp</a>
+                    <a href="{{ route('auth.register') }}" class="inline-flex flex-1 items-center justify-center rounded-full bg-[#f5c542] px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-[#ffd95d]">Start Trial</a>
                 </div>
             </div>
         </div>
@@ -266,7 +286,7 @@
                     <div>
                         <p class="text-sm font-bold uppercase tracking-[0.24em] text-emerald-700">24/7 WhatsApp support</p>
                         <h2 class="mt-4 text-4xl font-bold tracking-tight text-slate-950">Support should feel as simple as sending a message.</h2>
-                        <p class="mt-5 text-lg leading-8 text-slate-600">For ISP owners, fast help can matter more than another feature. Make WhatsApp part of the product promise, not a footer detail.</p>
+                        <p class="mt-5 text-lg leading-8 text-slate-600">Talk to SkyBase directly on WhatsApp at +33 7 58 35 14 73 when you want a walkthrough, setup guidance, or quick answers before starting.</p>
                     </div>
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div class="rounded-[1.75rem] bg-emerald-50 p-6 ring-1 ring-emerald-100">
@@ -295,11 +315,11 @@
             <div class="flex flex-col justify-between rounded-[2rem] bg-slate-950 p-8 text-white sm:p-10">
                 <div>
                     <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Book your demo</p>
-                    <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">Turn interest into a WhatsApp conversation.</h2>
-                    <p class="mt-5 text-lg leading-8 text-slate-300">Share a few details and we will tailor the walkthrough around your customer count, current system, pricing questions, and preferred WhatsApp contact.</p>
+                    <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">Book a product demo around your real ISP setup.</h2>
+                    <p class="mt-5 text-lg leading-8 text-slate-300">Share a few details and we will tailor the walkthrough around your customer count, current system, pricing questions, and preferred contact method.</p>
                 </div>
                 <div class="mt-10 space-y-3">
-                    @foreach(['Free demo', 'No credit card', 'Pricing questions welcome', 'Setup help included'] as $demoBenefit)
+                    @foreach(['Free product demo', 'Start trial separately', 'Pricing questions welcome', 'WhatsApp follow-up available'] as $demoBenefit)
                         <div class="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-semibold text-slate-100">{{ $demoBenefit }}</div>
                     @endforeach
                 </div>
@@ -404,9 +424,9 @@
                     />
 
                     <div class="flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                        <p class="text-sm leading-6 text-slate-600">We will use your WhatsApp number or email to arrange the demo.</p>
+                        <p class="text-sm leading-6 text-slate-600">We will use your WhatsApp number or email to arrange the demo. You can also message +33 7 58 35 14 73 directly.</p>
                         <button type="submit" class="inline-flex items-center justify-center rounded-full bg-emerald-600 px-7 py-3 text-sm font-bold text-white shadow-[0_16px_35px_rgba(5,150,105,0.25)] transition hover:-translate-y-0.5 hover:bg-emerald-700">
-                            Request WhatsApp Demo
+                            Request Demo
                         </button>
                     </div>
                 </form>
@@ -430,11 +450,11 @@
     <section class="bg-[#0d2f35] py-16 text-white sm:py-20">
         <div class="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
             <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Ready when you are</p>
-            <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">Book the demo, ask about pricing, and see if SkyBase fits your ISP.</h2>
-            <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-teal-50/80">Keep the next step simple: one WhatsApp-friendly demo request, then a focused walkthrough around your real operation.</p>
+            <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">Start your trial or book a demo to see if SkyBase fits your ISP.</h2>
+            <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-teal-50/80">Create your trial account when you are ready, or request a walkthrough if you want to review your setup with us first.</p>
             <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                <a href="#demo" class="inline-flex items-center justify-center rounded-full bg-[#f5c542] px-8 py-4 text-base font-bold text-slate-950 transition hover:bg-[#ffd95d]">Book WhatsApp Demo</a>
-                <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 py-4 text-base font-bold text-white transition hover:bg-white hover:text-slate-950">Start Free Trial</a>
+                <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full bg-[#f5c542] px-8 py-4 text-base font-bold text-slate-950 transition hover:bg-[#ffd95d]">Start Trial</a>
+                <a href="#demo" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 py-4 text-base font-bold text-white transition hover:bg-white hover:text-slate-950">Book a Demo</a>
             </div>
         </div>
     </section>
