@@ -6,56 +6,62 @@
 @section('og_title', 'Contact SkyBase | Talk to Our Team')
 @section('og_description', 'Reach the SkyBase team for product questions, demos, and sales guidance.')
 @section('og_url', url('/contact'))
+@section('body_class', 'bg-[#f6f1e8] text-slate-950')
 
 @section('content')
-    <section class="border-b border-gray-200 bg-gray-50 py-16 sm:py-20">
+    <section class="relative isolate overflow-hidden bg-[#0d2f35] py-16 text-white sm:py-20">
+        <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_20%,rgba(34,197,94,0.26),transparent_28%),radial-gradient(circle_at_85%_10%,rgba(245,197,66,0.22),transparent_30%),linear-gradient(135deg,#09252b_0%,#0d2f35_52%,#123f3d_100%)]"></div>
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="max-w-3xl">
-                <p class="text-sm font-semibold uppercase tracking-[0.28em] text-blue-600">Contact</p>
-                <h1 class="mt-4 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">Let’s talk about your ISP operations</h1>
-                <p class="mt-5 max-w-2xl text-lg leading-8 text-gray-600">Ask about pricing, migrations, onboarding, or deployment options. We keep the process simple and reply with practical next steps.</p>
+                <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Contact</p>
+                <h1 class="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">Talk to SkyBase about your ISP operations.</h1>
+                <p class="mt-5 max-w-2xl text-lg leading-8 text-teal-50/85">Ask about pricing, onboarding, migrations, or deployment options. We reply with practical next steps for your network and team.</p>
             </div>
         </div>
     </section>
 
-    <section class="bg-white py-16 sm:py-20">
-        <div class="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:px-8">
-            <div class="space-y-6">
-                <div class="rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm">
-                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-gray-500">Call or message</p>
-                    <h2 class="mt-3 text-2xl font-bold text-gray-900">We’re easy to reach</h2>
-                    <div class="mt-6 space-y-5">
-                        <div class="rounded-2xl bg-gray-50 p-5">
-                            <p class="text-sm font-medium text-gray-500">Phone</p>
-                            <a href="tel:+33758351473" class="mt-2 inline-flex text-lg font-semibold text-gray-900 hover:text-blue-600">+33 7 58 35 14 73</a>
+    <section class="bg-[#f6f1e8] py-16 sm:py-20">
+        <div class="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+            <div class="space-y-5">
+                <div class="rounded-[2rem] bg-[#172a2c] p-8 text-white shadow-xl">
+                    <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Call or message</p>
+                    <h2 class="mt-3 text-3xl font-bold tracking-tight">We are easy to reach.</h2>
+                    <div class="mt-6 space-y-4">
+                        <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+                            <p class="text-sm font-semibold text-teal-50/70">WhatsApp / Phone</p>
+                            <a href="tel:+33758351473" class="mt-2 inline-flex text-lg font-bold text-white hover:text-[#f5c542]">+33 7 58 35 14 73</a>
                         </div>
-                        <div class="rounded-2xl bg-gray-50 p-5">
-                            <p class="text-sm font-medium text-gray-500">Email</p>
-                            <a href="mailto:sales@skybase.app" class="mt-2 inline-flex text-lg font-semibold text-gray-900 hover:text-blue-600">sales@skybase.app</a>
+                        <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+                            <p class="text-sm font-semibold text-teal-50/70">Email</p>
+                            <a href="mailto:sales@skybase.app" class="mt-2 inline-flex text-lg font-bold text-white hover:text-[#f5c542]">sales@skybase.app</a>
                         </div>
-                        <div class="rounded-2xl bg-blue-50 p-5">
-                            <p class="text-sm font-medium text-blue-700">Best for</p>
-                            <ul class="mt-3 space-y-2 text-sm leading-6 text-blue-900">
-                                <li>Product and pricing questions</li>
-                                <li>Migration planning and onboarding</li>
-                                <li>On-premise and cloud deployment advice</li>
-                            </ul>
-                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-[2rem] border border-emerald-200 bg-white p-8 shadow-xl">
+                    <p class="text-sm font-bold uppercase tracking-[0.24em] text-emerald-700">Best for</p>
+                    <div class="mt-5 space-y-3">
+                        @foreach(['Product and pricing questions', 'Migration planning and onboarding', 'On-premise and cloud deployment advice'] as $contactReason)
+                            <div class="flex gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-slate-800 ring-1 ring-emerald-100">
+                                <span class="mt-1.5 h-2 w-2 shrink-0 bg-emerald-500"></span>
+                                <span>{{ $contactReason }}</span>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
 
-            <div class="rounded-[2rem] border border-gray-200 bg-white p-8 shadow-sm sm:p-10">
+            <div class="rounded-[2rem] border border-slate-950/10 bg-[#fbf7ed] p-6 shadow-xl sm:p-8">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">Send a message</p>
-                        <h2 class="mt-3 text-2xl font-bold text-gray-900">Contact form</h2>
-                        <p class="mt-2 text-sm leading-6 text-gray-600">Clear fields, no clutter, and your message is saved to the database and pushed to Telegram for quick follow-up.</p>
+                        <p class="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Send a message</p>
+                        <h2 class="mt-3 text-3xl font-bold tracking-tight text-slate-950">Contact form</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Your message is saved to the database and pushed to Telegram for quick follow-up.</p>
                     </div>
                 </div>
 
                 @if (session('contact_success'))
-                    <div class="mt-6 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+                    <div class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                         {{ session('contact_success') }}
                     </div>
                 @endif
@@ -104,7 +110,7 @@
                             label="Subject"
                             :value="old('subject')"
                             error="{{ $errors->contactInquiry->first('subject') }}"
-                            placeholder="I’d like to discuss pricing"
+                            placeholder="I would like to discuss pricing"
                             required
                         />
                     </div>
@@ -121,9 +127,9 @@
                         />
                     </div>
 
-                    <div class="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                        <p class="text-sm leading-6 text-gray-500">We usually respond with the right next step instead of a generic message.</p>
-                        <button type="submit" class="inline-flex items-center justify-center rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700">
+                    <div class="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm leading-6 text-slate-600">We usually respond with the right next step instead of a generic message.</p>
+                        <button type="submit" class="inline-flex items-center justify-center bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-[0_16px_35px_rgba(5,150,105,0.25)] transition hover:-translate-y-0.5 hover:bg-emerald-700">
                             Send Message
                         </button>
                     </div>

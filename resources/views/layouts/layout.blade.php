@@ -66,16 +66,16 @@
                     </span>
                 </a>
 
-                <div class="hidden items-center gap-1 rounded-full border border-slate-900/10 bg-white/75 p-1 shadow-sm md:flex">
-                    <a href="{{ url('/') }}" class="rounded-full px-4 py-2 text-sm font-bold transition {{ $isHomePage ? 'bg-[#0d2f35] text-white shadow-sm' : 'text-slate-600 hover:bg-[#f6f1e8] hover:text-slate-950' }}">Home</a>
-                    <a href="{{ url('/features') }}" class="rounded-full px-4 py-2 text-sm font-bold transition {{ $isFeaturesPage ? 'bg-[#0d2f35] text-white shadow-sm' : 'text-slate-600 hover:bg-[#f6f1e8] hover:text-slate-950' }}">Features</a>
-                    <a href="{{ url('/pricing') }}" class="rounded-full px-4 py-2 text-sm font-bold transition {{ $isPricingPage ? 'bg-[#0d2f35] text-white shadow-sm' : 'text-slate-600 hover:bg-[#f6f1e8] hover:text-slate-950' }}">Pricing</a>
-                    <a href="{{ route('contact.show') }}" class="rounded-full px-4 py-2 text-sm font-bold transition {{ $isContactPage ? 'bg-[#0d2f35] text-white shadow-sm' : 'text-slate-600 hover:bg-[#f6f1e8] hover:text-slate-950' }}">Contact</a>
+                <div class="hidden items-center gap-3 md:flex">
+                    <a href="{{ url('/') }}" class="border px-4 py-2 text-sm font-bold transition {{ $isHomePage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Home</a>
+                    <a href="{{ url('/features') }}" class="border px-4 py-2 text-sm font-bold transition {{ $isFeaturesPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Features</a>
+                    <a href="{{ url('/pricing') }}" class="border px-4 py-2 text-sm font-bold transition {{ $isPricingPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Pricing</a>
+                    <a href="{{ route('contact.show') }}" class="border px-4 py-2 text-sm font-bold transition {{ $isContactPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Contact</a>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('auth.login') }}" class="hidden rounded-full px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-white hover:text-slate-950 lg:inline-flex">Login</a>
-                    <a href="{{ route('auth.register') }}" class="hidden rounded-full bg-[#f5c542] px-5 py-2.5 text-sm font-bold text-slate-950 shadow-[0_12px_30px_rgba(245,197,66,0.28)] transition hover:-translate-y-0.5 hover:bg-[#ffd95d] sm:inline-flex">Start Trial</a>
+                    <a href="{{ route('auth.login') }}" class="hidden border border-slate-900/10 bg-white/80 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950 lg:inline-flex">Login</a>
+                    <a href="{{ route('auth.register') }}" class="hidden border border-[#f5c542] bg-[#f5c542] px-5 py-2.5 text-sm font-bold text-slate-950 shadow-[0_12px_30px_rgba(245,197,66,0.28)] transition hover:-translate-y-0.5 hover:bg-[#ffd95d] sm:inline-flex">Start Trial</a>
                     <button
                         type="button"
                         class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-900/10 bg-white text-slate-800 shadow-sm transition hover:bg-[#f6f1e8] md:hidden"
@@ -109,17 +109,17 @@
             >
                 <div class="overflow-hidden rounded-[1.75rem] border border-slate-900/10 bg-white shadow-xl">
                     <div class="grid grid-cols-2 gap-2 p-3">
-                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}" class="rounded-2xl px-4 py-3 text-sm font-bold transition {{ $isHomePage ? 'bg-[#0d2f35] text-white' : 'bg-[#f6f1e8] text-slate-700' }}">Home</a>
-                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/features') }}" class="rounded-2xl px-4 py-3 text-sm font-bold transition {{ $isFeaturesPage ? 'bg-[#0d2f35] text-white' : 'bg-[#f6f1e8] text-slate-700' }}">Features</a>
-                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/pricing') }}" class="rounded-2xl px-4 py-3 text-sm font-bold transition {{ $isPricingPage ? 'bg-[#0d2f35] text-white' : 'bg-[#f6f1e8] text-slate-700' }}">Pricing</a>
-                        <a x-on:click="mobileMenuOpen = false" href="{{ route('contact.show') }}" class="rounded-2xl px-4 py-3 text-sm font-bold transition {{ $isContactPage ? 'bg-[#0d2f35] text-white' : 'bg-[#f6f1e8] text-slate-700' }}">Contact</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}" class="border px-4 py-3 text-sm font-bold transition {{ $isHomePage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Home</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/features') }}" class="border px-4 py-3 text-sm font-bold transition {{ $isFeaturesPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Features</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ url('/pricing') }}" class="border px-4 py-3 text-sm font-bold transition {{ $isPricingPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Pricing</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ route('contact.show') }}" class="border px-4 py-3 text-sm font-bold transition {{ $isContactPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Contact</a>
                     </div>
                     <div class="border-t border-slate-900/10 bg-[#0d2f35] p-4 text-white">
                         <p class="text-sm font-bold">Ready to try SkyBase?</p>
                         <p class="mt-1 text-sm leading-6 text-teal-50/75">Start a tenant, compare pricing, or sign in to your dashboard.</p>
                         <div class="mt-4 grid grid-cols-2 gap-3">
-                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full bg-[#f5c542] px-4 py-3 text-sm font-bold text-slate-950">Start Trial</a>
-                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.login') }}" class="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-3 text-sm font-bold text-white">Login</a>
+                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.register') }}" class="inline-flex items-center justify-center border border-[#f5c542] bg-[#f5c542] px-4 py-3 text-sm font-bold text-slate-950">Start Trial</a>
+                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.login') }}" class="inline-flex items-center justify-center border border-white/20 px-4 py-3 text-sm font-bold text-white">Login</a>
                         </div>
                     </div>
                 </div>
@@ -129,7 +129,7 @@
 
     @yield('content')
 
-    <footer class="bg-gray-900 py-16 text-gray-400">
+    <footer class="bg-slate-950 py-16 text-slate-400">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="grid gap-12 md:grid-cols-4">
                 <div>
@@ -168,7 +168,7 @@
                 </div>
             </div>
 
-            <div class="border-t border-gray-800 pt-8">
+            <div class="border-t border-white/10 pt-8">
                 <div class="flex flex-col items-center justify-between gap-4 md:flex-row">
                     <div class="text-lg">
                         <a href="mailto:support@skybase.app" class="hover:text-white">support@skybase.app</a>
