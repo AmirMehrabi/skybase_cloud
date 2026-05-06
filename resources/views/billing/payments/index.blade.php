@@ -33,7 +33,7 @@
                     <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Export as Excel</a>
                 </div>
             </div>
-            <button @click="openRecordPaymentModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button @click="openRecordPaymentModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
@@ -248,11 +248,21 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Customer</label>
-                        <input type="text" x-model="newPayment.customer" placeholder="Search customer..." class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        <select x-model="newPayment.customer_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                            <option value="">Select customer</option>
+                            <template x-for="customer in customers" :key="customer.id">
+                                <option :value="customer.id" x-text="customer.name + ' (' + customer.customer_code + ')'"></option>
+                            </template>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Invoice</label>
-                        <input type="text" x-model="newPayment.invoice" placeholder="Select invoice" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        <select x-model="newPayment.invoice_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                            <option value="">Select invoice</option>
+                            <template x-for="invoice in invoices" :key="invoice.id">
+                                <option :value="invoice.id" x-text="invoice.invoice_number + ' - ' + invoice.customer_name + ' (' + formatCurrency(invoice.balance_due) + ')'"></option>
+                            </template>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Amount</label>
@@ -286,7 +296,15 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
+<script>
+    window.billingPayments = @json($payments ?? []);
+    window.billingPaymentStats = @json($stats ?? []);
+    window.billingPaymentCustomers = @json($customers ?? []);
+    window.billingPaymentInvoices = @json($invoices ?? []);
+    window.billingPaymentStoreUrl = @json(route('billing.payments.store'));
+    window.billingCsrfToken = @json(csrf_token());
+</script>
 <script src="{{ asset('js/billing/payments-index.js') }}"></script>
-@endscripts
+@endpush
 @endsection

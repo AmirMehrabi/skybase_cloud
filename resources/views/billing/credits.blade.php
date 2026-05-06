@@ -233,10 +233,10 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Customer</label>
-                        <select x-model="newCredit.customer" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                        <select x-model="newCredit.customer_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                             <option value="">Select Customer</option>
-                            <template x-for="c in credits" :key="c.id">
-                                <option :value="c.id" x-text="c.customer_name"></option>
+                            <template x-for="customer in customers" :key="customer.id">
+                                <option :value="customer.id" x-text="customer.name + ' (' + customer.customer_code + ')'"></option>
                             </template>
                         </select>
                     </div>
@@ -276,7 +276,14 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
+<script>
+    window.billingCredits = @json($credits ?? []);
+    window.billingCreditCustomers = @json($customers ?? []);
+    window.billingCreditStats = @json($stats ?? []);
+    window.billingCreditStoreUrl = @json(route('billing.credits.store'));
+    window.billingCsrfToken = @json(csrf_token());
+</script>
 <script src="{{ asset('js/billing/credits.js') }}"></script>
-@endscripts
+@endpush
 @endsection

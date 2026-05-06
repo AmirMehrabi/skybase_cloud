@@ -1,28 +1,10 @@
 function paymentsIndex() {
+    const payments = window.billingPayments || [];
     return {
-        payments: [
-            { id: 1, payment_reference: 'PAY-2024-001', customer_name: 'John Smith', invoice_number: 'INV-2024-001', invoice_id: 1, amount: 125.00, method: 'card', date: '2024-02-15', status: 'completed' },
-            { id: 2, payment_reference: 'PAY-2024-002', customer_name: 'ABC Enterprises', invoice_number: 'INV-2024-006', invoice_id: 6, amount: 500.00, method: 'bank_transfer', date: '2024-02-14', status: 'completed' },
-            { id: 3, payment_reference: 'PAY-2024-003', customer_name: 'Jennifer Taylor', invoice_number: 'INV-2024-010', invoice_id: 10, amount: 200.00, method: 'online', date: '2024-02-13', status: 'completed' },
-            { id: 4, payment_reference: 'PAY-2024-004', customer_name: 'Amanda White', invoice_number: 'INV-2024-012', invoice_id: 12, amount: 180.00, method: 'card', date: '2024-02-12', status: 'completed' },
-            { id: 5, payment_reference: 'PAY-2024-005', customer_name: 'Tech Corp Ltd', invoice_number: 'INV-2024-003', invoice_id: 3, amount: 350.00, method: 'check', date: '2024-02-20', status: 'pending' },
-            { id: 6, payment_reference: 'PAY-2024-006', customer_name: 'Emily Davis', invoice_number: 'INV-2024-005', invoice_id: 5, amount: 150.00, method: 'cash', date: '2024-02-11', status: 'completed' },
-            { id: 7, payment_reference: 'PAY-2024-007', customer_name: 'Lisa Anderson', invoice_number: 'INV-2024-008', invoice_id: 8, amount: 100.00, method: 'online', date: '2024-02-18', status: 'pending' },
-            { id: 8, payment_reference: 'PAY-2024-008', customer_name: 'Robert Brown', invoice_number: 'INV-2024-007', invoice_id: 7, amount: 50.00, method: 'card', date: '2024-02-17', status: 'failed' },
-            { id: 9, payment_reference: 'PAY-2024-009', customer_name: 'Mike Williams', invoice_number: 'INV-2024-004', invoice_id: 4, amount: 75.00, method: 'bank_transfer', date: '2024-02-16', status: 'completed' },
-            { id: 10, payment_reference: 'PAY-2024-010', customer_name: 'Chris Martinez', invoice_number: 'INV-2024-011', invoice_id: 11, amount: 140.00, method: 'card', date: '2024-02-19', status: 'pending' },
-            { id: 11, payment_reference: 'PAY-2024-011', customer_name: 'David Wilson', invoice_number: 'INV-2024-009', invoice_id: 9, amount: 60.00, method: 'cash', date: '2024-02-10', status: 'completed' },
-            { id: 12, payment_reference: 'PAY-2024-012', customer_name: 'Sophie Clark', invoice_number: 'INV-2024-015', invoice_id: 15, amount: 240.00, method: 'online', date: '2024-02-21', status: 'pending' }
-        ],
-
-        stats: {
-            totalCollected: 2565.00,
-            pending: 790.00,
-            pendingCount: 4,
-            failed: 50.00,
-            failedCount: 1,
-            totalCount: 12
-        },
+        payments,
+        stats: window.billingPaymentStats || {},
+        customers: window.billingPaymentCustomers || [],
+        invoices: window.billingPaymentInvoices || [],
 
         // Filters
         search: '',
@@ -37,8 +19,8 @@ function paymentsIndex() {
         // Modal
         openRecordPaymentModal: false,
         newPayment: {
-            customer: '',
-            invoice: '',
+            customer_id: '',
+            invoice_id: '',
             amount: '',
             method: 'cash',
             date: new Date().toISOString().split('T')[0]
@@ -142,9 +124,45 @@ function paymentsIndex() {
         },
 
         recordPayment() {
-            console.log('Recording payment:', this.newPayment);
-            alert('Payment recorded successfully!');
-            this.openRecordPaymentModal = false;
+            if (!this.newPayment.invoice_id) {
+                alert('Please select an invoice.');
+                return;
+            }
+
+            fetch(window.billingPaymentStoreUrl || '/billing/payments', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': window.billingCsrfToken || ''
+                },
+                body: JSON.stringify({
+                    invoice_id: this.newPayment.invoice_id,
+                    amount: this.newPayment.amount,
+                    payment_method: this.newPayment.method,
+                    paid_at: this.newPayment.date,
+                    customer_id: this.newPayment.customer_id
+                })
+            }).then(async (response) => {
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.message || 'Unable to record payment.');
+                    return;
+                }
+
+                this.payments.unshift(data.payment);
+                this.stats.totalCollected = (this.stats.totalCollected || 0) + (parseFloat(this.newPayment.amount) || 0);
+                this.stats.totalCount = (this.stats.totalCount || 0) + 1;
+                this.openRecordPaymentModal = false;
+                this.newPayment = {
+                    customer_id: '',
+                    invoice_id: '',
+                    amount: '',
+                    method: 'cash',
+                    date: new Date().toISOString().split('T')[0]
+                };
+            });
         }
     }
 }

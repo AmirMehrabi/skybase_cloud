@@ -4,8 +4,11 @@ use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantCo
 use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
+use App\Http\Controllers\Billing\CreditController;
+use App\Http\Controllers\Billing\DashboardController as BillingDashboardController;
 use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PaymentController;
+use App\Http\Controllers\Billing\ReportController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -158,24 +161,25 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
 
     // Billing Routes
     Route::prefix('billing')->name('billing.')->group(function () {
-        Route::get('/dashboard', fn () => view('billing.dashboard'))->name('dashboard');
+        Route::get('/dashboard', [BillingDashboardController::class, 'index'])->name('dashboard');
 
         Route::prefix('invoices')->name('invoices.')->group(function () {
             Route::get('/', [InvoiceController::class, 'index'])->name('index');
             Route::post('/generate-recurring', [InvoiceController::class, 'generateRecurring'])->name('generate-recurring');
             Route::get('/create', fn () => view('billing.invoices.create'))->name('create');
             Route::get('/{invoice}', [InvoiceController::class, 'show'])->name('show');
-            Route::post('/{invoice}/payments', [PaymentController::class, 'store'])->name('payments.store');
             Route::get('/{invoice}/edit', fn ($invoice) => view('billing.invoices.edit', compact('invoice')))->name('edit');
         });
 
         Route::prefix('payments')->name('payments.')->group(function () {
-            Route::get('/', fn () => view('billing.payments.index'))->name('index');
-            Route::get('/{payment}', fn ($payment) => view('billing.payments.show', compact('payment')))->name('show');
+            Route::get('/', [PaymentController::class, 'index'])->name('index');
+            Route::post('/', [PaymentController::class, 'store'])->name('store');
+            Route::get('/{payment}', [PaymentController::class, 'show'])->name('show');
         });
 
-        Route::get('/credits', fn () => view('billing.credits'))->name('credits');
-        Route::get('/reports', fn () => view('billing.reports'))->name('reports');
+        Route::get('/credits', [CreditController::class, 'index'])->name('credits');
+        Route::post('/credits', [CreditController::class, 'store'])->name('credits.store');
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports');
     });
 
     // Network Routes

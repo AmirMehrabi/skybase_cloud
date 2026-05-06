@@ -45,6 +45,34 @@
         </div>
     </div>
 
+    <form method="GET" action="{{ route('billing.reports') }}" class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Period</label>
+                <select name="period" x-model="selectedPeriod" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+                    <option value="this_month">This Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="this_quarter">This Quarter</option>
+                    <option value="this_year">This Year</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">From</label>
+                <input type="date" name="from" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                <input type="date" name="to" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 w-full">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </form>
+
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
@@ -262,7 +290,10 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
+<script>
+    window.billingReports = @json($billingReports ?? []);
+</script>
 <script src="{{ asset('js/billing/reports.js') }}"></script>
-@endscripts
+@endpush
 @endsection

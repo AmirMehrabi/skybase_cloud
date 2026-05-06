@@ -238,7 +238,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script src="{{ asset('js/billing/invoices-create.js') }}"></script>
-@endscripts
+@endpush
 @endsection

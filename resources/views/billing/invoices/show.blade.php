@@ -312,7 +312,7 @@
 @push('scripts')
 <script>
     window.billingInvoiceShow = @json($invoice ?? []);
-    window.billingPaymentStoreUrl = @json(isset($invoice['id']) ? route('billing.invoices.payments.store', $invoice['id']) : null);
+    window.billingPaymentStoreUrl = @json(route('billing.payments.store'));
     window.billingCsrfToken = @json(csrf_token());
 </script>
 <script src="{{ asset('js/billing/invoices-show.js') }}"></script>

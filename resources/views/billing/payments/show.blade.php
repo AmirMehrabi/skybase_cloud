@@ -233,7 +233,11 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
+<script>
+    window.billingPaymentShow = @json($payment ?? []);
+    window.billingCsrfToken = @json(csrf_token());
+</script>
 <script src="{{ asset('js/billing/payments-show.js') }}"></script>
-@endscripts
+@endpush
 @endsection

@@ -288,6 +288,9 @@
 </div>
 
 @push('scripts')
+<script>
+    window.billingDashboard = @json($billingDashboard ?? []);
+</script>
 <script src="{{ asset('js/billing/dashboard.js') }}"></script>
 @endpush
 @endsection

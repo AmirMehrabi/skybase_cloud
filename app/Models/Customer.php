@@ -71,6 +71,11 @@ class Customer extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function credits(): HasMany
+    {
+        return $this->hasMany(CustomerCredit::class);
+    }
+
     public function activeSubscription(): ?Subscription
     {
         return $this->subscriptions()->active()->latest()->first();

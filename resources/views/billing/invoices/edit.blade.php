@@ -230,7 +230,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script src="{{ asset('js/billing/invoices-edit.js') }}"></script>
-@endscripts
+@endpush
 @endsection
