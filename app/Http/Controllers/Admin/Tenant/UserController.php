@@ -103,7 +103,7 @@ class UserController extends Controller
 
         $user->load('tenant');
 
-        $recentActivity = app(ActivityLogFormatter::class)->forSubject($user, tenant_id());
+        $recentActivity = app(ActivityLogFormatter::class)->forSubject($user, $user->tenant_id);
 
         return view('admin.tenant.users.show', compact('user', 'recentActivity'));
     }
