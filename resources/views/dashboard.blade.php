@@ -26,10 +26,10 @@
 
 @section('content')
 <div class="space-y-6">
-    <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 text-white shadow-sm">
-        <div class="grid gap-8 px-6 py-7 md:px-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] lg:items-end">
-            <div class="space-y-5">
-                <div class="flex flex-wrap items-center gap-3">
+    <section class="overflow-hidden rounded-[22px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 text-white shadow-sm sm:rounded-[28px]">
+        <div class="grid gap-5 px-4 py-4 sm:px-5 sm:py-5 md:gap-6 md:px-6 md:py-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] lg:items-end lg:gap-8 lg:px-8 lg:py-7">
+            <div class="space-y-4 md:space-y-5">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                     <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-sky-100 ring-1 ring-inset ring-white/15">
                         Tenant dashboard
                     </span>
@@ -43,7 +43,7 @@
                     @endif
                 </div>
 
-                <div class="space-y-3">
+                <div class="space-y-2 sm:space-y-3">
                     <div>
                         <p class="text-sm font-medium text-sky-100/80">Welcome back</p>
                         <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{{ $dashboard['tenant']['name'] }}</h1>
@@ -76,9 +76,9 @@
                 </div>
             </div>
 
-            <div class="grid gap-3 rounded-[24px] border border-white/10 bg-white/5 p-4 backdrop-blur-sm sm:grid-cols-2">
+            <div class="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-3 backdrop-blur-sm sm:grid-cols-2 sm:rounded-[24px] sm:p-4">
                 @foreach ($dashboard['stats'] as $stat)
-                    <a href="{{ $stat['href'] }}" class="rounded-2xl border border-white/10 bg-black/10 p-4 transition hover:bg-black/20">
+                    <a href="{{ $stat['href'] }}" class="rounded-2xl border border-white/10 bg-black/10 p-3 transition hover:bg-black/20 sm:p-4">
                         <p class="text-xs font-medium uppercase tracking-[0.22em] text-slate-300">{{ $stat['label'] }}</p>
                         <p class="mt-3 text-3xl font-semibold tracking-tight text-white">{{ $stat['value'] }}</p>
                         <p class="mt-3 text-sm leading-5 text-slate-300">{{ $stat['meta'] }}</p>

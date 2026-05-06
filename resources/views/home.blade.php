@@ -86,7 +86,7 @@
             <div class="flex flex-col justify-center">
                 <div class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-[0_12px_40px_rgba(16,185,129,0.18)]">
                     <span class="h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.9)]"></span>
-                    Affordable cloud ISP management with real WhatsApp help
+                    Affordable cloud ISP management
                 </div>
 
                 <h1 class="mt-7 max-w-4xl text-5xl font-bold tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl">

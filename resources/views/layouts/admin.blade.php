@@ -98,17 +98,25 @@
         
         @stack('styles')
     </head>
-<body class="bg-whites" style="direction: {{ $direction }};">
+<body class="bg-[#f6f1e8] text-slate-950" style="direction: {{ $direction }};">
     <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 hidden lg:hidden"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 bg-slate-950/60 z-40 hidden lg:hidden"></div>
     
     <!-- Fixed Sidebar -->
-    <aside id="sidebar" class="fixed top-0 {{ $isRtl ? 'right-0' : 'left-0' }} z-50 w-64 h-screen {{ request()->routeIs('admin.reports.*') ? 'bg-blue-900' : 'bg-blue-600' }} transform {{ $isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0' }} transition-transform duration-300">
+    <aside id="sidebar" class="fixed top-0 {{ $isRtl ? 'right-0' : 'left-0' }} z-50 w-64 h-screen overflow-hidden bg-[#0d2f35] text-white shadow-[0_35px_90px_rgba(13,47,53,0.28)] transform {{ $isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0' }} transition-transform duration-300">
+        <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_15%,rgba(34,197,94,0.24),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(245,158,11,0.18),transparent_30%),linear-gradient(135deg,#09252b_0%,#0d2f35_48%,#123f3d_100%)]"></div>
+        <div class="absolute left-1/2 top-0 -z-10 h-72 w-72 -translate-x-1/2 rounded-full border border-white/10 bg-white/[0.03] blur-3xl"></div>
         <div class="h-full flex flex-col">
             <!-- Logo -->
-            <div class="h-[60px] flex items-center px-6 border-b border-blue-700">
-                <a href="{{ route('dashboard') }}" class="text-xl font-semibold text-white">
-                    {{ config('app.name', 'SkyBill') }}
+            <div class="h-[60px] flex items-center px-6 border-b border-white/10 bg-white/[0.03] backdrop-blur-xl">
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-3 text-white">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                        <img src="{{ asset('assets/images/logo/logo-black.png') }}" class="max-w-6 brightness-0 invert" alt="SkyBase Cloud logo mark">
+                    </span>
+                    <span class="leading-none">
+                        <span class="block text-base font-bold tracking-tight">{{ config('app.name', 'SkyBill') }}</span>
+                        <span class="block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/80">Cloud ISP</span>
+                    </span>
                 </a>
             </div>
             
@@ -122,10 +130,10 @@
     <!-- Main Content Area -->
     <div id="main-content-wrapper" class="{{ $isRtl ? 'pr-0 lg:pr-64' : 'pl-0 lg:pl-64' }}">
         <!-- Top Navigation Bar -->
-        <header class="fixed top-0 h-[60px] bg-white border-b border-gray-200 z-30 {{ $isRtl ? 'right-0 left-0 lg:right-64' : 'right-0 left-0 lg:left-64' }}">
+        <header class="fixed top-0 h-[60px] bg-[#fffaf0]/90 border-b border-slate-900/10 shadow-sm backdrop-blur-xl z-30 {{ $isRtl ? 'right-0 left-0 lg:right-64' : 'right-0 left-0 lg:left-64' }}">
             <div class="h-full flex items-center justify-between px-6">
                 <!-- Mobile Menu Button -->
-                <button id="mobile-menu-button" class="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900">
+                <button id="mobile-menu-button" class="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-[#fbf7ed] hover:text-slate-950">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
@@ -133,7 +141,7 @@
                 
                 <!-- Logo (Mobile) -->
                 <div class="lg:hidden">
-                    <a href="{{ route('dashboard') }}" class="text-lg font-semibold text-gray-900">
+                    <a href="{{ route('dashboard') }}" class="text-lg font-semibold text-slate-950">
                         {{ config('app.name', 'SkyBill') }}
                     </a>
                 </div>
@@ -142,18 +150,18 @@
                 <div class="hidden md:flex flex-1 max-w-md mx-8 relative z-50 mr-64">
                     <div class="relative w-full">
                         <div class="absolute inset-y-0 {{ $isRtl ? 'right-0 pr-3' : 'left-0 pl-3' }} flex items-center pointer-events-none">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                         </div>
-                        <input type="text" id="search-input" class="block w-full {{ $isRtl ? 'pr-10 pl-3' : 'pl-10 pr-3' }} py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Search resources..." autocomplete="off">
+                        <input type="text" id="search-input" class="block w-full {{ $isRtl ? 'pr-10 pl-3' : 'pl-10 pr-3' }} py-2 border border-slate-900/10 bg-white/80 rounded-lg text-sm text-slate-900 placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-[#0d2f35]/30" placeholder="Search resources..." autocomplete="off">
                         
                         <!-- Search Dropdown -->
-                        <div id="search-dropdown" class="hidden absolute {{ $isRtl ? 'right-0' : 'left-0' }} mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto z-50">
+                        <div id="search-dropdown" class="hidden absolute {{ $isRtl ? 'right-0' : 'left-0' }} mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-900/10 max-h-96 overflow-y-auto z-50">
                             <!-- Loading State -->
-                            <div id="search-loading" class="hidden px-4 py-3 text-sm text-gray-500">
+                            <div id="search-loading" class="hidden px-4 py-3 text-sm text-slate-500">
                                 <div class="flex items-center gap-2">
-                                    <svg class="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                    <svg class="animate-spin h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
@@ -163,14 +171,14 @@
                             
                             <!-- Recent Searches (shown when input is empty) -->
                             <div id="recent-searches" class="hidden">
-                                <div class="px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                                    <span class="text-xs font-semibold text-gray-500 uppercase">Recent Searches</span>
-                                    <button id="clear-recent-searches" class="text-xs text-gray-400 hover:text-gray-600">Clear</button>
+                                <div class="px-4 py-2 border-b border-slate-900/10 flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase">Recent Searches</span>
+                                    <button id="clear-recent-searches" class="text-xs text-slate-400 hover:text-slate-700">Clear</button>
                                 </div>
                                 <div id="recent-searches-list" class="py-1">
                                     <!-- Recent searches will be populated here -->
                                 </div>
-                                <div id="no-recent-searches" class="hidden px-4 py-3 text-sm text-gray-500 text-center">
+                                <div id="no-recent-searches" class="hidden px-4 py-3 text-sm text-slate-500 text-center">
                                     No recent searches
                                 </div>
                             </div>
@@ -179,8 +187,8 @@
                             <div id="search-results" class="hidden">
                                 <!-- Customers Section -->
                                 <div id="customers-section" class="hidden">
-                                    <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
-                                        <span class="text-xs font-semibold text-gray-700 uppercase">Customers</span>
+                                    <div class="px-4 py-2 border-b border-slate-900/10 bg-[#fbf7ed]">
+                                        <span class="text-xs font-semibold text-slate-700 uppercase">Customers</span>
                                     </div>
                                     <div id="customers-list" class="py-1">
                                         <!-- Customer results will be populated here -->
@@ -189,8 +197,8 @@
                                 
                                 <!-- Instances Section -->
                                 <div id="instances-section" class="hidden">
-                                    <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
-                                        <span class="text-xs font-semibold text-gray-700 uppercase">Instances</span>
+                                    <div class="px-4 py-2 border-b border-slate-900/10 bg-[#fbf7ed]">
+                                        <span class="text-xs font-semibold text-slate-700 uppercase">Instances</span>
                                     </div>
                                     <div id="instances-list" class="py-1">
                                         <!-- Instance results will be populated here -->
@@ -198,7 +206,7 @@
                                 </div>
                                 
                                 <!-- No Results -->
-                                <div id="no-results" class="hidden px-4 py-3 text-sm text-gray-500 text-center">
+                                <div id="no-results" class="hidden px-4 py-3 text-sm text-slate-500 text-center">
                                     No results found
                                 </div>
                             </div>
@@ -209,32 +217,32 @@
                 <!-- Right Side: Notifications + User Menu -->
                 <div class="flex items-center gap-4">
                     <!-- Notifications -->
-                    <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 relative">
+                    <button class="p-2 rounded-lg text-slate-500 hover:bg-[#fbf7ed] hover:text-slate-950 relative">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                         </svg>
-                        <span class="absolute top-1 {{ $isRtl ? 'left-1' : 'right-1' }} block h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white"></span>
+                        <span class="absolute top-1 {{ $isRtl ? 'left-1' : 'right-1' }} block h-2 w-2 rounded-full bg-[#f5c542] ring-2 ring-white"></span>
                     </button>
                     
                     <!-- User Menu -->
                     <div class="relative">
-                        <button id="user-menu-button" class="flex items-center gap-2 p-2 rounded-lg text-gray-700 hover:bg-gray-100 ">
-                            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                        <button id="user-menu-button" class="flex items-center gap-2 p-2 rounded-lg text-slate-700 hover:bg-[#fbf7ed] ">
+                            <div class="w-8 h-8 rounded-full bg-[#0d2f35] flex items-center justify-center text-white text-sm font-medium shadow-[0_10px_24px_rgba(13,47,53,0.18)]">
                                 @yield('user_initials', strtoupper(substr($user->name ?? 'A', 0, 2)))
                             </div>
-                            <svg class="w-4 h-4 text-gray-500 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-slate-500 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
                         
                         <!-- User Dropdown Menu -->
-                        <div id="user-menu" class="hidden absolute {{ $isRtl ? 'left-0' : 'right-0' }} mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profile</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Settings</a>
-                            <div class="border-t border-gray-200 my-1"></div>
+                        <div id="user-menu" class="hidden absolute {{ $isRtl ? 'left-0' : 'right-0' }} mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-900/10 py-1 z-50">
+                            <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Profile</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Settings</a>
+                            <div class="border-t border-slate-900/10 my-1"></div>
                             <form method="POST" action="{{ route('auth.logout') }}">
                                 @csrf
-                                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign Out</button>
+                                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Sign Out</button>
                             </form>
                         </div>
                     </div>
@@ -243,7 +251,7 @@
         </header>
         
         <!-- Main Content -->
-        <main class="pt-[75px] s px-6 md:px-12 pb-8">
+        <main class="min-h-screen pt-[75px] px-6 md:px-12 pb-8">
             @yield('content')
         </main>
     </div>
@@ -407,9 +415,9 @@
                 } else {
                     noRecentSearches.classList.add('hidden');
                     recentSearchesList.innerHTML = recent.map((query, index) => `
-                        <button type="button" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none recent-search-item" data-query="${escapeHtml(query)}" data-index="${index}">
+                        <button type="button" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed] focus:bg-[#fbf7ed] focus:outline-none recent-search-item" data-query="${escapeHtml(query)}" data-index="${index}">
                             <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                                 <span>${escapeHtml(query)}</span>
@@ -539,13 +547,13 @@
                         const resultIndex = currentResults.length;
                         currentResults.push({ type: 'customer', url: customer.url });
                         return `
-                            <a href="${escapeHtml(customer.url)}" class="block px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none search-result-item" data-index="${resultIndex}">
+                            <a href="${escapeHtml(customer.url)}" class="block px-4 py-3 hover:bg-[#fbf7ed] focus:bg-[#fbf7ed] focus:outline-none search-result-item" data-index="${resultIndex}">
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-medium text-gray-900">${safeHtml(customer.name)}</div>
-                                        ${customer.email ? `<div class="text-xs text-gray-500 mt-1">${safeHtml(customer.email)}</div>` : ''}
-                                        ${customer.phone ? `<div class="text-xs text-gray-500">${safeHtml(customer.phone)}</div>` : ''}
-                                        ${customer.company ? `<div class="text-xs text-gray-500">${safeHtml(customer.company)}</div>` : ''}
+                                        <div class="text-sm font-medium text-slate-900">${safeHtml(customer.name)}</div>
+                                        ${customer.email ? `<div class="text-xs text-slate-500 mt-1">${safeHtml(customer.email)}</div>` : ''}
+                                        ${customer.phone ? `<div class="text-xs text-slate-500">${safeHtml(customer.phone)}</div>` : ''}
+                                        ${customer.company ? `<div class="text-xs text-slate-500">${safeHtml(customer.company)}</div>` : ''}
                                     </div>
                                     <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                         customer.status === 'active' ? 'bg-green-100 text-green-800' : 
@@ -569,13 +577,13 @@
                         const resultIndex = currentResults.length;
                         currentResults.push({ type: 'instance', url: instance.url });
                         return `
-                            <a href="${escapeHtml(instance.url)}" class="block px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none search-result-item" data-index="${resultIndex}">
+                            <a href="${escapeHtml(instance.url)}" class="block px-4 py-3 hover:bg-[#fbf7ed] focus:bg-[#fbf7ed] focus:outline-none search-result-item" data-index="${resultIndex}">
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-medium text-gray-900">${safeHtml(instance.name)}</div>
-                                        ${instance.description ? `<div class="text-xs text-gray-500 mt-1">${safeHtml(instance.description)}</div>` : ''}
-                                        ${instance.customer_name ? `<div class="text-xs text-gray-500">${safeHtml(instance.customer_name)}</div>` : ''}
-                                        <div class="text-xs text-gray-500 mt-1">${escapeHtml(instance.region || '')}</div>
+                                        <div class="text-sm font-medium text-slate-900">${safeHtml(instance.name)}</div>
+                                        ${instance.description ? `<div class="text-xs text-slate-500 mt-1">${safeHtml(instance.description)}</div>` : ''}
+                                        ${instance.customer_name ? `<div class="text-xs text-slate-500">${safeHtml(instance.customer_name)}</div>` : ''}
+                                        <div class="text-xs text-slate-500 mt-1">${escapeHtml(instance.region || '')}</div>
                                     </div>
                                     <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                         instance.status === 'active' ? 'bg-green-100 text-green-800' : 
@@ -673,10 +681,10 @@
             function updateSelection(items) {
                 items.forEach((item, index) => {
                     if (index === selectedIndex) {
-                        item.classList.add('bg-gray-50');
+                        item.classList.add('bg-[#fbf7ed]');
                         item.focus();
                     } else {
-                        item.classList.remove('bg-gray-50');
+                        item.classList.remove('bg-[#fbf7ed]');
                     }
                 });
             }
@@ -719,4 +727,3 @@
     @stack('scripts')
 </body>
 </html>
-
