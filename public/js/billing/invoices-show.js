@@ -1,6 +1,6 @@
 function invoiceShow() {
     return {
-        invoice: {
+        invoice: window.billingInvoiceShow || {
             id: 1,
             invoice_number: 'INV-2024-001',
             customer_name: 'John Smith',
@@ -24,7 +24,7 @@ function invoiceShow() {
             ]
         },
 
-        payments: [
+        payments: (window.billingInvoiceShow && window.billingInvoiceShow.payments) || [
             { id: 1, payment_reference: 'PAY-2024-001', date: '2024-02-15', method: 'card', amount: 125.00, status: 'completed' }
         ],
 
@@ -61,6 +61,7 @@ function invoiceShow() {
 
         init() {
             this.paymentForm.amount = this.invoice.balance_due;
+            this.invoice.items = this.invoice.items || [];
         },
 
         formatCurrency(value) {
@@ -73,17 +74,54 @@ function invoiceShow() {
         getInvoiceStatusClass(status) {
             const classes = {
                 draft: 'bg-gray-100 text-gray-700 border-gray-300',
-                unpaid: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                issued: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                partially_paid: 'bg-blue-100 text-blue-700 border-blue-300',
                 paid: 'bg-green-100 text-green-700 border-green-300',
                 overdue: 'bg-red-100 text-red-700 border-red-300',
-                cancelled: 'bg-gray-100 text-gray-500 border-gray-300'
+                void: 'bg-gray-100 text-gray-500 border-gray-300'
             };
             return classes[status] || 'bg-gray-100 text-gray-700 border-gray-300';
         },
 
-        recordPayment() {
-            console.log('Recording payment:', this.paymentForm);
-            alert('Payment recorded successfully!');
+        async recordPayment() {
+            if (!window.billingPaymentStoreUrl) {
+                alert('Payment endpoint is unavailable.');
+                return;
+            }
+
+            const response = await fetch(window.billingPaymentStoreUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': window.billingCsrfToken
+                },
+                body: JSON.stringify({
+                    amount: this.paymentForm.amount,
+                    payment_method: this.paymentForm.method,
+                    paid_at: this.paymentForm.date
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.message || 'Could not record payment.');
+                return;
+            }
+
+            this.invoice.paid_amount = parseFloat(data.invoice.paid_amount || 0);
+            this.invoice.balance_due = parseFloat(data.invoice.balance_due || 0);
+            this.invoice.status = data.invoice.status;
+            this.payments.push({
+                id: data.payment.id,
+                payment_reference: data.payment.payment_reference,
+                date: data.payment.paid_at?.split('T')[0] || this.paymentForm.date,
+                method: data.payment.payment_method || this.paymentForm.method,
+                amount: parseFloat(data.payment.amount || 0),
+                status: data.payment.status
+            });
+
             this.openPaymentModal = false;
         }
     }

@@ -40,7 +40,9 @@ class UpdateCustomerRequest extends FormRequest
             'state' => 'nullable|string|max:255',
             'postal_code' => 'nullable|string|max:255',
             'country' => 'required|string|max:255',
+            'status' => 'required|in:active,inactive,suspended',
             'billing_type' => 'required|in:prepaid,postpaid',
+            'billing_enabled' => 'boolean',
             'balance' => 'nullable|numeric|min:-99999999.99|max:99999999.99',
             'credit_limit' => 'nullable|numeric|min:0|max:99999999.99',
             'tax_exempt' => 'boolean',
@@ -71,6 +73,7 @@ class UpdateCustomerRequest extends FormRequest
     {
         $this->merge([
             'tax_exempt' => $this->boolean('tax_exempt'),
+            'billing_enabled' => $this->boolean('billing_enabled', true),
         ]);
     }
 }

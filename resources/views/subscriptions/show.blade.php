@@ -23,8 +23,10 @@ $subscription = [
     'pppoe_username' => $subscription->pppoe_username ?? 'N/A',
     'start_date' => optional($subscription->start_date ?? $subscription->activation_date ?? $subscription->created_at)->toDateString(),
     'end_date' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addYear())->toDateString(),
-    'next_billing_date' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addMonth())->toDateString(),
-    'last_billing_date' => optional($subscription->created_at)->toDateString(),
+    'billing_enabled' => (bool) $subscription->billing_enabled,
+    'grace_period_days' => $subscription->effectiveGracePeriodDays(),
+    'next_billing_date' => optional($subscription->next_billing_date ?? $subscription->created_at?->copy()->addMonth())->toDateString(),
+    'last_billing_date' => optional($subscription->last_billed_at ?? $subscription->created_at)->toDateString(),
     'auto_renew' => true,
     'contract_start' => optional($subscription->start_date ?? $subscription->activation_date ?? $subscription->created_at)->toDateString(),
     'contract_end' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addYear())->toDateString(),
@@ -165,12 +167,15 @@ function getStatusBadgeClass($status)
                     </button>
                 @endif
 
-                <button class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Create Invoice
-                </button>
+                <form method="POST" action="{{ route('subscriptions.generate-invoice', $subscription['id']) }}">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Create Invoice
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -193,6 +198,35 @@ function getStatusBadgeClass($status)
                 <p class="text-xl font-bold text-gray-900 mt-1">{{ \Carbon\Carbon::parse($subscription['contract_end'])->format('M d, Y') }}</p>
             </div>
         </div>
+    </div>
+
+    <!-- Billing Controls -->
+    <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <form method="POST" action="{{ route('subscriptions.billing.update', $subscription['id']) }}" class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_160px_180px_auto] gap-4 md:items-end">
+            @csrf
+            @method('PATCH')
+            <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4">
+                <div>
+                    <label for="subscription_billing_enabled" class="text-sm font-medium text-gray-700">Billing Enabled</label>
+                    <p class="text-xs text-gray-500 mt-1">Controls invoice generation and overdue suspension for this subscription.</p>
+                </div>
+                <div>
+                    <input type="hidden" name="billing_enabled" value="0">
+                    <input type="checkbox" id="subscription_billing_enabled" name="billing_enabled" value="1" @checked($subscription['billing_enabled']) class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                </div>
+            </div>
+            <div>
+                <label for="subscription_grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Grace Days</label>
+                <input type="number" id="subscription_grace_period_days" name="grace_period_days" min="0" max="365" value="{{ $subscription['grace_period_days'] }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+            </div>
+            <div>
+                <label for="subscription_next_billing_date" class="block text-sm font-medium text-gray-700 mb-1">Next Billing</label>
+                <input type="date" id="subscription_next_billing_date" name="next_billing_date" value="{{ $subscription['next_billing_date'] }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+            </div>
+            <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                Save Billing
+            </button>
+        </form>
     </div>
 
     <!-- Tabs Navigation -->

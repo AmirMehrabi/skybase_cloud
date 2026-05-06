@@ -236,6 +236,16 @@
                 <div class="lg:col-span-3 flex items-center gap-6">
                     <div class="flex items-center gap-2">
                         <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="hidden" name="billing_enabled" value="0">
+                            <input type="checkbox" name="billing_enabled" value="1" x-model="form.billingEnabled" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm text-gray-700">Billing Enabled</span>
+                        </label>
+                        @error('billing_enabled')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" name="tax_exempt" value="1" x-model="form.taxExempt" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                             <span class="text-sm text-gray-700">Tax Exempt</span>
                         </label>
@@ -286,6 +296,7 @@ function customerCreateForm() {
             postalCode: '{{ old('postal_code') }}',
             country: '{{ old('country', 'United States') }}',
             billingType: '{{ old('billing_type', 'postpaid') }}',
+            billingEnabled: {{ old('billing_enabled', 'true') }},
             balance: '{{ old('balance', '0') }}',
             creditLimit: '{{ old('credit_limit', '0') }}',
             taxExempt: {{ old('tax_exempt', 'false') }}

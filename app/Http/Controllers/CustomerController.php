@@ -100,6 +100,8 @@ class CustomerController extends Controller
             $validated['tenant_id'] = auth()->user()->tenant_id;
         }
 
+        $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : now();
+
         $customer = Customer::create($validated);
 
         if ($request->expectsJson()) {
@@ -151,10 +153,7 @@ class CustomerController extends Controller
             $validated['name'] = $validated['company_name'];
         }
 
-        // Handle activation date change
-        if ($customer->status !== 'active' && $validated['status'] === 'active' && ! $customer->activation_date) {
-            $validated['activation_date'] = now();
-        }
+        $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($customer->billing_disabled_at ?? now());
 
         $customer->update($validated);
 
@@ -207,6 +206,29 @@ class CustomerController extends Controller
         return response()->json([
             'message' => 'Customer activated successfully.',
         ]);
+    }
+
+    public function updateBilling(Request $request, Customer $customer): JsonResponse|RedirectResponse
+    {
+        $this->authorizeTenantAccess($customer);
+
+        $validated = $request->validate([
+            'billing_enabled' => 'required|boolean',
+        ]);
+
+        $customer->update([
+            'billing_enabled' => $validated['billing_enabled'],
+            'billing_disabled_at' => $validated['billing_enabled'] ? null : ($customer->billing_disabled_at ?? now()),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Customer billing settings updated successfully.',
+                'customer' => $customer->fresh(),
+            ]);
+        }
+
+        return back()->with('success', 'Customer billing settings updated successfully.');
     }
 
     /**

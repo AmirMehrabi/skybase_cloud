@@ -39,6 +39,7 @@ class StoreCustomerRequest extends FormRequest
             'postal_code' => 'nullable|string|max:255',
             'country' => 'required|string|max:255',
             'billing_type' => 'required|in:prepaid,postpaid',
+            'billing_enabled' => 'boolean',
             'balance' => 'nullable|numeric|min:-99999999.99|max:99999999.99',
             'credit_limit' => 'nullable|numeric|min:0|max:99999999.99',
             'tax_exempt' => 'boolean',
@@ -69,6 +70,7 @@ class StoreCustomerRequest extends FormRequest
     {
         $this->merge([
             'tax_exempt' => $this->boolean('tax_exempt'),
+            'billing_enabled' => $this->boolean('billing_enabled', true),
         ]);
     }
 }

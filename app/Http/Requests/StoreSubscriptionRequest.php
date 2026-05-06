@@ -41,6 +41,8 @@ class StoreSubscriptionRequest extends FormRequest
             'ip_pool_id' => $ipManagement === 'system' ? 'required|exists:ip_pools,id' : 'nullable|exists:ip_pools,id',
             'ip_address' => 'nullable|ip|max:255',
             'billing_cycle' => 'required|in:monthly,quarterly,yearly',
+            'billing_enabled' => 'boolean',
+            'grace_period_days' => 'nullable|integer|min:0|max:365',
             'status' => 'required|in:pending,active,suspended,cancelled',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
@@ -92,6 +94,7 @@ class StoreSubscriptionRequest extends FormRequest
     {
         $this->merge([
             'items' => $this->input('items', []),
+            'billing_enabled' => $this->boolean('billing_enabled', true),
         ]);
     }
 }

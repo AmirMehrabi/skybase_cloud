@@ -1,6 +1,6 @@
 function invoicesIndex() {
     return {
-        invoices: [
+        invoices: window.billingInvoices || [
             { id: 1, invoice_number: 'INV-2024-001', customer_name: 'John Smith', subscription_code: 'SUB-001', issue_date: '2024-02-01', due_date: '2024-02-28', billing_period: 'Feb 2024', subtotal: 113.64, tax: 11.36, discount: 0, total: 125.00, paid_amount: 125.00, balance_due: 0, status: 'paid' },
             { id: 2, invoice_number: 'INV-2024-002', customer_name: 'Sarah Johnson', subscription_code: 'SUB-002', issue_date: '2024-02-01', due_date: '2024-02-25', billing_period: 'Feb 2024', subtotal: 80.91, tax: 8.09, discount: 0, total: 89.00, paid_amount: 0, balance_due: 89.00, status: 'overdue' },
             { id: 3, invoice_number: 'INV-2024-003', customer_name: 'Tech Corp Ltd', subscription_code: 'SUB-003', issue_date: '2024-02-05', due_date: '2024-03-01', billing_period: 'Feb 2024', subtotal: 318.18, tax: 31.82, discount: 0, total: 350.00, paid_amount: 0, balance_due: 350.00, status: 'unpaid' },
@@ -39,10 +39,11 @@ function invoicesIndex() {
         filterOptions: {
             statuses: [
                 { value: 'draft', label: 'Draft' },
-                { value: 'unpaid', label: 'Unpaid' },
+                { value: 'issued', label: 'Issued' },
+                { value: 'partially_paid', label: 'Partially Paid' },
                 { value: 'paid', label: 'Paid' },
                 { value: 'overdue', label: 'Overdue' },
-                { value: 'cancelled', label: 'Cancelled' }
+                { value: 'void', label: 'Void' }
             ]
         },
 
@@ -118,10 +119,11 @@ function invoicesIndex() {
         getInvoiceStatusClass(status) {
             const classes = {
                 draft: 'bg-gray-100 text-gray-700 border-gray-300',
-                unpaid: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                issued: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                partially_paid: 'bg-blue-100 text-blue-700 border-blue-300',
                 paid: 'bg-green-100 text-green-700 border-green-300',
                 overdue: 'bg-red-100 text-red-700 border-red-300',
-                cancelled: 'bg-gray-100 text-gray-500 border-gray-300'
+                void: 'bg-gray-100 text-gray-500 border-gray-300'
             };
             return classes[status] || 'bg-gray-100 text-gray-700 border-gray-300';
         },

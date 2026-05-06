@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ class Subscription extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes'];
+    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes'];
 
     protected function casts(): array
     {
@@ -21,6 +22,11 @@ class Subscription extends Model
             'discount_amount' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'total_price' => 'decimal:2',
+            'billing_enabled' => 'boolean',
+            'grace_period_days' => 'integer',
+            'next_billing_date' => 'date',
+            'last_billed_at' => 'datetime',
+            'billing_disabled_at' => 'datetime',
             'start_date' => 'datetime',
             'end_date' => 'datetime',
             'activation_date' => 'datetime',
@@ -64,6 +70,11 @@ class Subscription extends Model
         return $this->hasMany(SubscriptionItem::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function scopeActive($query)
     {
         $query->where('status', 'active');
@@ -77,6 +88,15 @@ class Subscription extends Model
     public function scopePending($query)
     {
         $query->where('status', 'pending');
+    }
+
+    public function scopeBillable($query)
+    {
+        $query->where('billing_enabled', true)
+            ->whereIn('status', ['pending', 'active'])
+            ->whereHas('customer', function ($query) {
+                $query->where('billing_enabled', true);
+            });
     }
 
     public function scopeCancelled($query)
@@ -112,12 +132,33 @@ class Subscription extends Model
 
     public function getIsActiveAttribute(): bool
     {
-        return $this->status === 'active' && (!$this->end_date || $this->end_date->isFuture());
+        return $this->status === 'active' && (! $this->end_date || $this->end_date->isFuture());
     }
 
     public function getIsExpiredAttribute(): bool
     {
         return $this->end_date && $this->end_date->isPast();
+    }
+
+    public function isBillable(): bool
+    {
+        return (bool) $this->billing_enabled
+            && $this->status !== 'cancelled'
+            && (bool) $this->customer?->billing_enabled;
+    }
+
+    public function effectiveGracePeriodDays(): int
+    {
+        return (int) ($this->grace_period_days ?? $this->plan?->grace_period_days ?? 7);
+    }
+
+    public function billingPeriodEndFor(CarbonInterface $periodStart): CarbonInterface
+    {
+        return match ($this->billing_cycle) {
+            'quarterly' => $periodStart->copy()->addMonthsNoOverflow(3)->subDay(),
+            'yearly' => $periodStart->copy()->addYearNoOverflow()->subDay(),
+            default => $periodStart->copy()->addMonthNoOverflow()->subDay(),
+        };
     }
 
     /**
@@ -165,7 +206,7 @@ class Subscription extends Model
      */
     public function assignIpAddress(?string $specificIp = null): ?IpAddress
     {
-        if (!$this->ip_pool_id || $this->ip_management !== 'system') {
+        if (! $this->ip_pool_id || $this->ip_management !== 'system') {
             return null;
         }
 
@@ -175,7 +216,7 @@ class Subscription extends Model
             // Assign specific IP
             $ip = $pool->ipAddresses()->where('ip_address', $specificIp)->first();
 
-            if (!$ip || !$ip->isAvailable()) {
+            if (! $ip || ! $ip->isAvailable()) {
                 return null;
             }
 
@@ -188,7 +229,7 @@ class Subscription extends Model
         // Auto-assign next available IP
         $ip = $pool->availableAddresses()->first();
 
-        if (!$ip) {
+        if (! $ip) {
             return null;
         }
 
@@ -206,13 +247,13 @@ class Subscription extends Model
      */
     public function releaseIpAddress(): bool
     {
-        if (!$this->ip_address || $this->ip_management !== 'system') {
+        if (! $this->ip_address || $this->ip_management !== 'system') {
             return false;
         }
 
         $ip = $this->ipAddress;
 
-        if (!$ip) {
+        if (! $ip) {
             return false;
         }
 
@@ -280,7 +321,7 @@ class Subscription extends Model
         });
 
         static::updating(function ($subscription) {
-            if ($subscription->isDirty('status') && $subscription->status === 'active' && !$subscription->activation_date) {
+            if ($subscription->isDirty('status') && $subscription->status === 'active' && ! $subscription->activation_date) {
                 $subscription->activation_date = now();
             }
         });

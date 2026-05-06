@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantCo
 use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
+use App\Http\Controllers\Billing\InvoiceController;
+use App\Http\Controllers\Billing\PaymentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -78,6 +80,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
         Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
         Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
+        Route::patch('/{customer}/billing', [CustomerController::class, 'updateBilling'])->name('billing.update');
         Route::post('/{customer}/suspend', [CustomerController::class, 'suspend'])->name('suspend');
         Route::post('/{customer}/activate', [CustomerController::class, 'activate'])->name('activate');
     });
@@ -94,9 +97,11 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{subscription}/edit', [SubscriptionController::class, 'edit'])->name('edit');
         Route::put('/{subscription}', [SubscriptionController::class, 'update'])->name('update');
         Route::delete('/{subscription}', [SubscriptionController::class, 'destroy'])->name('destroy');
+        Route::patch('/{subscription}/billing', [SubscriptionController::class, 'updateBilling'])->name('billing.update');
         Route::post('/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->name('suspend');
         Route::post('/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('activate');
         Route::post('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
+        Route::post('/{subscription}/generate-invoice', [SubscriptionController::class, 'generateInvoice'])->name('generate-invoice');
     });
 
     // Plan Management Routes
@@ -156,9 +161,11 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/dashboard', fn () => view('billing.dashboard'))->name('dashboard');
 
         Route::prefix('invoices')->name('invoices.')->group(function () {
-            Route::get('/', fn () => view('billing.invoices.index'))->name('index');
+            Route::get('/', [InvoiceController::class, 'index'])->name('index');
+            Route::post('/generate-recurring', [InvoiceController::class, 'generateRecurring'])->name('generate-recurring');
             Route::get('/create', fn () => view('billing.invoices.create'))->name('create');
-            Route::get('/{invoice}', fn ($invoice) => view('billing.invoices.show', compact('invoice')))->name('show');
+            Route::get('/{invoice}', [InvoiceController::class, 'show'])->name('show');
+            Route::post('/{invoice}/payments', [PaymentController::class, 'store'])->name('payments.store');
             Route::get('/{invoice}/edit', fn ($invoice) => view('billing.invoices.edit', compact('invoice')))->name('edit');
         });
 

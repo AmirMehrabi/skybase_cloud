@@ -578,6 +578,29 @@
                     @enderror
                 </div>
                 <div>
+                    <label for="grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Grace Period</label>
+                    <div class="flex gap-2">
+                        <input type="number" min="0" max="365" step="1" name="grace_period_days" id="grace_period_days" x-model="form.grace_period_days" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" placeholder="Plan default">
+                        <span class="inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">days</span>
+                    </div>
+                    @error('grace_period_days')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="md:col-span-2 lg:col-span-2 flex items-center justify-between rounded-xl border border-gray-200 p-4">
+                    <div>
+                        <label for="billing_enabled" class="text-sm font-medium text-gray-700">Billing Enabled</label>
+                        <p class="text-xs text-gray-500 mt-1">Create invoices and include this subscription in automated billing.</p>
+                    </div>
+                    <div>
+                        <input type="hidden" name="billing_enabled" value="0">
+                        <input type="checkbox" name="billing_enabled" id="billing_enabled" value="1" x-model="form.billing_enabled" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    </div>
+                    @error('billing_enabled')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Initial Status <span class="text-red-500">*</span></label>
                     <select name="status" id="status" x-model="form.status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
                         <option value="pending">Pending Activation</option>
@@ -651,6 +674,8 @@ function subscriptionCreateForm() {
             pppoe_username: '',
             pppoe_password: '',
             billing_cycle: 'monthly',
+            billing_enabled: true,
+            grace_period_days: '',
             status: 'pending',
             start_date: '',
             end_date: '',
@@ -1038,6 +1063,8 @@ function subscriptionCreateForm() {
             if (this.form.pppoe_password) formData.append('pppoe_password', this.form.pppoe_password);
 
             if (this.form.billing_cycle) formData.append('billing_cycle', this.form.billing_cycle);
+            formData.append('billing_enabled', this.form.billing_enabled ? '1' : '0');
+            if (this.form.grace_period_days !== '') formData.append('grace_period_days', this.form.grace_period_days);
             if (this.form.status) formData.append('status', this.form.status);
             if (this.form.start_date) formData.append('start_date', this.form.start_date);
             if (this.form.end_date) formData.append('end_date', this.form.end_date);

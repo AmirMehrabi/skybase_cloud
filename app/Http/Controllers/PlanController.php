@@ -78,6 +78,7 @@ class PlanController extends Controller
             'price' => ['required', 'numeric', 'min:0'],
             'currency' => ['required', 'string', 'max:10'],
             'billing_cycle' => ['required', Rule::in(['daily', 'weekly', 'monthly', 'quarterly', 'yearly'])],
+            'grace_period_days' => ['required', 'integer', 'min:0', 'max:365'],
             'setup_fee' => ['nullable', 'numeric', 'min:0'],
             'tax_profile' => ['nullable', 'string', 'max:255'],
             'router_profile' => ['nullable', 'string', 'max:255'],
@@ -95,6 +96,7 @@ class PlanController extends Controller
         $validated['burst_download'] = $validated['burst_download'] ?? 0;
         $validated['burst_upload'] = $validated['burst_upload'] ?? 0;
         $validated['setup_fee'] = $validated['setup_fee'] ?? 0;
+        $validated['grace_period_days'] = $validated['grace_period_days'] ?? 7;
         $validated['priority'] = $validated['priority'] ?? 5;
         $validated['data_limit'] = $validated['unlimited'] ? null : ($validated['data_limit'] ?? null);
         $validated['contract_duration'] = $validated['contract_required'] ? ($validated['contract_duration'] ?? null) : null;
@@ -124,6 +126,7 @@ class PlanController extends Controller
             'price' => (float) $plan->price,
             'currency' => $plan->currency,
             'billing_cycle' => $plan->billing_cycle,
+            'grace_period_days' => $plan->grace_period_days,
             'setup_fee' => (float) $plan->setup_fee,
             'tax_profile' => $plan->tax_profile,
             'router_profile' => $plan->router_profile,

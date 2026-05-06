@@ -9,12 +9,16 @@ use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
+use App\Services\BillingService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class SubscriptionController extends Controller
 {
+    public function __construct(protected BillingService $billing) {}
+
     /**
      * Display a listing of the resource.
      */
@@ -35,7 +39,7 @@ class SubscriptionController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('per_page', 15))
             ->through(
-                fn($subscription) => [
+                fn ($subscription) => [
                     'id' => $subscription->id,
                     'subscription_code' => $subscription->subscription_code,
                     'customer_name' => $subscription->customer->full_name ?? 'N/A',
@@ -108,6 +112,9 @@ class SubscriptionController extends Controller
             $validated['start_date'] = $validated['start_date'] ?? now();
         }
 
+        $validated['next_billing_date'] = $validated['start_date'] ?? now()->toDateString();
+        $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : now();
+
         $subscription = Subscription::create($validated);
 
         // Create line items
@@ -135,10 +142,15 @@ class SubscriptionController extends Controller
         // Update subscription total
         $subscription->update(['total_price' => $totalPrice]);
 
+        $invoice = $this->billing->createInvoiceForSubscription($subscription->fresh(['customer', 'plan', 'items']), includeOneTimeItems: true);
+
         return response()->json(
             [
-                'message' => 'Subscription created successfully.',
+                'message' => $invoice
+                    ? 'Subscription created successfully and invoice generated.'
+                    : 'Subscription created successfully.',
                 'subscription' => $subscription->load('customer', 'plan', 'router'),
+                'invoice' => $invoice,
             ],
             201,
         );
@@ -181,6 +193,9 @@ class SubscriptionController extends Controller
             'pppoe_username' => 'nullable|string|max:255',
             'pppoe_password' => 'nullable|string|max:255',
             'billing_cycle' => 'nullable|in:monthly,quarterly,yearly',
+            'billing_enabled' => 'nullable|boolean',
+            'grace_period_days' => 'nullable|integer|min:0|max:365',
+            'next_billing_date' => 'nullable|date',
             'status' => 'nullable|in:pending,active,suspended,cancelled',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
@@ -188,8 +203,12 @@ class SubscriptionController extends Controller
         ]);
 
         // Handle activation
-        if (isset($validated['status']) && $validated['status'] === 'active' && !$subscription->activation_date) {
+        if (isset($validated['status']) && $validated['status'] === 'active' && ! $subscription->activation_date) {
             $validated['activation_date'] = now();
+        }
+
+        if (array_key_exists('billing_enabled', $validated)) {
+            $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now());
         }
 
         $subscription->update($validated);
@@ -248,6 +267,48 @@ class SubscriptionController extends Controller
         ]);
     }
 
+    public function updateBilling(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'billing_enabled' => 'required|boolean',
+            'grace_period_days' => 'nullable|integer|min:0|max:365',
+            'next_billing_date' => 'nullable|date',
+        ]);
+
+        $subscription->update([
+            'billing_enabled' => $validated['billing_enabled'],
+            'billing_disabled_at' => $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now()),
+            'grace_period_days' => $validated['grace_period_days'] ?? null,
+            'next_billing_date' => $validated['next_billing_date'] ?? $subscription->next_billing_date,
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Subscription billing settings updated successfully.',
+                'subscription' => $subscription->fresh(),
+            ]);
+        }
+
+        return back()->with('success', 'Subscription billing settings updated successfully.');
+    }
+
+    public function generateInvoice(Subscription $subscription): JsonResponse|RedirectResponse
+    {
+        $invoice = $this->billing->createInvoiceForSubscription($subscription->load(['customer', 'plan', 'items']), includeOneTimeItems: true);
+
+        if (request()->expectsJson()) {
+            return response()->json([
+                'message' => $invoice ? 'Invoice generated successfully.' : 'Billing is disabled or no billable items were found.',
+                'invoice' => $invoice,
+            ], $invoice ? 201 : 422);
+        }
+
+        return back()->with(
+            $invoice ? 'success' : 'error',
+            $invoice ? 'Invoice generated successfully.' : 'Billing is disabled or no billable items were found.',
+        );
+    }
+
     /**
      * Check if a PPPoE username is already taken.
      */
@@ -273,7 +334,7 @@ class SubscriptionController extends Controller
 
         $existingSubscription = $query->first();
 
-        if (!$existingSubscription) {
+        if (! $existingSubscription) {
             return response()->json([
                 'available' => true,
                 'username' => $username,
@@ -286,7 +347,7 @@ class SubscriptionController extends Controller
             'username' => $username,
             'subscription_code' => $existingSubscription->subscription_code,
             'customer' => $existingSubscription->customer->full_name ?? null,
-            'message' => 'Username is already taken by ' . ($existingSubscription->customer->full_name ?? 'another customer'),
+            'message' => 'Username is already taken by '.($existingSubscription->customer->full_name ?? 'another customer'),
         ]);
     }
 }

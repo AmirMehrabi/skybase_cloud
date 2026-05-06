@@ -254,6 +254,17 @@
             </div>
 
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Grace Period</label>
+                <div class="flex gap-2">
+                    <input type="number" name="grace_period_days" x-model="form.gracePeriodDays" min="0" max="365" step="1" placeholder="7" class="flex-1 block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <span class="inline-flex items-center px-3 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg bg-gray-50">days</span>
+                </div>
+                @error('grace_period_days')
+                    <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Setup Fee</label>
                 <input type="number" name="setup_fee" x-model="form.setupFee" min="0" step="0.01" placeholder="10.00" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
             </div>
@@ -356,6 +367,7 @@ function planForm() {
             price: @js(old('price', data_get($plan, 'price', ''))),
             currency: @js(old('currency', data_get($plan, 'currency', 'USD'))),
             billingCycle: @js(old('billing_cycle', data_get($plan, 'billing_cycle', 'monthly'))),
+            gracePeriodDays: @js(old('grace_period_days', data_get($plan, 'grace_period_days', 7))),
             setupFee: @js(old('setup_fee', data_get($plan, 'setup_fee', ''))),
             taxProfile: @js(old('tax_profile', data_get($plan, 'tax_profile', ''))),
             contractRequired: @js((bool) old('contract_required', data_get($plan, 'contract_required', false))),

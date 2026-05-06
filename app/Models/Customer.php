@@ -33,6 +33,8 @@ class Customer extends Model
         'country',
         'status',
         'billing_type',
+        'billing_enabled',
+        'billing_disabled_at',
         'balance',
         'credit_limit',
         'tax_exempt',
@@ -43,6 +45,8 @@ class Customer extends Model
         return [
             'balance' => 'decimal:2',
             'credit_limit' => 'decimal:2',
+            'billing_enabled' => 'boolean',
+            'billing_disabled_at' => 'datetime',
             'tax_exempt' => 'boolean',
         ];
     }
@@ -55,6 +59,16 @@ class Customer extends Model
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function activeSubscription(): ?Subscription

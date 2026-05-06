@@ -29,6 +29,7 @@ class Plan extends Model
         'price',
         'currency',
         'billing_cycle',
+        'grace_period_days',
         'setup_fee',
         'tax_profile',
         'router_profile',
@@ -48,6 +49,7 @@ class Plan extends Model
             'contract_required' => 'boolean',
             'price' => 'decimal:2',
             'setup_fee' => 'decimal:2',
+            'grace_period_days' => 'integer',
             'available_from' => 'date',
             'available_to' => 'date',
         ];
