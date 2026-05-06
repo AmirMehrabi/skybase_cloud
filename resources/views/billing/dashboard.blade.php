@@ -44,105 +44,117 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
         <!-- Total Revenue -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-500">Total Revenue</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-2" x-text="formatCurrency(stats.revenue)"></p>
-                    <p class="text-xs text-green-600 mt-1">
-                        <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+        <div class="min-h-[138px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col justify-between gap-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-500">Total Revenue</p>
+                        <p class="mt-2 text-xl font-semibold leading-none tracking-tight tabular-nums text-gray-900 sm:text-2xl xl:text-[1.35rem]" x-text="formatCurrency(stats.revenue)"></p>
+                    </div>
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        +12.5% from last month
-                    </p>
+                    </div>
                 </div>
-                <div class="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <p class="text-xs leading-5 text-green-600">
+                    <svg class="inline-block h-3 w-3 align-[-1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                     </svg>
-                </div>
+                    +12.5% from last month
+                </p>
             </div>
         </div>
 
         <!-- Outstanding Balance -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-500">Outstanding</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-2" x-text="formatCurrency(stats.outstanding)"></p>
-                    <p class="text-xs text-gray-500 mt-1" x-text="stats.pendingInvoices + ' pending invoices'"></p>
+        <div class="min-h-[138px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col justify-between gap-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-500">Outstanding</p>
+                        <p class="mt-2 text-xl font-semibold leading-none tracking-tight tabular-nums text-gray-900 sm:text-2xl xl:text-[1.35rem]" x-text="formatCurrency(stats.outstanding)"></p>
+                    </div>
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="w-14 h-14 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
+                <p class="text-xs leading-5 text-gray-500" x-text="stats.pendingInvoices + ' pending invoices'"></p>
             </div>
         </div>
 
         <!-- Overdue Amount -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-500">Overdue</p>
-                    <p class="text-2xl font-bold text-red-600 mt-2" x-text="formatCurrency(stats.overdue)"></p>
-                    <p class="text-xs text-red-600 mt-1" x-text="stats.overdueInvoices + ' invoices'"></p>
+        <div class="min-h-[138px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col justify-between gap-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-500">Overdue</p>
+                        <p class="mt-2 text-xl font-semibold leading-none tracking-tight tabular-nums text-red-600 sm:text-2xl xl:text-[1.35rem]" x-text="formatCurrency(stats.overdue)"></p>
+                    </div>
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="w-14 h-14 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                    </svg>
-                </div>
+                <p class="text-xs leading-5 text-red-600" x-text="stats.overdueInvoices + ' invoices'"></p>
             </div>
         </div>
 
         <!-- Paid Invoices -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-500">Paid Invoices</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-2" x-text="stats.paidInvoices"></p>
-                    <p class="text-xs text-green-600 mt-1">This month</p>
+        <div class="min-h-[138px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col justify-between gap-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-500">Paid Invoices</p>
+                        <p class="mt-2 text-xl font-semibold leading-none tracking-tight tabular-nums text-gray-900 sm:text-2xl xl:text-[1.35rem]" x-text="stats.paidInvoices"></p>
+                    </div>
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-600">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="w-14 h-14 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
+                <p class="text-xs leading-5 text-green-600">This month</p>
             </div>
         </div>
 
         <!-- Unpaid Invoices -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-500">Unpaid</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-2" x-text="stats.unpaidInvoices"></p>
-                    <p class="text-xs text-gray-500 mt-1">Awaiting payment</p>
+        <div class="min-h-[138px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col justify-between gap-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-500">Unpaid</p>
+                        <p class="mt-2 text-xl font-semibold leading-none tracking-tight tabular-nums text-gray-900 sm:text-2xl xl:text-[1.35rem]" x-text="stats.unpaidInvoices"></p>
+                    </div>
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-yellow-50 text-yellow-600">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="w-14 h-14 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-                    </svg>
-                </div>
+                <p class="text-xs leading-5 text-gray-500">Awaiting payment</p>
             </div>
         </div>
 
         <!-- Customers with Balance -->
-        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-500">Customers w/ Balance</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-2" x-text="stats.customersWithBalance"></p>
-                    <p class="text-xs text-gray-500 mt-1">Active accounts</p>
+        <div class="min-h-[138px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex h-full flex-col justify-between gap-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-500">Customers w/ Balance</p>
+                        <p class="mt-2 text-xl font-semibold leading-none tracking-tight tabular-nums text-gray-900 sm:text-2xl xl:text-[1.35rem]" x-text="stats.customersWithBalance"></p>
+                    </div>
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                </div>
+                <p class="text-xs leading-5 text-gray-500">Active accounts</p>
             </div>
         </div>
     </div>
@@ -195,10 +207,10 @@
         <div class="h-64 relative">
             <div class="absolute inset-0 flex items-end justify-between gap-2 px-4">
                 <template x-for="(month, index) in revenueChart" :key="index">
-                    <div class="flex-1 flex flex-col items-center gap-2">
-                        <div class="w-full flex flex-col-reverse gap-1">
-                            <div class="w-full bg-blue-500 rounded-t transition-all duration-500" :style="'height: ' + (month.revenue / 200) + '%'" :title="'Revenue: ' + formatCurrency(month.revenue)"></div>
-                            <div class="w-full bg-green-500 rounded-b transition-all duration-500" :style="'height: ' + (month.collected / 200) + '%'" :title="'Collected: ' + formatCurrency(month.collected)"></div>
+                    <div class="flex-1 h-full flex flex-col items-center gap-2">
+                        <div class="w-full h-full flex flex-col-reverse gap-1 justify-start">
+                            <div class="w-full bg-blue-500 rounded-t transition-all duration-500 min-h-2" :style="'height: ' + month.revenueHeight + '%'" :title="'Revenue: ' + formatCurrency(month.revenue)"></div>
+                            <div class="w-full bg-green-500 rounded-b transition-all duration-500 min-h-2" :style="'height: ' + month.collectedHeight + '%'" :title="'Collected: ' + formatCurrency(month.collected)"></div>
                         </div>
                         <span class="text-xs text-gray-500 rotate-45 origin-bottom-left mt-2" x-text="month.month"></span>
                     </div>
