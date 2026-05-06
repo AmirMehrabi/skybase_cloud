@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -124,7 +125,34 @@ class CustomerController extends Controller
     {
         $this->authorizeTenantAccess($customer);
 
-        return view('customers.show', ['customer' => $customer]);
+        $customer->load([
+            'subscriptions.plan',
+            'subscriptions.router',
+            'invoices',
+        ]);
+
+        $subscriptionIds = $customer->subscriptions->pluck('id');
+
+        $activityLog = ActivityLog::query()
+            ->where('tenant_id', $customer->tenant_id)
+            ->with('user:id,name')
+            ->where(function ($query) use ($customer, $subscriptionIds): void {
+                $query->where(function ($q) use ($customer): void {
+                    $q->where('model_type', Customer::class)
+                        ->where('model_id', $customer->id);
+                })->orWhere(function ($q) use ($subscriptionIds): void {
+                    $q->where('model_type', \App\Models\Subscription::class)
+                        ->whereIn('model_id', $subscriptionIds);
+                });
+            })
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        return view('customers.show', [
+            'customer' => $customer,
+            'activityLog' => $activityLog,
+        ]);
     }
 
     /**
