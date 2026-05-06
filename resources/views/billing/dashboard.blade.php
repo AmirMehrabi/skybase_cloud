@@ -275,7 +275,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script src="{{ asset('js/billing/dashboard.js') }}"></script>
-@endscripts
+@endpush
 @endsection
