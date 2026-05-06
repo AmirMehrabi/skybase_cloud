@@ -299,7 +299,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function networkStatus() {
     return {
@@ -325,5 +325,5 @@ function networkStatus() {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection

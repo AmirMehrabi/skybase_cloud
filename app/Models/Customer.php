@@ -134,7 +134,7 @@ class Customer extends Model
     {
         static::addGlobalScope('tenant', function ($query) {
             if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where('tenant_id', auth()->user()->tenant_id);
+                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
             }
         });
 

@@ -9,7 +9,31 @@
 @endpush
 
 @section('content')
-<div class="space-y-6 pb-24" x-data="customerEdit({{ $id }})" x-cloak>
+<div class="space-y-6 pb-24" x-data="customerEdit(@js([
+    'id' => $customer->id,
+    'customer_type' => $customer->customer_type,
+    'first_name' => $customer->first_name,
+    'last_name' => $customer->last_name,
+    'company_name' => $customer->company_name,
+    'email' => $customer->email,
+    'phone' => $customer->phone,
+    'mobile' => $customer->mobile,
+    'whatsapp' => $customer->whatsapp,
+    'address_line1' => $customer->address_line1,
+    'address_line2' => $customer->address_line2,
+    'city' => $customer->city,
+    'state' => $customer->state,
+    'postal_code' => $customer->postal_code,
+    'country' => $customer->country,
+    'national_id' => $customer->national_id,
+    'billing_type' => $customer->billing_type,
+    'billing_enabled' => $customer->billing_enabled,
+    'balance' => (float) $customer->balance,
+    'credit_limit' => (float) $customer->credit_limit,
+    'tax_exempt' => $customer->tax_exempt,
+    'status' => $customer->status,
+    'customer_code' => $customer->customer_code,
+]))" x-cloak>
     <!-- Header -->
     <div class="flex items-center justify-between" x-show="customer">
         <div class="flex items-center gap-4">
@@ -136,7 +160,38 @@
                 </div>
             </div>
 
-            <!-- Section 4: Financial Settings -->
+            <!-- Section 4: Address -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Address Line 1</label>
+                        <input type="text" x-model="form.addressLine1" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
+                        <input type="text" x-model="form.addressLine2" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">City</label>
+                        <input type="text" x-model="form.city" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">State</label>
+                        <input type="text" x-model="form.state" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                        <input type="text" x-model="form.postalCode" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Country</label>
+                        <input type="text" x-model="form.country" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Financial Settings -->
             <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Financial Settings</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -148,10 +203,25 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Credit Limit</label>
                         <input type="number" step="0.01" x-model="form.creditLimit" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Billing Type</label>
+                        <select x-model="form.billingType" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+                            <option value="prepaid">Prepaid</option>
+                            <option value="postpaid">Postpaid</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2 pt-8">
+                        <input type="checkbox" x-model="form.billingEnabled" class="h-4 w-4 text-blue-600 rounded border-gray-300">
+                        <label class="text-sm font-medium text-gray-700">Billing Enabled</label>
+                    </div>
+                    <div class="flex items-center gap-2 pt-8">
+                        <input type="checkbox" x-model="form.taxExempt" class="h-4 w-4 text-blue-600 rounded border-gray-300">
+                        <label class="text-sm font-medium text-gray-700">Tax Exempt</label>
+                    </div>
                 </div>
             </div>
 
-            <!-- Section 5: Status -->
+            <!-- Section 6: Status -->
             <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Status</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -159,9 +229,8 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                         <select x-model="form.status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                             <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
                             <option value="suspended">Suspended</option>
-                            <option value="terminated">Terminated</option>
-                            <option value="pending">Pending</option>
                         </select>
                     </div>
                 </div>
@@ -217,7 +286,124 @@
 </div>
 
 @scripts
-<script src="{{ asset('js/customers/data.js') }}"></script>
-<script src="{{ asset('js/customers/edit.js') }}"></script>
+<script>
+function customerEdit(initialCustomer) {
+    return {
+        customerId: initialCustomer.id,
+        customer: initialCustomer,
+        saving: false,
+        form: {
+            customerType: initialCustomer.customer_type || 'individual',
+            firstName: initialCustomer.first_name || '',
+            lastName: initialCustomer.last_name || '',
+            companyName: initialCustomer.company_name || '',
+            email: initialCustomer.email || '',
+            phone: initialCustomer.phone || '',
+            mobile: initialCustomer.mobile || '',
+            whatsapp: initialCustomer.whatsapp || '',
+            plan: '',
+            site: '',
+            router: '',
+            pppoeUsername: '',
+            pppoePassword: '',
+            addressLine1: initialCustomer.address_line1 || '',
+            addressLine2: initialCustomer.address_line2 || '',
+            city: initialCustomer.city || '',
+            state: initialCustomer.state || '',
+            postalCode: initialCustomer.postal_code || '',
+            country: initialCustomer.country || 'United States',
+            billingType: initialCustomer.billing_type || 'postpaid',
+            billingEnabled: Boolean(initialCustomer.billing_enabled),
+            balance: initialCustomer.balance ?? 0,
+            creditLimit: initialCustomer.credit_limit ?? 0,
+            taxExempt: Boolean(initialCustomer.tax_exempt),
+            status: initialCustomer.status || 'active',
+            nationalId: initialCustomer.national_id || '',
+        },
+
+        async update() {
+            if (!this.form.email || !this.form.mobile) {
+                alert('Email and mobile are required.');
+                return;
+            }
+
+            this.saving = true;
+
+            const payload = {
+                customer_type: this.form.customerType,
+                first_name: this.form.firstName,
+                last_name: this.form.lastName,
+                company_name: this.form.companyName,
+                national_id: this.form.nationalId,
+                email: this.form.email,
+                phone: this.form.phone,
+                mobile: this.form.mobile,
+                whatsapp: this.form.whatsapp,
+                address_line1: this.form.addressLine1,
+                address_line2: this.form.addressLine2,
+                city: this.form.city,
+                state: this.form.state,
+                postal_code: this.form.postalCode,
+                country: this.form.country,
+                billing_type: this.form.billingType,
+                billing_enabled: this.form.billingEnabled,
+                balance: this.form.balance,
+                credit_limit: this.form.creditLimit,
+                tax_exempt: this.form.taxExempt,
+                status: this.form.status,
+            };
+
+            try {
+                const response = await fetch(`/customers/${this.customerId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 422 && data.errors) {
+                        const firstError = Object.values(data.errors)[0]?.[0] || 'Validation failed.';
+                        alert(firstError);
+                        return;
+                    }
+
+                    throw new Error(data.message || 'Failed to update customer.');
+                }
+
+                alert(data.message || 'Customer updated successfully.');
+                window.location.href = `/customers/${this.customerId}`;
+            } catch (error) {
+                alert(error.message || 'Unexpected error occurred.');
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        suspendService() {
+            this.form.status = 'suspended';
+        },
+
+        resetPPPoE() {
+            this.form.pppoePassword = Math.random().toString(36).substring(2, 14);
+            alert('PPPoE password has been reset.');
+        },
+
+        getStatusBadgeClass(status) {
+            const classes = {
+                active: 'bg-green-100 text-green-800 border-green-200',
+                inactive: 'bg-gray-100 text-gray-800 border-gray-200',
+                suspended: 'bg-red-100 text-red-800 border-red-200',
+            };
+            return classes[status] || classes.inactive;
+        },
+    };
+}
+</script>
 @endscripts
 @endsection

@@ -308,7 +308,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function bandwidthMonitoring() {
     return {
@@ -345,5 +345,5 @@ function bandwidthMonitoring() {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection

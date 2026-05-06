@@ -335,7 +335,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function dataUsage() {
     return {
@@ -447,5 +447,5 @@ function dataUsage() {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection
