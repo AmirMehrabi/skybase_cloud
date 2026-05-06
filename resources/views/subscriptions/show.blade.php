@@ -4,44 +4,44 @@
 
 @php
 $subscription = [
-    'id' => 1,
-    'subscription_code' => 'SUB-2024-001',
+    'id' => $subscription->id,
+    'subscription_code' => $subscription->subscription_code,
     'customer' => [
-        'id' => 'cust-001',
-        'name' => 'Acme Corporation',
-        'email' => 'billing@acmecorp.com',
-        'phone' => '+1 (555) 123-4567',
+        'id' => $subscription->customer?->id,
+        'name' => $subscription->customer?->full_name ?? 'N/A',
+        'email' => $subscription->customer?->email ?? 'N/A',
+        'phone' => $subscription->customer?->phone ?? $subscription->customer?->mobile ?? 'N/A',
     ],
-    'plan_name' => 'Fiber Business 100',
-    'plan_price' => 89.99,
-    'billing_cycle' => 'monthly',
-    'status' => 'active',
-    'site' => 'Downtown Office',
-    'router' => 'MikroTik RouterBOARD-3011',
-    'ip_address' => '192.168.1.100',
-    'mac_address' => 'AA:BB:CC:DD:EE:01',
-    'pppoe_username' => 'acme_corp_001',
-    'start_date' => '2024-01-15',
-    'end_date' => '2025-01-15',
-    'next_billing_date' => '2025-03-15',
-    'last_billing_date' => '2025-02-15',
+    'plan_name' => $subscription->plan?->name ?? 'N/A',
+    'plan_price' => (float) ($subscription->plan?->price ?? 0),
+    'billing_cycle' => $subscription->billing_cycle ?? 'monthly',
+    'status' => $subscription->status,
+    'site' => $subscription->site ?? $subscription->customer?->site ?? 'N/A',
+    'router' => $subscription->router?->name ?? 'N/A',
+    'ip_address' => $subscription->ip_address ?? 'N/A',
+    'mac_address' => $subscription->mac_address ?? 'N/A',
+    'pppoe_username' => $subscription->pppoe_username ?? 'N/A',
+    'start_date' => optional($subscription->start_date ?? $subscription->activation_date ?? $subscription->created_at)->toDateString(),
+    'end_date' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addYear())->toDateString(),
+    'next_billing_date' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addMonth())->toDateString(),
+    'last_billing_date' => optional($subscription->created_at)->toDateString(),
     'auto_renew' => true,
-    'contract_start' => '2024-01-15',
-    'contract_end' => '2025-01-15',
-    'installation_fee' => 150.00,
-    'discount_percentage' => 10,
-    'tax_percentage' => 8,
-    'monthly_price' => 89.99,
-    'total_price' => 97.19,
-    'balance' => 0.00,
-    'data_quota' => 1000,
-    'data_used' => 650,
-    'created_at' => '2024-01-10',
-    'termination_fee' => 250.00,
-    'speed_download' => 100,
-    'speed_upload' => 50,
-    'burst_mode' => true,
-    'throttle_over_quota' => true,
+    'contract_start' => optional($subscription->start_date ?? $subscription->activation_date ?? $subscription->created_at)->toDateString(),
+    'contract_end' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addYear())->toDateString(),
+    'installation_fee' => 0.00,
+    'discount_percentage' => 0,
+    'tax_percentage' => 0,
+    'monthly_price' => (float) ($subscription->plan?->price ?? $subscription->total_price ?? 0),
+    'total_price' => (float) $subscription->total_price,
+    'balance' => (float) ($subscription->customer?->balance ?? 0),
+    'data_quota' => 0,
+    'data_used' => 0,
+    'created_at' => optional($subscription->created_at)->toDateString(),
+    'termination_fee' => 0.00,
+    'speed_download' => 0,
+    'speed_upload' => 0,
+    'burst_mode' => false,
+    'throttle_over_quota' => false,
 ];
 
 $invoices = [
@@ -148,6 +148,7 @@ function getStatusBadgeClass($status)
                     Edit
                 </a>
 
+                
                 @if($subscription['status'] === 'active')
                     <button class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,7 +322,7 @@ function getStatusBadgeClass($status)
                             </div>
                             <div class="flex justify-between">
                                 <dt class="text-sm text-gray-500">Current Balance</dt>
-                                <dd class="text-sm font-bold" :class="$subscription['balance'] > 0 ? 'text-red-600' : 'text-green-600'">
+                                <dd class="text-sm font-bold {{ $subscription['balance'] > 0 ? 'text-red-600' : 'text-green-600' }}">
                                     ${{ number_format($subscription['balance'], 2) }}
                                 </dd>
                             </div>
@@ -345,7 +346,9 @@ function getStatusBadgeClass($status)
                                     <span class="text-sm text-gray-500">of {{ number_format($subscription['data_quota']) }} GB</span>
                                 </div>
                                 @php
-                                    $usagePercent = min(($subscription['data_used'] / $subscription['data_quota']) * 100, 100);
+                                    $dataQuota = (float) $subscription['data_quota'];
+                                    $dataUsed = (float) $subscription['data_used'];
+                                    $usagePercent = $dataQuota > 0 ? min(($dataUsed / $dataQuota) * 100, 100) : 0;
                                     $barColor = $usagePercent > 90 ? 'bg-red-500' : ($usagePercent > 70 ? 'bg-yellow-500' : 'bg-green-500');
                                 @endphp
                                 <div class="w-full bg-gray-200 rounded-full h-3">
@@ -503,7 +506,7 @@ function getStatusBadgeClass($status)
                             @endphp
                             <div class="flex justify-between">
                                 <dt class="text-sm text-gray-500">Remaining Days</dt>
-                                <dd class="text-sm font-medium" :class="$remainingDays < 30 ? 'text-red-600' : 'text-gray-900'">
+                                <dd class="text-sm font-medium {{ $remainingDays < 30 ? 'text-red-600' : 'text-gray-900' }}">
                                     {{ $remainingDays }} days
                                 </dd>
                             </div>

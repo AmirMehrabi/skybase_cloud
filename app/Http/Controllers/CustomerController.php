@@ -6,6 +6,7 @@ use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -83,7 +84,7 @@ class CustomerController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreCustomerRequest $request): JsonResponse
+    public function store(StoreCustomerRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
 
@@ -101,11 +102,17 @@ class CustomerController extends Controller
 
         $customer = Customer::create($validated);
 
-        return response()->json([
-            'message' => 'Customer created successfully.',
-            'redirect_to' => route('subscriptions.create', ['customer_id' => $customer->id]),
-            'customer' => $customer,
-        ], 201);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Customer created successfully.',
+                'redirect_to' => route('subscriptions.create', ['customer_id' => $customer->id]),
+                'customer' => $customer,
+            ], 201);
+        }
+
+        return redirect()
+            ->route('customers.index')
+            ->with('success', 'Customer created successfully.');
     }
 
     /**
