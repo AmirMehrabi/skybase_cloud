@@ -89,14 +89,6 @@ $dailySessions = [
     ['date' => '2025-02-12', 'duration' => '24h', 'download' => '13.7 GB', 'upload' => '2.5 GB'],
 ];
 
-$activityLog = [
-    ['action' => 'Subscription created', 'description' => 'Subscription SUB-2024-001 created for Acme Corporation', 'user' => 'Admin', 'timestamp' => '2024-01-10 10:30 AM'],
-    ['action' => 'Service activated', 'description' => 'Service activated at Downtown Office', 'user' => 'System', 'timestamp' => '2024-01-15 09:00 AM'],
-    ['action' => 'Payment received', 'description' => 'Payment of $97.19 received for INV-2025-0150', 'user' => 'System', 'timestamp' => '2025-02-14 02:45 PM'],
-    ['action' => 'Invoice generated', 'description' => 'Invoice INV-2025-0150 generated', 'user' => 'System', 'timestamp' => '2025-02-01 00:00 AM'],
-    ['action' => 'Plan upgraded', 'description' => 'Upgraded from Home Fiber 50 to Fiber Business 100', 'user' => 'Admin', 'timestamp' => '2024-06-15 11:20 AM'],
-];
-
 function getStatusBadgeClass($status)
 {
     $classes = [
@@ -652,48 +644,7 @@ function getStatusBadgeClass($status)
                         <h3 class="text-lg font-semibold text-gray-900">Activity Log</h3>
                         <p class="text-sm text-gray-500 mt-1">Subscription history and changes</p>
                     </div>
-                    <div class="space-y-6">
-                        @foreach($activityLog as $index => $activity)
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-10 h-10 rounded-full @if($index === 0) bg-blue-100 @elseif($activity['action'] === 'Payment received') bg-green-100 @elseif($activity['action'] === 'Service activated') bg-purple-100 @else bg-gray-100 @endif flex items-center justify-center flex-shrink-0">
-                                    @if($activity['action'] === 'Subscription created')
-                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                        </svg>
-                                    @elseif($activity['action'] === 'Payment received')
-                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                    @elseif($activity['action'] === 'Service activated')
-                                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                        </svg>
-                                    @else
-                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                        </svg>
-                                    @endif
-                                </div>
-                                @if($index < count($activityLog) - 1)
-                                <div class="w-0.5 h-full bg-gray-200 mt-2"></div>
-                                @endif
-                            </div>
-                            <div class="flex-1 pb-6 @if($index < count($activityLog) - 1) border-b border-gray-100 @endif">
-                                <div class="flex items-start justify-between">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">{{ $activity['action'] }}</p>
-                                        <p class="text-sm text-gray-500 mt-1">{{ $activity['description'] }}</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-xs text-gray-400">{{ $activity['user'] }}</p>
-                                        <p class="text-xs text-gray-400 mt-1">{{ $activity['timestamp'] }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
+                    <x-activity-log :activities="$activityLog" />
                 </div>
             </div>
         </div>

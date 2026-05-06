@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
+use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -162,8 +163,9 @@ class SubscriptionController extends Controller
     public function show(Subscription $subscription): View
     {
         $subscription->load(['customer', 'plan', 'router', 'items']);
+        $activityLog = app(ActivityLogFormatter::class)->forSubject($subscription, $subscription->tenant_id);
 
-        return view('subscriptions.show', compact('subscription'));
+        return view('subscriptions.show', compact('subscription', 'activityLog'));
     }
 
     /**

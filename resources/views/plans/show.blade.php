@@ -370,6 +370,14 @@ function getVisibilityBadgeClass($visibility)
                 </div>
             </dl>
         </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Activity Log</h3>
+                <p class="text-sm text-gray-500 mt-1">Plan history and changes</p>
+            </div>
+            <x-activity-log :activities="$activityLog" />
+        </div>
     </div>
 </div>
 @endsection

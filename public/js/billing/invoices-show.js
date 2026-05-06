@@ -28,29 +28,7 @@ function invoiceShow() {
             { id: 1, payment_reference: 'PAY-2024-001', date: '2024-02-15', method: 'card', amount: 125.00, status: 'completed' }
         ],
 
-        activities: [
-            {
-                title: 'Invoice Paid',
-                description: 'Payment of $125.00 received via Card',
-                time: 'Feb 15, 2024 at 2:30 PM',
-                icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
-                iconColor: 'bg-green-100 text-green-600'
-            },
-            {
-                title: 'Invoice Sent',
-                description: 'Invoice sent to john@example.com',
-                time: 'Feb 1, 2024 at 10:00 AM',
-                icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>',
-                iconColor: 'bg-blue-100 text-blue-600'
-            },
-            {
-                title: 'Invoice Created',
-                description: 'Invoice INV-2024-001 created for John Smith',
-                time: 'Feb 1, 2024 at 9:45 AM',
-                icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>',
-                iconColor: 'bg-gray-100 text-gray-600'
-            }
-        ],
+        activities: (window.billingInvoiceShow && window.billingInvoiceShow.activities) || [],
 
         openPaymentModal: false,
         paymentForm: {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -76,6 +77,10 @@ class InvoiceController extends Controller
                 'amount' => (float) $payment->amount,
                 'status' => $payment->status,
             ])->values();
+
+            $data['activities'] = app(ActivityLogFormatter::class)
+                ->forSubject($invoice, $invoice->tenant_id)
+                ->values();
         }
 
         return $data;

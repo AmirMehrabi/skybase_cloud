@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Plan;
+use App\Services\ActivityLogFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -35,7 +36,10 @@ class PlanController extends Controller
 
     public function show(Plan $plan): View
     {
-        return view('plans.show', ['plan' => $this->transformPlan($plan)]);
+        return view('plans.show', [
+            'plan' => $this->transformPlan($plan),
+            'activityLog' => app(ActivityLogFormatter::class)->forSubject($plan, auth()->user()?->tenant_id),
+        ]);
     }
 
     public function edit(Plan $plan): View

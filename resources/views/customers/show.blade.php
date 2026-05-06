@@ -58,12 +58,7 @@
             'status' => $invoice->status,
         ])->all();
 
-    $activity = $activityLog
-        ->map(fn ($log) => [
-            'action' => \Illuminate\Support\Str::headline(str_replace('.', ' ', $log->action)),
-            'description' => $log->user?->name ? 'By '.$log->user->name : 'System event',
-            'time' => optional($log->created_at)->diffForHumans(),
-        ])->values()->all();
+    $activity = $activityLog->values()->all();
 @endphp
 
 @push('styles')

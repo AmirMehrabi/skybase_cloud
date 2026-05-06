@@ -81,52 +81,7 @@
     <!-- Activity Log -->
     <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-
-        @if($recentActivity->count() > 0)
-        <div class="space-y-4">
-            @foreach($recentActivity as $activity)
-            <div class="flex items-start gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
-                <div class="w-10 h-10 rounded-full
-                    @if($activity->action === 'user.created') bg-green-100
-                    @elseif($activity->action === 'user.updated') bg-blue-100
-                    @elseif($activity->action === 'user.deleted') bg-red-100
-                    @else bg-gray-100
-                    @endif flex items-center justify-center flex-shrink-0">
-                    <i class="fas
-                        @if($activity->action === 'user.created') fa-user-plus text-green-600
-                        @elseif($activity->action === 'user.updated') fa-edit text-blue-600
-                        @elseif($activity->action === 'user.deleted') fa-trash text-red-600
-                        @else fa-circle text-gray-600
-                        @endif"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900">
-                        @if($activity->action === 'user.created')
-                            User created
-                        @elseif($activity->action === 'user.updated')
-                            User updated
-                        @elseif($activity->action === 'user.deleted')
-                            User deleted
-                        @else
-                            Activity logged
-                        @endif
-                    </p>
-                    @if($activity->ip_address)
-                    <p class="text-xs text-gray-500 mt-1">
-                        <i class="fas fa-map-marker-alt mr-1"></i>{{ $activity->ip_address }}
-                    </p>
-                    @endif
-                    <p class="text-xs text-gray-400 mt-1">{{ $activity->created_at->diffForHumans() }}</p>
-                </div>
-            </div>
-            @endforeach
-        </div>
-        @else
-        <div class="text-center py-8 text-gray-400">
-            <i class="fas fa-history text-3xl mb-2"></i>
-            <p>No recent activity</p>
-        </div>
-        @endif
+        <x-activity-log :activities="$recentActivity" empty-message="No recent activity" />
     </div>
 </div>
 

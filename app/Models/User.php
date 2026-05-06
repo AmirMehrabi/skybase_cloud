@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\LogsTenantActivity;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,8 +13,8 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, LogsTenantActivity, Notifiable;
 
     protected $fillable = [
         'tenant_id',
@@ -27,6 +29,11 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected function activityLogExcept(): array
+    {
+        return ['password', 'remember_token', 'updated_at'];
+    }
 
     protected function casts(): array
     {

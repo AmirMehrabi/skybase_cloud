@@ -197,6 +197,9 @@
             <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Activity Log</h3>
                 <div class="space-y-4">
+                    <div x-show="activities.length === 0" class="py-8 text-center text-sm text-gray-500">
+                        No activity recorded yet.
+                    </div>
                     <template x-for="(activity, index) in activities" :key="index">
                         <div class="flex gap-3">
                             <div class="flex flex-col items-center">

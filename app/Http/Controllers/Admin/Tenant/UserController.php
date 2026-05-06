@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\ActivityLogFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -102,11 +103,7 @@ class UserController extends Controller
 
         $user->load('tenant');
 
-        $recentActivity = ActivityLog::where('user_id', $user->id)
-            ->where('tenant_id', tenant_id())
-            ->latest()
-            ->take(20)
-            ->get();
+        $recentActivity = app(ActivityLogFormatter::class)->forSubject($user, tenant_id());
 
         return view('admin.tenant.users.show', compact('user', 'recentActivity'));
     }
