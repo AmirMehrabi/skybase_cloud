@@ -313,22 +313,12 @@
 function bandwidthMonitoring() {
     return {
         liveMode: false,
-        stats: {
-            totalThroughput: 8543200000,
-            downloadThroughput: 6789500000,
-            uploadThroughput: 1753700000,
-            peakUsage: 9234500000,
-            peakTime: '14:32'
-        },
-        chartData: [],
-        routerBandwidth: [],
-        interfaces: [],
+        stats: @js($networkBandwidth['stats']),
+        chartData: @js($networkBandwidth['chartData']),
+        routerBandwidth: @js($networkBandwidth['routerBandwidth']),
+        interfaces: @js($networkBandwidth['interfaces']),
 
         init() {
-            this.generateChartData();
-            this.generateRouterBandwidth();
-            this.generateInterfaces();
-
             // Auto-refresh in live mode
             this.$watch('liveMode', (value) => {
                 if (value) {
@@ -341,78 +331,6 @@ function bandwidthMonitoring() {
             });
         },
 
-        generateChartData() {
-            const times = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
-            for (let i = 0; i < 24; i++) {
-                const hour = Math.floor(i / 4);
-                const time = times[hour % times.length];
-                this.chartData.push({
-                    time: time,
-                    download: Math.floor(Math.random() * 8000000000) + 1000000000,
-                    upload: Math.floor(Math.random() * 2000000000) + 200000000
-                });
-            }
-        },
-
-        generateRouterBandwidth() {
-            const routers = [
-                { name: 'Router-Main-01', ip: '192.168.1.1', interface: 'ether1' },
-                { name: 'Router-Downtown-02', ip: '192.168.2.1', interface: 'ether2' },
-                { name: 'Router-West-03', ip: '192.168.3.1', interface: 'ether1' },
-                { name: 'Router-East-04', ip: '192.168.4.1', interface: 'ether3' },
-                { name: 'Router-North-05', ip: '192.168.5.1', interface: 'ether1' }
-            ];
-
-            this.routerBandwidth = routers.map((r, i) => {
-                const download = Math.floor(Math.random() * 3000000000) + 500000000;
-                const upload = Math.floor(Math.random() * 800000000) + 100000000;
-                const capacity = 10000000000;
-                const utilization = Math.floor(((download + upload) / capacity) * 100);
-
-                return {
-                    id: i + 1,
-                    name: r.name,
-                    ipAddress: r.ip,
-                    interface: r.interface,
-                    download: download,
-                    upload: upload,
-                    peak: download + Math.floor(Math.random() * 1000000000),
-                    capacity: capacity,
-                    utilization: utilization,
-                    status: utilization > 80 ? 'critical' : (utilization > 60 ? 'warning' : 'optimal')
-                };
-            });
-        },
-
-        generateInterfaces() {
-            const interfaces = [
-                { name: 'ether1-gateway', router: 'Router-Main-01' },
-                { name: 'ether2-lan', router: 'Router-Main-01' },
-                { name: 'ether3-wan', router: 'Router-Downtown-02' },
-                { name: 'ether1-uplink', router: 'Router-West-03' },
-                { name: 'ether2-backhaul', router: 'Router-East-04' },
-                { name: 'ether1-core', router: 'Router-North-05' },
-                { name: 'wlan1-main', router: 'Router-Main-01' },
-                { name: 'wlan2-guest', router: 'Router-Downtown-02' }
-            ];
-
-            this.interfaces = interfaces.map((iface, i) => {
-                const capacity = Math.floor(Math.random() * 9000000000) + 1000000000;
-                const usage = Math.floor(capacity * (Math.random() * 0.7 + 0.1));
-                const usagePercent = Math.floor((usage / capacity) * 100);
-
-                return {
-                    id: i + 1,
-                    name: iface.name,
-                    router: iface.router,
-                    capacity: capacity,
-                    usage: usage,
-                    usagePercent: usagePercent,
-                    status: usagePercent > 80 ? 'error' : (usagePercent > 60 ? 'warning' : 'active')
-                };
-            });
-        },
-
         formatSpeed(bps) {
             if (bps === 0) return '0 bps';
             const k = 1000;
@@ -422,12 +340,7 @@ function bandwidthMonitoring() {
         },
 
         refreshData() {
-            this.chartData = [];
-            this.routerBandwidth = [];
-            this.interfaces = [];
-            this.generateChartData();
-            this.generateRouterBandwidth();
-            this.generateInterfaces();
+            window.location.reload();
         }
     };
 }

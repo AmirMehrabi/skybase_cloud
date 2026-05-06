@@ -14,6 +14,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\IpamController;
+use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\RouterController;
@@ -184,9 +185,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
 
     // Network Routes
     Route::prefix('network')->name('network.')->group(function () {
-        Route::get('/data-usage', fn () => view('network.data-usage'))->name('data-usage');
-        Route::get('/bandwidth', fn () => view('network.bandwidth'))->name('bandwidth');
-        Route::get('/status', fn () => view('network.status'))->name('status');
+        Route::get('/data-usage', [NetworkController::class, 'dataUsage'])->name('data-usage');
+        Route::get('/bandwidth', [NetworkController::class, 'bandwidth'])->name('bandwidth');
+        Route::get('/status', [NetworkController::class, 'status'])->name('status');
     });
 
     // Reports Routes

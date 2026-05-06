@@ -339,14 +339,7 @@
 <script>
 function dataUsage() {
     return {
-        stats: {
-            totalToday: 1543944038,
-            totalMonth: 41231686050,
-            activeUsers: 312,
-            topUserUsage: 365072220,
-            topUserName: 'John Smith',
-            avgUsagePerUser: 132238333
-        },
+        stats: @js($networkUsage['stats']),
         filters: {
             dateRange: 'month',
             router: '',
@@ -354,24 +347,10 @@ function dataUsage() {
             subscription: '',
             usageType: ''
         },
-        routerOptions: [
-            { value: 'r1', label: 'Router-Main-01' },
-            { value: 'r2', label: 'Router-Downtown-02' },
-            { value: 'r3', label: 'Router-West-03' },
-            { value: 'r4', label: 'Router-East-04' },
-            { value: 'r5', label: 'Router-North-05' }
-        ],
-        customerOptions: [
-            { value: 'c1', label: 'Acme Corporation' },
-            { value: 'c2', label: 'Tech Solutions Inc' },
-            { value: 'c3', label: 'Global Services LLC' }
-        ],
-        subscriptionOptions: [
-            { value: 's1', label: 'Enterprise 100Mbps' },
-            { value: 's2', label: 'Business 50Mbps' },
-            { value: 's3', label: 'Home 20Mbps' }
-        ],
-        usageData: [],
+        routerOptions: @js($networkUsage['routerOptions']),
+        customerOptions: @js($networkUsage['customerOptions']),
+        subscriptionOptions: @js($networkUsage['subscriptionOptions']),
+        usageData: @js($networkUsage['usageData']),
         pagination: {
             currentPage: 1,
             perPage: 15,
@@ -381,7 +360,6 @@ function dataUsage() {
         },
 
         init() {
-            this.generateUsageData();
         },
 
         get filteredUsage() {
@@ -395,6 +373,12 @@ function dataUsage() {
             }
             if (this.filters.subscription) {
                 filtered = filtered.filter(u => u.subscriptionId === this.filters.subscription);
+            }
+            if (this.filters.usageType === 'download') {
+                filtered = filtered.filter(u => u.download >= u.upload);
+            }
+            if (this.filters.usageType === 'upload') {
+                filtered = filtered.filter(u => u.upload > u.download);
             }
 
             this.pagination.total = filtered.length;
@@ -412,43 +396,6 @@ function dataUsage() {
 
         get topUsers() {
             return [...this.usageData].sort((a, b) => b.total - a.total).slice(0, 10);
-        },
-
-        generateUsageData() {
-            const customers = ['John Smith', 'Emma Wilson', 'Michael Brown', 'Sarah Davis', 'James Johnson', 'Emily Taylor', 'David Martinez', 'Lisa Anderson', 'Robert Garcia', 'Maria Rodriguez'];
-            const subscriptions = ['Enterprise 100Mbps', 'Business 50Mbps', 'Business 30Mbps', 'Home 20Mbps', 'Home 10Mbps'];
-            const routers = ['Router-Main-01', 'Router-Downtown-02', 'Router-West-03', 'Router-East-04', 'Router-North-05'];
-
-            for (let i = 0; i < 50; i++) {
-                const download = Math.floor(Math.random() * 500000000000) + 1000000000;
-                const upload = Math.floor(Math.random() * 100000000000) + 500000000;
-                const total = download + upload;
-                const quota = Math.floor(Math.random() * 500000000000) + 50000000000;
-
-                this.usageData.push({
-                    id: i + 1,
-                    customer: customers[i % customers.length],
-                    customerId: `CUST-${String(i + 1).padStart(4, '0')}`,
-                    subscription: subscriptions[i % subscriptions.length],
-                    subscriptionId: `SUB-${String((i % 5) + 1).padStart(3, '0')}`,
-                    router: routers[i % routers.length],
-                    routerId: `r${String((i % 5) + 1)}`,
-                    ipAddress: `192.168.${Math.floor(i / 255)}.${i % 255}`,
-                    download: download,
-                    upload: upload,
-                    total: total,
-                    maxUsage: 500000000000,
-                    quota: quota,
-                    sessionTime: `${Math.floor(Math.random() * 720)}h ${Math.floor(Math.random() * 60)}m`,
-                    lastActivity: this.getRandomDate()
-                });
-            }
-        },
-
-        getRandomDate() {
-            const now = new Date();
-            const past = new Date(now - Math.random() * 24 * 60 * 60 * 1000);
-            return past.toLocaleString();
         },
 
         formatBytes(bytes) {
@@ -479,8 +426,7 @@ function dataUsage() {
         },
 
         refreshData() {
-            this.usageData = [];
-            this.generateUsageData();
+            window.location.reload();
         },
 
         previousPage() {

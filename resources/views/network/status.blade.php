@@ -305,19 +305,11 @@ function networkStatus() {
     return {
         filterStatus: '',
         showOfflineOnly: false,
-        stats: {
-            totalRouters: 20,
-            onlineRouters: 18,
-            offlineRouters: 2,
-            activeSessions: 1847,
-            alerts: 5
-        },
-        routers: [],
-        alerts: [],
+        stats: @js($networkStatus['stats']),
+        routers: @js($networkStatus['routers']),
+        alerts: @js($networkStatus['alerts']),
 
         init() {
-            this.generateRouters();
-            this.generateAlerts();
         },
 
         get filteredRouters() {
@@ -327,59 +319,8 @@ function networkStatus() {
             return this.routers.filter(r => r.status === this.filterStatus);
         },
 
-        generateRouters() {
-            const locations = ['Main Data Center', 'Downtown', 'West Tower', 'East Campus', 'North Building', 'South Wing', 'Central Hub'];
-            const statuses = ['online', 'online', 'online', 'online', 'online', 'warning', 'offline'];
-
-            for (let i = 0; i < 20; i++) {
-                const status = i < 17 ? 'online' : (i < 19 ? 'warning' : 'offline');
-                const cpu = status === 'offline' ? 0 : Math.floor(Math.random() * 60) + 20;
-                const memory = status === 'offline' ? 0 : Math.floor(Math.random() * 50) + 30;
-
-                this.routers.push({
-                    id: i + 1,
-                    name: `Router-${locations[i % locations.length].split(' ')[0]}-${String(i + 1).padStart(2, '0')}`,
-                    location: locations[i % locations.length],
-                    ipAddress: `192.168.${Math.floor(i / 5) + 1}.${(i % 5) * 10 + 1}`,
-                    status: status,
-                    cpu: cpu,
-                    memory: memory,
-                    activeSessions: status === 'offline' ? 0 : Math.floor(Math.random() * 200) + 50,
-                    uptime: status === 'offline' ? null : `${Math.floor(Math.random() * 300) + 1}d ${Math.floor(Math.random() * 24)}h`,
-                    lastSeen: status === 'online' ? 'Just now' : `${Math.floor(Math.random() * 60) + 1}m ago`
-                });
-            }
-        },
-
-        generateAlerts() {
-            const messages = [
-                { router: 'Router-West-03', severity: 'critical', message: 'Router offline - Connection timeout' },
-                { router: 'Router-East-04', severity: 'warning', message: 'High CPU usage (87%) - Performance degradation' },
-                { router: 'Router-Main-01', severity: 'info', message: 'Scheduled maintenance completed successfully' },
-                { router: 'Router-North-05', severity: 'warning', message: 'Memory usage above 80% threshold' },
-                { router: 'Router-Downtown-02', severity: 'critical', message: 'Router offline - No response to ping' }
-            ];
-
-            this.alerts = messages.map((m, i) => ({
-                id: i + 1,
-                time: this.getRandomTime(),
-                router: m.router,
-                severity: m.severity,
-                message: m.message
-            }));
-        },
-
-        getRandomTime() {
-            const now = new Date();
-            const past = new Date(now - Math.random() * 2 * 60 * 60 * 1000);
-            return past.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        },
-
         refreshData() {
-            this.routers = [];
-            this.alerts = [];
-            this.generateRouters();
-            this.generateAlerts();
+            window.location.reload();
         }
     };
 }
