@@ -18,15 +18,15 @@
                 value="1"
                 {{ $checked ? 'checked' : '' }}
                 @if($xModel) x-model="{{ $xModel }}" @endif
-                class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
             >
         </div>
         <div class="ml-3 text-sm">
             @if($label)
-            <label for="{{ $id }}" class="font-medium text-gray-700">{{ $label }}</label>
+            <label for="{{ $id }}" class="font-medium text-slate-700">{{ $label }}</label>
             @endif
             @if($help)
-            <p class="text-gray-500">{{ $help }}</p>
+            <p class="text-slate-500">{{ $help }}</p>
             @endif
         </div>
     </div>

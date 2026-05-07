@@ -3,7 +3,7 @@
 @section('title', 'Register')
 
 @section('content')
-<div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-8" x-data="{
+<div class="rounded-[2rem] border border-slate-950/10 bg-white p-8 shadow-xl" x-data="{
     companyName: '',
     ownerName: '',
     email: '',
@@ -15,8 +15,8 @@
     loading: false
 }">
     <div class="text-center mb-8">
-        <h2 class="text-2xl font-bold text-gray-900">Start Your Free Trial</h2>
-        <p class="text-gray-600 mt-1">14-day trial. No credit card required.</p>
+        <h2 class="text-2xl font-bold text-slate-950">Start Your Free Trial</h2>
+        <p class="mt-1 text-slate-600">14-day trial. No credit card required.</p>
     </div>
 
     <form method="POST" action="{{ route('auth.register.store') }}" @submit="loading = true">
@@ -50,7 +50,7 @@
         />
 
         <div class="space-y-2 mb-4">
-            <label for="password" class="block text-sm font-medium text-gray-700">Password <span class="text-red-600">*</span></label>
+            <label for="password" class="block text-sm font-medium text-slate-700">Password <span class="text-red-600">*</span></label>
             <input
                 type="password"
                 id="password"
@@ -58,14 +58,14 @@
                 required
                 minlength="8"
                 x-model="password"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
+                class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-950 placeholder-slate-500 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 placeholder="••••••••"
             >
-            <p class="text-xs text-gray-500">Must be at least 8 characters</p>
+            <p class="text-xs text-slate-500">Must be at least 8 characters</p>
         </div>
 
         <div class="space-y-2 mb-4">
-            <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm Password <span class="text-red-600">*</span></label>
+            <label for="password_confirmation" class="block text-sm font-medium text-slate-700">Confirm Password <span class="text-red-600">*</span></label>
             <input
                 type="password"
                 id="password_confirmation"
@@ -73,7 +73,7 @@
                 required
                 minlength="8"
                 x-model="passwordConfirmation"
-                class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
+                class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-950 placeholder-slate-500 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 placeholder="••••••••"
             >
         </div>
@@ -133,14 +133,14 @@
             name="terms"
             :value="true"
             :required="true"
-            label='I agree to the <a href="#" class="text-blue-600 hover:text-blue-700">Terms of Service</a> and <a href="#" class="text-blue-600 hover:text-blue-700">Privacy Policy</a>'
+            label='I agree to the <a href="#" class="font-semibold text-teal-700 hover:text-teal-800">Terms of Service</a> and <a href="#" class="font-semibold text-teal-700 hover:text-teal-800">Privacy Policy</a>'
         />
 
         <!-- Submit Button -->
         <button
             type="submit"
             :disabled="loading"
-            class="w-full py-3 px-4 mt-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="mt-6 w-full rounded-full bg-[#f5c542] px-4 py-3 font-bold text-slate-950 transition hover:bg-[#ffd95d] focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
             <span x-show="!loading">Start Free Trial</span>
             <span x-show="loading" x-cloak>
@@ -151,9 +151,9 @@
 
     <!-- Login Link -->
     <div class="mt-6 text-center">
-        <p class="text-gray-600">
+        <p class="text-slate-600">
             Already have an account?
-            <a href="{{ route('auth.login') }}" class="text-blue-600 hover:text-blue-700 font-medium transition">Sign in</a>
+            <a href="{{ route('auth.login') }}" class="font-semibold text-teal-700 transition hover:text-teal-800">Sign in</a>
         </p>
     </div>
 </div>

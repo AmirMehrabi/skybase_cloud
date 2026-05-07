@@ -11,18 +11,18 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen flex items-center justify-center px-4 py-12">
+<body class="bg-[#f6f1e8] text-slate-950">
+    <div class="flex min-h-screen items-center justify-center px-4 py-12">
         <div class="max-w-md w-full space-y-8">
             <!-- Logo -->
             <div class="text-center">
                 <a href="{{ route('home') }}" class="inline-flex items-center gap-3">
-                    <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-cloud text-white text-xl"></i>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0d2f35] shadow-[0_16px_36px_rgba(13,47,53,0.22)]">
+                        <i class="fas fa-cloud text-xl text-[#f5c542]"></i>
                     </div>
-                    <span class="text-2xl font-bold text-gray-900">SkyBase Cloud</span>
+                    <span class="text-2xl font-bold text-slate-950">SkyBase Cloud</span>
                 </a>
-                <p class="mt-2 text-gray-600 text-sm">Complete ISP Management Platform</p>
+                <p class="mt-2 text-sm font-medium text-slate-600">Complete ISP Management Platform</p>
             </div>
 
             <!-- Flash Messages -->

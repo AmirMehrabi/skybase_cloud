@@ -11,7 +11,7 @@
 
 <div class="mb-4">
     @if($label)
-    <label for="{{ $id }}" class="block text-sm font-medium text-gray-700">
+    <label for="{{ $id }}" class="block text-sm font-medium text-slate-700">
         {{ $label }}
         @if($required)<span class="text-red-500">*</span>@endif
     </label>
@@ -23,9 +23,9 @@
         @if($required) required @endif
         @if($xModel) x-model="{{ $xModel }}" @endif
         @error($name)
-            class="mt-1 block w-full rounded-md border border-red-500 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            class="mt-1 block w-full rounded-lg border border-red-500 bg-white px-3 py-3 text-slate-950 shadow-sm focus:border-transparent focus:ring-2 focus:ring-emerald-600 sm:text-sm"
         @else
-            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-slate-950 shadow-sm focus:border-transparent focus:ring-2 focus:ring-emerald-600 sm:text-sm"
         @enderror
     >
         @if($placeholder)
