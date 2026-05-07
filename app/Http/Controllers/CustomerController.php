@@ -152,7 +152,7 @@ class CustomerController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCustomerRequest $request, Customer $customer): JsonResponse
+    public function update(UpdateCustomerRequest $request, Customer $customer): JsonResponse|RedirectResponse
     {
         $this->authorizeTenantAccess($customer);
 
@@ -168,6 +168,12 @@ class CustomerController extends Controller
         $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($customer->billing_disabled_at ?? now());
 
         $customer->update($validated);
+
+        if (! $request->expectsJson()) {
+            return redirect()
+                ->route('customers.show', $customer)
+                ->with('success', 'Customer updated successfully.');
+        }
 
         return response()->json([
             'message' => 'Customer updated successfully.',
