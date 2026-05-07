@@ -11,7 +11,7 @@
     <h1 class="text-2xl font-bold text-gray-900">Edit User: {{ $user->name }}</h1>
 </div>
 
-<div class="max-w-2xl">
+<div class="max-w-full">
     <form method="POST" action="{{ route('admin.tenant.users.update', $user) }}" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         @csrf
         @method('put')

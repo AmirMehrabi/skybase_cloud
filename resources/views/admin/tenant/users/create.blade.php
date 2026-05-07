@@ -12,7 +12,7 @@
     <p class="text-gray-600 mt-1">Add a team member to your ISP account</p>
 </div>
 
-<div class="max-w-2xl">
+<div class="max-w-full">
     <form method="POST" action="{{ route('admin.tenant.users.store') }}" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         @csrf
 
