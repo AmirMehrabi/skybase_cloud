@@ -69,6 +69,8 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/', [SettingController::class, 'index'])->name('index');
         Route::put('/general', [SettingController::class, 'updateGeneral'])->name('update.general');
         Route::put('/branding', [SettingController::class, 'updateBranding'])->name('update.branding');
+        Route::put('/email', [SettingController::class, 'updateEmail'])->name('update.email');
+        Route::post('/email/test', [SettingController::class, 'testEmail'])->name('test.email');
         Route::delete('/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
     });
 

@@ -92,8 +92,12 @@ class CustomerController extends Controller
         // Generate name from first/last name or company name
         if ($validated['customer_type'] === 'individual') {
             $validated['name'] = trim($validated['first_name'].' '.$validated['last_name']);
+            $validated['company_name'] = null;
         } else {
             $validated['name'] = $validated['company_name'];
+            $validated['first_name'] = null;
+            $validated['last_name'] = null;
+            $validated['national_id'] = null;
         }
 
         // Set tenant if not provided
@@ -161,8 +165,12 @@ class CustomerController extends Controller
         // Update name based on customer type
         if ($validated['customer_type'] === 'individual') {
             $validated['name'] = trim($validated['first_name'].' '.$validated['last_name']);
+            $validated['company_name'] = null;
         } else {
             $validated['name'] = $validated['company_name'];
+            $validated['first_name'] = null;
+            $validated['last_name'] = null;
+            $validated['national_id'] = null;
         }
 
         $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($customer->billing_disabled_at ?? now());

@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Setting\TestEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateBrandingSettingRequest;
+use App\Http\Requests\Setting\UpdateEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateGeneralSettingRequest;
+use App\Models\Setting;
+use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Throwable;
 
 class SettingController extends Controller
 {
@@ -17,8 +22,82 @@ class SettingController extends Controller
         $timezones = \DateTimeZone::listIdentifiers();
         $currencies = $this->getCurrencies();
         $locales = $this->getLocales();
+        $emailSettings = $this->getEmailSettings($tenant->id);
 
-        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales'));
+        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings'));
+    }
+
+    public function updateEmail(UpdateEmailSettingRequest $request): RedirectResponse
+    {
+        $tenant = $this->getTenant();
+        $current = $this->getEmailSettings($tenant->id);
+
+        $incomingPassword = $request->filled('incoming_password')
+            ? $request->string('incoming_password')->toString()
+            : $current['incoming']['password'];
+
+        $outgoingPassword = $request->filled('outgoing_password')
+            ? $request->string('outgoing_password')->toString()
+            : $current['outgoing']['password'];
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'email.incoming'],
+            [
+                'value' => [
+                    'active' => $request->boolean('incoming_active'),
+                    'protocol' => $request->input('incoming_protocol'),
+                    'host' => $request->input('incoming_host'),
+                    'port' => $request->filled('incoming_port') ? $request->integer('incoming_port') : null,
+                    'encryption' => $request->input('incoming_encryption'),
+                    'username' => $request->input('incoming_username'),
+                    'password' => $incomingPassword,
+                    'mailbox' => $request->input('incoming_mailbox', 'INBOX'),
+                ],
+                'type' => 'json',
+                'group' => 'email',
+            ]
+        );
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'email.outgoing'],
+            [
+                'value' => [
+                    'active' => $request->boolean('outgoing_active'),
+                    'host' => $request->input('outgoing_host'),
+                    'port' => $request->filled('outgoing_port') ? $request->integer('outgoing_port') : null,
+                    'encryption' => $request->input('outgoing_encryption'),
+                    'username' => $request->input('outgoing_username'),
+                    'password' => $outgoingPassword,
+                    'from_email' => $request->input('outgoing_from_email'),
+                    'from_name' => $request->input('outgoing_from_name'),
+                ],
+                'type' => 'json',
+                'group' => 'email',
+            ]
+        );
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'email'])
+            ->with('success', 'Email settings updated successfully.');
+    }
+
+    public function testEmail(TestEmailSettingRequest $request): RedirectResponse
+    {
+        $tenant = $this->getTenant();
+        $direction = $request->validated('direction');
+        $settings = $this->getEmailSettings($tenant->id)[$direction];
+
+        try {
+            $this->testEmailConnection($settings, $direction);
+        } catch (Throwable $exception) {
+            return redirect()
+                ->route('settings.index', ['tab' => 'email'])
+                ->with('error', ucfirst($direction).' email test failed: '.$exception->getMessage());
+        }
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'email'])
+            ->with('success', ucfirst($direction).' email connection tested successfully.');
     }
 
     public function updateGeneral(UpdateGeneralSettingRequest $request): RedirectResponse
@@ -208,12 +287,90 @@ class SettingController extends Controller
         ];
     }
 
-    private function getTenant(): \App\Models\Tenant
+    /**
+     * @return array{incoming: array<string, mixed>, outgoing: array<string, mixed>}
+     */
+    private function getEmailSettings(string $tenantId): array
+    {
+        $incomingDefaults = [
+            'active' => false,
+            'protocol' => 'imap',
+            'host' => null,
+            'port' => 993,
+            'encryption' => 'ssl',
+            'username' => null,
+            'password' => null,
+            'mailbox' => 'INBOX',
+        ];
+
+        $outgoingDefaults = [
+            'active' => false,
+            'host' => null,
+            'port' => 587,
+            'encryption' => 'tls',
+            'username' => null,
+            'password' => null,
+            'from_email' => null,
+            'from_name' => null,
+        ];
+
+        return [
+            'incoming' => array_merge(
+                $incomingDefaults,
+                Setting::get('email.incoming', [], $tenantId) ?? []
+            ),
+            'outgoing' => array_merge(
+                $outgoingDefaults,
+                Setting::get('email.outgoing', [], $tenantId) ?? []
+            ),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function testEmailConnection(array $settings, string $direction): void
+    {
+        $host = trim((string) ($settings['host'] ?? ''));
+        $port = (int) ($settings['port'] ?? 0);
+        $encryption = $settings['encryption'] ?? 'none';
+
+        if ($host === '' || $port < 1 || $port > 65535) {
+            throw new \RuntimeException('Host and port are required before testing.');
+        }
+
+        $scheme = $encryption === 'ssl' ? 'ssl' : 'tcp';
+        $remoteSocket = "{$scheme}://{$host}:{$port}";
+        $errorCode = 0;
+        $errorMessage = '';
+
+        $socket = @stream_socket_client(
+            $remoteSocket,
+            $errorCode,
+            $errorMessage,
+            10,
+            STREAM_CLIENT_CONNECT
+        );
+
+        if ($socket === false) {
+            throw new \RuntimeException($errorMessage !== '' ? $errorMessage : "Unable to connect to {$host}:{$port}.");
+        }
+
+        stream_set_timeout($socket, 10);
+
+        if ($direction === 'outgoing') {
+            fgets($socket, 512);
+        }
+
+        fclose($socket);
+    }
+
+    private function getTenant(): Tenant
     {
         $tenant = tenant();
 
         if (! $tenant && auth()->check() && auth()->user()->tenant_id) {
-            $tenant = \App\Models\Tenant::find(auth()->user()->tenant_id);
+            $tenant = Tenant::find(auth()->user()->tenant_id);
         }
 
         return $tenant ?? throw new \Exception('Tenant not found.');
