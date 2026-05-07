@@ -133,7 +133,7 @@
             name="terms"
             :value="true"
             :required="true"
-            label='I agree to the <a href="#" class="font-semibold text-teal-700 hover:text-teal-800">Terms of Service</a> and <a href="#" class="font-semibold text-teal-700 hover:text-teal-800">Privacy Policy</a>'
+            label='I agree to the Terms of Service and Privacy Policy'
         />
 
         <!-- Submit Button -->
