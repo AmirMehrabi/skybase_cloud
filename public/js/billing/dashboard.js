@@ -1,14 +1,35 @@
 function billingDashboard() {
     const dashboard = window.billingDashboard || {};
     const revenueChart = dashboard.revenueChart || [];
-    const chartMax = Math.max(1, ...revenueChart.flatMap((month) => [month.revenue || 0, month.collected || 0]));
+    const toFiniteNumber = (value) => {
+        const number = Number(value);
+
+        return Number.isFinite(number) ? number : 0;
+    };
+    const stats = {
+        revenue: 0,
+        outstanding: 0,
+        overdue: 0,
+        paidInvoices: 0,
+        unpaidInvoices: 0,
+        overdueInvoices: 0,
+        pendingInvoices: 0,
+        customersWithBalance: 0,
+        ...(dashboard.stats || {}),
+    };
+    const chartMax = Math.max(1, ...revenueChart.flatMap((month) => [
+        toFiniteNumber(month.revenue),
+        toFiniteNumber(month.collected),
+    ]));
 
     return {
-        stats: dashboard.stats || {},
+        stats,
         revenueChart: revenueChart.map((month) => ({
             ...month,
-            revenueHeight: Math.max(((month.revenue || 0) / chartMax) * 100, 8),
-            collectedHeight: Math.max(((month.collected || 0) / chartMax) * 100, 8),
+            revenue: toFiniteNumber(month.revenue),
+            collected: toFiniteNumber(month.collected),
+            revenueHeight: Math.max((toFiniteNumber(month.revenue) / chartMax) * 100, 8),
+            collectedHeight: Math.max((toFiniteNumber(month.collected) / chartMax) * 100, 8),
         })),
         recentInvoices: dashboard.recentInvoices || [],
 
@@ -16,7 +37,7 @@ function billingDashboard() {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD'
-            }).format(value);
+            }).format(toFiniteNumber(value));
         },
 
         getInvoiceStatusClass(status) {

@@ -2,6 +2,7 @@
     'id' => null,
     'name' => null,
     'label' => null,
+    'labelHtml' => null,
     'value' => null,
     'checked' => false,
     'help' => null,
@@ -22,8 +23,14 @@
             >
         </div>
         <div class="ml-3 text-sm">
-            @if($label)
-            <label for="{{ $id }}" class="font-medium text-slate-700">{{ $label }}</label>
+            @if($label || $labelHtml)
+                <label for="{{ $id }}" class="font-medium text-slate-700">
+                    @if($labelHtml)
+                        {!! $labelHtml !!}
+                    @else
+                        {{ $label }}
+                    @endif
+                </label>
             @endif
             @if($help)
             <p class="text-slate-500">{{ $help }}</p>
