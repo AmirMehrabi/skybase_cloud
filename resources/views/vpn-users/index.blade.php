@@ -29,6 +29,70 @@
         </div>
     @endif
 
+    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm" x-data="{ copied: false, config: @js($onboarding['config']) }">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">First OpenVPN Client Onboarding</h2>
+                    <p class="mt-1 text-sm text-gray-500">Create an active VPN user, save this client profile, then sign in with that VPN username and password.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" @click="copyConfig(config).then(() => { copied = true; setTimeout(() => copied = false, 1600) })" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        <span x-text="copied ? 'Copied' : 'Copy Config'"></span>
+                    </button>
+                    <button type="button" @click="downloadConfig(config)" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0118 4.414V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Download client.ovpn
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 p-6 xl:grid-cols-[minmax(0,360px)_1fr]">
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Remote Host</p>
+                        <p class="mt-1 break-all font-mono text-sm text-gray-900">{{ $onboarding['remote_host'] }}</p>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Protocol</p>
+                        <p class="mt-1 font-mono text-sm uppercase text-gray-900">{{ $onboarding['protocol'] }}</p>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Port</p>
+                        <p class="mt-1 font-mono text-sm text-gray-900">{{ $onboarding['remote_port'] }}</p>
+                    </div>
+                </div>
+
+                <ol class="space-y-3 text-sm text-gray-700">
+                    <li class="flex gap-3">
+                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">1</span>
+                        <span>Create a VPN user from this page and keep the account active.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">2</span>
+                        <span>Download or copy the generated <span class="font-mono">client.ovpn</span> profile.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">3</span>
+                        <span>Import it into OpenVPN and authenticate with the VPN username and password.</span>
+                    </li>
+                </ol>
+            </div>
+
+            <div>
+                <label for="openvpn-client-config" class="mb-2 block text-sm font-medium text-gray-700">Generated client.ovpn</label>
+                <textarea id="openvpn-client-config" readonly rows="18" class="block w-full resize-y rounded-xl border border-gray-300 bg-slate-950 p-4 font-mono text-xs leading-5 text-slate-100 shadow-sm focus:border-blue-500 focus:ring-blue-500">{{ $onboarding['config'] }}</textarea>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <p class="text-sm font-medium text-gray-500">Total Users</p>

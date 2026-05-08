@@ -130,5 +130,36 @@ document.addEventListener('alpine:init', () => {
 
             return `${parseFloat((bytes / Math.pow(base, unitIndex)).toFixed(1))} ${units[unitIndex]}`;
         },
+
+        async copyConfig(config) {
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(config);
+
+                return;
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.value = config;
+            textarea.setAttribute('readonly', 'readonly');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        },
+
+        downloadConfig(config) {
+            const blob = new Blob([config], { type: 'application/x-openvpn-profile' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = url;
+            link.download = 'client.ovpn';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        },
     }));
 });
