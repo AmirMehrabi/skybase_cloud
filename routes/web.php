@@ -17,6 +17,7 @@ use App\Http\Controllers\IpamController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\ReportController as GeneralReportController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SubscriptionController;
@@ -194,8 +195,8 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
 
     // Reports Routes
     Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/usage', fn () => view('reports.usage'))->name('usage');
-        Route::get('/financial', fn () => view('reports.financial'))->name('financial');
+        Route::get('/usage', [GeneralReportController::class, 'usage'])->name('usage');
+        Route::get('/financial', [GeneralReportController::class, 'financial'])->name('financial');
     });
 });
 

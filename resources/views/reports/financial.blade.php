@@ -44,7 +44,7 @@
                         <svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                         </svg>
-                        <span class="text-xs text-green-600">+12.5%</span>
+                        <span class="text-xs" :class="summary.revenueChangePercent >= 0 ? 'text-green-600' : 'text-red-600'" x-text="formatPercent(summary.revenueChangePercent)"></span>
                     </div>
                 </div>
                 <div class="w-14 h-14 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
@@ -300,7 +300,7 @@
                     <template x-for="(month, index) in revenueChartData" :key="index">
                         <div class="flex-1 flex flex-col items-center gap-2">
                             <div class="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t transition-all duration-500 hover:from-blue-700 hover:to-blue-500"
-                                 :style="'height: ' + (month.revenue / 200000) + '%'"
+                                 :style="'height: ' + revenueChartHeight(month.revenue) + '%'"
                                  :title="'Revenue: ' + formatCurrency(month.revenue)"></div>
                             <span class="text-xs text-gray-500 rotate-45 origin-bottom-left mt-2" x-text="month.month"></span>
                         </div>
@@ -308,10 +308,10 @@
                 </div>
 
                 <div class="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-gray-400 -ml-1">
-                    <span>$200k</span>
-                    <span>$150k</span>
-                    <span>$100k</span>
-                    <span>$50k</span>
+                    <span x-text="formatCompactCurrency(revenueChartMax)"></span>
+                    <span x-text="formatCompactCurrency(revenueChartMax * 0.75)"></span>
+                    <span x-text="formatCompactCurrency(revenueChartMax * 0.5)"></span>
+                    <span x-text="formatCompactCurrency(revenueChartMax * 0.25)"></span>
                     <span>$0</span>
                 </div>
             </div>
@@ -319,93 +319,33 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function financialReports() {
+    const reportData = @json($financialReports ?? []);
+
     return {
-        summary: {
-            revenueThisMonth: 185420,
-            revenueLastMonth: 164830,
-            outstandingBalance: 48750,
-            overdueAmount: 12350,
-            arpu: 89.50,
-            pendingInvoices: 47,
-            overdueInvoices: 12
+        summary: reportData.summary ?? {
+            revenueThisMonth: 0,
+            revenueLastMonth: 0,
+            revenueChangePercent: 0,
+            outstandingBalance: 0,
+            overdueAmount: 0,
+            arpu: 0,
+            pendingInvoices: 0,
+            overdueInvoices: 0
         },
-        revenueRecords: [],
-        topCustomers: [],
-        paymentMethods: [],
-        revenueChartData: [],
+        revenueRecords: reportData.revenueRecords ?? [],
+        topCustomers: reportData.topCustomers ?? [],
+        paymentMethods: reportData.paymentMethods ?? [],
+        revenueChartData: reportData.revenueChartData ?? [],
 
-        init() {
-            this.generateRevenueRecords();
-            this.generateTopCustomers();
-            this.generatePaymentMethods();
-            this.generateRevenueChart();
+        get revenueChartMax() {
+            return Math.max(1, ...this.revenueChartData.map(month => month.revenue));
         },
 
-        generateRevenueRecords() {
-            const months = ['August 2025', 'September 2025', 'October 2025', 'November 2025', 'December 2025', 'January 2026', 'February 2026'];
-
-            for (let i = 0; i < 7; i++) {
-                const issued = Math.floor(Math.random() * 100) + 80;
-                const paid = Math.floor(issued * (Math.random() * 0.2 + 0.75));
-                const revenue = paid * (Math.random() * 500 + 200);
-                const outstanding = (issued - paid) * (Math.random() * 500 + 200);
-                const collectionRate = Math.round((paid / issued) * 100);
-
-                this.revenueRecords.push({
-                    id: i + 1,
-                    month: months[i],
-                    invoicesIssued: issued,
-                    invoicesPaid: paid,
-                    revenue: Math.floor(revenue),
-                    outstanding: Math.floor(outstanding),
-                    collectionRate: collectionRate
-                });
-            }
-        },
-
-        generateTopCustomers() {
-            const customers = [
-                { name: 'John Smith', company: 'Acme Corporation', plan: 'Enterprise 100Mbps' },
-                { name: 'Sarah Johnson', company: 'Tech Solutions Inc', plan: 'Enterprise 50Mbps' },
-                { name: 'Michael Chen', company: 'Global Services LLC', plan: 'Business 30Mbps' },
-                { name: 'Emily Davis', company: 'Metro Bank', plan: 'Enterprise 100Mbps' },
-                { name: 'Robert Wilson', company: 'City Hospital', plan: 'Enterprise 200Mbps' },
-                { name: 'Lisa Anderson', company: 'University District', plan: 'Enterprise 500Mbps' },
-                { name: 'David Martinez', company: 'Retail Chain Co', plan: 'Business 50Mbps' },
-                { name: 'Jennifer Taylor', company: 'Manufacturing Inc', plan: 'Enterprise 100Mbps' }
-            ];
-
-            this.topCustomers = customers.map((c, i) => ({
-                id: i + 1,
-                name: c.name,
-                company: c.company,
-                plan: c.plan,
-                totalPaid: Math.floor(Math.random() * 50000) + 10000,
-                activeSubscription: Math.random() > 0.2,
-                trendLevel: Math.floor(Math.random() * 6) + 1
-            })).sort((a, b) => b.totalPaid - a.totalPaid);
-        },
-
-        generatePaymentMethods() {
-            this.paymentMethods = [
-                { id: 1, name: 'Bank Transfer', amount: 82450, count: 145, percentage: 52, colorClass: 'bg-blue-100 text-blue-600', barColor: 'bg-blue-500' },
-                { id: 2, name: 'Credit Card', amount: 48230, count: 287, percentage: 30, colorClass: 'bg-green-100 text-green-600', barColor: 'bg-green-500' },
-                { id: 3, name: 'Online Payment', amount: 19200, count: 156, percentage: 12, colorClass: 'bg-purple-100 text-purple-600', barColor: 'bg-purple-500' },
-                { id: 4, name: 'Cash', amount: 9540, count: 42, percentage: 6, colorClass: 'bg-orange-100 text-orange-600', barColor: 'bg-orange-500' }
-            ];
-        },
-
-        generateRevenueChart() {
-            const months = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'];
-            for (let i = 0; i < 6; i++) {
-                this.revenueChartData.push({
-                    month: months[i],
-                    revenue: Math.floor(Math.random() * 100000) + 80000
-                });
-            }
+        revenueChartHeight(value) {
+            return Math.max(2, (value / this.revenueChartMax) * 100);
         },
 
         formatCurrency(amount) {
@@ -415,6 +355,21 @@ function financialReports() {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).format(amount);
+        },
+
+        formatCompactCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                notation: 'compact',
+                maximumFractionDigits: 1
+            }).format(amount);
+        },
+
+        formatPercent(value) {
+            const prefix = value > 0 ? '+' : '';
+
+            return prefix + value + '%';
         },
 
         exportPDF() {
@@ -427,5 +382,5 @@ function financialReports() {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection

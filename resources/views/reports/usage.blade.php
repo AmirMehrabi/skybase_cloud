@@ -110,7 +110,7 @@
                 <div class="flex-1">
                     <p class="text-sm font-medium text-gray-500">Total Usage</p>
                     <p class="text-3xl font-bold text-gray-900 mt-2" x-text="formatBytes(summary.totalUsage)"></p>
-                    <p class="text-xs text-green-600 mt-2">+12.5% from last period</p>
+                    <p class="text-xs text-gray-500 mt-2">Selected reporting period</p>
                 </div>
                 <div class="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,10 +248,10 @@
 
             <!-- Y-axis labels -->
             <div class="absolute left-0 top-0 bottom-0 flex flex-col justify-between py-12 pl-2 text-xs text-gray-400">
-                <span>5 TB</span>
-                <span>3.75 TB</span>
-                <span>2.5 TB</span>
-                <span>1.25 TB</span>
+                <span x-text="formatBytes(chartMax)"></span>
+                <span x-text="formatBytes(chartMax * 0.75)"></span>
+                <span x-text="formatBytes(chartMax * 0.5)"></span>
+                <span x-text="formatBytes(chartMax * 0.25)"></span>
                 <span>0</span>
             </div>
 
@@ -261,10 +261,10 @@
                     <div class="flex flex-col items-center gap-1 flex-1 max-w-12">
                         <div class="w-full flex flex-col-reverse gap-0.5">
                             <div class="w-full bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-600"
-                                 :style="`height: ${(point.download / 5000000000000) * 100}%`"
+                                 :style="`height: ${chartHeight(point.download)}%`"
                                  :title="`Download: ${formatBytes(point.download)}`"></div>
                             <div class="w-full bg-green-500 rounded-b transition-all duration-300 hover:bg-green-600"
-                                 :style="`height: ${(point.upload / 5000000000000) * 100}%`"
+                                 :style="`height: ${chartHeight(point.upload)}%`"
                                  :title="`Upload: ${formatBytes(point.upload)}`"></div>
                         </div>
                         <span class="text-xs text-gray-500 mt-2" x-text="point.period"></span>
@@ -275,9 +275,11 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function usageReports() {
+    const reportData = @json($usageReports ?? []);
+
     return {
         filters: {
             dateRange: 'month',
@@ -286,75 +288,173 @@ function usageReports() {
             router: '',
             groupBy: 'month'
         },
-        customerOptions: [
-            { value: 'all', label: 'All Customers' },
-            { value: 'enterprise', label: 'Enterprise Customers' },
-            { value: 'business', label: 'Business Customers' },
-            { value: 'residential', label: 'Residential Customers' }
-        ],
-        planOptions: [
-            { value: 'all', label: 'All Plans' },
-            { value: 'enterprise', label: 'Enterprise Plans' },
-            { value: 'business', label: 'Business Plans' },
-            { value: 'home', label: 'Home Plans' }
-        ],
-        routerOptions: [
-            { value: 'all', label: 'All Routers' },
-            { value: 'main', label: 'Main Data Center' },
-            { value: 'downtown', label: 'Downtown' },
-            { value: 'west', label: 'West Tower' }
-        ],
-        summary: {
-            totalUsage: 5497558138880,
-            avgUsage: 18325193796,
-            peakUsage: 879609302220,
-            peakDate: 'Jan 15, 2026',
-            activeUsers: 287
+        customerOptions: reportData.customerOptions ?? [],
+        planOptions: reportData.planOptions ?? [],
+        routerOptions: reportData.routerOptions ?? [],
+        baseSummary: reportData.summary ?? {
+            totalUsage: 0,
+            avgUsage: 0,
+            peakUsage: 0,
+            peakDate: 'No usage yet',
+            activeUsers: 0
         },
-        records: [],
-        chartData: [],
+        records: reportData.records ?? [],
+        initialChartData: reportData.chartData ?? [],
 
-        init() {
-            this.generateRecords();
-            this.generateChartData();
-        },
+        get baseFilteredRecords() {
+            return this.records.filter(record => {
+                if (this.filters.customer && record.customerId !== this.filters.customer) return false;
+                if (this.filters.plan && record.planId !== this.filters.plan) return false;
+                if (this.filters.router && record.routerId !== this.filters.router) return false;
+                if (!this.recordInDateRange(record)) return false;
 
-        get filteredRecords() {
-            return this.records;
-        },
-
-        generateRecords() {
-            const customers = ['Acme Corp', 'Tech Solutions', 'Global Services', 'Metro Bank', 'City Hospital', 'University District', 'Retail Chain Co', 'Manufacturing Inc'];
-            const periods = ['Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026'];
-
-            let id = 1;
-            periods.forEach(period => {
-                customers.forEach(customer => {
-                    const download = Math.floor(Math.random() * 500000000000) + 50000000000;
-                    const upload = Math.floor(Math.random() * 100000000000) + 10000000000;
-
-                    this.records.push({
-                        id: id++,
-                        period: period,
-                        customer: customer,
-                        download: download,
-                        upload: upload,
-                        total: download + upload,
-                        sessions: Math.floor(Math.random() * 500) + 50
-                    });
-                });
+                return true;
             });
         },
 
-        generateChartData() {
-            const periods = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-            for (let i = 0; i < 6; i++) {
-                this.chartData.push({
-                    period: periods[i],
-                    download: Math.floor(Math.random() * 4000000000000) + 500000000000,
-                    upload: Math.floor(Math.random() * 800000000000) + 100000000000
-                });
+        get filteredRecords() {
+            const groups = new Map();
+
+            this.baseFilteredRecords.forEach(record => {
+                const period = this.periodLabel(record.date);
+                const key = [period, record.customerId, record.planId, record.routerId].join(':');
+
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        id: key,
+                        period,
+                        date: record.date,
+                        customer: record.customer,
+                        customerId: record.customerId,
+                        planId: record.planId,
+                        routerId: record.routerId,
+                        download: 0,
+                        upload: 0,
+                        total: 0,
+                        sessions: 0
+                    });
+                }
+
+                const group = groups.get(key);
+                group.download += record.download;
+                group.upload += record.upload;
+                group.total += record.total;
+                group.sessions += record.sessions;
+            });
+
+            return [...groups.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
+        },
+
+        get summary() {
+            const totalUsage = this.baseFilteredRecords.reduce((sum, record) => sum + record.total, 0);
+            const customers = new Set(this.baseFilteredRecords.map(record => record.customerId).filter(Boolean));
+            const peak = [...this.baseFilteredRecords].sort((a, b) => b.total - a.total)[0];
+
+            return {
+                totalUsage,
+                avgUsage: customers.size ? Math.round(totalUsage / customers.size) : 0,
+                peakUsage: peak?.total ?? 0,
+                peakDate: peak?.date ? new Date(peak.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No usage yet',
+                activeUsers: customers.size
+            };
+        },
+
+        get chartData() {
+            if (!this.hasActiveFilters() && this.filters.dateRange === 'month' && this.filters.groupBy === 'month') {
+                return this.initialChartData;
             }
+
+            const groups = new Map();
+
+            this.baseFilteredRecords.forEach(record => {
+                const period = this.periodLabel(record.date, true);
+
+                if (!groups.has(period)) {
+                    groups.set(period, {
+                        period,
+                        date: record.date,
+                        download: 0,
+                        upload: 0
+                    });
+                }
+
+                const group = groups.get(period);
+                group.download += record.download;
+                group.upload += record.upload;
+            });
+
+            return [...groups.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
+        },
+
+        get chartMax() {
+            return Math.max(1, ...this.chartData.map(point => Math.max(point.download, point.upload)));
+        },
+
+        chartHeight(value) {
+            return Math.max(2, (value / this.chartMax) * 100);
+        },
+
+        recordInDateRange(record) {
+            if (!record.date) return true;
+
+            const date = new Date(record.date + 'T00:00:00');
+            const now = new Date();
+            const start = new Date(now);
+
+            if (this.filters.dateRange === 'today') {
+                start.setHours(0, 0, 0, 0);
+                return date >= start;
+            }
+
+            if (this.filters.dateRange === 'week') {
+                start.setDate(now.getDate() - 7);
+                return date >= start;
+            }
+
+            if (this.filters.dateRange === 'quarter') {
+                start.setMonth(Math.floor(now.getMonth() / 3) * 3, 1);
+                start.setHours(0, 0, 0, 0);
+                return date >= start;
+            }
+
+            if (this.filters.dateRange === 'year') {
+                start.setMonth(0, 1);
+                start.setHours(0, 0, 0, 0);
+                return date >= start;
+            }
+
+            if (this.filters.dateRange === 'month') {
+                start.setDate(1);
+                start.setHours(0, 0, 0, 0);
+                return date >= start;
+            }
+
+            return true;
+        },
+
+        periodLabel(dateValue, short = false) {
+            if (!dateValue) return 'Unknown';
+
+            const date = new Date(dateValue + 'T00:00:00');
+
+            if (this.filters.groupBy === 'day') {
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+
+            if (this.filters.groupBy === 'week') {
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay());
+
+                return 'Week of ' + weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+
+            if (this.filters.groupBy === 'quarter') {
+                const quarter = Math.floor(date.getMonth() / 3) + 1;
+
+                return 'Q' + quarter + ' ' + date.getFullYear();
+            }
+
+            return date.toLocaleDateString('en-US', short ? { month: 'short' } : { month: 'short', year: 'numeric' });
         },
 
         formatBytes(bytes) {
@@ -376,7 +476,7 @@ function usageReports() {
         },
 
         generateReport() {
-            alert('Generating report with current filters...');
+            this.filteredRecords;
         },
 
         exportPDF() {
@@ -389,5 +489,5 @@ function usageReports() {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection
