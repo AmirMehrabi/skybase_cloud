@@ -289,7 +289,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function routersIndex() {
     return {
@@ -425,5 +425,5 @@ function routersIndex() {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection

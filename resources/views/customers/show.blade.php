@@ -264,7 +264,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function customerShow(customer, services, invoices, activityLog) {
     return {
@@ -310,5 +310,5 @@ function customerShow(customer, services, invoices, activityLog) {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection

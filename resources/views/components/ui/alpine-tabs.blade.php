@@ -28,7 +28,7 @@ $defaultTab ??= array_key_first($tabs) ?? null;
     </div>
 </div>
 
-@script
+@push('scripts')
 <script>
     // Expose activeTab to child components
     document.addEventListener('alpine:init', () => {
@@ -37,4 +37,4 @@ $defaultTab ??= array_key_first($tabs) ?? null;
         });
     });
 </script>
-@endscript
+@endpush

@@ -260,7 +260,7 @@
     </div>
 </div>
 
-@scripts
+@push('scripts')
 <script>
 function routerShow(router) {
     return {
@@ -300,5 +300,5 @@ function routerShow(router) {
     };
 }
 </script>
-@endscripts
+@endpush
 @endsection
