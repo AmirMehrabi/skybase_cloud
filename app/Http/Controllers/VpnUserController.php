@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\VpnUser\StoreVpnUserRequest;
 use App\Http\Requests\VpnUser\UpdateVpnUserRequest;
 use App\Models\VpnUser;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,19 +15,51 @@ class VpnUserController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $request->only(['search', 'active']);
+        return view('vpn-users.index');
+    }
+
+    public function data(Request $request): JsonResponse
+    {
+        $filters = $request->only(['search', 'active', 'online']);
 
         $vpnUsers = VpnUser::query()
             ->filter($filters)
             ->latest('created_at')
-            ->paginate(15)
-            ->withQueryString();
+            ->paginate($request->input('per_page', 15))
+            ->through(fn (VpnUser $vpnUser): array => [
+                'id' => $vpnUser->id,
+                'username' => $vpnUser->username,
+                'active' => $vpnUser->active,
+                'online' => $vpnUser->online,
+                'vpn_ip' => $vpnUser->vpn_ip,
+                'real_ip' => $vpnUser->real_ip,
+                'bytes_received' => $vpnUser->bytes_received,
+                'bytes_sent' => $vpnUser->bytes_sent,
+                'last_login_at' => $vpnUser->last_login_at?->format('M d, Y H:i'),
+                'last_seen_at' => $this->lastSeenAt($vpnUser),
+                'connected_at' => $vpnUser->connected_at?->format('M d, Y H:i'),
+                'disconnected_at' => $vpnUser->disconnected_at?->format('M d, Y H:i'),
+                'created_at' => $vpnUser->created_at?->format('M d, Y'),
+                'show_url' => route('vpn-users.show', $vpnUser),
+                'edit_url' => route('vpn-users.edit', $vpnUser),
+            ]);
 
-        return view('vpn-users.index', [
-            'vpnUsers' => $vpnUsers,
-            'stats' => VpnUser::getStats(),
-            'filters' => $filters,
+        return response()->json([
+            'vpnUsers' => $vpnUsers->items(),
+            'pagination' => [
+                'current_page' => $vpnUsers->currentPage(),
+                'last_page' => $vpnUsers->lastPage(),
+                'per_page' => $vpnUsers->perPage(),
+                'total' => $vpnUsers->total(),
+                'from' => $vpnUsers->firstItem(),
+                'to' => $vpnUsers->lastItem(),
+            ],
         ]);
+    }
+
+    public function stats(): JsonResponse
+    {
+        return response()->json(VpnUser::getStats());
     }
 
     public function create(): View
@@ -101,5 +134,12 @@ class VpnUserController extends Controller
         if (auth()->check() && auth()->user()->tenant_id && $vpnUser->tenant_id !== auth()->user()->tenant_id) {
             abort(403, 'You do not have access to this VPN user.');
         }
+    }
+
+    private function lastSeenAt(VpnUser $vpnUser): ?string
+    {
+        return ($vpnUser->online ? $vpnUser->connected_at : $vpnUser->disconnected_at)
+            ?->format('M d, Y H:i')
+            ?? $vpnUser->last_login_at?->format('M d, Y H:i');
     }
 }

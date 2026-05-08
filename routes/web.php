@@ -124,6 +124,8 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     });
 
     // Router Management Routes
+    Route::get('/vpn-users/data', [VpnUserController::class, 'data'])->name('vpn-users.data');
+    Route::get('/vpn-users/stats', [VpnUserController::class, 'stats'])->name('vpn-users.stats');
     Route::resource('vpn-users', VpnUserController::class);
 
     Route::prefix('routers')->name('routers.')->group(function () {

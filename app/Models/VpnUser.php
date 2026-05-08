@@ -20,6 +20,13 @@ class VpnUser extends Model
         'username',
         'password_hash',
         'active',
+        'online',
+        'connected_at',
+        'disconnected_at',
+        'vpn_ip',
+        'real_ip',
+        'bytes_received',
+        'bytes_sent',
         'last_login_at',
     ];
 
@@ -53,7 +60,10 @@ class VpnUser extends Model
                 $query->where('username', 'like', "%{$search}%");
             })
             ->when(($filters['active'] ?? '') !== '', function (Builder $query) use ($filters): void {
-                $query->where('active', (bool) $filters['active']);
+                $query->where('active', filter_var($filters['active'], FILTER_VALIDATE_BOOLEAN));
+            })
+            ->when(($filters['online'] ?? '') !== '', function (Builder $query) use ($filters): void {
+                $query->where('online', filter_var($filters['online'], FILTER_VALIDATE_BOOLEAN));
             });
     }
 
@@ -65,6 +75,8 @@ class VpnUser extends Model
             'total' => (clone $query)->count(),
             'active' => (clone $query)->where('active', true)->count(),
             'inactive' => (clone $query)->where('active', false)->count(),
+            'online' => (clone $query)->where('online', true)->count(),
+            'offline' => (clone $query)->where('online', false)->count(),
             'recentLogins' => (clone $query)->where('last_login_at', '>=', now()->subDays(7))->count(),
         ];
     }

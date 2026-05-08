@@ -24,6 +24,13 @@ class VpnUserFactory extends Factory
             'username' => fake()->unique()->userName(),
             'password_hash' => Hash::make('password'),
             'active' => fake()->boolean(85),
+            'online' => false,
+            'connected_at' => null,
+            'disconnected_at' => fake()->optional()->dateTimeBetween('-30 days', 'now'),
+            'vpn_ip' => fake()->optional()->ipv4(),
+            'real_ip' => fake()->optional()->ipv4(),
+            'bytes_received' => fake()->numberBetween(0, 10737418240),
+            'bytes_sent' => fake()->numberBetween(0, 10737418240),
             'last_login_at' => fake()->optional()->dateTimeBetween('-30 days', 'now'),
         ];
     }
@@ -39,6 +46,15 @@ class VpnUserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'active' => false,
+        ]);
+    }
+
+    public function online(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'online' => true,
+            'connected_at' => now()->subMinutes(fake()->numberBetween(1, 180)),
+            'disconnected_at' => null,
         ]);
     }
 }

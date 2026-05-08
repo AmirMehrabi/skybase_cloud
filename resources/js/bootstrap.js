@@ -12,5 +12,6 @@ window.Alpine = Alpine;
 import './customers/index.js';
 import './customers/create.js';
 import './customers/show.js';
+import './vpn-users/index.js';
 
 Alpine.start();
