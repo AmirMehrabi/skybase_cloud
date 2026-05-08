@@ -33,6 +33,11 @@ class VpnUser extends Model
             'active' => 'boolean',
             'last_login_at' => 'datetime',
             'created_at' => 'datetime',
+            'online' => 'boolean',
+            'connected_at' => 'datetime',
+            'disconnected_at' => 'datetime',
+            'bytes_received' => 'integer',
+            'bytes_sent' => 'integer',
         ];
     }
 
