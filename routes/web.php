@@ -21,6 +21,7 @@ use App\Http\Controllers\ReportController as GeneralReportController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\VpnUserController;
 use Illuminate\Support\Facades\Route;
 
 // Landing page - redirect authenticated users to dashboard
@@ -123,6 +124,8 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     });
 
     // Router Management Routes
+    Route::resource('vpn-users', VpnUserController::class);
+
     Route::prefix('routers')->name('routers.')->group(function () {
         Route::get('/', [RouterController::class, 'index'])->name('index');
         Route::get('/data', [RouterController::class, 'data'])->name('data');
