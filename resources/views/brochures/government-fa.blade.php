@@ -51,8 +51,20 @@
 
         @media print {
             html,
+            body,
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            html,
             body {
-                /* background: #fff !important; */
+                background: #ffffff !important;
+            }
+
+            body {
+                font-size: 12px !important;
+                line-height: 1.45 !important;
             }
 
             .print-hidden {
@@ -65,10 +77,108 @@
                 box-shadow: none !important;
                 margin: 0 !important;
                 border-radius: 0 !important;
+                padding: 7mm !important;
+                overflow: hidden !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
             }
 
             .sheet:last-child {
                 break-after: auto;
+            }
+
+            .sheet h1 {
+                font-size: 32px !important;
+                line-height: 1.3 !important;
+            }
+
+            .sheet h2 {
+                font-size: 28px !important;
+                line-height: 1.35 !important;
+            }
+
+            .sheet h3 {
+                font-size: 20px !important;
+                line-height: 1.4 !important;
+            }
+
+            .sheet p,
+            .sheet li,
+            .sheet td,
+            .sheet th,
+            .sheet span {
+                line-height: 1.45 !important;
+            }
+
+            .sheet .text-5xl {
+                font-size: 32px !important;
+            }
+
+            .sheet .text-4xl {
+                font-size: 28px !important;
+            }
+
+            .sheet .text-3xl {
+                font-size: 22px !important;
+            }
+
+            .sheet .text-2xl {
+                font-size: 18px !important;
+            }
+
+            .sheet .text-xl {
+                font-size: 16px !important;
+            }
+
+            .sheet .text-lg {
+                font-size: 15px !important;
+            }
+
+            .sheet .mt-20 {
+                margin-top: 2.5rem !important;
+            }
+
+            .sheet .mt-10 {
+                margin-top: 1.5rem !important;
+            }
+
+            .sheet .mt-8 {
+                margin-top: 1.2rem !important;
+            }
+
+            .sheet .mt-6 {
+                margin-top: 1rem !important;
+            }
+
+            .sheet .p-10 {
+                padding: 7mm !important;
+            }
+
+            .sheet .p-8 {
+                padding: 6mm !important;
+            }
+
+            .sheet .p-7 {
+                padding: 5mm !important;
+            }
+
+            .sheet .p-6 {
+                padding: 4mm !important;
+            }
+
+            .sheet .p-5 {
+                padding: 3.5mm !important;
+            }
+
+            .sheet table,
+            .sheet tr,
+            .sheet td,
+            .sheet th,
+            .sheet article,
+            .sheet section,
+            .sheet div {
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
             }
         }
 
@@ -121,7 +231,7 @@
             <div class="relative z-10 mt-auto grid grid-cols-3 gap-4">
                 <div class="rounded-2xl border border-white/15 bg-white/10 p-5">
                     <p class="text-sm text-teal-50/70">مدل استقرار</p>
-                    <p class="mt-3 text-2xl font-black">چندمستاجری امن</p>
+                    <p class="mt-3 text-2xl font-black">جداسازی امن داده‌ها</p>
                     <p class="mt-2 text-sm leading-6 text-teal-50/75">جداسازی داده‌ها و عملیات هر سازمان یا واحد اجرایی.</p>
                 </div>
                 <div class="rounded-2xl border border-white/15 bg-white/10 p-5">
@@ -130,7 +240,7 @@
                     <p class="mt-2 text-sm leading-6 text-teal-50/75">صورتحساب، پرداخت، نقش‌ها، مجوزها و گزارش‌ها.</p>
                 </div>
                 <div class="rounded-2xl border border-white/15 bg-[#f5c542] p-5 text-slate-950">
-                    <p class="text-sm text-slate-700">کاربری پیشنهادی</p>
+                    <p class="text-sm text-slate-700">کاربران هدف</p>
                     <p class="mt-3 text-2xl font-black">دولت، سلامت، آموزش</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">مناسب ساختارهای ستادی و زیرمجموعه‌های متعدد.</p>
                 </div>
@@ -152,7 +262,7 @@
 
             <div class="mt-10 grid grid-cols-2 gap-6">
                 <article class="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-                    <h3 class="text-xl font-black text-slate-950">چندمستاجری و جداسازی سازمانی</h3>
+                    <h3 class="text-xl font-black text-slate-950">جداسازی داده‌های سازمانی</h3>
                     <p class="mt-4 text-base leading-8 text-slate-700">هر سازمان، دانشگاه، بیمارستان یا واحد اجرایی می‌تواند داده‌ها، کاربران، سرویس‌ها و گزارش‌های خود را در محدوده امن tenant اختصاصی مدیریت کند.</p>
                 </article>
                 <article class="rounded-2xl border border-slate-200 bg-slate-50 p-6">
@@ -191,7 +301,7 @@
         </section>
 
         <section class="sheet min-h-[297mm] rounded-[1.5rem] bg-white p-10 shadow-2xl print:p-8">
-            <p class="text-sm font-black text-teal-700">Billing & Accounting</p>
+            <p class="text-sm font-black text-teal-700">صورت‌حساب و حسابداری</p>
             <h2 class="mt-3 text-4xl font-black leading-tight">صورتحساب، حسابداری و کنترل چرخه درآمد</h2>
             <p class="mt-5 max-w-3xl text-lg leading-9 text-slate-700">
                 SkyBase جریان مالی سرویس‌ها را از تعریف پلن و اشتراک تا تولید فاکتور، ثبت پرداخت، اعتبار مشتری، پیگیری بدهی و گزارش مالی پوشش می‌دهد.
@@ -419,8 +529,8 @@
                     <div class="rounded-2xl bg-white p-5 text-slate-950">
                         <p class="text-sm text-slate-500">وب‌سایت</p>
                         <p class="mt-2 text-xl font-black">skybase.app</p>
-                        <p class="mt-4 text-sm text-slate-500">ایمیل</p>
-                        <p class="mt-2 text-xl font-black">support@skybase.app</p>
+                        <p class="mt-4 text-sm text-slate-500">شماره تماس</p>
+                        <p class="mt-2 text-xl font-black">09336337953</p>
                     </div>
                 </div>
             </div>
