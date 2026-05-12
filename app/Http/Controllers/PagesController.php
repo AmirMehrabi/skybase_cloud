@@ -35,6 +35,11 @@ class PagesController extends Controller
         return view('features');
     }
 
+    public function governmentBrochure(): View
+    {
+        return view('brochures.government-fa');
+    }
+
     public function contact(): View|RedirectResponse
     {
         if (Auth::check()) {

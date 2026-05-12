@@ -33,6 +33,9 @@ Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 // Features page
 Route::get('/features', [PagesController::class, 'features'])->name('features');
 
+// Government brochure
+Route::get('/brochure/government-fa', [PagesController::class, 'governmentBrochure'])->name('brochures.government-fa');
+
 // Contact page
 Route::get('/contact', [PagesController::class, 'contact'])->name('contact.show');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
