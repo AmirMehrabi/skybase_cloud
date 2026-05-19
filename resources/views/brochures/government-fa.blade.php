@@ -180,6 +180,12 @@
                 page-break-inside: avoid !important;
                 break-inside: avoid-page !important;
             }
+
+            .hero-logo-art {
+                width: 155px !important;
+                max-width: 155px !important;
+                opacity: 0.2 !important;
+            }
         }
 
         body {
@@ -206,6 +212,7 @@
     <main class="mx-auto my-6 max-w-[210mm] space-y-6 print:my-0 print:space-y-0">
         <section class="sheet relative flex min-h-[297mm] flex-col overflow-hidden rounded-[1.5rem] bg-[#0d2f35] p-10 text-white shadow-2xl print:p-8">
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(245,197,66,0.28),transparent_28%),radial-gradient(circle_at_88%_18%,rgba(20,184,166,0.28),transparent_30%),linear-gradient(145deg,#071f25_0%,#0d2f35_45%,#123f3d_100%)]"></div>
+
             <div class="relative z-10 flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <span class="flex items-center justify-center rounded p-4 bg-white shadow-xl">
@@ -221,13 +228,17 @@
 
             <div class="relative z-10 mt-20 max-w-3xl">
                 <h1 class="text-5xl font-black leading-[1.35] tracking-tight">
-                    سکوی یکپارچه SkyBase برای مدیریت زیرساخت، دسترسی، صورتحساب و حکمرانی سازمان‌های دولتی
+                    سکوی یک‌پارچه‌ی SkyBase برای اکانتینگ پهنای باند، مدیریت زیرساخت و دسترسی سازمان‌ها
                 </h1>
                 <p class="mt-8 text-xl leading-10 text-teal-50/85">
-                    SkyBase برای نهادهای دولتی، دانشگاه‌های علوم پزشکی، بیمارستان‌ها، شهرداری‌ها و سازمان‌های چندواحدی طراحی شده است تا مدیریت کاربران، سرویس‌ها، شبکه، حسابداری و مجوزهای دسترسی در یک محیط ابری امن و قابل ممیزی انجام شود.
+                    SkyBase برای نهادهای دولتی، دانشگاه‌های علوم پزشکی، بیمارستان‌ها، شهرداری‌ها و سازمان‌های چندواحدی طراحی شده است تا مدیریت کاربران، سرویس‌ها، شبکه، حسابداری و مجوزهای دسترسی در یک محیط امن و قابل ممیزی انجام شود.
                 </p>
             </div>
-
+            <img
+                src="{{ asset('assets/images/hero.png') }}"
+                alt="SkyBase Sonar"
+                class=" pointer-events-none  z-0 mx-auto my-10 w-[100%] select-none"
+            >
             <div class="relative z-10 mt-auto grid grid-cols-3 gap-4">
                 <div class="rounded-2xl border border-white/15 bg-white/10 p-5">
                     <p class="text-sm text-teal-50/70">مدل استقرار</p>
@@ -301,27 +312,27 @@
         </section>
 
         <section class="sheet min-h-[297mm] rounded-[1.5rem] bg-white p-10 shadow-2xl print:p-8">
-            <p class="text-sm font-black text-teal-700">صورت‌حساب و حسابداری</p>
-            <h2 class="mt-3 text-4xl font-black leading-tight">صورتحساب، حسابداری و کنترل چرخه درآمد</h2>
+            <p class="text-sm font-black text-teal-700">قابلیت‌های عملیاتی</p>
+            <h2 class="mt-3 text-4xl font-black leading-tight">ابزارهای عملیاتی برای مدیریت روزانه</h2>
             <p class="mt-5 max-w-3xl text-lg leading-9 text-slate-700">
-                SkyBase جریان مالی سرویس‌ها را از تعریف پلن و اشتراک تا تولید فاکتور، ثبت پرداخت، اعتبار مشتری، پیگیری بدهی و گزارش مالی پوشش می‌دهد.
+                SkyBase ابزارهای عملیاتی کاربردی برای مدیریت روزمره سرویس‌ها، نظارت بر شبکه، پشتیبان‌گیری خودکار و کنترل وضعیت اشتراک‌ها فراهم می‌کند.
             </p>
 
             <div class="mt-10 grid grid-cols-3 gap-4">
                 <div class="rounded-2xl bg-[#0d2f35] p-6 text-white">
-                    <p class="text-sm text-teal-50/70">فاکتورهای دوره‌ای</p>
-                    <p class="mt-3 text-3xl font-black">Recurring</p>
-                    <p class="mt-3 text-sm leading-7 text-teal-50/80">تولید فاکتور بر اساس دوره ماهانه، فصلی یا سالانه اشتراک‌ها.</p>
+                    <p class="text-sm text-teal-50/70">تعلیق و انجماد</p>
+                    <p class="mt-3 text-3xl font-black">Suspend / Freeze</p>
+                    <p class="mt-3 text-sm leading-7 text-teal-50/80">تعلیق موقت یا انجماد اشتراک‌ها بدون حذف داده‌ها.</p>
                 </div>
                 <div class="rounded-2xl bg-emerald-50 p-6 text-slate-950 ring-1 ring-emerald-100">
-                    <p class="text-sm text-emerald-700">وضعیت مالی</p>
-                    <p class="mt-3 text-3xl font-black">Paid / Overdue</p>
-                    <p class="mt-3 text-sm leading-7 text-slate-700">مانده بدهی، فاکتورهای پرداخت‌شده، معوق و نیمه‌پرداخت‌شده.</p>
+                    <p class="text-sm text-emerald-700">پشتیبان‌گیری زمان‌بندی‌شده</p>
+                    <p class="mt-3 text-3xl font-black">Scheduled Backups</p>
+                    <p class="mt-3 text-sm leading-7 text-slate-700">پشتیبان خودکار از تنظیمات روترها در بازه‌های زمانی مشخص.</p>
                 </div>
                 <div class="rounded-2xl bg-amber-50 p-6 text-slate-950 ring-1 ring-amber-100">
-                    <p class="text-sm text-amber-700">کنترل سرویس</p>
-                    <p class="mt-3 text-3xl font-black">Grace Days</p>
-                    <p class="mt-3 text-sm leading-7 text-slate-700">مهلت پرداخت و تعلیق خودکار سرویس‌های دارای بدهی معوق.</p>
+                    <p class="text-sm text-amber-700">نظارت و هشدار</p>
+                    <p class="mt-3 text-3xl font-black">Monitoring</p>
+                    <p class="mt-3 text-sm leading-7 text-slate-700">نظارت بر وضعیت روترها و اعلان‌های خودکار در صورت قطعی.</p>
                 </div>
             </div>
 
@@ -336,24 +347,34 @@
                     </thead>
                     <tbody class="divide-y divide-slate-200">
                         <tr>
-                            <td class="px-5 py-4 font-bold">پلن‌ها و اشتراک‌ها</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">تعریف بسته خدمات برای واحدها، ساختمان‌ها یا مراکز درمانی</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">ارزش اشتراک فعال و درآمد دوره‌ای</td>
+                            <td class="px-5 py-4 font-bold">تعلیق و انجماد اشتراک</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">توقف موقت سرویس بدون حذف داده‌ها برای واحدهای غیرفعال</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">کنترل دقیق وضعیت سرویس‌ها</td>
                         </tr>
                         <tr>
-                            <td class="px-5 py-4 font-bold">فاکتور و آیتم فاکتور</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">ثبت ریزخدمات، مالیات، تخفیف و هزینه‌های دوره‌ای</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">گزارش دقیق بدهی و وصولی</td>
+                            <td class="px-5 py-4 font-bold">پشتیبان‌گیری زمان‌بندی‌شده</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">ذخیره خودکار تنظیمات روترها در بازه‌های روزانه، هفتگی یا ماهانه</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">بازیابی سریع در صورت خرابی</td>
                         </tr>
                         <tr>
-                            <td class="px-5 py-4 font-bold">پرداخت و اعتبار مشتری</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">ثبت پرداخت نقدی، انتقال بانکی یا اعتبار اصلاحی</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">مانده حساب و سابقه تراکنش</td>
+                            <td class="px-5 py-4 font-bold">نظارت و اعلان‌ها</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">بررسی وضعیت روترها، پینگ خودکار و اعلان در صورت قطعی یا کندی</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">کاهش زمان رفع مشکل</td>
                         </tr>
                         <tr>
-                            <td class="px-5 py-4 font-bold">گزارش مالی</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">تحلیل درآمد، مطالبات، معوقات و مشتریان برتر</td>
-                            <td class="px-5 py-4 leading-7 text-slate-700">داشبورد تصمیم‌گیری برای مدیران مالی</td>
+                            <td class="px-5 py-4 font-bold">اعلان‌های هوشمند</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">ارسال اعلان به مدیران از طریق ایمیل، SMS یا داشبورد در مواقع بحرانی</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">واکنش سریع به حوادث</td>
+                        </tr>
+                        <tr>
+                            <td class="px-5 py-4 font-bold">گزارش مصرف و ترافیک</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">نمایش مصرف پهنای باند، ترافیک ورودی و خروجی هر واحد</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">شناسایی الگوهای مصرف</td>
+                        </tr>
+                        <tr>
+                            <td class="px-5 py-4 font-bold">مدیریت تیکت و پشتیبانی</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">ثبت درخواست‌ها، پیگیری مشکلات و ارتباط با واحدهای مختلف</td>
+                            <td class="px-5 py-4 leading-7 text-slate-700">بهبود کیفیت خدمات</td>
                         </tr>
                     </tbody>
                 </table>
@@ -380,7 +401,7 @@
                 <div class="rounded-3xl bg-[#f6f1e8] p-7">
                     <h3 class="text-2xl font-black">نقش‌ها و سطح دسترسی</h3>
                     <div class="mt-5 grid grid-cols-2 gap-3">
-                        @foreach(['Owner', 'Admin', 'Billing', 'Support', 'NOC'] as $role)
+                        @foreach(['Owner', 'Admin', 'Support', 'NOC'] as $role)
                             <div class="rounded-2xl bg-white px-4 py-3 text-center text-sm font-black shadow-sm">{{ $role }}</div>
                         @endforeach
                     </div>
@@ -498,11 +519,11 @@
                 </div>
                 <div class="rounded-3xl bg-white p-7 shadow-sm">
                     <h3 class="text-2xl font-black">کاهش وابستگی به فرایندهای دستی</h3>
-                    <p class="mt-4 text-base leading-8 text-slate-700">عملیات تکراری مانند صدور صورتحساب، پیگیری بدهی، تعلیق سرویس، تخصیص IP و مشاهده وضعیت شبکه از مسیرهای استاندارد انجام می‌شود.</p>
+                    <p class="mt-4 text-base leading-8 text-slate-700">عملیات تکراری مانند پشتیبان‌گیری از روترها، نظارت بر شبکه، تعلیق و انجماد سرویس‌ها، تخصیص IP و ارسال اعلان‌ها به‌صورت خودکار انجام می‌شود.</p>
                 </div>
                 <div class="rounded-3xl bg-white p-7 shadow-sm">
                     <h3 class="text-2xl font-black">گزارش‌پذیری برای تصمیم‌گیری</h3>
-                    <p class="mt-4 text-base leading-8 text-slate-700">مدیران می‌توانند وضعیت مالی، مصرف، سلامت شبکه، اشتراک‌ها و عملکرد واحدها را در قالب گزارش‌های روشن بررسی کنند.</p>
+                    <p class="mt-4 text-base leading-8 text-slate-700">مدیران می‌توانند وضعیت روترها، مصرف پهنای باند، سلامت شبکه، اشتراک‌های فعال و عملکرد واحدها را در قالب گزارش‌های روشن بررسی کنند.</p>
                 </div>
                 <div class="rounded-3xl bg-white p-7 shadow-sm">
                     <h3 class="text-2xl font-black">آماده برای سیاست‌های دسترسی سازمانی</h3>
@@ -513,7 +534,7 @@
             <div class="mt-10 rounded-3xl bg-white p-7 shadow-sm">
                 <h3 class="text-2xl font-black">جمع‌بندی قابلیت‌ها</h3>
                 <div class="mt-6 grid grid-cols-3 gap-3">
-                    @foreach(['چندمستاجری امن', 'مدیریت کاربران سازمانی', 'Active Directory Sync', 'مدیریت گروه‌ها', 'نقش‌ها و مجوزها', 'صورتحساب دوره‌ای', 'پرداخت و اعتبار', 'گزارش مالی', 'روتر و شبکه', 'IPAM', 'VPN Users', 'گزارش مصرف'] as $capability)
+                    @foreach(['چندمستاجری امن', 'مدیریت کاربران سازمانی', 'Active Directory Sync', 'مدیریت گروه‌ها', 'نقش‌ها و مجوزها', 'تعلیق و انجماد', 'پشتیبان‌گیری خودکار', 'نظارت و اعلان', 'روتر و شبکه', 'IPAM', 'VPN Users', 'گزارش مصرف'] as $capability)
                         <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm font-black text-slate-700">{{ $capability }}</div>
                     @endforeach
                 </div>

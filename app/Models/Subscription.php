@@ -9,12 +9,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use LdapRecord\Laravel\ImportableFromLdap;
+use LdapRecord\Laravel\LdapImportable;
 
-class Subscription extends Model
+class Subscription extends Model implements LdapImportable
 {
-    use HasFactory, LogsTenantActivity, SoftDeletes;
+    use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes'];
+    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at'];
 
     protected function activityLogExcept(): array
     {
@@ -38,7 +40,18 @@ class Subscription extends Model
             'activation_date' => 'datetime',
             'suspended_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'ldap_synced_at' => 'datetime',
         ];
+    }
+
+    public function getLdapGuidColumn(): string
+    {
+        return 'ldap_guid';
+    }
+
+    public function getLdapDomainColumn(): string
+    {
+        return 'ldap_domain';
     }
 
     public function tenant(): BelongsTo

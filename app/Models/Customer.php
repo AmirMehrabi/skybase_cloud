@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use LdapRecord\Laravel\ImportableFromLdap;
+use LdapRecord\Laravel\LdapImportable;
 
-class Customer extends Model
+class Customer extends Model implements LdapImportable
 {
-    use HasFactory, LogsTenantActivity, SoftDeletes;
+    use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
@@ -39,6 +41,10 @@ class Customer extends Model
         'balance',
         'credit_limit',
         'tax_exempt',
+        'ldap_guid',
+        'ldap_domain',
+        'ldap_dn',
+        'ldap_synced_at',
     ];
 
     protected function casts(): array
@@ -49,7 +55,18 @@ class Customer extends Model
             'billing_enabled' => 'boolean',
             'billing_disabled_at' => 'datetime',
             'tax_exempt' => 'boolean',
+            'ldap_synced_at' => 'datetime',
         ];
+    }
+
+    public function getLdapGuidColumn(): string
+    {
+        return 'ldap_guid';
+    }
+
+    public function getLdapDomainColumn(): string
+    {
+        return 'ldap_domain';
     }
 
     public function tenant(): BelongsTo

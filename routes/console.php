@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('billing:run')
     ->hourly()
     ->withoutOverlapping();
+
+Schedule::command('ldap:sync --all')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();

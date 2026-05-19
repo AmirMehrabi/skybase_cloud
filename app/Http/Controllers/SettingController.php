@@ -6,8 +6,11 @@ use App\Http\Requests\Setting\TestEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateBrandingSettingRequest;
 use App\Http\Requests\Setting\UpdateEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateGeneralSettingRequest;
+use App\Http\Requests\Setting\UpdateLdapSettingRequest;
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Services\Ldap\LdapConnectionFactory;
+use App\Services\Ldap\LdapSyncService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -23,8 +26,9 @@ class SettingController extends Controller
         $currencies = $this->getCurrencies();
         $locales = $this->getLocales();
         $emailSettings = $this->getEmailSettings($tenant->id);
+        $ldapSettings = app(LdapSyncService::class)->settingsForTenant($tenant->id);
 
-        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings'));
+        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings', 'ldapSettings'));
     }
 
     public function updateEmail(UpdateEmailSettingRequest $request): RedirectResponse
@@ -189,6 +193,89 @@ class SettingController extends Controller
             ->with('success', 'Branding settings updated successfully.');
     }
 
+    public function updateLdap(UpdateLdapSettingRequest $request): RedirectResponse
+    {
+        $tenant = $this->getTenant();
+        $settings = $this->ldapSettingsFromRequest($request, $tenant->id);
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'ldap.connection'],
+            ['value' => $settings['connection'], 'type' => 'json', 'group' => 'ldap']
+        );
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'ldap.customer_sync'],
+            ['value' => $settings['customer_sync'], 'type' => 'json', 'group' => 'ldap']
+        );
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'ldap.subscription_sync'],
+            ['value' => $settings['subscription_sync'], 'type' => 'json', 'group' => 'ldap']
+        );
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'ldap'])
+            ->with('success', 'LDAP settings updated successfully.');
+    }
+
+    public function testLdap(LdapConnectionFactory $connections): RedirectResponse
+    {
+        $this->authorizeLdapSettings();
+
+        $tenant = $this->getTenant();
+        $settings = app(LdapSyncService::class)->settingsForTenant($tenant->id);
+
+        try {
+            $connections->test($tenant->id, $settings['connection']);
+        } catch (Throwable $exception) {
+            return redirect()
+                ->route('settings.index', ['tab' => 'ldap'])
+                ->with('error', 'LDAP connection test failed: '.$exception->getMessage());
+        }
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'ldap'])
+            ->with('success', 'LDAP connection tested successfully.');
+    }
+
+    public function previewLdap(LdapSyncService $sync): RedirectResponse
+    {
+        $this->authorizeLdapSettings();
+
+        $tenant = $this->getTenant();
+
+        try {
+            $result = $sync->syncTenant($tenant, dryRun: true);
+        } catch (Throwable $exception) {
+            return redirect()
+                ->route('settings.index', ['tab' => 'ldap'])
+                ->with('error', 'LDAP preview failed: '.$exception->getMessage());
+        }
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'ldap'])
+            ->with('success', $this->ldapResultMessage('LDAP preview completed.', $result));
+    }
+
+    public function syncLdap(LdapSyncService $sync): RedirectResponse
+    {
+        $this->authorizeLdapSettings();
+
+        $tenant = $this->getTenant();
+
+        try {
+            $result = $sync->syncTenant($tenant);
+        } catch (Throwable $exception) {
+            return redirect()
+                ->route('settings.index', ['tab' => 'ldap'])
+                ->with('error', 'LDAP sync failed: '.$exception->getMessage());
+        }
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'ldap'])
+            ->with('success', $this->ldapResultMessage('LDAP sync completed.', $result));
+    }
+
     public function deleteAsset(string $asset): RedirectResponse
     {
         $tenant = $this->getTenant();
@@ -324,6 +411,94 @@ class SettingController extends Controller
                 Setting::get('email.outgoing', [], $tenantId) ?? []
             ),
         ];
+    }
+
+    /**
+     * @return array{connection: array<string, mixed>, customer_sync: array<string, mixed>, subscription_sync: array<string, mixed>}
+     */
+    private function ldapSettingsFromRequest(UpdateLdapSettingRequest $request, string $tenantId): array
+    {
+        $current = app(LdapSyncService::class)->settingsForTenant($tenantId);
+        $password = $request->filled('password')
+            ? $request->string('password')->toString()
+            : $current['connection']['password'];
+
+        return [
+            'connection' => [
+                'enabled' => $request->boolean('enabled'),
+                'hosts' => $this->splitHosts($request->string('hosts')->toString()),
+                'port' => $request->filled('port') ? $request->integer('port') : 389,
+                'base_dn' => $request->input('base_dn'),
+                'username' => $request->input('username'),
+                'password' => $password,
+                'timeout' => $request->filled('timeout') ? $request->integer('timeout') : 5,
+                'use_tls' => $request->boolean('use_tls'),
+                'use_starttls' => $request->boolean('use_starttls'),
+                'sync_interval_minutes' => $request->filled('sync_interval_minutes') ? $request->integer('sync_interval_minutes') : 15,
+                'missing_action' => $request->input('missing_action', 'mark_inactive'),
+            ],
+            'customer_sync' => [
+                'base_dn' => $request->input('customer_base_dn'),
+                'filter' => $request->input('customer_filter', '(objectClass=*)'),
+                'unique_attribute' => $request->input('customer_unique_attribute', 'uid'),
+                'match_attribute' => $request->input('customer_match_attribute', $request->input('customer_unique_attribute', 'uid')),
+                'map' => [
+                    'name' => $request->input('customer_map_name'),
+                    'email' => $request->input('customer_map_email'),
+                    'phone' => $request->input('customer_map_phone'),
+                    'mobile' => $request->input('customer_map_mobile'),
+                    'customer_code' => $request->input('customer_map_customer_code'),
+                    'status' => $request->input('customer_map_status'),
+                ],
+            ],
+            'subscription_sync' => [
+                'base_dn' => $request->input('subscription_base_dn'),
+                'filter' => $request->input('subscription_filter'),
+                'unique_attribute' => $request->input('subscription_unique_attribute', 'uid'),
+                'customer_attribute' => $request->input('subscription_customer_attribute', 'uid'),
+                'customer_match_field' => $request->input('subscription_customer_match_field', 'customer_code'),
+                'map' => [
+                    'subscription_code' => $request->input('subscription_map_subscription_code'),
+                    'pppoe_username' => $request->input('subscription_map_pppoe_username'),
+                    'pppoe_password' => $request->input('subscription_map_pppoe_password'),
+                    'ip_address' => $request->input('subscription_map_ip_address'),
+                    'mac_address' => $request->input('subscription_map_mac_address'),
+                    'status' => $request->input('subscription_map_status'),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function splitHosts(string $hosts): array
+    {
+        return preg_split('/[\s,]+/', $hosts, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private function ldapResultMessage(string $prefix, array $result): string
+    {
+        return sprintf(
+            '%s Customers: %d created, %d updated, %d skipped, %d missing. Subscriptions: %d created, %d updated, %d skipped, %d missing.',
+            $prefix,
+            $result['customers']['created'],
+            $result['customers']['updated'],
+            $result['customers']['skipped'],
+            $result['customers']['missing'],
+            $result['subscriptions']['created'],
+            $result['subscriptions']['updated'],
+            $result['subscriptions']['skipped'],
+            $result['subscriptions']['missing'],
+        );
+    }
+
+    private function authorizeLdapSettings(): void
+    {
+        abort_unless(auth()->user()?->isAdmin() === true, 403);
     }
 
     /**

@@ -76,6 +76,10 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::put('/branding', [SettingController::class, 'updateBranding'])->name('update.branding');
         Route::put('/email', [SettingController::class, 'updateEmail'])->name('update.email');
         Route::post('/email/test', [SettingController::class, 'testEmail'])->name('test.email');
+        Route::put('/ldap', [SettingController::class, 'updateLdap'])->name('update.ldap');
+        Route::post('/ldap/test', [SettingController::class, 'testLdap'])->name('test.ldap');
+        Route::post('/ldap/preview', [SettingController::class, 'previewLdap'])->name('preview.ldap');
+        Route::post('/ldap/sync', [SettingController::class, 'syncLdap'])->name('sync.ldap');
         Route::delete('/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
     });
 
