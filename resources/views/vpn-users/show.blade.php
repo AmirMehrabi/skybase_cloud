@@ -15,12 +15,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
-            {{ session('success') }}
-        </div>
-    @endif
-
     <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <dl class="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>

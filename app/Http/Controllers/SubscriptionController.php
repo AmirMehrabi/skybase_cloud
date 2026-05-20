@@ -96,7 +96,7 @@ class SubscriptionController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreSubscriptionRequest $request): JsonResponse
+    public function store(StoreSubscriptionRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
 
@@ -145,16 +145,24 @@ class SubscriptionController extends Controller
 
         $invoice = $this->billing->createInvoiceForSubscription($subscription->fresh(['customer', 'plan', 'items']), includeOneTimeItems: true);
 
-        return response()->json(
-            [
-                'message' => $invoice
-                    ? 'Subscription created successfully and invoice generated.'
-                    : 'Subscription created successfully.',
-                'subscription' => $subscription->load('customer', 'plan', 'router'),
-                'invoice' => $invoice,
-            ],
-            201,
-        );
+        if ($request->expectsJson()) {
+            return response()->json(
+                [
+                    'message' => $invoice
+                        ? 'Subscription created successfully and invoice generated.'
+                        : 'Subscription created successfully.',
+                    'subscription' => $subscription->load('customer', 'plan', 'router'),
+                    'invoice' => $invoice,
+                ],
+                201,
+            );
+        }
+
+        return redirect()
+            ->route('subscriptions.show', $subscription)
+            ->with('success', $invoice
+                ? 'Subscription created successfully and invoice generated.'
+                : 'Subscription created successfully.');
     }
 
     /**
@@ -185,7 +193,7 @@ class SubscriptionController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Subscription $subscription): JsonResponse
+    public function update(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'plan_id' => 'nullable|exists:plans,id',
@@ -215,22 +223,34 @@ class SubscriptionController extends Controller
 
         $subscription->update($validated);
 
-        return response()->json([
-            'message' => 'Subscription updated successfully.',
-            'subscription' => $subscription->fresh()->load('customer', 'plan', 'router'),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Subscription updated successfully.',
+                'subscription' => $subscription->fresh()->load('customer', 'plan', 'router'),
+            ]);
+        }
+
+        return redirect()
+            ->route('subscriptions.show', $subscription)
+            ->with('success', 'Subscription updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Subscription $subscription): JsonResponse
+    public function destroy(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
         $subscription->delete();
 
-        return response()->json([
-            'message' => 'Subscription deleted successfully.',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Subscription deleted successfully.',
+            ]);
+        }
+
+        return redirect()
+            ->route('subscriptions.index')
+            ->with('success', 'Subscription deleted successfully.');
     }
 
     /**

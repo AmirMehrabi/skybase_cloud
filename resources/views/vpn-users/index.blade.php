@@ -23,12 +23,6 @@
         </a>
     </div>
 
-    @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
-            {{ session('success') }}
-        </div>
-    @endif
-
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm" x-data="{ copied: false, config: @js($onboarding['config']) }">
         <div class="border-b border-gray-200 px-6 py-4">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
