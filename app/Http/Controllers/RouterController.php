@@ -10,6 +10,7 @@ use App\Models\Router;
 use App\Services\Netflow\NetflowSummaryService;
 use App\Services\RouterOs\RouterOsTrafficFlowService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Throwable;
@@ -96,7 +97,7 @@ class RouterController extends Controller
     /**
      * Store a newly created router in storage.
      */
-    public function store(StoreRouterRequest $request): JsonResponse
+    public function store(StoreRouterRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
 
@@ -114,10 +115,16 @@ class RouterController extends Controller
 
         $router = Router::create($validated);
 
-        return response()->json([
-            'message' => 'Router created successfully.',
-            'router' => $router,
-        ], 201);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Router created successfully.',
+                'router' => $router,
+            ], 201);
+        }
+
+        return redirect()
+            ->route('routers.index')
+            ->with('success', 'Router created successfully.');
     }
 
     /**
@@ -146,7 +153,7 @@ class RouterController extends Controller
     /**
      * Update the specified router in storage.
      */
-    public function update(UpdateRouterRequest $request, Router $router): JsonResponse
+    public function update(UpdateRouterRequest $request, Router $router): JsonResponse|RedirectResponse
     {
         $this->authorizeTenantAccess($router);
 
@@ -159,24 +166,36 @@ class RouterController extends Controller
 
         $router->update($validated);
 
-        return response()->json([
-            'message' => 'Router updated successfully.',
-            'router' => $router->fresh(),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Router updated successfully.',
+                'router' => $router->fresh(),
+            ]);
+        }
+
+        return redirect()
+            ->route('routers.index')
+            ->with('success', 'Router updated successfully.');
     }
 
     /**
      * Remove the specified router from storage.
      */
-    public function destroy(Router $router): JsonResponse
+    public function destroy(Request $request, Router $router): JsonResponse|RedirectResponse
     {
         $this->authorizeTenantAccess($router);
 
         $router->delete();
 
-        return response()->json([
-            'message' => 'Router deleted successfully.',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Router deleted successfully.',
+            ]);
+        }
+
+        return redirect()
+            ->route('routers.index')
+            ->with('success', 'Router deleted successfully.');
     }
 
     public function setupNetflow(SetupNetflowRequest $request, Router $router, RouterOsTrafficFlowService $trafficFlow): JsonResponse

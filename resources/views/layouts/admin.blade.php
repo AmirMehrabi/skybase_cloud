@@ -252,6 +252,10 @@
         
         <!-- Main Content -->
         <main class="min-h-screen pt-[75px] px-6 md:px-12 pb-8">
+            <div class="space-y-3 mb-4">
+                <x-ui.alert type="success" :message="session('success')" />
+                <x-ui.alert type="error" :message="session('error')" />
+            </div>
             @yield('content')
         </main>
     </div>
