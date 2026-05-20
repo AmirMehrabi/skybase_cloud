@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Router;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Router>
+ * @extends Factory<Router>
  */
 class RouterFactory extends Factory
 {
@@ -38,6 +39,12 @@ class RouterFactory extends Factory
             'total_customers' => fake()->numberBetween(20, 200),
             'enable_monitoring' => true,
             'enable_provisioning' => true,
+            'netflow_enabled' => false,
+            'netflow_collector_host' => null,
+            'netflow_collector_port' => 2055,
+            'netflow_version' => 9,
+            'netflow_interfaces' => 'all',
+            'netflow_sampling_interval' => 1,
             'timeout' => 30,
         ];
     }

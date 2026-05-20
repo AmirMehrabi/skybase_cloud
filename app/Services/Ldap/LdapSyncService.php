@@ -8,6 +8,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use LdapRecord\Models\Entry;
 use LdapRecord\Models\Model as LdapModel;
 use Throwable;
@@ -146,6 +147,10 @@ class LdapSyncService
 
             if (! filled($guid)) {
                 $result['customers']['skipped']++;
+                $this->logSkippedEntry($tenant->id, 'customer', 'missing_unique_attribute', $entry, [
+                    'unique_attribute' => $settings['customer_sync']['unique_attribute'] ?? null,
+                    'available_attributes' => $this->attributeNames($entry),
+                ]);
 
                 continue;
             }
@@ -167,6 +172,10 @@ class LdapSyncService
 
             if (! filled($guid)) {
                 $result['subscriptions']['skipped']++;
+                $this->logSkippedEntry($tenant->id, 'subscription', 'missing_unique_attribute', $entry, [
+                    'unique_attribute' => $settings['subscription_sync']['unique_attribute'] ?? null,
+                    'available_attributes' => $this->attributeNames($entry),
+                ]);
 
                 continue;
             }
@@ -175,6 +184,12 @@ class LdapSyncService
 
             if (! $customer) {
                 $result['subscriptions']['skipped']++;
+                $this->logSkippedEntry($tenant->id, 'subscription', 'customer_not_found', $entry, [
+                    'customer_attribute' => $settings['subscription_sync']['customer_attribute'] ?? null,
+                    'customer_attribute_value' => $this->mapped($entry, $settings['subscription_sync']['customer_attribute'] ?? null),
+                    'customer_match_field' => $settings['subscription_sync']['customer_match_field'] ?? null,
+                    'subscription_guid' => $guid,
+                ]);
 
                 continue;
             }
@@ -429,6 +444,33 @@ class LdapSyncService
         $value = is_array($value) ? Arr::first($value) : $value;
 
         return filled($value) ? (string) $value : null;
+    }
+
+    /**
+     * @param  LdapModel|array<string, mixed>  $entry
+     * @param  array<string, mixed>  $context
+     */
+    private function logSkippedEntry(string $tenantId, string $type, string $reason, LdapModel|array $entry, array $context = []): void
+    {
+        Log::warning('LDAP sync skipped entry.', $context + [
+            'tenant_id' => $tenantId,
+            'type' => $type,
+            'reason' => $reason,
+            'dn' => $this->dn($entry),
+        ]);
+    }
+
+    /**
+     * @param  LdapModel|array<string, mixed>  $entry
+     * @return array<int, string>
+     */
+    private function attributeNames(LdapModel|array $entry): array
+    {
+        if ($entry instanceof LdapModel) {
+            return array_values(array_filter(array_keys($entry->getAttributes()), fn (string $attribute): bool => ! str_contains(strtolower($attribute), 'password')));
+        }
+
+        return array_values(array_filter(array_keys($entry), fn (string $attribute): bool => ! str_contains(strtolower($attribute), 'password')));
     }
 
     /**

@@ -158,6 +158,65 @@
             </div>
         </div>
 
+        <!-- Section 4: NetFlow Settings -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">NetFlow Settings</h3>
+                    <p class="text-sm text-gray-500 mt-1">Available for MikroTik routers using RouterOS Traffic Flow.</p>
+                </div>
+                <x-ui.input.checkbox
+                    label="Enable NetFlow"
+                    name="netflow_enabled"
+                    :checked="old('netflow_enabled', false)"
+                    :error="$errors->first('netflow_enabled')"
+                />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <x-ui.input.text
+                    label="Collector Host"
+                    name="netflow_collector_host"
+                    placeholder="collector.skybase.local"
+                    :value="old('netflow_collector_host', config('netflow.collector_host'))"
+                    :error="$errors->first('netflow_collector_host')"
+                />
+
+                <x-ui.input.text
+                    type="number"
+                    label="Collector Port"
+                    name="netflow_collector_port"
+                    :value="old('netflow_collector_port', config('netflow.collector_port'))"
+                    :error="$errors->first('netflow_collector_port')"
+                    hint="Default: 2055"
+                />
+
+                <x-ui.input.select
+                    label="Version"
+                    name="netflow_version"
+                    :options="[9 => 'NetFlow v9', 5 => 'NetFlow v5']"
+                    :value="old('netflow_version', 9)"
+                    :error="$errors->first('netflow_version')"
+                />
+
+                <x-ui.input.text
+                    label="Interfaces"
+                    name="netflow_interfaces"
+                    placeholder="all"
+                    :value="old('netflow_interfaces', 'all')"
+                    :error="$errors->first('netflow_interfaces')"
+                />
+
+                <x-ui.input.text
+                    type="number"
+                    label="Sampling Interval"
+                    name="netflow_sampling_interval"
+                    :value="old('netflow_sampling_interval', 1)"
+                    :error="$errors->first('netflow_sampling_interval')"
+                    hint="1 means every packet"
+                />
+            </div>
+        </div>
+
         <!-- Sticky Bottom Action Bar -->
         <div class="fixed bottom-0 right-0 left-0 lg:left-64 bg-white border-t border-gray-200 shadow-lg p-4 z-40">
             <div class="flex items-center justify-end gap-3">

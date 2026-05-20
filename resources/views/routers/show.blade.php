@@ -9,7 +9,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-6" x-data="routerShow(@json($router))" x-cloak>
+<div class="space-y-6" x-data="routerShow(@json($router), @json($netflowSummary))" x-cloak>
     <!-- Top Header -->
     <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -171,6 +171,133 @@
         </div>
     </div>
 
+    <!-- NetFlow Monitor -->
+    <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
+            <div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h3 class="text-lg font-semibold text-gray-900">NetFlow</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                          :class="router.netflow_enabled ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-700 border-gray-200'"
+                          x-text="router.netflow_enabled ? 'Enabled' : 'Disabled'"></span>
+                    <span x-show="router.netflow_setup_status" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100" x-text="router.netflow_setup_status"></span>
+                </div>
+                <p class="text-sm text-gray-500 mt-1">
+                    <span x-text="router.netflow_collector_host || 'No collector host'"></span>:<span x-text="router.netflow_collector_port || 2055"></span>
+                    <span class="mx-2 text-gray-300">/</span>
+                    <span x-text="'Version ' + (router.netflow_version || 9)"></span>
+                    <span class="mx-2 text-gray-300">/</span>
+                    <span x-text="'Interfaces ' + (router.netflow_interfaces || 'all')"></span>
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <button @click="setupNetflow()" :disabled="netflow.settingUp || !isMikrotik()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span x-text="netflow.settingUp ? 'Configuring...' : 'Setup on MikroTik'"></span>
+                </button>
+                <button @click="testNetflow()" :disabled="netflow.testing || !router.netflow_enabled" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"></path>
+                    </svg>
+                    <span x-text="netflow.testing ? 'Testing...' : 'Test Connection'"></span>
+                </button>
+            </div>
+        </div>
+
+        <div x-show="netflow.message" class="mb-5 rounded-lg border px-4 py-3 text-sm"
+             :class="netflow.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'"
+             x-text="netflow.message"></div>
+
+        <div x-show="!isMikrotik()" class="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+            NetFlow setup is only available for MikroTik routers.
+        </div>
+
+        <div x-show="isMikrotik()" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <p class="text-sm text-gray-500">Flows Last Hour</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900" x-text="netflow.summary.stats.flows"></p>
+                </div>
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <p class="text-sm text-gray-500">Throughput</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900" x-text="formatBits(netflow.summary.stats.throughput_bps)"></p>
+                </div>
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <p class="text-sm text-gray-500">Total Traffic</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900" x-text="formatBytes(netflow.summary.stats.bytes)"></p>
+                </div>
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <p class="text-sm text-gray-500">Last Packet</p>
+                    <p class="mt-2 text-lg font-semibold text-gray-900" x-text="netflow.summary.stats.last_packet_at || 'No packets'"></p>
+                </div>
+            </div>
+
+            <div x-show="netflow.summary.stats.flows === 0" class="rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                <p class="text-sm font-medium text-gray-900">No NetFlow data received yet</p>
+                <p class="text-sm text-gray-500 mt-1">Configure the router and run the collector with php artisan netflow:collect.</p>
+            </div>
+
+            <div x-show="netflow.summary.stats.flows > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-3">Top Sources</h4>
+                    <template x-for="item in netflow.summary.top_sources" :key="item.label">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                            <span class="text-sm font-mono text-gray-700" x-text="item.label"></span>
+                            <span class="text-sm font-medium text-gray-900" x-text="formatBytes(item.bytes)"></span>
+                        </div>
+                    </template>
+                </div>
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-3">Top Destinations</h4>
+                    <template x-for="item in netflow.summary.top_destinations" :key="item.label">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                            <span class="text-sm font-mono text-gray-700" x-text="item.label"></span>
+                            <span class="text-sm font-medium text-gray-900" x-text="formatBytes(item.bytes)"></span>
+                        </div>
+                    </template>
+                </div>
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-3">Protocols</h4>
+                    <template x-for="item in netflow.summary.top_protocols" :key="item.label">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                            <span class="text-sm text-gray-700" x-text="item.label"></span>
+                            <span class="text-sm font-medium text-gray-900" x-text="formatBytes(item.bytes)"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div x-show="netflow.summary.latest_flows.length > 0" class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Source</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Destination</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Protocol</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bytes</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Packets</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Received</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        <template x-for="flow in netflow.summary.latest_flows" :key="flow.id">
+                            <tr>
+                                <td class="px-4 py-3 text-sm font-mono text-gray-900" x-text="flow.source"></td>
+                                <td class="px-4 py-3 text-sm font-mono text-gray-900" x-text="flow.destination"></td>
+                                <td class="px-4 py-3 text-sm text-gray-700" x-text="flow.protocol"></td>
+                                <td class="px-4 py-3 text-sm text-gray-700" x-text="formatBytes(flow.bytes)"></td>
+                                <td class="px-4 py-3 text-sm text-gray-700" x-text="flow.packets"></td>
+                                <td class="px-4 py-3 text-sm text-gray-500" x-text="flow.received_at"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions -->
     <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
@@ -262,12 +389,126 @@
 
 @push('scripts')
 <script>
-function routerShow(router) {
+function routerShow(router, netflowSummary) {
     return {
         router: router,
+        netflow: {
+            summary: netflowSummary,
+            settingUp: false,
+            testing: false,
+            message: '',
+            ok: true
+        },
         deleteModal: {
             show: false,
             deleting: false
+        },
+
+        isMikrotik() {
+            return String(this.router.vendor || '').toLowerCase() === 'mikrotik';
+        },
+
+        async setupNetflow() {
+            this.netflow.settingUp = true;
+            this.netflow.message = '';
+
+            try {
+                const response = await fetch(`{{ route('routers.index') }}/${this.router.id}/netflow/setup`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        netflow_enabled: Boolean(this.router.netflow_enabled),
+                        netflow_collector_host: this.router.netflow_collector_host,
+                        netflow_collector_port: this.router.netflow_collector_port || 2055,
+                        netflow_version: this.router.netflow_version || 9,
+                        netflow_interfaces: this.router.netflow_interfaces || 'all',
+                        netflow_sampling_interval: this.router.netflow_sampling_interval || 1
+                    })
+                });
+                const data = await response.json();
+
+                this.netflow.ok = response.ok;
+                this.netflow.message = data.message || 'NetFlow setup completed.';
+
+                if (response.ok && data.router) {
+                    this.router = data.router;
+                    await this.refreshNetflow();
+                }
+            } catch (error) {
+                this.netflow.ok = false;
+                this.netflow.message = 'NetFlow setup failed. Please try again.';
+            } finally {
+                this.netflow.settingUp = false;
+            }
+        },
+
+        async testNetflow() {
+            this.netflow.testing = true;
+            this.netflow.message = '';
+
+            try {
+                const response = await fetch(`{{ route('routers.index') }}/${this.router.id}/netflow/test`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await response.json();
+
+                this.netflow.ok = response.ok;
+                this.netflow.message = data.message || 'NetFlow test completed.';
+                await this.refreshNetflow();
+            } catch (error) {
+                this.netflow.ok = false;
+                this.netflow.message = 'NetFlow test failed. Please try again.';
+            } finally {
+                this.netflow.testing = false;
+            }
+        },
+
+        async refreshNetflow() {
+            const response = await fetch(`{{ route('routers.index') }}/${this.router.id}/netflow/data`, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                this.netflow.summary = await response.json();
+            }
+        },
+
+        formatBytes(bytes) {
+            const value = Number(bytes || 0);
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let size = value;
+            let unit = 0;
+
+            while (size >= 1024 && unit < units.length - 1) {
+                size = size / 1024;
+                unit++;
+            }
+
+            return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+        },
+
+        formatBits(bits) {
+            const value = Number(bits || 0);
+            const units = ['bps', 'Kbps', 'Mbps', 'Gbps'];
+            let size = value;
+            let unit = 0;
+
+            while (size >= 1000 && unit < units.length - 1) {
+                size = size / 1000;
+                unit++;
+            }
+
+            return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
         },
 
         confirmDelete() {

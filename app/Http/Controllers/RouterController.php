@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Router\SetupNetflowRequest;
 use App\Http\Requests\Router\StoreRouterRequest;
 use App\Http\Requests\Router\UpdateRouterRequest;
+use App\Models\NetflowFlow;
 use App\Models\Router;
+use App\Services\Netflow\NetflowSummaryService;
+use App\Services\RouterOs\RouterOsTrafficFlowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Throwable;
 
 class RouterController extends Controller
 {
@@ -118,11 +123,14 @@ class RouterController extends Controller
     /**
      * Display the specified router.
      */
-    public function show(Router $router): View
+    public function show(Router $router, NetflowSummaryService $netflowSummary): View
     {
         $this->authorizeTenantAccess($router);
 
-        return view('routers.show', ['router' => $router]);
+        return view('routers.show', [
+            'router' => $router,
+            'netflowSummary' => $netflowSummary->forRouter($router),
+        ]);
     }
 
     /**
@@ -171,6 +179,99 @@ class RouterController extends Controller
         ]);
     }
 
+    public function setupNetflow(SetupNetflowRequest $request, Router $router, RouterOsTrafficFlowService $trafficFlow): JsonResponse
+    {
+        $this->authorizeTenantAccess($router);
+
+        if (! $router->isMikrotik()) {
+            return response()->json([
+                'message' => 'NetFlow setup is only available for MikroTik routers.',
+            ], 422);
+        }
+
+        $validated = $request->validated();
+        $enabled = (bool) $validated['netflow_enabled'];
+
+        if ($enabled && (! $router->api_username || ! $router->api_password)) {
+            return response()->json([
+                'message' => 'RouterOS API credentials are required before NetFlow can be configured.',
+            ], 422);
+        }
+
+        $router->forceFill([
+            'netflow_enabled' => $enabled,
+            'netflow_collector_host' => $enabled ? $validated['netflow_collector_host'] : null,
+            'netflow_collector_port' => $validated['netflow_collector_port'] ?? config('netflow.collector_port'),
+            'netflow_version' => $validated['netflow_version'] ?? 9,
+            'netflow_interfaces' => $validated['netflow_interfaces'] ?? 'all',
+            'netflow_sampling_interval' => $validated['netflow_sampling_interval'] ?? 1,
+            'netflow_setup_status' => 'pending',
+            'netflow_error' => null,
+        ])->save();
+
+        try {
+            $trafficFlow->configure($router->fresh());
+
+            $router->forceFill([
+                'netflow_setup_status' => $enabled ? 'configured' : 'disabled',
+                'netflow_last_setup_at' => now(),
+                'netflow_error' => null,
+            ])->save();
+
+            return response()->json([
+                'message' => $enabled ? 'NetFlow has been configured on the MikroTik router.' : 'NetFlow has been disabled on the MikroTik router.',
+                'router' => $router->fresh(),
+            ]);
+        } catch (Throwable $exception) {
+            $router->forceFill([
+                'netflow_setup_status' => 'failed',
+                'netflow_error' => $exception->getMessage(),
+            ])->save();
+
+            return response()->json([
+                'message' => 'NetFlow setup failed: '.$exception->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function testNetflow(Router $router): JsonResponse
+    {
+        $this->authorizeTenantAccess($router);
+
+        if (! $router->netflow_enabled) {
+            return response()->json([
+                'message' => 'Enable and configure NetFlow before testing packet collection.',
+            ], 422);
+        }
+
+        $latestFlow = NetflowFlow::query()
+            ->where('tenant_id', $router->tenant_id)
+            ->where('router_id', $router->id)
+            ->where('received_at', '>=', now()->subSeconds((int) config('netflow.test_window_seconds')))
+            ->latest('received_at')
+            ->first();
+
+        $router->forceFill([
+            'netflow_test_status' => $latestFlow ? 'received' : 'timeout',
+            'netflow_last_tested_at' => now(),
+            'netflow_last_packet_at' => $latestFlow?->received_at ?? $router->netflow_last_packet_at,
+            'netflow_error' => $latestFlow ? null : 'No NetFlow packets were received during the test window.',
+        ])->save();
+
+        return response()->json([
+            'message' => $latestFlow ? 'NetFlow packets are being received.' : 'No recent NetFlow packets were found for this router.',
+            'status' => $latestFlow ? 'received' : 'timeout',
+            'last_packet_at' => $latestFlow?->received_at?->diffForHumans(),
+        ], $latestFlow ? 200 : 422);
+    }
+
+    public function netflowData(Router $router, NetflowSummaryService $netflowSummary): JsonResponse
+    {
+        $this->authorizeTenantAccess($router);
+
+        return response()->json($netflowSummary->forRouter($router->fresh()));
+    }
+
     /**
      * Ensure the user has access to the router's tenant.
      */
@@ -186,6 +287,8 @@ class RouterController extends Controller
      */
     public function sessions(Router $router): View
     {
+        $this->authorizeTenantAccess($router);
+
         return view('routers.sessions', compact('router'));
     }
 
@@ -194,6 +297,8 @@ class RouterController extends Controller
      */
     public function queues(Router $router): View
     {
+        $this->authorizeTenantAccess($router);
+
         return view('routers.queues', compact('router'));
     }
 
@@ -202,6 +307,8 @@ class RouterController extends Controller
      */
     public function profiles(Router $router): View
     {
+        $this->authorizeTenantAccess($router);
+
         return view('routers.profiles', compact('router'));
     }
 
@@ -210,6 +317,8 @@ class RouterController extends Controller
      */
     public function interfaces(Router $router): View
     {
+        $this->authorizeTenantAccess($router);
+
         return view('routers.interfaces', compact('router'));
     }
 
@@ -218,6 +327,8 @@ class RouterController extends Controller
      */
     public function ipPools(Router $router): View
     {
+        $this->authorizeTenantAccess($router);
+
         return view('routers.ip-pools', compact('router'));
     }
 
@@ -226,6 +337,8 @@ class RouterController extends Controller
      */
     public function logs(Router $router): View
     {
+        $this->authorizeTenantAccess($router);
+
         return view('routers.logs', compact('router'));
     }
 }

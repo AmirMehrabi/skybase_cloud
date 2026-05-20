@@ -146,6 +146,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{router}/edit', [RouterController::class, 'edit'])->name('edit');
         Route::put('/{router}', [RouterController::class, 'update'])->name('update');
         Route::delete('/{router}', [RouterController::class, 'destroy'])->name('destroy');
+        Route::post('/{router}/netflow/setup', [RouterController::class, 'setupNetflow'])->name('netflow.setup');
+        Route::post('/{router}/netflow/test', [RouterController::class, 'testNetflow'])->name('netflow.test');
+        Route::get('/{router}/netflow/data', [RouterController::class, 'netflowData'])->name('netflow.data');
         Route::get('/{router}/sessions', [RouterController::class, 'sessions'])->name('sessions');
         Route::get('/{router}/queues', [RouterController::class, 'queues'])->name('queues');
         Route::get('/{router}/profiles', [RouterController::class, 'profiles'])->name('profiles');

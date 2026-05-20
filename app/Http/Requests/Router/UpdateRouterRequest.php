@@ -2,10 +2,21 @@
 
 namespace App\Http\Requests\Router;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateRouterRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'enable_monitoring' => $this->boolean('enable_monitoring'),
+            'enable_provisioning' => $this->boolean('enable_provisioning'),
+            'netflow_enabled' => $this->boolean('netflow_enabled'),
+        ]);
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -17,7 +28,7 @@ class UpdateRouterRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -25,7 +36,7 @@ class UpdateRouterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'vendor' => ['required', 'string', 'in:Mikrotik,Cisco,Juniper,Huawei'],
-            'ip_address' => ['required', 'ip', 'unique:routers,ip_address,'.$this->route('router')],
+            'ip_address' => ['required', 'ip', Rule::unique('routers', 'ip_address')->ignore($this->route('router')?->id)],
             'api_port' => ['required', 'integer', 'min:1', 'max:65535'],
             'api_username' => ['nullable', 'string', 'max:255'],
             'api_password' => ['nullable', 'string', 'max:255', 'sometimes'],
@@ -35,6 +46,12 @@ class UpdateRouterRequest extends FormRequest
             'timeout' => ['nullable', 'integer', 'min:1', 'max:300'],
             'enable_monitoring' => ['nullable', 'boolean'],
             'enable_provisioning' => ['nullable', 'boolean'],
+            'netflow_enabled' => ['nullable', 'boolean'],
+            'netflow_collector_host' => ['nullable', 'string', 'max:255'],
+            'netflow_collector_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'netflow_version' => ['nullable', 'integer', 'in:5,9'],
+            'netflow_interfaces' => ['nullable', 'string', 'max:255'],
+            'netflow_sampling_interval' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'tenant_id' => ['nullable', 'exists:tenants,id'],
         ];
     }

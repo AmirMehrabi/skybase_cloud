@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use Database\Factories\RouterFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Router extends Model
 {
-    /** @use HasFactory<\Database\Factories\RouterFactory> */
+    /** @use HasFactory<RouterFactory> */
     use HasFactory;
 
     /**
@@ -37,6 +39,18 @@ class Router extends Model
         'total_customers',
         'enable_monitoring',
         'enable_provisioning',
+        'netflow_enabled',
+        'netflow_collector_host',
+        'netflow_collector_port',
+        'netflow_version',
+        'netflow_interfaces',
+        'netflow_sampling_interval',
+        'netflow_setup_status',
+        'netflow_test_status',
+        'netflow_last_setup_at',
+        'netflow_last_tested_at',
+        'netflow_last_packet_at',
+        'netflow_error',
         'timeout',
     ];
 
@@ -50,6 +64,13 @@ class Router extends Model
         return [
             'enable_monitoring' => 'boolean',
             'enable_provisioning' => 'boolean',
+            'netflow_enabled' => 'boolean',
+            'netflow_collector_port' => 'integer',
+            'netflow_version' => 'integer',
+            'netflow_sampling_interval' => 'integer',
+            'netflow_last_setup_at' => 'datetime',
+            'netflow_last_tested_at' => 'datetime',
+            'netflow_last_packet_at' => 'datetime',
         ];
     }
 
@@ -64,6 +85,16 @@ class Router extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function netflowFlows(): HasMany
+    {
+        return $this->hasMany(NetflowFlow::class);
+    }
+
+    public function isMikrotik(): bool
+    {
+        return strcasecmp((string) $this->vendor, 'Mikrotik') === 0;
     }
 
     public function scopeFilter($query, array $filters)
