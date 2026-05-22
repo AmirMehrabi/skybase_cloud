@@ -11,7 +11,9 @@ use App\Models\Setting;
 use App\Models\Tenant;
 use App\Services\Ldap\LdapConnectionFactory;
 use App\Services\Ldap\LdapSyncService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Throwable;
@@ -243,6 +245,52 @@ class SettingController extends Controller
             ->with('success', 'LDAP connection tested successfully.');
     }
 
+    public function discoverLdapOrganizationalUnits(Request $request, LdapConnectionFactory $connections, LdapSyncService $sync): JsonResponse
+    {
+        $this->authorizeLdapSettings();
+
+        $request->validate([
+            'hosts' => ['required', 'string', 'max:1000'],
+            'port' => ['nullable', 'integer', 'between:1,65535'],
+            'base_dn' => ['required', 'string', 'max:1000'],
+            'username' => ['nullable', 'string', 'max:1000'],
+            'password' => ['nullable', 'string', 'max:1000'],
+            'timeout' => ['nullable', 'integer', 'between:1,60'],
+            'use_tls' => ['nullable', 'boolean'],
+            'use_starttls' => ['nullable', 'boolean'],
+            'organization_excluded_ou_dns' => ['nullable', 'array'],
+            'organization_excluded_ou_dns.*' => ['string', 'max:1000'],
+        ]);
+
+        $tenant = $this->getTenant();
+        $settings = $sync->settingsForTenant($tenant->id);
+        $settings['connection'] = $this->ldapConnectionSettingsFromRequest($request, $tenant->id);
+        $settings['organization_sync']['excluded_ou_dns'] = $this->excludedOuDnsFromRequest($request);
+
+        try {
+            $connection = $connections->register($tenant->id, $settings['connection']);
+            $organizationalUnits = $sync->discoverOrganizationalUnits($connection, $settings)
+                ->map(fn (array $ou): array => [
+                    'dn' => $ou['dn'],
+                    'guid' => $ou['guid'],
+                    'name' => $ou['name'],
+                    'path' => $ou['path'],
+                    'selected' => $ou['selected'],
+                ])
+                ->values();
+        } catch (Throwable $exception) {
+            return response()->json([
+                'message' => 'OU discovery failed: '.$exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'organizational_units' => $organizationalUnits,
+            'count' => $organizationalUnits->count(),
+            'selected_count' => $organizationalUnits->where('selected', true)->count(),
+        ]);
+    }
+
     public function previewLdap(LdapSyncService $sync): RedirectResponse
     {
         $this->authorizeLdapSettings();
@@ -423,30 +471,14 @@ class SettingController extends Controller
      */
     private function ldapSettingsFromRequest(UpdateLdapSettingRequest $request, string $tenantId): array
     {
-        $current = app(LdapSyncService::class)->settingsForTenant($tenantId);
-        $password = $request->filled('password')
-            ? $request->string('password')->toString()
-            : $current['connection']['password'];
-
         return [
-            'connection' => [
-                'enabled' => $request->boolean('enabled'),
-                'hosts' => $this->splitHosts($request->string('hosts')->toString()),
-                'port' => $request->filled('port') ? $request->integer('port') : 389,
-                'base_dn' => $request->input('base_dn'),
-                'username' => $request->input('username'),
-                'password' => $password,
-                'timeout' => $request->filled('timeout') ? $request->integer('timeout') : 5,
-                'use_tls' => $request->boolean('use_tls'),
-                'use_starttls' => $request->boolean('use_starttls'),
-                'sync_interval_minutes' => $request->filled('sync_interval_minutes') ? $request->integer('sync_interval_minutes') : 15,
-                'missing_action' => $request->input('missing_action', 'mark_inactive'),
-            ],
+            'connection' => $this->ldapConnectionSettingsFromRequest($request, $tenantId),
             'organization_sync' => [
                 'base_dn' => $request->input('organization_base_dn'),
                 'filter' => $request->input('organization_filter'),
                 'unique_attribute' => $request->input('organization_unique_attribute', 'objectGUID'),
                 'match_attribute' => $request->input('organization_match_attribute', $request->input('organization_unique_attribute', 'objectGUID')),
+                'excluded_ou_dns' => $this->excludedOuDnsFromRequest($request),
                 'map' => [
                     'code' => $request->input('organization_map_code'),
                     'name' => $request->input('organization_map_name'),
@@ -486,6 +518,44 @@ class SettingController extends Controller
                 ],
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function ldapConnectionSettingsFromRequest(Request $request, string $tenantId): array
+    {
+        $current = app(LdapSyncService::class)->settingsForTenant($tenantId);
+        $password = $request->filled('password')
+            ? $request->string('password')->toString()
+            : $current['connection']['password'];
+
+        return [
+            'enabled' => $request->boolean('enabled'),
+            'hosts' => $this->splitHosts($request->string('hosts')->toString()),
+            'port' => $request->filled('port') ? $request->integer('port') : 389,
+            'base_dn' => $request->input('base_dn'),
+            'username' => $request->input('username'),
+            'password' => $password,
+            'timeout' => $request->filled('timeout') ? $request->integer('timeout') : 5,
+            'use_tls' => $request->boolean('use_tls'),
+            'use_starttls' => $request->boolean('use_starttls'),
+            'sync_interval_minutes' => $request->filled('sync_interval_minutes') ? $request->integer('sync_interval_minutes') : 15,
+            'missing_action' => $request->input('missing_action', 'mark_inactive'),
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function excludedOuDnsFromRequest(Request $request): array
+    {
+        return collect($request->input('organization_excluded_ou_dns', []))
+            ->filter(fn ($dn): bool => filled($dn))
+            ->map(fn ($dn): string => (string) $dn)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

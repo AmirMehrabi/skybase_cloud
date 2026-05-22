@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
+use App\Models\Organization;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\Ldap\LdapSyncService;
@@ -121,6 +122,84 @@ class LdapSyncServiceTest extends TestCase
         $this->assertSame(1, $result['subscriptions']['missing']);
         $this->assertSame('inactive', $oldCustomer->fresh()->status);
         $this->assertSame('cancelled', Subscription::withoutGlobalScopes()->where('subscription_code', 'old-subscription')->firstOrFail()->status);
+    }
+
+    public function test_unchecked_ou_records_are_left_unchanged_when_missing_records_are_handled(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $settings = $this->settings();
+        $settings['organization_sync']['unique_attribute'] = 'objectGUID';
+        $settings['organization_sync']['map']['code'] = 'ou';
+        $settings['organization_sync']['map']['name'] = 'ou';
+        $settings['customer_sync']['organization_attribute'] = 'department';
+        $settings['customer_sync']['organization_match_field'] = 'code';
+
+        $skippedOrganization = Organization::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'code' => 'Skipped',
+            'name' => 'Skipped',
+            'status' => 'active',
+            'ldap_guid' => 'skipped-ou',
+            'ldap_dn' => 'ou=Skipped,dc=alpha,dc=test',
+        ]);
+        $skippedCustomer = Customer::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'organization_id' => $skippedOrganization->id,
+            'customer_code' => 'skipped-customer',
+            'customer_type' => 'individual',
+            'name' => 'Skipped Customer',
+            'first_name' => 'Skipped',
+            'last_name' => 'Customer',
+            'status' => 'active',
+            'billing_type' => 'prepaid',
+            'ldap_guid' => 'skipped-customer',
+            'ldap_dn' => 'uid=skipped-customer,ou=Skipped,dc=alpha,dc=test',
+        ]);
+        Subscription::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $skippedCustomer->id,
+            'subscription_code' => 'skipped-subscription',
+            'connection_type' => 'pppoe',
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'ldap_guid' => 'skipped-subscription',
+            'ldap_dn' => 'uid=skipped-subscription,ou=Skipped,dc=alpha,dc=test',
+        ]);
+
+        $result = app(LdapSyncService::class)->syncTenantFromEntries(
+            $tenant,
+            $settings,
+            [[
+                'uid' => 'selected-customer',
+                'cn' => 'Selected Customer',
+                'department' => 'Selected',
+                'dn' => 'uid=selected-customer,ou=Selected,dc=alpha,dc=test',
+            ]],
+            [[
+                'uid' => 'selected-subscription',
+                'customerUid' => 'selected-customer',
+                'dn' => 'uid=selected-subscription,ou=Selected,dc=alpha,dc=test',
+            ]],
+            false,
+            [[
+                'objectGUID' => 'selected-ou',
+                'ou' => 'Selected',
+                'dn' => 'ou=Selected,dc=alpha,dc=test',
+            ]],
+            ['ou=Selected,dc=alpha,dc=test'],
+        );
+
+        $this->assertSame(0, $result['organizations']['missing']);
+        $this->assertSame(0, $result['customers']['missing']);
+        $this->assertSame(0, $result['subscriptions']['missing']);
+        $this->assertSame('active', $skippedOrganization->fresh()->status);
+        $this->assertSame('active', $skippedCustomer->fresh()->status);
+        $this->assertSame('active', Subscription::withoutGlobalScopes()->where('subscription_code', 'skipped-subscription')->firstOrFail()->status);
+        $this->assertDatabaseHas('customers', [
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'selected-customer',
+        ]);
     }
 
     /**

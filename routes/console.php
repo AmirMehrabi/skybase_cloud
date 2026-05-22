@@ -15,3 +15,7 @@ Schedule::command('billing:run')
 Schedule::command('ldap:sync --all')
     ->everyFifteenMinutes()
     ->withoutOverlapping();
+
+Schedule::command('routers:check-status')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

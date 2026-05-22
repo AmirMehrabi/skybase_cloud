@@ -37,8 +37,10 @@ class UpdateLdapSettingRequest extends FormRequest
             'organization_map_name' => ['nullable', 'string', 'max:255'],
             'organization_map_description' => ['nullable', 'string', 'max:255'],
             'organization_map_status' => ['nullable', 'string', 'max:255'],
+            'organization_excluded_ou_dns' => ['nullable', 'array'],
+            'organization_excluded_ou_dns.*' => ['string', 'max:1000'],
 
-            'customer_base_dn' => [$enabled ? 'required' : 'nullable', 'string', 'max:1000'],
+            'customer_base_dn' => ['nullable', 'string', 'max:1000'],
             'customer_filter' => [$enabled ? 'required' : 'nullable', 'string', 'max:1000'],
             'customer_unique_attribute' => [$enabled ? 'required' : 'nullable', 'string', 'max:255'],
             'customer_match_attribute' => ['nullable', 'string', 'max:255'],

@@ -31,6 +31,9 @@ class Router extends Model
         'location',
         'site',
         'status',
+        'last_status_checked_at',
+        'last_status_changed_at',
+        'status_check_error',
         'version',
         'uptime',
         'cpu_usage',
@@ -71,6 +74,8 @@ class Router extends Model
             'netflow_last_setup_at' => 'datetime',
             'netflow_last_tested_at' => 'datetime',
             'netflow_last_packet_at' => 'datetime',
+            'last_status_checked_at' => 'datetime',
+            'last_status_changed_at' => 'datetime',
         ];
     }
 

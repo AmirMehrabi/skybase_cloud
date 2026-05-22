@@ -43,9 +43,10 @@ class LdapSyncService
                 'filter' => null,
                 'unique_attribute' => 'objectGUID',
                 'match_attribute' => 'objectGUID',
+                'excluded_ou_dns' => [],
                 'map' => [
-                    'code' => 'sAMAccountName',
-                    'name' => 'cn',
+                    'code' => 'ou',
+                    'name' => 'ou',
                     'description' => 'description',
                     'status' => null,
                 ],
@@ -126,27 +127,37 @@ class LdapSyncService
             Log::info('LDAP sync search started.', [
                 'tenant_id' => $tenant->id,
                 'dry_run' => $dryRun,
-                'organization_base_dn' => $settings['organization_sync']['base_dn'] ?? null,
+                'base_dn' => $settings['connection']['base_dn'] ?? null,
+                'excluded_ou_count' => count($settings['organization_sync']['excluded_ou_dns'] ?? []),
                 'customer_base_dn' => $settings['customer_sync']['base_dn'] ?? null,
                 'subscription_base_dn' => $settings['subscription_sync']['base_dn'] ?? null,
             ]);
-            $organizations = filled($settings['organization_sync']['base_dn']) && filled($settings['organization_sync']['filter'])
-                ? $this->search($connection, $settings['organization_sync'])
-                : collect();
-            $customers = $this->search($connection, $settings['customer_sync']);
-            $subscriptions = filled($settings['subscription_sync']['base_dn']) && filled($settings['subscription_sync']['filter'])
-                ? $this->search($connection, $settings['subscription_sync'])
+
+            $discoveredOus = $this->discoverOrganizationalUnits($connection, $settings);
+            $selectedOus = $this->selectedOrganizationalUnits($discoveredOus);
+            $useOuScopes = $discoveredOus->isNotEmpty();
+            $selectedOuDns = $selectedOus->pluck('dn')->filter()->values()->all();
+            $organizations = $selectedOus->map(fn (array $ou): array => $ou['entry']);
+            $customers = $useOuScopes
+                ? $this->searchAcrossBaseDns($connection, $settings['customer_sync'], $selectedOuDns)
+                : $this->search($connection, $settings['customer_sync']);
+            $subscriptions = filled($settings['subscription_sync']['filter'])
+                ? ($useOuScopes
+                    ? $this->searchAcrossBaseDns($connection, $settings['subscription_sync'], $selectedOuDns)
+                    : (filled($settings['subscription_sync']['base_dn']) ? $this->search($connection, $settings['subscription_sync']) : collect()))
                 : collect();
 
             Log::info('LDAP sync search completed.', [
                 'tenant_id' => $tenant->id,
                 'dry_run' => $dryRun,
+                'organizational_units_found' => $discoveredOus->count(),
+                'organizational_units_selected' => $selectedOus->count(),
                 'organizations_found' => $organizations->count(),
                 'customers_found' => $customers->count(),
                 'subscriptions_found' => $subscriptions->count(),
             ]);
 
-            $result = $this->syncTenantFromEntries($tenant, $settings, $customers, $subscriptions, $dryRun, $organizations);
+            $result = $this->syncTenantFromEntries($tenant, $settings, $customers, $subscriptions, $dryRun, $organizations, $useOuScopes ? $selectedOuDns : null);
 
             if (! $dryRun) {
                 $this->writeStatus($tenant->id, [
@@ -171,7 +182,7 @@ class LdapSyncService
      * @param  iterable<int, LdapModel|array<string, mixed>>  $subscriptionEntries
      * @return array<string, mixed>
      */
-    public function syncTenantFromEntries(Tenant $tenant, array $settings, iterable $customerEntries, iterable $subscriptionEntries, bool $dryRun = false, iterable $organizationEntries = []): array
+    public function syncTenantFromEntries(Tenant $tenant, array $settings, iterable $customerEntries, iterable $subscriptionEntries, bool $dryRun = false, iterable $organizationEntries = [], ?array $selectedOuDns = null): array
     {
         $result = $this->emptyResult($dryRun ? 'preview' : 'synced');
         $syncedOrganizationGuids = [];
@@ -331,12 +342,18 @@ class LdapSyncService
         }
 
         if (! $dryRun) {
-            if (filled($settings['organization_sync']['base_dn'] ?? null) && filled($settings['organization_sync']['filter'] ?? null)) {
-                $result['organizations']['missing'] = $this->handleMissingOrganizations($tenant->id, $syncedOrganizationGuids, $settings['connection']['missing_action']);
-            }
+            if ($selectedOuDns !== null) {
+                $result['organizations']['missing'] = $this->handleMissingOrganizations($tenant->id, $syncedOrganizationGuids, $settings['connection']['missing_action'], $selectedOuDns);
+                $result['customers']['missing'] = $this->handleMissingCustomers($tenant->id, $syncedCustomerGuids, $settings['connection']['missing_action'], $selectedOuDns);
+                $result['subscriptions']['missing'] = $this->handleMissingSubscriptions($tenant->id, $syncedSubscriptionGuids, $settings['connection']['missing_action'], $selectedOuDns);
+            } else {
+                if (filled($settings['organization_sync']['base_dn'] ?? null) && filled($settings['organization_sync']['filter'] ?? null)) {
+                    $result['organizations']['missing'] = $this->handleMissingOrganizations($tenant->id, $syncedOrganizationGuids, $settings['connection']['missing_action']);
+                }
 
-            $result['customers']['missing'] = $this->handleMissingCustomers($tenant->id, $syncedCustomerGuids, $settings['connection']['missing_action']);
-            $result['subscriptions']['missing'] = $this->handleMissingSubscriptions($tenant->id, $syncedSubscriptionGuids, $settings['connection']['missing_action']);
+                $result['customers']['missing'] = $this->handleMissingCustomers($tenant->id, $syncedCustomerGuids, $settings['connection']['missing_action']);
+                $result['subscriptions']['missing'] = $this->handleMissingSubscriptions($tenant->id, $syncedSubscriptionGuids, $settings['connection']['missing_action']);
+            }
         }
 
         return $result;
@@ -348,10 +365,121 @@ class LdapSyncService
      */
     private function search(string $connection, array $syncSettings): Collection
     {
+        if (! filled($syncSettings['base_dn'] ?? null) || ! filled($syncSettings['filter'] ?? null)) {
+            return collect();
+        }
+
         return Entry::on($connection)
             ->in($syncSettings['base_dn'])
             ->rawFilter($syncSettings['filter'])
             ->get($this->selects($syncSettings));
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return Collection<int, array{dn: string, guid: string|null, name: string, path: string, selected: bool, entry: LdapModel|array<string, mixed>}>
+     */
+    public function discoverOrganizationalUnits(string $connection, array $settings): Collection
+    {
+        $baseDn = $settings['connection']['base_dn'] ?? null;
+
+        if (! filled($baseDn)) {
+            return collect();
+        }
+
+        $entries = Entry::on($connection)
+            ->in($baseDn)
+            ->rawFilter('(objectClass=organizationalUnit)')
+            ->get(['dn', 'distinguishedName', 'objectGUID', 'ou', 'name', 'description']);
+
+        return $this->normalizeOrganizationalUnits($entries, $settings);
+    }
+
+    /**
+     * @param  iterable<int, LdapModel|array<string, mixed>>  $entries
+     * @param  array<string, mixed>  $settings
+     * @return Collection<int, array{dn: string, guid: string|null, name: string, path: string, selected: bool, entry: LdapModel|array<string, mixed>}>
+     */
+    public function normalizeOrganizationalUnits(iterable $entries, array $settings): Collection
+    {
+        $excludedDns = collect($settings['organization_sync']['excluded_ou_dns'] ?? [])
+            ->map(fn (string $dn): string => $this->normalizeDn($dn))
+            ->filter()
+            ->flip();
+
+        return collect($entries)
+            ->map(function (LdapModel|array $entry) use ($excludedDns): ?array {
+                $dn = $this->dn($entry);
+
+                if (! filled($dn)) {
+                    return null;
+                }
+
+                $name = $this->mapped($entry, 'ou') ?: $this->mapped($entry, 'name') ?: $this->firstDnPart($dn);
+                $normalizedDn = $this->normalizeDn($dn);
+
+                return [
+                    'dn' => $dn,
+                    'guid' => $this->entryGuid($entry),
+                    'name' => $name,
+                    'path' => $this->ouPath($dn),
+                    'selected' => ! $excludedDns->has($normalizedDn),
+                    'entry' => $entry,
+                ];
+            })
+            ->filter()
+            ->sortBy('path', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, array{dn: string, selected: bool, entry: LdapModel|array<string, mixed>}>  $organizationalUnits
+     * @return Collection<int, array{dn: string, selected: bool, entry: LdapModel|array<string, mixed>}>
+     */
+    private function selectedOrganizationalUnits(Collection $organizationalUnits): Collection
+    {
+        return $organizationalUnits
+            ->filter(fn (array $ou): bool => (bool) $ou['selected'])
+            ->values();
+    }
+
+    /**
+     * @param  array<string, mixed>  $syncSettings
+     * @param  array<int, string>  $baseDns
+     * @return Collection<int, LdapModel>
+     */
+    private function searchAcrossBaseDns(string $connection, array $syncSettings, array $baseDns): Collection
+    {
+        if (! filled($syncSettings['filter'] ?? null)) {
+            return collect();
+        }
+
+        $uniqueEntries = collect();
+        $seenKeys = [];
+
+        foreach ($baseDns as $baseDn) {
+            if (! filled($baseDn)) {
+                continue;
+            }
+
+            $entries = Entry::on($connection)
+                ->in($baseDn)
+                ->rawFilter($syncSettings['filter'])
+                ->get($this->selects($syncSettings));
+
+            foreach ($entries as $entry) {
+                $key = $this->entryGuid($entry) ?: $this->normalizeDn((string) $this->dn($entry));
+
+                if (! filled($key) || isset($seenKeys[$key])) {
+                    continue;
+                }
+
+                $seenKeys[$key] = true;
+                $uniqueEntries->push($entry);
+            }
+        }
+
+        return $uniqueEntries->values();
     }
 
     /**
@@ -624,9 +752,13 @@ class LdapSyncService
     /**
      * @param  array<int, string>  $syncedGuids
      */
-    private function handleMissingCustomers(string $tenantId, array $syncedGuids, string $action): int
+    private function handleMissingCustomers(string $tenantId, array $syncedGuids, string $action, ?array $selectedOuDns = null): int
     {
         if ($action === 'ignore') {
+            return 0;
+        }
+
+        if ($selectedOuDns === []) {
             return 0;
         }
 
@@ -634,6 +766,8 @@ class LdapSyncService
             ->where('tenant_id', $tenantId)
             ->whereNotNull('ldap_guid')
             ->when($syncedGuids !== [], fn ($query) => $query->whereNotIn('ldap_guid', $syncedGuids));
+
+        $this->scopeQueryToOuDns($query, $selectedOuDns);
 
         if ($action === 'soft_delete') {
             $customers = $query->get();
@@ -648,9 +782,13 @@ class LdapSyncService
     /**
      * @param  array<int, string>  $syncedGuids
      */
-    private function handleMissingOrganizations(string $tenantId, array $syncedGuids, string $action): int
+    private function handleMissingOrganizations(string $tenantId, array $syncedGuids, string $action, ?array $selectedOuDns = null): int
     {
         if ($action === 'ignore') {
+            return 0;
+        }
+
+        if ($selectedOuDns === []) {
             return 0;
         }
 
@@ -658,6 +796,10 @@ class LdapSyncService
             ->where('tenant_id', $tenantId)
             ->whereNotNull('ldap_guid')
             ->when($syncedGuids !== [], fn ($query) => $query->whereNotIn('ldap_guid', $syncedGuids));
+
+        if ($selectedOuDns !== null) {
+            $query->whereIn('ldap_dn', $selectedOuDns);
+        }
 
         if ($action === 'soft_delete') {
             $organizations = $query->get();
@@ -684,9 +826,13 @@ class LdapSyncService
     /**
      * @param  array<int, string>  $syncedGuids
      */
-    private function handleMissingSubscriptions(string $tenantId, array $syncedGuids, string $action): int
+    private function handleMissingSubscriptions(string $tenantId, array $syncedGuids, string $action, ?array $selectedOuDns = null): int
     {
         if ($action === 'ignore') {
+            return 0;
+        }
+
+        if ($selectedOuDns === []) {
             return 0;
         }
 
@@ -694,6 +840,8 @@ class LdapSyncService
             ->where('tenant_id', $tenantId)
             ->whereNotNull('ldap_guid')
             ->when($syncedGuids !== [], fn ($query) => $query->whereNotIn('ldap_guid', $syncedGuids));
+
+        $this->scopeQueryToOuDns($query, $selectedOuDns);
 
         if ($action === 'soft_delete') {
             $subscriptions = $query->get();
@@ -710,6 +858,10 @@ class LdapSyncService
      */
     private function guid(LdapModel|array $entry, ?string $attribute): ?string
     {
+        if (strtolower((string) $attribute) === 'objectguid') {
+            return $this->entryGuid($entry);
+        }
+
         $value = $this->mapped($entry, $attribute);
 
         if (! filled($value)) {
@@ -739,6 +891,22 @@ class LdapSyncService
         $value = is_array($value) ? Arr::first($value) : $value;
 
         return filled($value) ? (string) $value : null;
+    }
+
+    /**
+     * @param  LdapModel|array<string, mixed>  $entry
+     */
+    private function entryGuid(LdapModel|array $entry): ?string
+    {
+        if ($entry instanceof LdapModel && method_exists($entry, 'getConvertedGuid')) {
+            $guid = $entry->getConvertedGuid();
+
+            if (filled($guid)) {
+                return $guid;
+            }
+        }
+
+        return $this->mapped($entry, 'objectGUID') ?: $this->mapped($entry, 'objectguid');
     }
 
     /**
@@ -778,6 +946,45 @@ class LdapSyncService
         }
 
         return $entry['dn'] ?? $entry['distinguishedname'] ?? null;
+    }
+
+    private function normalizeDn(?string $dn): string
+    {
+        return strtolower(trim((string) $dn));
+    }
+
+    private function firstDnPart(string $dn): string
+    {
+        $firstPart = explode(',', $dn, 2)[0] ?? $dn;
+
+        return trim((string) preg_replace('/^[a-zA-Z]+=/', '', $firstPart));
+    }
+
+    private function ouPath(string $dn): string
+    {
+        $parts = array_map('trim', explode(',', $dn));
+
+        return collect($parts)
+            ->filter(fn (string $part): bool => str_starts_with(strtolower($part), 'ou='))
+            ->map(fn (string $part): string => trim(substr($part, 3)))
+            ->reverse()
+            ->implode(' / ') ?: $this->firstDnPart($dn);
+    }
+
+    private function scopeQueryToOuDns($query, ?array $selectedOuDns): void
+    {
+        if ($selectedOuDns === null) {
+            return;
+        }
+
+        $query->where(function ($query) use ($selectedOuDns): void {
+            foreach ($selectedOuDns as $dn) {
+                $escapedDn = addcslashes($dn, '%_\\');
+
+                $query->orWhere('ldap_dn', $dn)
+                    ->orWhere('ldap_dn', 'like', '%,'.$escapedDn);
+            }
+        });
     }
 
     /**

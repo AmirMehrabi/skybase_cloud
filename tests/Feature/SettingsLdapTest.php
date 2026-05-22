@@ -27,6 +27,7 @@ class SettingsLdapTest extends TestCase
         $response->assertRedirect(route('settings.index', ['tab' => 'ldap']));
 
         $connection = Setting::forTenant($tenant->id)->where('key', 'ldap.connection')->firstOrFail();
+        $organizations = Setting::forTenant($tenant->id)->where('key', 'ldap.organization_sync')->firstOrFail();
         $customers = Setting::forTenant($tenant->id)->where('key', 'ldap.customer_sync')->firstOrFail();
         $subscriptions = Setting::forTenant($tenant->id)->where('key', 'ldap.subscription_sync')->firstOrFail();
 
@@ -34,6 +35,7 @@ class SettingsLdapTest extends TestCase
         $this->assertTrue($connection->value['enabled']);
         $this->assertSame(['ldap1.alpha.test', 'ldap2.alpha.test'], $connection->value['hosts']);
         $this->assertSame('secret', $connection->value['password']);
+        $this->assertSame(['ou=Skipped,dc=alpha,dc=test'], $organizations->value['excluded_ou_dns']);
         $this->assertSame('ou=customers,dc=alpha,dc=test', $customers->value['base_dn']);
         $this->assertSame('uid', $customers->value['map']['customer_code']);
         $this->assertSame('customerUid', $subscriptions->value['customer_attribute']);
@@ -97,6 +99,11 @@ class SettingsLdapTest extends TestCase
             'timeout' => 5,
             'sync_interval_minutes' => 15,
             'missing_action' => 'mark_inactive',
+            'organization_unique_attribute' => 'objectGUID',
+            'organization_match_attribute' => 'objectGUID',
+            'organization_map_code' => 'ou',
+            'organization_map_name' => 'ou',
+            'organization_map_description' => 'description',
             'customer_base_dn' => 'ou=customers,dc=alpha,dc=test',
             'customer_filter' => '(objectClass=inetOrgPerson)',
             'customer_unique_attribute' => 'uid',
@@ -106,6 +113,7 @@ class SettingsLdapTest extends TestCase
             'customer_map_email' => 'mail',
             'customer_map_phone' => 'telephoneNumber',
             'customer_map_mobile' => 'mobile',
+            'organization_excluded_ou_dns' => ['ou=Skipped,dc=alpha,dc=test'],
             'subscription_base_dn' => 'ou=subscriptions,dc=alpha,dc=test',
             'subscription_filter' => '(objectClass=*)',
             'subscription_unique_attribute' => 'uid',

@@ -5,12 +5,25 @@
     $subscriptionSync = $ldapSettings['subscription_sync'];
     $syncStatus = $ldapSettings['sync_status'];
     $hosts = implode("\n", $connection['hosts'] ?? []);
+    $excludedOuDns = old('organization_excluded_ou_dns', $organizationSync['excluded_ou_dns'] ?? []);
 @endphp
 
 <div class="space-y-6">
-    <form action="{{ route('settings.update.ldap') }}" method="POST" class="space-y-6">
+    <form
+        action="{{ route('settings.update.ldap') }}"
+        method="POST"
+        class="space-y-6"
+        x-data="ldapOuPicker({
+            discoverUrl: @js(route('settings.discover.ldap-organizational-units')),
+            csrfToken: @js(csrf_token()),
+            excludedDns: @js(array_values((array) $excludedOuDns))
+        })"
+    >
         @csrf
         @method('PUT')
+        <template x-for="dn in excludedDns" :key="'excluded-ou-' + dn">
+            <input type="hidden" name="organization_excluded_ou_dns[]" :value="dn">
+        </template>
 
         <x-ui.card title="LDAP Sync" subtitle="Configure one-way Active Directory / LDAP synchronization for tenant organizations, customers, and subscriptions.">
             <div class="mb-5 flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
@@ -69,14 +82,75 @@
             </div>
         </x-ui.card>
 
-        <x-ui.card title="Organization Mapping" subtitle="Optional mapping for App\Models\Organization. For Active Directory, this is usually an OU or group search.">
+        <x-ui.card title="Organizational Units" subtitle="Fetch Active Directory OUs, keep the ones that should sync selected, and skip only the branches you do not want.">
+            <div class="space-y-5">
+                <div class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">OU discovery</p>
+                        <p class="mt-1 text-sm text-gray-500">Searches under the LDAP Base DN above. Newly discovered OUs are included automatically unless unchecked.</p>
+                    </div>
+                    <button type="button" x-on:click="fetchOus" x-bind:disabled="loading" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                        <span x-show="! loading">Fetch OUs</span>
+                        <span x-cloak x-show="loading">Fetching...</span>
+                    </button>
+                </div>
+
+                <div x-cloak x-show="error" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" x-text="error"></div>
+
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div class="rounded-lg border border-gray-200 bg-white p-4">
+                        <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Discovered</p>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900" x-text="ous.length"></p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 bg-white p-4">
+                        <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Selected</p>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900" x-text="selectedCount()"></p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 bg-white p-4">
+                        <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Skipped</p>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900" x-text="excludedDns.length"></p>
+                    </div>
+                </div>
+
+                <div x-show="ous.length === 0" class="rounded-lg border border-dashed border-gray-300 bg-white p-5 text-sm text-gray-600">
+                    <p class="font-medium text-gray-900">No OUs fetched yet.</p>
+                    <p class="mt-1">Save your LDAP connection details or fetch now using the current form values. Existing skipped OU selections are preserved when you save.</p>
+                </div>
+
+                <div x-cloak x-show="ous.length > 0" class="space-y-3">
+                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div class="md:w-80">
+                            <label for="ou_search" class="sr-only">Search OUs</label>
+                            <input id="ou_search" type="search" x-model="query" placeholder="Search OUs" class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" x-on:click="selectVisible" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50">Select visible</button>
+                            <button type="button" x-on:click="skipVisible" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50">Skip visible</button>
+                        </div>
+                    </div>
+
+                    <div class="max-h-96 overflow-y-auto rounded-lg border border-gray-200">
+                        <template x-for="ou in filteredOus()" :key="ou.dn">
+                            <label class="flex cursor-pointer gap-3 border-b border-gray-100 px-4 py-3 last:border-b-0 hover:bg-gray-50">
+                                <input type="checkbox" class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" x-bind:checked="isSelected(ou)" x-on:change="toggleOu(ou, $event.target.checked)">
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-medium text-gray-900" x-text="ou.name"></span>
+                                    <span class="mt-0.5 block truncate text-xs text-gray-500" x-text="ou.path"></span>
+                                    <span class="mt-0.5 block truncate text-xs text-gray-400" x-text="ou.dn"></span>
+                                </span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card title="Organization Mapping" subtitle="Organizations are created from the selected OUs. Map the Organization fields from AD OU attributes.">
             <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
-                <x-ui.input.text name="organization_base_dn" label="Organization Base DN" :value="old('organization_base_dn', $organizationSync['base_dn'])" placeholder="ou=organizations,dc=example,dc=com" :error="$errors->first('organization_base_dn')" />
-                <x-ui.input.text name="organization_filter" label="Organization Filter" :value="old('organization_filter', $organizationSync['filter'])" placeholder="(|(objectClass=organizationalUnit)(objectClass=group))" :error="$errors->first('organization_filter')" />
                 <x-ui.input.text name="organization_unique_attribute" label="Unique Attribute" :value="old('organization_unique_attribute', $organizationSync['unique_attribute'])" placeholder="objectGUID" :error="$errors->first('organization_unique_attribute')" />
-                <x-ui.input.text name="organization_match_attribute" label="Organization Match Attribute" :value="old('organization_match_attribute', $organizationSync['match_attribute'])" placeholder="sAMAccountName" :error="$errors->first('organization_match_attribute')" />
-                <x-ui.input.text name="organization_map_code" label="code <-" :value="old('organization_map_code', $organizationSync['map']['code'])" placeholder="sAMAccountName" :error="$errors->first('organization_map_code')" />
-                <x-ui.input.text name="organization_map_name" label="name <-" :value="old('organization_map_name', $organizationSync['map']['name'])" placeholder="cn" :error="$errors->first('organization_map_name')" />
+                <x-ui.input.text name="organization_match_attribute" label="Organization Match Attribute" :value="old('organization_match_attribute', $organizationSync['match_attribute'])" placeholder="objectGUID" :error="$errors->first('organization_match_attribute')" />
+                <x-ui.input.text name="organization_map_code" label="code <-" :value="old('organization_map_code', $organizationSync['map']['code'])" placeholder="ou" :error="$errors->first('organization_map_code')" />
+                <x-ui.input.text name="organization_map_name" label="name <-" :value="old('organization_map_name', $organizationSync['map']['name'])" placeholder="ou" :error="$errors->first('organization_map_name')" />
                 <x-ui.input.text name="organization_map_description" label="description <-" :value="old('organization_map_description', $organizationSync['map']['description'])" placeholder="description" :error="$errors->first('organization_map_description')" />
                 <x-ui.input.text name="organization_map_status" label="status <-" :value="old('organization_map_status', $organizationSync['map']['status'])" placeholder="accountStatus" :error="$errors->first('organization_map_status')" />
             </div>
@@ -84,7 +158,7 @@
 
         <x-ui.card title="Customer Mapping" subtitle="Map LDAP customer entries into App\Models\Customer.">
             <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
-                <x-ui.input.text name="customer_base_dn" label="Customer Base DN" :value="old('customer_base_dn', $customerSync['base_dn'])" placeholder="ou=customers,dc=example,dc=com" :error="$errors->first('customer_base_dn')" />
+                <x-ui.input.text name="customer_base_dn" label="Customer Base DN Fallback" :value="old('customer_base_dn', $customerSync['base_dn'])" placeholder="ou=customers,dc=example,dc=com" :error="$errors->first('customer_base_dn')" />
                 <x-ui.input.text name="customer_filter" label="Customer Filter" :value="old('customer_filter', $customerSync['filter'])" placeholder="(objectClass=inetOrgPerson)" :error="$errors->first('customer_filter')" />
                 <x-ui.input.text name="customer_unique_attribute" label="Unique Attribute" :value="old('customer_unique_attribute', $customerSync['unique_attribute'])" placeholder="uid" :error="$errors->first('customer_unique_attribute')" />
                 <x-ui.input.text name="customer_match_attribute" label="Customer Match Attribute" :value="old('customer_match_attribute', $customerSync['match_attribute'])" placeholder="uid" :error="$errors->first('customer_match_attribute')" />
@@ -191,3 +265,107 @@
         </div>
     </x-ui.card>
 </div>
+
+@once
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    <script>
+        function ldapOuPicker(config) {
+            return {
+                discoverUrl: config.discoverUrl,
+                csrfToken: config.csrfToken,
+                excludedDns: config.excludedDns || [],
+                ous: [],
+                query: '',
+                loading: false,
+                error: null,
+
+                async fetchOus() {
+                    this.loading = true;
+                    this.error = null;
+
+                    try {
+                        const formData = new FormData(this.$root);
+
+                        const response = await fetch(this.discoverUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken,
+                            },
+                            body: formData,
+                        });
+
+                        const data = await response.json();
+
+                        if (! response.ok) {
+                            this.error = data.message || 'Unable to fetch organizational units.';
+                            return;
+                        }
+
+                        this.ous = data.organizational_units || [];
+                        this.syncExcludedFromFetchedOus();
+                    } catch (error) {
+                        this.error = 'Unable to fetch organizational units.';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                filteredOus() {
+                    const search = this.query.trim().toLowerCase();
+
+                    if (! search) {
+                        return this.ous;
+                    }
+
+                    return this.ous.filter((ou) => {
+                        return [ou.name, ou.path, ou.dn].some((value) => String(value || '').toLowerCase().includes(search));
+                    });
+                },
+
+                selectedCount() {
+                    if (this.ous.length === 0) {
+                        return 'All new';
+                    }
+
+                    return this.ous.filter((ou) => this.isSelected(ou)).length;
+                },
+
+                isSelected(ou) {
+                    return ! this.excludedDns.includes(ou.dn);
+                },
+
+                toggleOu(ou, selected) {
+                    if (selected) {
+                        this.excludedDns = this.excludedDns.filter((dn) => dn !== ou.dn);
+                        return;
+                    }
+
+                    if (! this.excludedDns.includes(ou.dn)) {
+                        this.excludedDns = [...this.excludedDns, ou.dn];
+                    }
+                },
+
+                selectVisible() {
+                    const visibleDns = this.filteredOus().map((ou) => ou.dn);
+                    this.excludedDns = this.excludedDns.filter((dn) => ! visibleDns.includes(dn));
+                },
+
+                skipVisible() {
+                    const skipped = this.filteredOus().map((ou) => ou.dn);
+                    this.excludedDns = Array.from(new Set([...this.excludedDns, ...skipped]));
+                },
+
+                syncExcludedFromFetchedOus() {
+                    const fetchedDns = this.ous.map((ou) => ou.dn);
+                    const staleExcludedDns = this.excludedDns.filter((dn) => ! fetchedDns.includes(dn));
+                    const fetchedExcludedDns = this.ous.filter((ou) => ! ou.selected).map((ou) => ou.dn);
+
+                    this.excludedDns = Array.from(new Set([...staleExcludedDns, ...fetchedExcludedDns]));
+                },
+            };
+        }
+    </script>
+@endonce
