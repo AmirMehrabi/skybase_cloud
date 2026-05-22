@@ -9,6 +9,7 @@ use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -21,7 +22,6 @@ class SubscriptionConnectionStatusSyncTest extends TestCase
         [$tenant, $subscription] = $this->createPppoeSubscription();
 
         RadiusAccountingRecord::create([
-            'tenant_id' => $tenant->id,
             'acctsessionid' => 'session-001',
             'acctuniqueid' => 'unique-001',
             'username' => $subscription->pppoe_username,
@@ -31,6 +31,7 @@ class SubscriptionConnectionStatusSyncTest extends TestCase
             'acctsessiontime' => 600,
             'acctinputoctets' => 1024,
             'acctoutputoctets' => 2048,
+            ...($this->radiusAccountingSupportsTenantId() ? ['tenant_id' => $tenant->id] : []),
         ]);
 
         $this->artisan('subscriptions:sync-connection-status')
@@ -113,5 +114,10 @@ class SubscriptionConnectionStatusSyncTest extends TestCase
             'timezone' => 'UTC',
             'status' => 'active',
         ]);
+    }
+
+    private function radiusAccountingSupportsTenantId(): bool
+    {
+        return Schema::hasColumn('radacct', 'tenant_id');
     }
 }

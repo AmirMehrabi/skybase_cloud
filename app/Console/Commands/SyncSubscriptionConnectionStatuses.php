@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -39,44 +40,60 @@ class SyncSubscriptionConnectionStatuses extends Command
             ->orderBy('id')
             ->get()
             ->each(function (Tenant $tenant) use (&$checked, &$online, &$offline, &$cleared): void {
-                $openUsernames = RadiusAccountingRecord::query()
-                    ->withoutGlobalScopes()
+                $subscriptions = Subscription::withoutGlobalScopes()
                     ->where('tenant_id', $tenant->id)
-                    ->openSession()
+                    ->orderBy('id')
+                    ->get();
+
+                $usernameList = $subscriptions
+                    ->filter(fn (Subscription $subscription): bool => $subscription->isPppoe() && filled($subscription->pppoe_username))
+                    ->pluck('pppoe_username')
+                    ->unique()
+                    ->values();
+
+                if ($usernameList->isEmpty()) {
+                    $this->clearNonPppoeStatuses($subscriptions, $cleared);
+
+                    return;
+                }
+
+                $openSessionsQuery = RadiusAccountingRecord::query()
+                    ->select('username')
+                    ->whereIn('username', $usernameList)
+                    ->openSession();
+
+                if (Schema::hasColumn('radacct', 'tenant_id')) {
+                    $openSessionsQuery->where('tenant_id', $tenant->id);
+                }
+
+                $openUsernames = $openSessionsQuery
                     ->pluck('username')
                     ->filter()
                     ->flip();
 
-                Subscription::withoutGlobalScopes()
-                    ->where('tenant_id', $tenant->id)
-                    ->orderBy('id')
-                    ->chunkById(200, function ($subscriptions) use (&$checked, &$online, &$offline, &$cleared, $openUsernames): void {
-                        foreach ($subscriptions as $subscription) {
-                            $checked++;
+                $checked += $subscriptions->filter(fn (Subscription $subscription): bool => $subscription->isPppoe() && filled($subscription->pppoe_username))->count();
 
-                            if (! $subscription->isPppoe() || blank($subscription->pppoe_username)) {
-                                if ($subscription->connection_status !== null || $subscription->connection_status_checked_at !== null) {
-                                    $subscription->forceFill([
-                                        'connection_status' => null,
-                                        'connection_status_checked_at' => now(),
-                                    ])->saveQuietly();
-                                }
+                foreach ($subscriptions as $subscription) {
+                    if (! $subscription->isPppoe() || blank($subscription->pppoe_username)) {
+                        $subscription->forceFill([
+                            'connection_status' => null,
+                            'connection_status_checked_at' => now(),
+                        ])->saveQuietly();
 
-                                $cleared++;
+                        $cleared++;
 
-                                continue;
-                            }
+                        continue;
+                    }
 
-                            $isOnline = $openUsernames->has((string) $subscription->pppoe_username);
+                    $isOnline = $openUsernames->has((string) $subscription->pppoe_username);
 
-                            $subscription->forceFill([
-                                'connection_status' => $isOnline ? 'online' : 'offline',
-                                'connection_status_checked_at' => now(),
-                            ])->saveQuietly();
+                    $subscription->forceFill([
+                        'connection_status' => $isOnline ? 'online' : 'offline',
+                        'connection_status_checked_at' => now(),
+                    ])->saveQuietly();
 
-                            $isOnline ? $online++ : $offline++;
-                        }
-                    });
+                    $isOnline ? $online++ : $offline++;
+                }
             });
 
         Log::info('Subscription connection status sync completed.', [
@@ -90,5 +107,24 @@ class SyncSubscriptionConnectionStatuses extends Command
         $this->components->info("Subscription connection status sync completed. Checked: {$checked}, online: {$online}, offline: {$offline}, cleared: {$cleared}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  Collection<int, Subscription>  $subscriptions
+     */
+    private function clearNonPppoeStatuses(Collection $subscriptions, int &$cleared): void
+    {
+        $subscriptions
+            ->filter(fn (Subscription $subscription): bool => ! $subscription->isPppoe() || blank($subscription->pppoe_username))
+            ->each(function (Subscription $subscription) use (&$cleared): void {
+                if ($subscription->connection_status !== null || $subscription->connection_status_checked_at !== null) {
+                    $subscription->forceFill([
+                        'connection_status' => null,
+                        'connection_status_checked_at' => now(),
+                    ])->saveQuietly();
+                }
+
+                $cleared++;
+            });
     }
 }
