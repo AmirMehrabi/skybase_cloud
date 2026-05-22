@@ -170,7 +170,6 @@ return new class extends Migration
 
         Schema::create('radacct', function (Blueprint $table): void {
             $table->bigIncrements('radacctid');
-            $table->string('tenant_id');
             $table->string('acctsessionid', 64);
             $table->string('acctuniqueid', 32)->nullable()->unique();
             $table->string('username', 64)->nullable()->index();
@@ -200,9 +199,8 @@ return new class extends Migration
             $table->string('framedinterfaceid', 44)->nullable();
             $table->string('delegatedipv6prefix', 45)->nullable();
 
-            $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-            $table->index(['tenant_id', 'username', 'acctstoptime'], 'radacct_tenant_username_stop_index');
-            $table->index(['tenant_id', 'acctsessionid'], 'radacct_tenant_session_index');
+            $table->index(['username', 'acctstoptime'], 'radacct_username_stop_index');
+            $table->index(['acctsessionid'], 'radacct_session_index');
         });
     }
 

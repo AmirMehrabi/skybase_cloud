@@ -2,13 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Models\RadiusAccountingRecord;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -57,16 +57,10 @@ class SyncSubscriptionConnectionStatuses extends Command
                     return;
                 }
 
-                $openSessionsQuery = RadiusAccountingRecord::query()
+                $openUsernames = DB::table('radacct')
                     ->select('username')
                     ->whereIn('username', $usernameList)
-                    ->openSession();
-
-                if (Schema::hasColumn('radacct', 'tenant_id')) {
-                    $openSessionsQuery->where('tenant_id', $tenant->id);
-                }
-
-                $openUsernames = $openSessionsQuery
+                    ->whereNull('acctstoptime')
                     ->pluck('username')
                     ->filter()
                     ->flip();

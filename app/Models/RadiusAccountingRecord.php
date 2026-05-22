@@ -14,7 +14,6 @@ class RadiusAccountingRecord extends Model
     protected $primaryKey = 'radacctid';
 
     protected $fillable = [
-        'tenant_id',
         'acctsessionid',
         'acctuniqueid',
         'username',
