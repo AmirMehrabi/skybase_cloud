@@ -107,7 +107,13 @@ RadiusCheck::withoutGlobalScopes()->updateOrCreate(
             );
         });
     }
-
+private function makeNtPasswordHash(string $password): string
+{
+    return strtoupper(hash(
+        'md4',
+        mb_convert_encoding($password, 'UTF-16LE', 'UTF-8')
+    ));
+}
     public function removeSubscription(Subscription $subscription): void
     {
         $this->removeUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
