@@ -108,24 +108,21 @@ class NetworkController extends Controller
         $tenantId = $this->tenantId();
         $sessions = $this->radiusAccountingUsage->sessionsForTenant($tenantId, now()->subYear()->startOfDay(), now());
         $usageData = $sessions->map(fn (array $session): array => $this->usageRow($session))->values();
-        $groupedUsage = $this->groupUsageRows($usageData);
         $summary = $this->radiusAccountingUsage->summary($sessions);
-        $todayTotal = $sessions
-            ->filter(fn (array $session): bool => ($session['last_activity_date'] ?? null) === now()->toDateString())
-            ->sum('total');
-        $monthTotal = $sessions
-            ->filter(fn (array $session): bool => filled($session['last_activity_date']) && str_starts_with((string) $session['last_activity_date'], now()->format('Y-m')))
-            ->sum('total');
-        $topUser = $groupedUsage->sortByDesc('total')->first();
+        $todaySessions = $sessions->filter(fn (array $session): bool => ($session['last_activity_date'] ?? null) === now()->toDateString());
+        $monthSessions = $sessions->filter(fn (array $session): bool => filled($session['last_activity_date']) && str_starts_with((string) $session['last_activity_date'], now()->format('Y-m')));
+        $monthUsageData = $monthSessions->map(fn (array $session): array => $this->usageRow($session))->values();
+        $monthSummary = $this->radiusAccountingUsage->summary($monthSessions);
+        $topUser = $this->groupUsageRows($monthUsageData)->sortByDesc('total')->first();
 
         $networkUsage = [
             'stats' => [
-                'totalToday' => (int) $todayTotal,
-                'totalMonth' => (int) $monthTotal,
+                'totalToday' => (int) $todaySessions->sum('total'),
+                'totalMonth' => (int) $monthSessions->sum('total'),
                 'activeUsers' => $summary['onlineSessions'],
                 'topUserUsage' => $topUser['total'] ?? 0,
                 'topUserName' => $topUser['customer'] ?? 'No usage yet',
-                'avgUsagePerUser' => $summary['avgPerCustomer'],
+                'avgUsagePerUser' => $monthSummary['avgPerCustomer'],
             ],
             'routerOptions' => Router::query()
                 ->where('tenant_id', $tenantId)

@@ -361,7 +361,7 @@ function dataUsage() {
         init() {
         },
 
-        get filteredUsage() {
+        get groupedFilteredUsage() {
             let filtered = this.usageData.filter(u => this.recordInDateRange(u));
 
             if (this.filters.router) {
@@ -382,6 +382,12 @@ function dataUsage() {
 
             const grouped = this.groupUsage(filtered);
 
+            return grouped;
+        },
+
+        get filteredUsage() {
+            const grouped = this.groupedFilteredUsage;
+
             this.pagination.total = grouped.length;
             const start = (this.pagination.currentPage - 1) * this.pagination.perPage;
             const end = start + this.pagination.perPage;
@@ -396,7 +402,7 @@ function dataUsage() {
         },
 
         get topUsers() {
-            return this.groupUsage(this.usageData.filter(u => this.recordInDateRange(u))).sort((a, b) => b.total - a.total).slice(0, 10);
+            return this.groupedFilteredUsage.slice(0, 10);
         },
 
         groupUsage(rows) {
@@ -522,7 +528,7 @@ function dataUsage() {
         },
 
         exportCSV() {
-            const rows = this.filteredUsage;
+            const rows = this.groupedFilteredUsage;
             const headers = ['Customer', 'Subscription', 'Router', 'IP Address', 'Download', 'Upload', 'Total', 'Sessions', 'Session Time', 'Last Activity'];
             const csvRows = [
                 headers,

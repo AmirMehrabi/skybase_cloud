@@ -15,10 +15,10 @@ use App\Services\BillingService;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\RadiusProvisioningService;
+use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class SubscriptionController extends Controller
@@ -531,7 +531,7 @@ class SubscriptionController extends Controller
             ->all();
     }
 
-    private function usageWindowStartForSubscription(Subscription $subscription): \Carbon\CarbonInterface
+    private function usageWindowStartForSubscription(Subscription $subscription): CarbonInterface
     {
         return $subscription->last_billed_at?->copy()->startOfDay()
             ?? $subscription->start_date?->copy()->startOfDay()
@@ -558,39 +558,5 @@ class SubscriptionController extends Controller
             'TB' => (int) round((float) $plan->data_limit * 1099511627776),
             default => (int) round((float) $plan->data_limit * 1073741824),
         };
-    }
-
-    private function formatBytes(int $bytes): string
-    {
-        if ($bytes <= 0) {
-            return '0 B';
-        }
-
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $size = (float) $bytes;
-        $index = 0;
-
-        while ($size >= 1024 && $index < count($units) - 1) {
-            $size /= 1024;
-            $index++;
-        }
-
-        return number_format($size, $index === 0 ? 0 : 2).' '.$units[$index];
-    }
-
-    private function formatDuration(int $seconds): string
-    {
-        if ($seconds <= 0) {
-            return '0m';
-        }
-
-        $hours = intdiv($seconds, 3600);
-        $minutes = intdiv($seconds % 3600, 60);
-
-        if ($hours > 0) {
-            return $hours.'h '.($minutes > 0 ? $minutes.'m' : '');
-        }
-
-        return $minutes.'m';
     }
 }
