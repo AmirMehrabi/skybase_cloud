@@ -2,7 +2,7 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('customersIndex', () => ({
         customers: [],
         stats: { total: 0, active: 0, suspended: 0, overdue: 0 },
-        filterOptions: { statuses: [], plans: [], sites: [], routers: [] },
+        filterOptions: { statuses: [], plans: [], sites: [], routers: [], organizations: [] },
 
         // Filters
         search: '',
@@ -10,6 +10,7 @@ document.addEventListener('alpine:init', () => {
         plan: '',
         site: '',
         router: '',
+        organization: '',
 
         // Pagination
         perPage: 15,
@@ -40,6 +41,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('plan', () => this.fetchCustomers());
             this.$watch('site', () => this.fetchCustomers());
             this.$watch('router', () => this.fetchCustomers());
+            this.$watch('organization', () => this.fetchCustomers());
         },
 
         // API calls
@@ -54,6 +56,7 @@ document.addEventListener('alpine:init', () => {
                     plan: this.plan,
                     site: this.site,
                     router: this.router,
+                    organization: this.organization,
                 });
 
                 const response = await fetch(`/customers/data?${params}`);
@@ -111,7 +114,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         get hasActiveFilters() {
-            return this.search || this.status || this.plan || this.site || this.router;
+            return this.search || this.status || this.plan || this.site || this.router || this.organization;
         },
 
         // Actions
@@ -121,6 +124,7 @@ document.addEventListener('alpine:init', () => {
             this.plan = '';
             this.site = '';
             this.router = '';
+            this.organization = '';
             this.currentPage = 1;
             this.fetchCustomers();
         },

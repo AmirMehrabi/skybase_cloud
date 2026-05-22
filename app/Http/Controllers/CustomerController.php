@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Models\Customer;
+use App\Models\Organization;
 use App\Services\ActivityLogFormatter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,9 +27,10 @@ class CustomerController extends Controller
      */
     public function data(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'status', 'plan', 'site', 'router']);
+        $filters = $request->only(['search', 'status', 'plan', 'site', 'router', 'organization']);
 
         $customers = Customer::filter($filters)
+            ->with('organization')
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('per_page', 15))
             ->through(fn ($customer) => [
@@ -36,6 +38,8 @@ class CustomerController extends Controller
                 'name' => $customer->full_name,
                 'customer_code' => $customer->customer_code,
                 'email' => $customer->email,
+                'organization' => $customer->organization?->name ?? 'Unassigned',
+                'organization_id' => $customer->organization_id,
                 'plan' => $customer->plan,
                 'site' => $customer->site,
                 'router' => $customer->router,
@@ -79,7 +83,9 @@ class CustomerController extends Controller
      */
     public function create(): View
     {
-        return view('customers.create');
+        return view('customers.create', [
+            'organizations' => Organization::query()->active()->orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -133,6 +139,7 @@ class CustomerController extends Controller
             'subscriptions.plan',
             'subscriptions.router',
             'invoices',
+            'organization',
         ]);
 
         $activityLog = app(ActivityLogFormatter::class)->forSubject($customer, $customer->tenant_id);
@@ -150,7 +157,10 @@ class CustomerController extends Controller
     {
         $this->authorizeTenantAccess($customer);
 
-        return view('customers.edit', ['customer' => $customer]);
+        return view('customers.edit', [
+            'customer' => $customer,
+            'organizations' => Organization::query()->active()->orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     /**

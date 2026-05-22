@@ -15,6 +15,17 @@
         </a>
     </li>
 
+    <!-- Organizations -->
+    <li>
+        <a href="{{ route('organizations.index') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg border text-sm font-medium transition {{ str_starts_with($currentRoute, 'organizations.') ? 'border-white/15 bg-white/[0.12] text-white shadow-sm' : 'border-transparent text-teal-50/85 hover:border-white/10 hover:bg-white/10 hover:text-white' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H5m2 0h4m0 0v-5a2 2 0 012-2h0a2 2 0 012 2v5m-4 0h4M9 7h1m4 0h1M9 11h1m4 0h1"></path>
+            </svg>
+            <span>Organizations</span>
+        </a>
+    </li>
+
     <!-- Customers -->
     <li>
         <a href="{{ route('customers.index') }}"

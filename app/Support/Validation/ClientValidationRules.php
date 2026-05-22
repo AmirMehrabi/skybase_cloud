@@ -11,6 +11,7 @@ class ClientValidationRules
     {
         $rules = [
             'customer_type' => ['required', 'in:individual,business'],
+            'organization_id' => [],
             'first_name' => ['required_if:customer_type,individual', 'max:255'],
             'last_name' => ['required_if:customer_type,individual', 'max:255'],
             'company_name' => ['required_if:customer_type,business', 'max:255'],

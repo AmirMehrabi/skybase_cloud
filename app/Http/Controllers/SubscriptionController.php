@@ -11,6 +11,7 @@ use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
+use App\Services\OrganizationBillingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ use Illuminate\View\View;
 
 class SubscriptionController extends Controller
 {
-    public function __construct(protected BillingService $billing) {}
+    public function __construct(
+        protected BillingService $billing,
+        protected OrganizationBillingService $organizationBilling,
+    ) {}
 
     /**
      * Display a listing of the resource.
@@ -82,8 +86,8 @@ class SubscriptionController extends Controller
     public function create(Request $request): View
     {
         $customerId = $request->query('customer_id');
-        $customer = $customerId ? Customer::findOrFail($customerId) : null;
-        $customers = Customer::get();
+        $customer = $customerId ? Customer::with('organization.defaultPlan')->findOrFail($customerId) : null;
+        $customers = Customer::with('organization.defaultPlan')->orderBy('name')->get();
         $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
@@ -100,6 +104,7 @@ class SubscriptionController extends Controller
     {
         $validated = $request->validated();
 
+        $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes($validated);
         $validated['tenant_id'] = auth()->user()->tenant_id ?? null;
         $validated['subscription_code'] = Subscription::generateSubscriptionCode();
 
@@ -135,6 +140,13 @@ class SubscriptionController extends Controller
                 'recurring' => $itemData['recurring'],
                 'billing_cycle' => $itemData['billing_cycle'] ?? $validated['billing_cycle'],
             ]);
+
+            if ($item->item_type === 'plan' && $subscription->customer?->organization?->billing_enabled) {
+                $this->organizationBilling->applyDefaultsToPlanItem($item, $subscription->customer->organization);
+                $totalPrice += $item->total;
+
+                continue;
+            }
 
             $item->calculateTotals();
             $totalPrice += $item->total;
@@ -181,7 +193,7 @@ class SubscriptionController extends Controller
      */
     public function edit(Subscription $subscription): View
     {
-        $subscription->load(['items']);
+        $subscription->load(['items', 'customer.organization.defaultPlan']);
         $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
@@ -212,6 +224,10 @@ class SubscriptionController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        if (array_key_exists('plan_id', $validated)) {
+            $this->organizationBilling->assertPlanAllowedForCustomer($subscription->customer_id, (int) $validated['plan_id']);
+        }
+
         // Handle activation
         if (isset($validated['status']) && $validated['status'] === 'active' && ! $subscription->activation_date) {
             $validated['activation_date'] = now();
@@ -221,7 +237,16 @@ class SubscriptionController extends Controller
             $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now());
         }
 
+        $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes([
+            ...$subscription->only(['customer_id', 'plan_id', 'billing_cycle', 'billing_enabled']),
+            ...$validated,
+        ]);
+
         $subscription->update($validated);
+
+        if ($subscription->customer?->organization?->billing_enabled) {
+            $this->organizationBilling->applyDefaultsToExistingSubscription($subscription->fresh(['items']), $subscription->customer->organization);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

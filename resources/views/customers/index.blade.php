@@ -122,6 +122,13 @@
                 </template>
             </select>
 
+            <select x-model="organization" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+                <option value="">All Organizations</option>
+                <template x-for="option in filterOptions.organizations" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                </template>
+            </select>
+
             <select x-model="plan" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                 <option value="">All Plans</option>
                 <template x-for="option in filterOptions.plans" :key="option.value">
@@ -152,6 +159,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Organization</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Plan</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Site / Router</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">IP Address</th>
@@ -170,6 +178,9 @@
                                     <span class="text-xs text-gray-500" x-text="customer.customer_code"></span>
                                     <span class="text-xs text-gray-400" x-text="customer.email"></span>
                                 </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-sm text-gray-700" x-text="customer.organization"></span>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="text-sm text-gray-700" x-text="customer.plan"></span>
@@ -240,7 +251,7 @@
                     </template>
 
                     <tr x-show="paginatedCustomers.length === 0" style="display: none;">
-                        <td colspan="8" class="px-6 py-12 text-center">
+                        <td colspan="9" class="px-6 py-12 text-center">
                             <div class="flex flex-col items-center justify-center space-y-3">
                                 <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
                                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

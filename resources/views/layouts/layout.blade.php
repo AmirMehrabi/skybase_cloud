@@ -3,6 +3,7 @@
     $isFeaturesPage = request()->is('features');
     $isPricingPage = request()->is('pricing');
     $isContactPage = request()->is('contact');
+    $isChangelogPage = request()->is('changelog');
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -70,6 +71,7 @@
                     <a href="{{ url('/') }}" class="rounded-lg border px-4 py-2 text-sm font-bold transition {{ $isHomePage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Home</a>
                     <a href="{{ url('/features') }}" class="rounded-lg border px-4 py-2 text-sm font-bold transition {{ $isFeaturesPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Features</a>
                     <a href="{{ url('/pricing') }}" class="rounded-lg border px-4 py-2 text-sm font-bold transition {{ $isPricingPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Pricing</a>
+                    <a href="{{ route('changelog') }}" class="rounded-lg border px-4 py-2 text-sm font-bold transition {{ $isChangelogPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Changelog</a>
                     <a href="{{ route('contact.show') }}" class="rounded-lg border px-4 py-2 text-sm font-bold transition {{ $isContactPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white shadow-[0_10px_24px_rgba(13,47,53,0.18)]' : 'border-slate-900/10 bg-white/80 text-slate-700 shadow-sm hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950' }}">Contact</a>
                 </div>
 
@@ -112,6 +114,7 @@
                         <a x-on:click="mobileMenuOpen = false" href="{{ url('/') }}" class="rounded-lg border px-4 py-3 text-sm font-bold transition {{ $isHomePage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Home</a>
                         <a x-on:click="mobileMenuOpen = false" href="{{ url('/features') }}" class="rounded-lg border px-4 py-3 text-sm font-bold transition {{ $isFeaturesPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Features</a>
                         <a x-on:click="mobileMenuOpen = false" href="{{ url('/pricing') }}" class="rounded-lg border px-4 py-3 text-sm font-bold transition {{ $isPricingPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Pricing</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ route('changelog') }}" class="rounded-lg border px-4 py-3 text-sm font-bold transition {{ $isChangelogPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Changelog</a>
                         <a x-on:click="mobileMenuOpen = false" href="{{ route('contact.show') }}" class="rounded-lg border px-4 py-3 text-sm font-bold transition {{ $isContactPage ? 'border-[#0d2f35] bg-[#0d2f35] text-white' : 'border-slate-900/10 bg-[#f6f1e8] text-slate-700' }}">Contact</a>
                     </div>
                     <div class="border-t border-slate-900/10 bg-[#0d2f35] p-4 text-white">

@@ -17,6 +17,7 @@ class Customer extends Model implements LdapImportable
 
     protected $fillable = [
         'tenant_id',
+        'organization_id',
         'customer_code',
         'customer_type',
         'first_name',
@@ -74,6 +75,11 @@ class Customer extends Model implements LdapImportable
         return $this->belongsTo(Tenant::class);
     }
 
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
@@ -111,6 +117,8 @@ class Customer extends Model implements LdapImportable
             });
         })->when($filters['status'] ?? null, function ($query, $status) {
             $query->where('status', $status);
+        })->when($filters['organization'] ?? null, function ($query, $organization) {
+            $query->where('organization_id', $organization);
         });
     }
 
@@ -184,6 +192,15 @@ class Customer extends Model implements LdapImportable
                 ['value' => 'inactive', 'label' => 'Inactive'],
                 ['value' => 'suspended', 'label' => 'Suspended'],
             ],
+            'organizations' => Organization::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Organization $organization) => [
+                    'value' => (string) $organization->id,
+                    'label' => $organization->name,
+                ])
+                ->values()
+                ->all(),
         ];
     }
 

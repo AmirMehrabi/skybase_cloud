@@ -35,6 +35,11 @@ class PagesController extends Controller
         return view('features');
     }
 
+    public function changelog(): View
+    {
+        return view('changelog');
+    }
+
     public function governmentBrochure(): View
     {
         return view('brochures.government-fa');

@@ -15,6 +15,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\NetworkController;
+use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ReportController as GeneralReportController;
@@ -32,6 +33,9 @@ Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 
 // Features page
 Route::get('/features', [PagesController::class, 'features'])->name('features');
+
+// Changelog page
+Route::get('/changelog', [PagesController::class, 'changelog'])->name('changelog');
 
 // Government brochure
 Route::get('/brochure/government-fa', [PagesController::class, 'governmentBrochure'])->name('brochures.government-fa');
@@ -84,6 +88,18 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     });
 
     // Customer Management Routes
+    Route::prefix('organizations')->name('organizations.')->group(function () {
+        Route::get('/', [OrganizationController::class, 'index'])->name('index');
+        Route::get('/data', [OrganizationController::class, 'data'])->name('data');
+        Route::get('/stats', [OrganizationController::class, 'stats'])->name('stats');
+        Route::get('/create', [OrganizationController::class, 'create'])->name('create');
+        Route::post('/', [OrganizationController::class, 'store'])->name('store');
+        Route::get('/{organization}', [OrganizationController::class, 'show'])->name('show');
+        Route::get('/{organization}/edit', [OrganizationController::class, 'edit'])->name('edit');
+        Route::put('/{organization}', [OrganizationController::class, 'update'])->name('update');
+        Route::delete('/{organization}', [OrganizationController::class, 'destroy'])->name('destroy');
+    });
+
     Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('/', [CustomerController::class, 'index'])->name('index');
         Route::get('/data', [CustomerController::class, 'data'])->name('data');

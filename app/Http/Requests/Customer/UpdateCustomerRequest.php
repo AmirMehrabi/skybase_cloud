@@ -43,6 +43,7 @@ class UpdateCustomerRequest extends FormRequest
         $this->merge([
             'tax_exempt' => $this->boolean('tax_exempt'),
             'billing_enabled' => $this->boolean('billing_enabled', true),
+            'organization_id' => $this->input('organization_id') ?: null,
         ]);
     }
 }

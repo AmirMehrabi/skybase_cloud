@@ -115,6 +115,14 @@ class Subscription extends Model implements LdapImportable
             ->whereIn('status', ['pending', 'active'])
             ->whereHas('customer', function ($query) {
                 $query->where('billing_enabled', true);
+            })
+            ->where(function ($query) {
+                $query->whereDoesntHave('customer.organization', function ($query) {
+                    $query->where('billing_enabled', true);
+                })->orWhereHas('customer.organization', function ($query) {
+                    $query->where('billing_enabled', true)
+                        ->whereColumn('organizations.default_plan_id', 'subscriptions.plan_id');
+                });
             });
     }
 
@@ -163,12 +171,19 @@ class Subscription extends Model implements LdapImportable
     {
         return (bool) $this->billing_enabled
             && $this->status !== 'cancelled'
-            && (bool) $this->customer?->billing_enabled;
+            && (bool) $this->customer?->billing_enabled
+            && (! $this->customer?->organization?->billing_enabled
+                || (int) $this->plan_id === (int) $this->customer->organization->default_plan_id);
     }
 
     public function effectiveGracePeriodDays(): int
     {
-        return (int) ($this->grace_period_days ?? $this->plan?->grace_period_days ?? 7);
+        return (int) (
+            $this->grace_period_days
+            ?? ($this->customer?->organization?->billing_enabled ? $this->customer->organization->default_grace_period_days : null)
+            ?? $this->plan?->grace_period_days
+            ?? 7
+        );
     }
 
     public function billingPeriodEndFor(CarbonInterface $periodStart): CarbonInterface

@@ -83,6 +83,19 @@
                     <input type="text" id="customer_code" :value="generatedCustomerCode" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
                 </div>
 
+                <div>
+                    <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">Organization</label>
+                    <select name="organization_id" id="organization_id" x-model="form.organization_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                        <option value="">Unassigned</option>
+                        @foreach($organizations as $organization)
+                            <option value="{{ $organization->id }}">{{ $organization->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('organization_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- National ID -->
                 <template x-if="form.customer_type === 'individual'">
                     <div>
@@ -265,6 +278,7 @@ function customerCreateForm() {
         submitting: false,
         form: {
             customer_type: '{{ old('customer_type', 'individual') }}',
+            organization_id: @js(old('organization_id', request('organization_id', ''))),
             first_name: '{{ old('first_name') }}',
             last_name: '{{ old('last_name') }}',
             company_name: '{{ old('company_name') }}',

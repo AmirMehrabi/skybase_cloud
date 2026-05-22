@@ -22,6 +22,10 @@ class CustomerValidation
 
         $rules = [
             'customer_type' => ['required', 'in:individual,business'],
+            'organization_id' => [
+                'nullable',
+                Rule::exists('organizations', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+            ],
             'first_name' => ['exclude_unless:customer_type,individual', 'required', 'string', 'max:255'],
             'last_name' => ['exclude_unless:customer_type,individual', 'required', 'string', 'max:255'],
             'company_name' => ['exclude_unless:customer_type,business', 'required', 'string', 'max:255'],

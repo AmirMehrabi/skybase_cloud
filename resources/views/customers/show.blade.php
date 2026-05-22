@@ -12,6 +12,7 @@
         'name' => $customer->full_name,
         'customer_code' => $customer->customer_code,
         'customer_type' => $customer->customer_type,
+        'organization' => $customer->organization?->name ?? 'Unassigned',
         'national_id' => $customer->national_id,
         'email' => $customer->email,
         'phone' => $customer->phone,
@@ -134,6 +135,7 @@
                         <div class="space-y-3 text-sm">
                             <div class="flex justify-between"><span class="text-gray-500">Customer Code</span><span class="font-medium text-gray-900" x-text="customer?.customer_code || ''"></span></div>
                             <div class="flex justify-between"><span class="text-gray-500">Type</span><span class="font-medium text-gray-900 capitalize" x-text="customer?.customer_type || ''"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Organization</span><span class="font-medium text-gray-900" x-text="customer?.organization || 'Unassigned'"></span></div>
                             <div class="flex justify-between"><span class="text-gray-500">National ID</span><span class="font-medium text-gray-900" x-text="customer?.national_id || '—'"></span></div>
                             <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="font-medium text-gray-900 capitalize" x-text="customer?.status || ''"></span></div>
                         </div>

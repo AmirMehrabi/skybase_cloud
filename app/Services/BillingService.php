@@ -13,7 +13,7 @@ class BillingService
 {
     public function createInvoiceForSubscription(Subscription $subscription, ?CarbonInterface $periodStart = null, bool $includeOneTimeItems = false): ?Invoice
     {
-        $subscription->loadMissing(['customer', 'plan', 'items']);
+        $subscription->loadMissing(['customer.organization', 'plan', 'items']);
 
         if (! $subscription->isBillable()) {
             return null;
@@ -21,7 +21,7 @@ class BillingService
 
         return DB::transaction(function () use ($subscription, $periodStart, $includeOneTimeItems) {
             $lockedSubscription = Subscription::withoutGlobalScopes()
-                ->with(['customer', 'plan', 'items'])
+                ->with(['customer.organization', 'plan', 'items'])
                 ->lockForUpdate()
                 ->findOrFail($subscription->id);
 
@@ -118,11 +118,20 @@ class BillingService
         $created = 0;
 
         Subscription::withoutGlobalScopes()
-            ->with(['customer', 'plan', 'items'])
+            ->with(['customer.organization', 'plan', 'items'])
             ->where('billing_enabled', true)
             ->whereIn('status', ['pending', 'active'])
             ->whereHas('customer', function ($query) {
                 $query->withoutGlobalScopes()->where('billing_enabled', true);
+            })
+            ->where(function ($query) {
+                $query->whereDoesntHave('customer.organization', function ($query) {
+                    $query->withoutGlobalScopes()->where('billing_enabled', true);
+                })->orWhereHas('customer.organization', function ($query) {
+                    $query->withoutGlobalScopes()
+                        ->where('billing_enabled', true)
+                        ->whereColumn('organizations.default_plan_id', 'subscriptions.plan_id');
+                });
             })
             ->where(function ($query) use ($asOf) {
                 $query->whereNull('next_billing_date')
@@ -159,6 +168,15 @@ class BillingService
             ->where('billing_enabled', true)
             ->whereHas('customer', function ($query) {
                 $query->withoutGlobalScopes()->where('billing_enabled', true);
+            })
+            ->where(function ($query) {
+                $query->whereDoesntHave('customer.organization', function ($query) {
+                    $query->withoutGlobalScopes()->where('billing_enabled', true);
+                })->orWhereHas('customer.organization', function ($query) {
+                    $query->withoutGlobalScopes()
+                        ->where('billing_enabled', true)
+                        ->whereColumn('organizations.default_plan_id', 'subscriptions.plan_id');
+                });
             })
             ->whereHas('invoices', function ($query) use ($asOf) {
                 $query->withoutGlobalScopes()

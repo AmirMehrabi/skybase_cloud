@@ -50,7 +50,7 @@
                         <input type="text" :value="'{{ $customer->full_name }} ({{ $customer->customer_code }})'" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
                         <input type="hidden" name="customer_id" value="{{ $customer->id }}">
                     @else
-                        <select name="customer_id" id="customer_id" x-model="form.customer_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="applyOrganizationDefaults()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
                             <option value="">Select a customer</option>
                             @foreach($customers ?? [] as $cust)
                                 <option value="{{ $cust->id }}">{{ $cust->full_name }} ({{ $cust->customer_code }})</option>
@@ -62,10 +62,14 @@
                     @enderror
                 </div>
 
+                <div x-show="selectedOrganizationBilling" class="lg:col-span-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900" style="display: none;">
+                    Billing is managed by <span class="font-semibold" x-text="selectedOrganizationBilling?.organization"></span>. The default service, cycle, grace period, discount, and tax will be enforced.
+                </div>
+
                 <!-- Plan -->
                 <div>
                     <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-1">Service Plan <span class="text-red-500">*</span></label>
-                    <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                    <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
                         <option value="">Select a plan</option>
                         @foreach($plans as $plan)
                             <option value="{{ $plan->id }}" data-price="{{ $plan->price }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
@@ -399,14 +403,14 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
                         <div class="relative">
                             <span class="absolute left-3 top-2 text-gray-500">$</span>
-                            <input type="number" step="0.01" x-model="items[0].unit_price" @input="calculateItemTotal(0)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-7 pr-3 border">
+                            <input type="number" step="0.01" x-model="items[0].unit_price" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-7 pr-3 border disabled:bg-gray-50">
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
                         <div class="flex gap-2">
-                            <input type="number" step="0.01" x-model="items[0].discount_amount" @input="calculateItemTotal(0)" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
-                            <select x-model="items[0].discount_type" @change="calculateItemTotal(0)" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                            <input type="number" step="0.01" x-model="items[0].discount_amount" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border disabled:bg-gray-50">
+                            <select x-model="items[0].discount_type" @change="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50">
                                 <option value="none">None</option>
                                 <option value="fixed">$</option>
                                 <option value="percentage">%</option>
@@ -416,7 +420,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tax (%)</label>
                         <div class="relative">
-                            <input type="number" step="0.01" x-model="items[0].tax_percentage" @input="calculateItemTotal(0)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                            <input type="number" step="0.01" x-model="items[0].tax_percentage" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border disabled:bg-gray-50">
                             <span class="absolute right-3 top-2 text-gray-500">%</span>
                         </div>
                     </div>
@@ -568,7 +572,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                     <label for="billing_cycle" class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle <span class="text-red-500">*</span></label>
-                    <select name="billing_cycle" id="billing_cycle" x-model="form.billing_cycle" @change="updateBillingCycle()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                    <select name="billing_cycle" id="billing_cycle" x-model="form.billing_cycle" @change="updateBillingCycle()" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly (3 months)</option>
                         <option value="yearly">Yearly (12 months)</option>
@@ -580,7 +584,7 @@
                 <div>
                     <label for="grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Grace Period</label>
                     <div class="flex gap-2">
-                        <input type="number" min="0" max="365" step="1" name="grace_period_days" id="grace_period_days" x-model="form.grace_period_days" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" placeholder="Plan default">
+                        <input type="number" min="0" max="365" step="1" name="grace_period_days" id="grace_period_days" x-model="form.grace_period_days" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border disabled:bg-gray-50" placeholder="Plan default">
                         <span class="inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">days</span>
                     </div>
                     @error('grace_period_days')
@@ -594,7 +598,7 @@
                     </div>
                     <div>
                         <input type="hidden" name="billing_enabled" value="0">
-                        <input type="checkbox" name="billing_enabled" id="billing_enabled" value="1" x-model="form.billing_enabled" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <input type="checkbox" name="billing_enabled" id="billing_enabled" value="1" x-model="form.billing_enabled" :disabled="!!selectedOrganizationBilling" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
                     </div>
                     @error('billing_enabled')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -657,6 +661,27 @@
 </div>
 
 @push('scripts')
+@php
+    $customerBillingProfiles = $customers
+        ->mapWithKeys(function ($customer) {
+            if (! $customer->organization?->billing_enabled) {
+                return [];
+            }
+
+            return [
+                (string) $customer->id => [
+                    'organization' => $customer->organization->name,
+                    'plan_id' => (string) $customer->organization->default_plan_id,
+                    'billing_cycle' => $customer->organization->default_billing_cycle,
+                    'grace_period_days' => $customer->organization->default_grace_period_days,
+                    'discount_type' => $customer->organization->default_discount_type,
+                    'discount_amount' => (float) $customer->organization->default_discount_amount,
+                    'tax_percentage' => (float) $customer->organization->default_tax_percentage,
+                ],
+            ];
+        })
+        ->all();
+@endphp
 <script>
 function subscriptionCreateForm() {
     return {
@@ -688,6 +713,7 @@ function subscriptionCreateForm() {
 
         // IP pools data
         ipPools: @json( $ipPools ),
+        customerBillingProfiles: @json($customerBillingProfiles),
 
         // Plan line item (always present)
         items: [{
@@ -746,11 +772,16 @@ function subscriptionCreateForm() {
             return this.suggestNextIp(network, cidr);
         },
 
+        get selectedOrganizationBilling() {
+            return this.customerBillingProfiles[String(this.form.customer_id)] || null;
+        },
+
         init() {
             // Pre-fill customer if provided
             @if($customer)
             this.updateCustomerInfo('{{ $customer->full_name }}', '{{ $customer->id }}');
             @endif
+            this.applyOrganizationDefaults();
         },
 
         updatePlanPrice() {
@@ -766,6 +797,23 @@ function subscriptionCreateForm() {
 
         updateCustomerInfo(name, id) {
             this.form.customer_id = id;
+            this.applyOrganizationDefaults();
+        },
+
+        applyOrganizationDefaults() {
+            const defaults = this.selectedOrganizationBilling;
+
+            if (!defaults) return;
+
+            this.form.plan_id = defaults.plan_id;
+            this.form.billing_cycle = defaults.billing_cycle;
+            this.form.grace_period_days = defaults.grace_period_days;
+            this.form.billing_enabled = true;
+            this.items[0].discount_type = defaults.discount_type;
+            this.items[0].discount_amount = defaults.discount_amount;
+            this.items[0].tax_percentage = defaults.tax_percentage;
+            this.updatePlanPrice();
+            this.updateBillingCycle();
         },
 
         updateBillingCycle() {
