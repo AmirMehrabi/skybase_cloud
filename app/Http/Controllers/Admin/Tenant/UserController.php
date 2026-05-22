@@ -71,8 +71,14 @@ class UserController extends Controller
             'send_invite' => ['nullable', 'boolean'],
         ]);
 
+        $tenantId = tenant_id() ?? $request->user()?->tenant_id;
+
+        if (! $tenantId) {
+            abort(403, 'Tenant context is required.');
+        }
+
         $user = User::create([
-            'tenant_id' => tenant_id(),
+            'tenant_id' => $tenantId,
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -82,7 +88,7 @@ class UserController extends Controller
 
         // Log activity
         ActivityLog::create([
-            'tenant_id' => tenant_id(),
+            'tenant_id' => $tenantId,
             'user_id' => auth()->id(),
             'action' => 'user.created',
             'model_type' => User::class,

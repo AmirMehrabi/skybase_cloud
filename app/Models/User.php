@@ -44,6 +44,15 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (empty($user->tenant_id)) {
+                $user->tenant_id = tenant_id() ?? auth()->user()?->tenant_id;
+            }
+        });
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

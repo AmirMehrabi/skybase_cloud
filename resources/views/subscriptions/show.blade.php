@@ -28,67 +28,30 @@ $subscription = [
     'grace_period_days' => $subscription->effectiveGracePeriodDays(),
     'next_billing_date' => optional($subscription->next_billing_date ?? $subscription->created_at?->copy()->addMonth())->toDateString(),
     'last_billing_date' => optional($subscription->last_billed_at ?? $subscription->created_at)->toDateString(),
-    'auto_renew' => true,
+    'auto_renew' => (bool) $subscription->billing_enabled,
     'contract_start' => optional($subscription->start_date ?? $subscription->activation_date ?? $subscription->created_at)->toDateString(),
     'contract_end' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addYear())->toDateString(),
-    'installation_fee' => 0.00,
-    'discount_percentage' => 0,
-    'tax_percentage' => 0,
+    'discount_percentage' => filled($subscription->base_price) && (float) $subscription->base_price > 0
+        ? (int) round(((float) $subscription->discount_amount / (float) $subscription->base_price) * 100)
+        : 0,
+    'tax_percentage' => filled($subscription->base_price) && (float) $subscription->base_price > 0
+        ? (int) round(((float) $subscription->tax_amount / (float) $subscription->base_price) * 100)
+        : 0,
     'monthly_price' => (float) ($subscription->plan?->price ?? $subscription->total_price ?? 0),
     'total_price' => (float) $subscription->total_price,
     'balance' => (float) ($subscription->customer?->balance ?? 0),
-    'data_quota' => 0,
-    'data_used' => 0,
+    'data_quota' => (float) ($usageSummary['quota_gb'] ?? 0),
+    'data_used' => (float) ($usageSummary['total_gb'] ?? 0),
     'created_at' => optional($subscription->created_at)->toDateString(),
-    'termination_fee' => 0.00,
-    'speed_download' => 0,
-    'speed_upload' => 0,
-    'burst_mode' => false,
-    'throttle_over_quota' => false,
+    'speed_download' => (int) ($subscription->plan?->download_speed ?? 0),
+    'speed_upload' => (int) ($subscription->plan?->upload_speed ?? 0),
+    'burst_mode' => filled($subscription->plan?->burst_download) || filled($subscription->plan?->burst_upload),
 ];
 
-$invoices = [
-    [
-        'id' => 1,
-        'invoice_number' => 'INV-2025-0150',
-        'amount' => 97.19,
-        'due_date' => '2025-02-15',
-        'status' => 'paid',
-        'paid_date' => '2025-02-14',
-    ],
-    [
-        'id' => 2,
-        'invoice_number' => 'INV-2025-0145',
-        'amount' => 97.19,
-        'due_date' => '2025-01-15',
-        'status' => 'paid',
-        'paid_date' => '2025-01-14',
-    ],
-    [
-        'id' => 3,
-        'invoice_number' => 'INV-2024-0189',
-        'amount' => 97.19,
-        'due_date' => '2024-12-15',
-        'status' => 'paid',
-        'paid_date' => '2024-12-14',
-    ],
-    [
-        'id' => 4,
-        'invoice_number' => 'INV-2024-0132',
-        'amount' => 97.19,
-        'due_date' => '2024-11-15',
-        'status' => 'paid',
-        'paid_date' => '2024-11-13',
-    ],
-];
-
-$dailySessions = [
-    ['date' => '2025-02-16', 'duration' => '24h', 'download' => '12.5 GB', 'upload' => '2.1 GB'],
-    ['date' => '2025-02-15', 'duration' => '24h', 'download' => '15.2 GB', 'upload' => '3.4 GB'],
-    ['date' => '2025-02-14', 'duration' => '24h', 'download' => '11.8 GB', 'upload' => '1.9 GB'],
-    ['date' => '2025-02-13', 'duration' => '24h', 'download' => '14.3 GB', 'upload' => '2.8 GB'],
-    ['date' => '2025-02-12', 'duration' => '24h', 'download' => '13.7 GB', 'upload' => '2.5 GB'],
-];
+$usagePercent = ($usageSummary['usage_percent'] ?? 0);
+$quotaLabel = $usageSummary['quota_label'] ?? 'Unlimited';
+$billingInvoices = collect($billingInvoices ?? []);
+$usageSessions = collect($usageSessions ?? []);
 
 function getStatusBadgeClass($status)
 {
@@ -418,19 +381,13 @@ function getStatusBadgeClass($status)
                         <div class="space-y-4">
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm text-gray-600">{{ number_format($subscription['data_used']) }} GB used</span>
-                                    <span class="text-sm text-gray-500">of {{ number_format($subscription['data_quota']) }} GB</span>
+                                    <span class="text-sm text-gray-600">{{ number_format($subscription['data_used'], 2) }} GB used</span>
+                                    <span class="text-sm text-gray-500">of {{ $quotaLabel }}</span>
                                 </div>
-                                @php
-                                    $dataQuota = (float) $subscription['data_quota'];
-                                    $dataUsed = (float) $subscription['data_used'];
-                                    $usagePercent = $dataQuota > 0 ? min(($dataUsed / $dataQuota) * 100, 100) : 0;
-                                    $barColor = $usagePercent > 90 ? 'bg-red-500' : ($usagePercent > 70 ? 'bg-yellow-500' : 'bg-green-500');
-                                @endphp
                                 <div class="w-full bg-gray-200 rounded-full h-3">
-                                    <div class="{{ $barColor }} h-3 rounded-full transition-all duration-500" style="width: {{ $usagePercent }}%"></div>
+                                    <div class="{{ $usagePercent > 90 ? 'bg-red-500' : ($usagePercent > 70 ? 'bg-yellow-500' : 'bg-green-500') }} h-3 rounded-full transition-all duration-500" style="width: {{ $usagePercent }}%"></div>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-2">{{ number_format($usagePercent, 1) }}% of quota used</p>
+                                <p class="text-xs text-gray-500 mt-2">{{ $usageSummary['quota_gb'] > 0 ? number_format($usagePercent, 1).'%' : 'Unlimited plan' }}</p>
                             </div>
 
                             <div class="pt-4 border-t border-gray-200 space-y-3">
@@ -458,8 +415,8 @@ function getStatusBadgeClass($status)
             <div x-show="tab === 'billing'" x-transition class="space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <div class="mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Payment History</h3>
-                        <p class="text-sm text-gray-500 mt-1">Recent payments and invoices</p>
+                        <h3 class="text-lg font-semibold text-gray-900">Billing Overview</h3>
+                        <p class="text-sm text-gray-500 mt-1">Current billing status and recent invoices</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
@@ -474,28 +431,34 @@ function getStatusBadgeClass($status)
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($invoices as $invoice)
-                                <tr class="hover:bg-gray-50 transition-colors duration-150">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-blue-600">{{ $invoice['invoice_number'] }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-gray-900">${{ number_format($invoice['amount'], 2) }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ \Carbon\Carbon::parse($invoice['due_date'])->format('M d, Y') }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ $invoice['paid_date'] ? \Carbon\Carbon::parse($invoice['paid_date'])->format('M d, Y') : '-' }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <button class="text-sm text-gray-500 hover:text-gray-700">View</button>
-                                    </td>
-                                </tr>
-                                @endforeach
+                                @forelse($billingInvoices->take(5) as $invoice)
+                                    <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <a href="{{ $invoice['url'] }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">{{ $invoice['invoice_number'] }}</a>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-medium text-gray-900">${{ number_format($invoice['amount'], 2) }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $invoice['due_date'] ? \Carbon\Carbon::parse($invoice['due_date'])->format('M d, Y') : '—' }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $invoice['paid_date'] ? \Carbon\Carbon::parse($invoice['paid_date'])->format('M d, Y') : '—' }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            <a href="{{ $invoice['url'] }}" class="text-sm text-blue-600 hover:text-blue-700">View</a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">
+                                            No invoices have been generated for this subscription yet.
+                                        </td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -504,19 +467,47 @@ function getStatusBadgeClass($status)
 
             <!-- TAB: Usage -->
             <div x-show="tab === 'usage'" x-transition class="space-y-6">
-                <!-- Monthly Usage Chart Placeholder -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <div class="mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Monthly Usage Trends</h3>
-                        <p class="text-sm text-gray-500 mt-1">Data consumption over time</p>
+                        <h3 class="text-lg font-semibold text-gray-900">Usage Summary</h3>
+                        <p class="text-sm text-gray-500 mt-1">Real usage totals for {{ $usageSummary['window'] ?? 'the current billing window' }}</p>
                     </div>
-                    <div class="h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl flex items-center justify-center">
-                        <div class="text-center">
-                            <svg class="w-16 h-16 text-blue-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                            </svg>
-                            <p class="text-sm text-gray-500">Usage chart visualization</p>
-                            <p class="text-xs text-gray-400 mt-1">Interactive graphs will be displayed here</p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-gray-500">Used</p>
+                            <p class="mt-2 text-2xl font-semibold text-gray-900">{{ number_format($usageSummary['total_gb'] ?? 0, 2) }} GB</p>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-gray-500">Download</p>
+                            <p class="mt-2 text-2xl font-semibold text-gray-900">{{ number_format($usageSummary['download_gb'] ?? 0, 2) }} GB</p>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-gray-500">Upload</p>
+                            <p class="mt-2 text-2xl font-semibold text-gray-900">{{ number_format($usageSummary['upload_gb'] ?? 0, 2) }} GB</p>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs uppercase tracking-wide text-gray-500">Quota</p>
+                            <p class="mt-2 text-2xl font-semibold text-gray-900">{{ $quotaLabel }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 space-y-2">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-500">Usage progress</span>
+                            <span class="text-gray-700">{{ $usageSummary['quota_gb'] > 0 ? number_format($usagePercent, 1).'%' : 'Unlimited' }}</span>
+                        </div>
+                        <div class="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+                            <div class="h-full rounded-full {{ $usagePercent > 90 ? 'bg-red-500' : ($usagePercent > 70 ? 'bg-yellow-500' : 'bg-green-500') }}" style="width: {{ $usageSummary['quota_gb'] > 0 ? $usagePercent : 0 }}%"></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 text-sm text-gray-600">
+                            <div>
+                                <span class="font-medium text-gray-900">Sessions:</span> {{ $usageSummary['sessions'] ?? 0 }}
+                            </div>
+                            <div>
+                                <span class="font-medium text-gray-900">Last activity:</span> {{ $usageSummary['last_activity'] ?? 'No usage yet' }}
+                            </div>
+                            <div>
+                                <span class="font-medium text-gray-900">Peak session:</span> {{ number_format($usageSummary['peak_gb'] ?? 0, 2) }} GB at {{ $usageSummary['peak_time'] ?? 'No usage yet' }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -525,7 +516,7 @@ function getStatusBadgeClass($status)
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <div class="mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Recent Sessions</h3>
-                        <p class="text-sm text-gray-500 mt-1">Daily connection and usage data</p>
+                        <p class="text-sm text-gray-500 mt-1">Latest subscription usage records</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
@@ -535,25 +526,39 @@ function getStatusBadgeClass($status)
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Duration</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Download</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Upload</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Router</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">IP Address</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($dailySessions as $session)
-                                <tr class="hover:bg-gray-50 transition-colors duration-150">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ \Carbon\Carbon::parse($session['date'])->format('M d, Y') }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ $session['duration'] }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-green-600">{{ $session['download'] }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-blue-600">{{ $session['upload'] }}</span>
-                                    </td>
-                                </tr>
-                                @endforeach
+                                @forelse($usageSessions as $session)
+                                    <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $session['date'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $session['duration'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-medium text-green-600">{{ $session['download'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-medium text-blue-600">{{ $session['upload'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $session['router'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-mono text-gray-900">{{ $session['ip_address'] }}</span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">
+                                            No usage records have been captured for this subscription yet.
+                                        </td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -593,8 +598,8 @@ function getStatusBadgeClass($status)
                                 </dd>
                             </div>
                             <div class="flex justify-between">
-                                <dt class="text-sm text-gray-500">Early Termination Fee</dt>
-                                <dd class="text-sm font-medium text-gray-900">${{ number_format($subscription['termination_fee'], 2) }}</dd>
+                                <dt class="text-sm text-gray-500">Last Billed</dt>
+                                <dd class="text-sm font-medium text-gray-900">{{ \Carbon\Carbon::parse($subscription['last_billing_date'])->format('M d, Y') }}</dd>
                             </div>
                         </dl>
                     </div>
@@ -637,8 +642,8 @@ function getStatusBadgeClass($status)
             <div x-show="tab === 'invoices'" x-transition>
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <div class="mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">All Invoices</h3>
-                        <p class="text-sm text-gray-500 mt-1">Complete invoice history</p>
+                        <h3 class="text-lg font-semibold text-gray-900">Invoice History</h3>
+                        <p class="text-sm text-gray-500 mt-1">Complete invoice history for this subscription</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
@@ -646,6 +651,7 @@ function getStatusBadgeClass($status)
                                 <tr>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice Number</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Balance Due</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date</th>
@@ -653,34 +659,37 @@ function getStatusBadgeClass($status)
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($invoices as $invoice)
-                                <tr class="hover:bg-gray-50 transition-colors duration-150">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-blue-600">{{ $invoice['invoice_number'] }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm font-medium text-gray-900">${{ number_format($invoice['amount'], 2) }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ \Carbon\Carbon::parse($invoice['due_date'])->format('M d, Y') }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ $invoice['paid_date'] ? \Carbon\Carbon::parse($invoice['paid_date'])->format('M d, Y') : '-' }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <div class="flex items-center justify-end gap-3">
-                                            <button class="text-sm text-gray-500 hover:text-gray-700">View</button>
-                                            <button class="text-sm text-gray-500 hover:text-gray-700">Download</button>
-                                            @if($invoice['status'] !== 'paid')
-                                                <button class="text-sm text-blue-600 hover:text-blue-800">Pay Now</button>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
+                                @forelse($billingInvoices as $invoice)
+                                    <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <a href="{{ $invoice['url'] }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">{{ $invoice['invoice_number'] }}</a>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-medium text-gray-900">${{ number_format($invoice['amount'], 2) }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-medium {{ $invoice['balance_due'] > 0 ? 'text-red-600' : 'text-green-600' }}">${{ number_format($invoice['balance_due'], 2) }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $invoice['due_date'] ? \Carbon\Carbon::parse($invoice['due_date'])->format('M d, Y') : '—' }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $invoice['paid_date'] ? \Carbon\Carbon::parse($invoice['paid_date'])->format('M d, Y') : '—' }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            <a href="{{ $invoice['url'] }}" class="text-sm text-blue-600 hover:text-blue-700">View</a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">
+                                            No invoices have been generated for this subscription yet.
+                                        </td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>

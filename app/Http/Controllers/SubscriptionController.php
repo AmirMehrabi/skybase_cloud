@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubscriptionRequest;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\IpPool;
+use App\Models\NetworkUsageRecord;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
@@ -16,6 +18,7 @@ use App\Services\RadiusProvisioningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class SubscriptionController extends Controller
@@ -183,10 +186,19 @@ class SubscriptionController extends Controller
      */
     public function show(Subscription $subscription): View
     {
-        $subscription->load(['customer', 'plan', 'router', 'items']);
+        $subscription->load(['customer.organization', 'plan', 'router', 'items', 'invoices.payments']);
         $activityLog = app(ActivityLogFormatter::class)->forSubject($subscription, $subscription->tenant_id);
+        $billingInvoices = $this->billingInvoicesForSubscription($subscription);
+        $usageSummary = $this->usageSummaryForSubscription($subscription);
+        $usageSessions = $this->usageSessionsForSubscription($subscription);
 
-        return view('subscriptions.show', compact('subscription', 'activityLog'));
+        return view('subscriptions.show', compact(
+            'subscription',
+            'activityLog',
+            'billingInvoices',
+            'usageSummary',
+            'usageSessions',
+        ));
     }
 
     /**
@@ -424,5 +436,163 @@ class SubscriptionController extends Controller
             'customer' => $existingSubscription->customer->full_name ?? null,
             'message' => 'Username is already taken by '.($existingSubscription->customer->full_name ?? 'another customer'),
         ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function billingInvoicesForSubscription(Subscription $subscription): array
+    {
+        return $subscription->invoices
+            ->sortByDesc(fn (Invoice $invoice): int => optional($invoice->issue_date ?? $invoice->created_at)->timestamp ?? 0)
+            ->values()
+            ->map(function (Invoice $invoice): array {
+                $latestPayment = $invoice->payments
+                    ->sortByDesc(fn ($payment): int => optional($payment->paid_at ?? $payment->created_at)->timestamp ?? 0)
+                    ->first();
+
+                return [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'amount' => (float) $invoice->total,
+                    'balance_due' => (float) $invoice->balance_due,
+                    'due_date' => $invoice->due_date?->toDateString(),
+                    'status' => $invoice->status,
+                    'paid_date' => ($latestPayment?->paid_at ?? $latestPayment?->created_at)?->toDateString(),
+                    'url' => route('billing.invoices.show', $invoice),
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function usageSummaryForSubscription(Subscription $subscription): array
+    {
+        $records = $this->usageRecordsForSubscription($subscription);
+        $downloadBytes = (int) $records->sum('download_bytes');
+        $uploadBytes = (int) $records->sum('upload_bytes');
+        $totalBytes = $downloadBytes + $uploadBytes;
+        $quotaBytes = $this->quotaBytesForPlan($subscription->plan);
+        $peakRecord = $records->sortByDesc(fn (NetworkUsageRecord $record): int => $record->download_bytes + $record->upload_bytes)->first();
+        $latestRecord = $records->sortByDesc(fn (NetworkUsageRecord $record): int => optional($record->last_activity_at ?? $record->ended_at ?? $record->started_at)->timestamp ?? 0)->first();
+
+        return [
+            'window' => $this->usageWindowLabelForSubscription($subscription),
+            'download_gb' => round($downloadBytes / 1073741824, 2),
+            'upload_gb' => round($uploadBytes / 1073741824, 2),
+            'total_gb' => round($totalBytes / 1073741824, 2),
+            'quota_gb' => $quotaBytes > 0 ? round($quotaBytes / 1073741824, 2) : 0,
+            'quota_label' => $quotaBytes > 0 ? number_format($quotaBytes / 1073741824, 2).' GB' : 'Unlimited',
+            'usage_percent' => $quotaBytes > 0 ? round(min(($totalBytes / $quotaBytes) * 100, 100), 1) : 0,
+            'sessions' => $records->count(),
+            'peak_gb' => round((($peakRecord?->download_bytes ?? 0) + ($peakRecord?->upload_bytes ?? 0)) / 1073741824, 2),
+            'peak_time' => $peakRecord?->last_activity_at?->format('M d, Y H:i') ?? 'No usage yet',
+            'last_activity' => $latestRecord?->last_activity_at?->diffForHumans() ?? 'No usage yet',
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function usageSessionsForSubscription(Subscription $subscription): array
+    {
+        return $this->usageRecordsForSubscription($subscription)
+            ->map(function (NetworkUsageRecord $record): array {
+                $timestamp = $record->last_activity_at ?? $record->ended_at ?? $record->started_at;
+
+                return [
+                    'date' => $timestamp?->format('M d, Y') ?? '—',
+                    'duration' => $this->formatDuration($record->session_seconds),
+                    'download' => $this->formatBytes($record->download_bytes),
+                    'upload' => $this->formatBytes($record->upload_bytes),
+                    'router' => $record->router?->name ?? '—',
+                    'ip_address' => $record->ip_address ?? $record->subscription?->ip_address ?? '—',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function usageRecordsForSubscription(Subscription $subscription): Collection
+    {
+        $usageWindowStart = $subscription->last_billed_at?->copy()->startOfDay()
+            ?? $subscription->start_date?->copy()->startOfDay()
+            ?? now()->subDays(30)->startOfDay();
+
+        return NetworkUsageRecord::query()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->where(function ($query) use ($subscription): void {
+                $query->where('subscription_id', $subscription->id)
+                    ->orWhere('customer_id', $subscription->customer_id);
+            })
+            ->where(function ($query) use ($usageWindowStart): void {
+                $query->where('last_activity_at', '>=', $usageWindowStart)
+                    ->orWhere(function ($query) use ($usageWindowStart): void {
+                        $query->whereNull('last_activity_at')
+                            ->where('started_at', '>=', $usageWindowStart);
+                    });
+            })
+            ->with('router:id,name')
+            ->latest('last_activity_at')
+            ->limit(10)
+            ->get();
+    }
+
+    private function usageWindowLabelForSubscription(Subscription $subscription): string
+    {
+        $start = $subscription->last_billed_at?->copy()->startOfDay()
+            ?? $subscription->start_date?->copy()->startOfDay()
+            ?? now()->subDays(30)->startOfDay();
+
+        return $start->format('M d, Y').' - '.now()->format('M d, Y');
+    }
+
+    private function quotaBytesForPlan(?Plan $plan): int
+    {
+        if (! $plan || $plan->unlimited || ! $plan->data_limit) {
+            return 0;
+        }
+
+        return match ($plan->data_unit) {
+            'MB' => (int) round((float) $plan->data_limit * 1048576),
+            'TB' => (int) round((float) $plan->data_limit * 1099511627776),
+            default => (int) round((float) $plan->data_limit * 1073741824),
+        };
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes <= 0) {
+            return '0 B';
+        }
+
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $size = (float) $bytes;
+        $index = 0;
+
+        while ($size >= 1024 && $index < count($units) - 1) {
+            $size /= 1024;
+            $index++;
+        }
+
+        return number_format($size, $index === 0 ? 0 : 2).' '.$units[$index];
+    }
+
+    private function formatDuration(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return '0m';
+        }
+
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+
+        if ($hours > 0) {
+            return $hours.'h '.($minutes > 0 ? $minutes.'m' : '');
+        }
+
+        return $minutes.'m';
     }
 }
