@@ -281,37 +281,55 @@ class SubscriptionController extends Controller
     /**
      * Suspend a subscription.
      */
-    public function suspend(Subscription $subscription): JsonResponse
+    public function suspend(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
         $subscription->suspend();
 
-        return response()->json([
-            'message' => 'Subscription suspended successfully.',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Subscription suspended successfully.',
+            ]);
+        }
+
+        return redirect()
+            ->route('subscriptions.show', $subscription)
+            ->with('success', 'Subscription suspended successfully.');
     }
 
     /**
      * Activate a subscription.
      */
-    public function activate(Subscription $subscription): JsonResponse
+    public function activate(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
         $subscription->activate();
 
-        return response()->json([
-            'message' => 'Subscription activated successfully.',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Subscription activated successfully.',
+            ]);
+        }
+
+        return redirect()
+            ->route('subscriptions.show', $subscription)
+            ->with('success', 'Subscription activated successfully.');
     }
 
     /**
      * Cancel a subscription.
      */
-    public function cancel(Subscription $subscription): JsonResponse
+    public function cancel(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
         $subscription->cancel();
 
-        return response()->json([
-            'message' => 'Subscription cancelled successfully.',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Subscription cancelled successfully.',
+            ]);
+        }
+
+        return redirect()
+            ->route('subscriptions.show', $subscription)
+            ->with('success', 'Subscription cancelled successfully.');
     }
 
     public function updateBilling(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
