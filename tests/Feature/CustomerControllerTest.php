@@ -134,9 +134,11 @@ class CustomerControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('SUB-REAL-0001');
+        $response->assertSee('Subscriptions');
         $response->assertSee('Fiber 300');
         $response->assertSee('INV-REAL-0001');
         $response->assertSee('PAY-REAL-0001');
+        $response->assertDontSee('Services');
         $response->assertDontSee('INV-2024-0156');
         $response->assertDontSee('Mikrotik-01');
     }
