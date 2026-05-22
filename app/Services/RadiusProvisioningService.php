@@ -43,31 +43,51 @@ class RadiusProvisioningService
             $plan = $subscription->plan;
             $groupName = $this->groupNameForPlan($plan);
 
-$password = (string) $subscription->pppoe_password;
+            $password = (string) $subscription->pppoe_password;
 
-RadiusCheck::withoutGlobalScopes()->updateOrCreate(
-    [
-        'tenant_id' => $tenantId,
-        'username' => $username,
-        'attribute' => 'Cleartext-Password',
-    ],
-    [
-        'op' => ':=',
-        'value' => $password,
-    ],
-);
+            RadiusCheck::withoutGlobalScopes()->updateOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'username' => $username,
+                    'attribute' => 'Cleartext-Password',
+                ],
+                [
+                    'op' => ':=',
+                    'value' => $password,
+                ],
+            );
 
-RadiusCheck::withoutGlobalScopes()->updateOrCreate(
-    [
-        'tenant_id' => $tenantId,
-        'username' => $username,
-        'attribute' => 'NT-Password',
-    ],
-    [
-        'op' => ':=',
-        'value' => $this->makeNtPasswordHash($password),
-    ],
-);
+            RadiusCheck::withoutGlobalScopes()->updateOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'username' => $username,
+                    'attribute' => 'NT-Password',
+                ],
+                [
+                    'op' => ':=',
+                    'value' => $this->makeNtPasswordHash($password),
+                ],
+            );
+
+            if (! empty($subscription->ip_address)) {
+                RadiusReply::withoutGlobalScopes()->updateOrCreate(
+                    [
+                        'tenant_id' => $tenantId,
+                        'username' => $username,
+                        'attribute' => 'Framed-IP-Address',
+                    ],
+                    [
+                        'op' => ':=',
+                        'value' => (string) $subscription->ip_address,
+                    ],
+                );
+            } else {
+                RadiusReply::withoutGlobalScopes()
+                    ->where('tenant_id', $tenantId)
+                    ->where('username', $username)
+                    ->where('attribute', 'Framed-IP-Address')
+                    ->delete();
+            }
 
             $rateLimit = $this->rateLimitForPlan($plan);
             if ($rateLimit !== null) {
@@ -83,17 +103,10 @@ RadiusCheck::withoutGlobalScopes()->updateOrCreate(
                     ],
                 );
             } else {
-                RadiusReply::withoutGlobalScopes()
-                    ->where('tenant_id', $tenantId)
-                    ->where('username', $username)
-                    ->where('attribute', 'Mikrotik-Rate-Limit')
-                    ->delete();
+                RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->where('attribute', 'Mikrotik-Rate-Limit')->delete();
             }
 
-            RadiusUserGroup::withoutGlobalScopes()->where('tenant_id', $tenantId)
-                ->where('username', $username)
-                ->where('groupname', '!=', $groupName)
-                ->delete();
+            RadiusUserGroup::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->where('groupname', '!=', $groupName)->delete();
 
             RadiusUserGroup::withoutGlobalScopes()->updateOrCreate(
                 [
@@ -107,13 +120,10 @@ RadiusCheck::withoutGlobalScopes()->updateOrCreate(
             );
         });
     }
-private function makeNtPasswordHash(string $password): string
-{
-    return strtoupper(hash(
-        'md4',
-        mb_convert_encoding($password, 'UTF-16LE', 'UTF-8')
-    ));
-}
+    private function makeNtPasswordHash(string $password): string
+    {
+        return strtoupper(hash('md4', mb_convert_encoding($password, 'UTF-16LE', 'UTF-8')));
+    }
     public function removeSubscription(Subscription $subscription): void
     {
         $this->removeUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
@@ -150,31 +160,22 @@ private function makeNtPasswordHash(string $password): string
             return;
         }
 
-        RadiusCheck::withoutGlobalScopes()
-            ->where('tenant_id', $tenantId)
-            ->where('username', $username)
-            ->delete();
+        RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->delete();
 
-        RadiusReply::withoutGlobalScopes()
-            ->where('tenant_id', $tenantId)
-            ->where('username', $username)
-            ->delete();
+        RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->delete();
 
-        RadiusUserGroup::withoutGlobalScopes()
-            ->where('tenant_id', $tenantId)
-            ->where('username', $username)
-            ->delete();
+        RadiusUserGroup::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->delete();
     }
 
     public function rateLimitForPlan(?Plan $plan): ?string
     {
-        if (! $plan || ! $plan->upload_speed || ! $plan->download_speed) {
+        if (!$plan || !$plan->upload_speed || !$plan->download_speed) {
             return null;
         }
 
         $suffix = $this->rateSuffix((string) $plan->bandwidth_unit);
 
-        return ((int) $plan->upload_speed).$suffix.'/'.((int) $plan->download_speed).$suffix;
+        return ((int) $plan->upload_speed) . $suffix . '/' . ((int) $plan->download_speed) . $suffix;
     }
 
     public function provisioningSkipReason(Subscription $subscription): ?string
@@ -183,28 +184,23 @@ private function makeNtPasswordHash(string $password): string
             return 'missing tenant_id';
         }
 
-        if (! $subscription->isPppoe()) {
+        if (!$subscription->isPppoe()) {
             return 'connection type is not pppoe';
         }
 
-        if ($subscription->status !== 'active' || ! $subscription->billing_enabled) {
-            return $subscription->status !== 'active'
-                ? 'subscription status is not active'
-                : 'subscription billing is disabled';
+        if ($subscription->status !== 'active' || !$subscription->billing_enabled) {
+            return $subscription->status !== 'active' ? 'subscription status is not active' : 'subscription billing is disabled';
         }
 
-        if (! $subscription->pppoe_username || ! $subscription->pppoe_password) {
-            return ! $subscription->pppoe_username
-                ? 'missing pppoe username'
-                : 'missing pppoe password';
+        if (!$subscription->pppoe_username || !$subscription->pppoe_password) {
+            return !$subscription->pppoe_username ? 'missing pppoe username' : 'missing pppoe password';
         }
 
-        if (! $subscription->customer?->billing_enabled) {
+        if (!$subscription->customer?->billing_enabled) {
             return 'customer billing is disabled';
         }
 
-        if ($subscription->customer?->organization?->billing_enabled
-            && (int) $subscription->customer->organization->default_plan_id !== (int) $subscription->plan_id) {
+        if ($subscription->customer?->organization?->billing_enabled && (int) $subscription->customer->organization->default_plan_id !== (int) $subscription->plan_id) {
             return 'subscription plan does not match organization billing plan';
         }
 
@@ -226,12 +222,12 @@ private function makeNtPasswordHash(string $password): string
 
     protected function groupNameForPlan(?Plan $plan): string
     {
-        if (! $plan) {
+        if (!$plan) {
             return 'skybase-plan-unassigned';
         }
 
-        $name = $plan->router_profile ?: $plan->internal_name ?: 'plan-'.$plan->id;
+        $name = $plan->router_profile ?: $plan->internal_name ?: 'plan-' . $plan->id;
 
-        return 'skybase-plan-'.Str::slug($name);
+        return 'skybase-plan-' . Str::slug($name);
     }
 }
