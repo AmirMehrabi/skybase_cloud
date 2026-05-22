@@ -37,12 +37,12 @@
         'open_balance' => (float) $customer->invoices->sum('balance_due'),
     ];
 
-    $services = $customer->subscriptions
+    $subscriptions = $customer->subscriptions
         ->sortByDesc(fn ($subscription) => optional($subscription->created_at)->timestamp ?? 0)
         ->values()
         ->map(fn ($subscription) => [
             'id' => $subscription->id,
-            'service_id' => $subscription->subscription_code,
+            'subscription_code' => $subscription->subscription_code,
             'plan' => $subscription->plan?->name ?? 'N/A',
             'router' => $subscription->router?->name ?? 'N/A',
             'ip_address' => $subscription->ip_address ?? 'N/A',
@@ -96,7 +96,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-6" x-data="customerShow(@js($customerData), @js($services), @js($invoices), @js($payments), @js($activity), @js(route('billing.payments.store')))" x-cloak>
+<div class="space-y-6" x-data="customerShow(@js($customerData), @js($subscriptions), @js($invoices), @js($payments), @js($activity), @js(route('billing.payments.store')))" x-cloak>
     <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="flex items-center gap-4">
@@ -192,13 +192,13 @@
                 </div>
             </div>
 
-            <div x-show="activeTab === 'services'" style="display: none;">
+            <div x-show="activeTab === 'subscriptions'" style="display: none;">
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Service ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Subscription</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Plan</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Router</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">IP</th>
@@ -208,27 +208,27 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <template x-if="services.length === 0">
+                                <template x-if="subscriptions.length === 0">
                                     <tr><td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">No subscriptions found.</td></tr>
                                 </template>
-                                <template x-for="service in services" :key="service.id">
+                                <template x-for="subscription in subscriptions" :key="subscription.id">
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-6 py-4">
-                                            <a :href="service.url" class="text-sm font-medium text-blue-600 hover:text-blue-700" x-text="service.service_id"></a>
+                                            <a :href="subscription.url" class="text-sm font-medium text-blue-600 hover:text-blue-700" x-text="subscription.subscription_code"></a>
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-700" x-text="service.plan"></td>
-                                        <td class="px-6 py-4 text-sm text-gray-700" x-text="service.router"></td>
-                                        <td class="px-6 py-4 text-sm font-mono text-gray-700" x-text="service.ip_address"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-700" x-text="subscription.plan"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-700" x-text="subscription.router"></td>
+                                        <td class="px-6 py-4 text-sm font-mono text-gray-700" x-text="subscription.ip_address"></td>
                                         <td class="px-6 py-4">
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
-                                                  :class="getStatusBadgeClass(service.status)"
-                                                  x-text="formatStatus(service.status)"></span>
+                                                  :class="getStatusBadgeClass(subscription.status)"
+                                                  x-text="formatStatus(subscription.status)"></span>
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="service.activated_at || '—'"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="subscription.activated_at || '—'"></td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center justify-end gap-2">
-                                                <a :href="service.url" class="text-sm font-medium text-blue-600 hover:text-blue-700">View</a>
-                                                <a :href="service.edit_url" class="text-sm font-medium text-gray-600 hover:text-gray-900">Edit</a>
+                                                <a :href="subscription.url" class="text-sm font-medium text-blue-600 hover:text-blue-700">View</a>
+                                                <a :href="subscription.edit_url" class="text-sm font-medium text-gray-600 hover:text-gray-900">Edit</a>
                                             </div>
                                         </td>
                                     </tr>
@@ -413,10 +413,10 @@
 
 @push('scripts')
 <script>
-function customerShow(customer, services, invoices, payments, activityLog, paymentStoreUrl) {
+function customerShow(customer, subscriptions, invoices, payments, activityLog, paymentStoreUrl) {
     return {
         customer,
-        services,
+        subscriptions,
         invoices,
         payments,
         activityLog,
@@ -436,7 +436,7 @@ function customerShow(customer, services, invoices, payments, activityLog, payme
         },
         tabs: {
             overview: 'Overview',
-            services: 'Services',
+            subscriptions: 'Subscriptions',
             invoices: 'Invoices',
             payments: 'Payments',
             activity: 'Activity Log',

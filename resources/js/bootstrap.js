@@ -11,7 +11,6 @@ window.Alpine = Alpine;
 // Import customer components (these will register Alpine data)
 import './customers/index.js';
 import './customers/create.js';
-import './customers/show.js';
 import './vpn-users/index.js';
 
 Alpine.start();

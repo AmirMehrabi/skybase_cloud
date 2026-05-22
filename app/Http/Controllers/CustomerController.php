@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Models\Customer;
@@ -144,7 +145,27 @@ class CustomerController extends Controller
             'organization',
         ]);
 
-        $activityLog = app(ActivityLogFormatter::class)->forSubject($customer, $customer->tenant_id);
+        $activitySubjects = collect([$customer])
+            ->merge($customer->subscriptions)
+            ->merge($customer->invoices)
+            ->merge($customer->payments);
+
+        $activities = Activity::query()
+            ->forTenant($customer->tenant_id)
+            ->where(function ($query) use ($activitySubjects): void {
+                foreach ($activitySubjects as $subject) {
+                    $query->orWhere(function ($query) use ($subject): void {
+                        $query->where('subject_type', $subject->getMorphClass())
+                            ->where('subject_id', $subject->getKey());
+                    });
+                }
+            })
+            ->with('causer')
+            ->latest()
+            ->limit(30)
+            ->get();
+
+        $activityLog = app(ActivityLogFormatter::class)->formatCollection($activities);
 
         return view('customers.show', [
             'customer' => $customer,
