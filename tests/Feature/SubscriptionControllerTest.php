@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\NetworkUsageRecord;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Router;
@@ -12,6 +11,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -110,18 +110,18 @@ class SubscriptionControllerTest extends TestCase
             'paid_at' => now()->subDays(2),
         ]);
 
-        NetworkUsageRecord::create([
-            'tenant_id' => $tenant->id,
-            'customer_id' => $customer->id,
-            'subscription_id' => $subscription->id,
-            'router_id' => $router->id,
-            'ip_address' => '192.168.1.100',
-            'download_bytes' => 2147483648,
-            'upload_bytes' => 1073741824,
-            'session_seconds' => 5400,
-            'started_at' => now()->subHours(6),
-            'ended_at' => now()->subHours(4),
-            'last_activity_at' => now()->subHours(4),
+        DB::table('radacct')->insert([
+            'acctsessionid' => 'session-001',
+            'acctuniqueid' => 'unique-001',
+            'username' => 'jane.doe',
+            'nasipaddress' => $router->ip_address,
+            'acctstarttime' => now()->subHours(6),
+            'acctupdatetime' => now()->subHours(4),
+            'acctstoptime' => now()->subHours(4),
+            'acctsessiontime' => 5400,
+            'acctinputoctets' => 1073741824,
+            'acctoutputoctets' => 2147483648,
+            'framedipaddress' => '192.168.1.100',
         ]);
 
         $response = $this->actingAs($user)->get(route('subscriptions.show', $subscription));

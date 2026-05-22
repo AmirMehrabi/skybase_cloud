@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\NetworkUsageRecord;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Router;
@@ -12,6 +11,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -42,22 +42,25 @@ class ReportsControllerTest extends TestCase
             'subscription_code' => 'SUB-ALPHA-001',
             'plan_id' => $plan->id,
             'router_id' => $router->id,
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'acme.user',
             'ip_address' => '10.0.0.10',
             'status' => 'active',
             'start_date' => now()->subMonth(),
         ]);
 
-        NetworkUsageRecord::create([
-            'tenant_id' => $tenant->id,
-            'customer_id' => $customer->id,
-            'subscription_id' => $subscription->id,
-            'router_id' => $router->id,
-            'ip_address' => '10.0.0.10',
-            'download_bytes' => 1024,
-            'upload_bytes' => 512,
-            'session_seconds' => 3600,
-            'started_at' => now()->subDay(),
-            'last_activity_at' => now(),
+        DB::table('radacct')->insert([
+            'acctsessionid' => 'session-001',
+            'acctuniqueid' => 'unique-001',
+            'username' => 'acme.user',
+            'nasipaddress' => $router->ip_address,
+            'acctstarttime' => now()->subDay(),
+            'acctupdatetime' => now(),
+            'acctstoptime' => now(),
+            'acctsessiontime' => 3600,
+            'acctinputoctets' => 512,
+            'acctoutputoctets' => 1024,
+            'framedipaddress' => '10.0.0.10',
         ]);
 
         $otherCustomer = Customer::create([
@@ -65,12 +68,15 @@ class ReportsControllerTest extends TestCase
             'name' => 'Hidden Customer',
             'status' => 'active',
         ]);
-        NetworkUsageRecord::create([
-            'tenant_id' => $otherTenant->id,
-            'customer_id' => $otherCustomer->id,
-            'download_bytes' => 999999,
-            'upload_bytes' => 999999,
-            'last_activity_at' => now(),
+        DB::table('radacct')->insert([
+            'acctsessionid' => 'session-002',
+            'acctuniqueid' => 'unique-002',
+            'username' => 'hidden.user',
+            'acctstarttime' => now()->subDay(),
+            'acctupdatetime' => now(),
+            'acctstoptime' => now(),
+            'acctinputoctets' => 999999,
+            'acctoutputoctets' => 999999,
         ]);
 
         $response = $this->actingAs($user)->get(route('reports.usage'));
