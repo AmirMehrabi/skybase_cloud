@@ -6,7 +6,6 @@ use App\Http\Requests\StoreSubscriptionRequest;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\IpPool;
-use App\Models\NetworkUsageRecord;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
@@ -14,6 +13,7 @@ use App\Models\SubscriptionItem;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
 use App\Services\OrganizationBillingService;
+use App\Services\RadiusAccountingUsageService;
 use App\Services\RadiusProvisioningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +26,7 @@ class SubscriptionController extends Controller
     public function __construct(
         protected BillingService $billing,
         protected OrganizationBillingService $organizationBilling,
+        protected RadiusAccountingUsageService $radiusAccountingUsage,
     ) {}
 
     /**
@@ -475,13 +476,18 @@ class SubscriptionController extends Controller
      */
     private function usageSummaryForSubscription(Subscription $subscription): array
     {
-        $records = $this->usageRecordsForSubscription($subscription);
-        $downloadBytes = (int) $records->sum('download_bytes');
-        $uploadBytes = (int) $records->sum('upload_bytes');
+        $sessions = $this->radiusAccountingUsage->sessionsForSubscription(
+            $subscription,
+            $this->usageWindowStartForSubscription($subscription),
+            now(),
+            500,
+        );
+        $downloadBytes = (int) $sessions->sum('download');
+        $uploadBytes = (int) $sessions->sum('upload');
         $totalBytes = $downloadBytes + $uploadBytes;
         $quotaBytes = $this->quotaBytesForPlan($subscription->plan);
-        $peakRecord = $records->sortByDesc(fn (NetworkUsageRecord $record): int => $record->download_bytes + $record->upload_bytes)->first();
-        $latestRecord = $records->sortByDesc(fn (NetworkUsageRecord $record): int => optional($record->last_activity_at ?? $record->ended_at ?? $record->started_at)->timestamp ?? 0)->first();
+        $peakSession = $sessions->sortByDesc('total')->first();
+        $latestSession = $sessions->sortByDesc('last_activity_sort')->first();
 
         return [
             'window' => $this->usageWindowLabelForSubscription($subscription),
@@ -491,10 +497,10 @@ class SubscriptionController extends Controller
             'quota_gb' => $quotaBytes > 0 ? round($quotaBytes / 1073741824, 2) : 0,
             'quota_label' => $quotaBytes > 0 ? number_format($quotaBytes / 1073741824, 2).' GB' : 'Unlimited',
             'usage_percent' => $quotaBytes > 0 ? round(min(($totalBytes / $quotaBytes) * 100, 100), 1) : 0,
-            'sessions' => $records->count(),
-            'peak_gb' => round((($peakRecord?->download_bytes ?? 0) + ($peakRecord?->upload_bytes ?? 0)) / 1073741824, 2),
-            'peak_time' => $peakRecord?->last_activity_at?->format('M d, Y H:i') ?? 'No usage yet',
-            'last_activity' => $latestRecord?->last_activity_at?->diffForHumans() ?? 'No usage yet',
+            'sessions' => $sessions->count(),
+            'peak_gb' => round((int) ($peakSession['total'] ?? 0) / 1073741824, 2),
+            'peak_time' => $peakSession['last_activity_date_label'] ?? 'No usage yet',
+            'last_activity' => $latestSession['last_activity'] ?? 'No usage yet',
         ];
     }
 
@@ -503,46 +509,33 @@ class SubscriptionController extends Controller
      */
     private function usageSessionsForSubscription(Subscription $subscription): array
     {
-        return $this->usageRecordsForSubscription($subscription)
-            ->map(function (NetworkUsageRecord $record): array {
-                $timestamp = $record->last_activity_at ?? $record->ended_at ?? $record->started_at;
-
-                return [
-                    'date' => $timestamp?->format('M d, Y') ?? '—',
-                    'duration' => $this->formatDuration($record->session_seconds),
-                    'download' => $this->formatBytes($record->download_bytes),
-                    'upload' => $this->formatBytes($record->upload_bytes),
-                    'router' => $record->router?->name ?? '—',
-                    'ip_address' => $record->ip_address ?? $record->subscription?->ip_address ?? '—',
-                ];
-            })
+        return $this->radiusAccountingUsage->sessionsForSubscription(
+            $subscription,
+            $this->usageWindowStartForSubscription($subscription),
+            now(),
+            25,
+        )
+            ->map(fn (array $session): array => [
+                'date' => $session['started_at_label'],
+                'stopped_at' => $session['stopped_at_label'],
+                'duration' => $session['duration'],
+                'download' => $session['download_label'],
+                'upload' => $session['upload_label'],
+                'total' => $session['total_label'],
+                'router' => $session['router'],
+                'ip_address' => $session['ip_address'],
+                'status' => $session['status'],
+                'terminate_cause' => $session['terminate_cause'],
+            ])
             ->values()
             ->all();
     }
 
-    private function usageRecordsForSubscription(Subscription $subscription): Collection
+    private function usageWindowStartForSubscription(Subscription $subscription): \Carbon\CarbonInterface
     {
-        $usageWindowStart = $subscription->last_billed_at?->copy()->startOfDay()
+        return $subscription->last_billed_at?->copy()->startOfDay()
             ?? $subscription->start_date?->copy()->startOfDay()
             ?? now()->subDays(30)->startOfDay();
-
-        return NetworkUsageRecord::query()
-            ->where('tenant_id', $subscription->tenant_id)
-            ->where(function ($query) use ($subscription): void {
-                $query->where('subscription_id', $subscription->id)
-                    ->orWhere('customer_id', $subscription->customer_id);
-            })
-            ->where(function ($query) use ($usageWindowStart): void {
-                $query->where('last_activity_at', '>=', $usageWindowStart)
-                    ->orWhere(function ($query) use ($usageWindowStart): void {
-                        $query->whereNull('last_activity_at')
-                            ->where('started_at', '>=', $usageWindowStart);
-                    });
-            })
-            ->with('router:id,name')
-            ->latest('last_activity_at')
-            ->limit(10)
-            ->get();
     }
 
     private function usageWindowLabelForSubscription(Subscription $subscription): string

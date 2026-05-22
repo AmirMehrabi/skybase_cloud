@@ -4,36 +4,29 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\NetworkUsageRecord;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Services\RadiusAccountingUsageService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 class ReportController extends Controller
 {
+    public function __construct(
+        protected RadiusAccountingUsageService $radiusAccountingUsage,
+    ) {}
+
     public function usage(): View
     {
         $tenantId = $this->tenantId();
         $from = now()->subMonthsNoOverflow(11)->startOfMonth();
         $to = now()->endOfMonth();
 
-        $records = NetworkUsageRecord::query()
-            ->where('tenant_id', $tenantId)
-            ->with([
-                'customer:id,customer_code,name,first_name,last_name,company_name,customer_type',
-                'subscription:id,subscription_code,plan_id,router_id',
-                'subscription.plan:id,name',
-                'router:id,name',
-            ])
-            ->whereBetween('last_activity_at', [$from, $to])
-            ->orderBy('last_activity_at')
-            ->get();
+        $records = $this->radiusAccountingUsage->sessionsForTenant($tenantId, $from, $to);
 
         $usageReports = [
             'summary' => $this->usageSummary($records),
@@ -113,58 +106,53 @@ class ReportController extends Controller
         return (string) (tenant()?->id ?? auth()->user()->tenant_id);
     }
 
-    private function usageSummary(EloquentCollection $records): array
+    private function usageSummary(Collection $records): array
     {
-        $totalUsage = $records->sum(fn (NetworkUsageRecord $record): int => $record->download_bytes + $record->upload_bytes);
+        $totalUsage = (int) $records->sum('total');
         $customerCount = max(1, $records->pluck('customer_id')->unique()->count());
-        $peakRecord = $records->sortByDesc(fn (NetworkUsageRecord $record): int => $record->download_bytes + $record->upload_bytes)->first();
+        $peakRecord = $records->sortByDesc('total')->first();
 
         return [
             'totalUsage' => $totalUsage,
             'avgUsage' => (int) round($totalUsage / $customerCount),
-            'peakUsage' => $peakRecord ? $peakRecord->download_bytes + $peakRecord->upload_bytes : 0,
-            'peakDate' => $peakRecord?->last_activity_at?->format('M j, Y') ?? 'No usage yet',
+            'peakUsage' => (int) ($peakRecord['total'] ?? 0),
+            'peakDate' => $peakRecord['last_activity_date_label'] ?? 'No usage yet',
             'activeUsers' => $records->pluck('customer_id')->unique()->count(),
         ];
     }
 
-    private function usageRecords(EloquentCollection $records): Collection
+    private function usageRecords(Collection $records): Collection
     {
         return $records
-            ->map(function (NetworkUsageRecord $record): array {
-                $download = $record->download_bytes;
-                $upload = $record->upload_bytes;
-
-                return [
-                    'id' => $record->id,
-                    'period' => $record->last_activity_at?->format('M j, Y') ?? 'Unknown',
-                    'date' => $record->last_activity_at?->toDateString(),
-                    'customer' => $record->customer?->full_name ?? 'Unknown customer',
-                    'customerId' => (string) $record->customer_id,
-                    'planId' => $record->subscription?->plan_id ? (string) $record->subscription->plan_id : '',
-                    'routerId' => $record->router_id ? (string) $record->router_id : '',
-                    'download' => $download,
-                    'upload' => $upload,
-                    'total' => $download + $upload,
-                    'sessions' => 1,
-                ];
-            })
+            ->map(fn (array $record): array => [
+                'id' => $record['id'],
+                'period' => $record['last_activity_date_label'] ?? 'Unknown',
+                'date' => $record['last_activity_date'],
+                'customer' => $record['customer'],
+                'customerId' => (string) $record['customer_id'],
+                'planId' => $record['plan_id'] ? (string) $record['plan_id'] : '',
+                'routerId' => $record['router_id'] ? (string) $record['router_id'] : '',
+                'download' => $record['download'],
+                'upload' => $record['upload'],
+                'total' => $record['total'],
+                'sessions' => 1,
+            ])
             ->sortByDesc('date')
             ->values();
     }
 
-    private function usageChartData(EloquentCollection $records): Collection
+    private function usageChartData(Collection $records): Collection
     {
         return $records
-            ->groupBy(fn (NetworkUsageRecord $record): string => $record->last_activity_at?->format('Y-m') ?? 'unknown')
+            ->groupBy(fn (array $record): string => filled($record['last_activity_date']) ? Carbon::parse($record['last_activity_date'])->format('Y-m') : 'unknown')
             ->map(function (Collection $group): array {
-                /** @var NetworkUsageRecord $first */
                 $first = $group->first();
+                $date = filled($first['last_activity_date'] ?? null) ? Carbon::parse($first['last_activity_date']) : null;
 
                 return [
-                    'period' => $first->last_activity_at?->format('M') ?? 'N/A',
-                    'download' => $group->sum('download_bytes'),
-                    'upload' => $group->sum('upload_bytes'),
+                    'period' => $date?->format('M') ?? 'N/A',
+                    'download' => $group->sum('download'),
+                    'upload' => $group->sum('upload'),
                 ];
             })
             ->values();

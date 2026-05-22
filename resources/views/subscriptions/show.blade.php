@@ -512,22 +512,26 @@ function getStatusBadgeClass($status)
                     </div>
                 </div>
 
-                <!-- Daily Sessions -->
+                <!-- Accounting Sessions -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <div class="mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Recent Sessions</h3>
-                        <p class="text-sm text-gray-500 mt-1">Latest subscription usage records</p>
+                        <h3 class="text-lg font-semibold text-gray-900">RADIUS Accounting Sessions</h3>
+                        <p class="text-sm text-gray-500 mt-1">Latest sessions from FreeRADIUS accounting for this PPPoE username</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Started</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Stopped</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Duration</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Download</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Upload</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Router</th>
                                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">IP Address</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Terminate Cause</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -535,6 +539,14 @@ function getStatusBadgeClass($status)
                                     <tr class="hover:bg-gray-50 transition-colors duration-150">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm text-gray-900">{{ $session['date'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-900">{{ $session['stopped_at'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $session['status'] === 'online' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200' }}">
+                                                {{ ucfirst($session['status']) }}
+                                            </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm text-gray-900">{{ $session['duration'] }}</span>
@@ -546,16 +558,22 @@ function getStatusBadgeClass($status)
                                             <span class="text-sm font-medium text-blue-600">{{ $session['upload'] }}</span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-semibold text-gray-900">{{ $session['total'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm text-gray-900">{{ $session['router'] }}</span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="text-sm font-mono text-gray-900">{{ $session['ip_address'] }}</span>
                                         </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-500">{{ $session['terminate_cause'] }}</span>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">
-                                            No usage records have been captured for this subscription yet.
+                                        <td colspan="10" class="px-6 py-10 text-center text-sm text-gray-500">
+                                            No RADIUS accounting sessions have been captured for this subscription yet.
                                         </td>
                                     </tr>
                                 @endforelse

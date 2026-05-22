@@ -133,7 +133,6 @@
                     <option value="week">Last 7 Days</option>
                     <option value="month" selected>This Month</option>
                     <option value="last_month">Last Month</option>
-                    <option value="custom">Custom Range</option>
                 </select>
             </div>
 
@@ -363,7 +362,7 @@ function dataUsage() {
         },
 
         get filteredUsage() {
-            let filtered = this.usageData;
+            let filtered = this.usageData.filter(u => this.recordInDateRange(u));
 
             if (this.filters.router) {
                 filtered = filtered.filter(u => u.routerId === this.filters.router);
@@ -381,13 +380,15 @@ function dataUsage() {
                 filtered = filtered.filter(u => u.upload > u.download);
             }
 
-            this.pagination.total = filtered.length;
+            const grouped = this.groupUsage(filtered);
+
+            this.pagination.total = grouped.length;
             const start = (this.pagination.currentPage - 1) * this.pagination.perPage;
             const end = start + this.pagination.perPage;
-            this.pagination.from = filtered.length > 0 ? start + 1 : 0;
-            this.pagination.to = Math.min(end, filtered.length);
+            this.pagination.from = grouped.length > 0 ? start + 1 : 0;
+            this.pagination.to = Math.min(end, grouped.length);
 
-            return filtered.slice(start, end);
+            return grouped.slice(start, end);
         },
 
         get totalPages() {
@@ -395,7 +396,51 @@ function dataUsage() {
         },
 
         get topUsers() {
-            return [...this.usageData].sort((a, b) => b.total - a.total).slice(0, 10);
+            return this.groupUsage(this.usageData.filter(u => this.recordInDateRange(u))).sort((a, b) => b.total - a.total).slice(0, 10);
+        },
+
+        groupUsage(rows) {
+            const groups = new Map();
+
+            rows.forEach(row => {
+                const key = [row.customerId, row.subscriptionId, row.routerId].join(':');
+
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        ...row,
+                        id: key,
+                        download: 0,
+                        upload: 0,
+                        total: 0,
+                        usage: 0,
+                        sessions: 0,
+                        sessionSeconds: 0,
+                        lastActivityDate: row.lastActivityDate,
+                        lastActivity: row.lastActivity
+                    });
+                }
+
+                const group = groups.get(key);
+                group.download += row.download;
+                group.upload += row.upload;
+                group.total += row.total;
+                group.usage += row.total;
+                group.sessions += row.sessions ?? 1;
+                group.sessionSeconds += row.sessionSeconds ?? 0;
+
+                if (!group.lastActivityDate || (row.lastActivityDate && row.lastActivityDate > group.lastActivityDate)) {
+                    group.lastActivityDate = row.lastActivityDate;
+                    group.lastActivity = row.lastActivity;
+                }
+            });
+
+            return [...groups.values()]
+                .map(group => ({
+                    ...group,
+                    maxUsage: Math.max(group.download, group.upload, 1),
+                    sessionTime: this.formatDuration(group.sessionSeconds)
+                }))
+                .sort((a, b) => b.total - a.total);
         },
 
         formatBytes(bytes) {
@@ -406,8 +451,63 @@ function dataUsage() {
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         },
 
+        formatDuration(seconds) {
+            const value = Number(seconds ?? 0);
+            const hours = Math.floor(value / 3600);
+            const minutes = Math.floor((value % 3600) / 60);
+
+            if (hours > 0) {
+                return `${hours}h ${minutes > 0 ? minutes + 'm' : ''}`.trim();
+            }
+
+            return `${minutes}m`;
+        },
+
+        recordInDateRange(record) {
+            if (!record.lastActivityDate) return true;
+
+            const date = new Date(record.lastActivityDate + 'T00:00:00');
+            const now = new Date();
+            const start = new Date(now);
+            const end = new Date(now);
+
+            if (this.filters.dateRange === 'today') {
+                start.setHours(0, 0, 0, 0);
+                return date >= start;
+            }
+
+            if (this.filters.dateRange === 'yesterday') {
+                start.setDate(now.getDate() - 1);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(0, 0, 0, 0);
+                return date >= start && date < end;
+            }
+
+            if (this.filters.dateRange === 'week') {
+                start.setDate(now.getDate() - 7);
+                start.setHours(0, 0, 0, 0);
+                return date >= start;
+            }
+
+            if (this.filters.dateRange === 'last_month') {
+                start.setMonth(now.getMonth() - 1, 1);
+                start.setHours(0, 0, 0, 0);
+                end.setDate(1);
+                end.setHours(0, 0, 0, 0);
+                return date >= start && date < end;
+            }
+
+            if (this.filters.dateRange === 'month') {
+                start.setDate(1);
+                start.setHours(0, 0, 0, 0);
+                return date >= start;
+            }
+
+            return true;
+        },
+
         hasActiveFilters() {
-            return this.filters.router || this.filters.customer || this.filters.subscription || this.filters.usageType;
+            return this.filters.dateRange !== 'month' || this.filters.router || this.filters.customer || this.filters.subscription || this.filters.usageType;
         },
 
         clearFilters() {
@@ -422,7 +522,30 @@ function dataUsage() {
         },
 
         exportCSV() {
-            alert('Exporting CSV with current filters...');
+            const rows = this.filteredUsage;
+            const headers = ['Customer', 'Subscription', 'Router', 'IP Address', 'Download', 'Upload', 'Total', 'Sessions', 'Session Time', 'Last Activity'];
+            const csvRows = [
+                headers,
+                ...rows.map(row => [
+                    row.customer,
+                    row.subscription,
+                    row.router,
+                    row.ipAddress,
+                    this.formatBytes(row.download),
+                    this.formatBytes(row.upload),
+                    this.formatBytes(row.total),
+                    row.sessions,
+                    row.sessionTime,
+                    row.lastActivity
+                ])
+            ];
+            const csv = csvRows.map(row => row.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'network-data-usage.csv';
+            link.click();
+            URL.revokeObjectURL(url);
         },
 
         refreshData() {

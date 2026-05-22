@@ -17,12 +17,6 @@
             <p class="text-sm text-gray-500 mt-1">Historical usage analytics and trends</p>
         </div>
         <div class="flex items-center gap-3">
-            <button @click="generateReport()" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                Generate Report
-            </button>
             <button @click="exportPDF()" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
@@ -56,7 +50,6 @@
                     <option value="month" selected>This Month</option>
                     <option value="quarter">This Quarter</option>
                     <option value="year">This Year</option>
-                    <option value="custom">Custom Range</option>
                 </select>
             </div>
 
@@ -466,25 +459,41 @@ function usageReports() {
         },
 
         hasActiveFilters() {
-            return this.filters.customer || this.filters.plan || this.filters.router;
+            return this.filters.dateRange !== 'month' || this.filters.groupBy !== 'month' || this.filters.customer || this.filters.plan || this.filters.router;
         },
 
         clearFilters() {
+            this.filters.dateRange = 'month';
+            this.filters.groupBy = 'month';
             this.filters.customer = '';
             this.filters.plan = '';
             this.filters.router = '';
         },
 
-        generateReport() {
-            this.filteredRecords;
-        },
-
         exportPDF() {
-            alert('Exporting report as PDF...');
+            window.print();
         },
 
         exportCSV() {
-            alert('Exporting report data as CSV...');
+            const headers = ['Period', 'Customer', 'Download', 'Upload', 'Total', 'Sessions'];
+            const csvRows = [
+                headers,
+                ...this.filteredRecords.map(row => [
+                    row.period,
+                    row.customer,
+                    this.formatBytes(row.download),
+                    this.formatBytes(row.upload),
+                    this.formatBytes(row.total),
+                    row.sessions
+                ])
+            ];
+            const csv = csvRows.map(row => row.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'usage-report.csv';
+            link.click();
+            URL.revokeObjectURL(url);
         }
     };
 }

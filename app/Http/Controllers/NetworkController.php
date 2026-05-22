@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\NetworkAlert;
 use App\Models\NetworkBandwidthSample;
-use App\Models\NetworkUsageRecord;
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Services\RadiusAccountingUsageService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 
 class NetworkController extends Controller
 {
+    public function __construct(
+        protected RadiusAccountingUsageService $radiusAccountingUsage,
+    ) {}
+
     public function status(): View
     {
         $tenantId = $this->tenantId();
@@ -102,41 +106,26 @@ class NetworkController extends Controller
     public function dataUsage(): View
     {
         $tenantId = $this->tenantId();
-
-        $usageRecords = NetworkUsageRecord::query()
-            ->where('tenant_id', $tenantId)
-            ->with([
-                'customer:id,customer_code,name,first_name,last_name,company_name,customer_type',
-                'subscription:id,subscription_code,plan_id,ip_address',
-                'subscription.plan:id,name,data_limit,data_unit,unlimited',
-                'router:id,name',
-            ])
-            ->latest('last_activity_at')
-            ->limit(200)
-            ->get();
-
-        $usageData = $usageRecords->map(fn (NetworkUsageRecord $record): array => $this->usageRow($record))->values();
-        $topUser = $usageData->sortByDesc('total')->first();
+        $sessions = $this->radiusAccountingUsage->sessionsForTenant($tenantId, now()->subYear()->startOfDay(), now());
+        $usageData = $sessions->map(fn (array $session): array => $this->usageRow($session))->values();
+        $groupedUsage = $this->groupUsageRows($usageData);
+        $summary = $this->radiusAccountingUsage->summary($sessions);
+        $todayTotal = $sessions
+            ->filter(fn (array $session): bool => ($session['last_activity_date'] ?? null) === now()->toDateString())
+            ->sum('total');
+        $monthTotal = $sessions
+            ->filter(fn (array $session): bool => filled($session['last_activity_date']) && str_starts_with((string) $session['last_activity_date'], now()->format('Y-m')))
+            ->sum('total');
+        $topUser = $groupedUsage->sortByDesc('total')->first();
 
         $networkUsage = [
             'stats' => [
-                'totalToday' => NetworkUsageRecord::query()
-                    ->where('tenant_id', $tenantId)
-                    ->where('last_activity_at', '>=', now()->startOfDay())
-                    ->get()
-                    ->sum(fn (NetworkUsageRecord $record): int => $record->download_bytes + $record->upload_bytes),
-                'totalMonth' => NetworkUsageRecord::query()
-                    ->where('tenant_id', $tenantId)
-                    ->where('last_activity_at', '>=', now()->startOfMonth())
-                    ->get()
-                    ->sum(fn (NetworkUsageRecord $record): int => $record->download_bytes + $record->upload_bytes),
-                'activeUsers' => Subscription::query()
-                    ->where('tenant_id', $tenantId)
-                    ->where('status', 'active')
-                    ->count(),
+                'totalToday' => (int) $todayTotal,
+                'totalMonth' => (int) $monthTotal,
+                'activeUsers' => $summary['onlineSessions'],
                 'topUserUsage' => $topUser['total'] ?? 0,
                 'topUserName' => $topUser['customer'] ?? 'No usage yet',
-                'avgUsagePerUser' => (int) round($usageData->avg('total') ?? 0),
+                'avgUsagePerUser' => $summary['avgPerCustomer'],
             ],
             'routerOptions' => Router::query()
                 ->where('tenant_id', $tenantId)
@@ -220,53 +209,59 @@ class NetworkController extends Controller
         ];
     }
 
-    private function usageRow(NetworkUsageRecord $record): array
+    private function usageRow(array $session): array
     {
-        $total = $record->download_bytes + $record->upload_bytes;
-        $quota = $this->quotaBytes($record->subscription?->plan);
-
         return [
-            'id' => $record->id,
-            'customer' => $record->customer?->full_name ?? 'Unknown customer',
-            'customerId' => (string) $record->customer_id,
-            'customerCode' => $record->customer?->customer_code ?? '—',
-            'subscription' => $record->subscription?->subscription_code ?? 'No subscription',
-            'subscriptionId' => $record->subscription_id ? (string) $record->subscription_id : '',
-            'router' => $record->router?->name ?? 'No router',
-            'routerId' => $record->router_id ? (string) $record->router_id : '',
-            'ipAddress' => $record->ip_address ?: ($record->subscription?->ip_address ?? '—'),
-            'download' => $record->download_bytes,
-            'upload' => $record->upload_bytes,
-            'total' => $total,
-            'usage' => $total,
-            'maxUsage' => max($record->download_bytes, $record->upload_bytes, 1),
-            'quota' => $quota,
-            'sessionTime' => $this->formatDuration($record->session_seconds),
-            'lastActivity' => $record->last_activity_at?->diffForHumans() ?? '—',
-            'plan' => $record->subscription?->plan?->name ?? 'Unassigned plan',
+            'id' => $session['id'],
+            'customer' => $session['customer'],
+            'customerId' => (string) $session['customer_id'],
+            'customerCode' => $session['customer_code'],
+            'subscription' => $session['subscription'],
+            'subscriptionId' => (string) $session['subscription_id'],
+            'router' => $session['router'],
+            'routerId' => $session['router_id'] ? (string) $session['router_id'] : '',
+            'ipAddress' => $session['ip_address'],
+            'download' => $session['download'],
+            'upload' => $session['upload'],
+            'total' => $session['total'],
+            'usage' => $session['total'],
+            'maxUsage' => max($session['download'], $session['upload'], 1),
+            'quota' => $session['quota'],
+            'sessionTime' => $session['duration'],
+            'sessionSeconds' => $session['duration_seconds'],
+            'sessions' => 1,
+            'lastActivity' => $session['last_activity'],
+            'lastActivityDate' => $session['last_activity_date'],
+            'plan' => $session['plan'],
         ];
     }
 
-    private function quotaBytes($plan): int
+    private function groupUsageRows(Collection $rows): Collection
     {
-        if (! $plan || $plan->unlimited || ! $plan->data_limit) {
-            return 1099511627776;
-        }
+        return $rows
+            ->groupBy(fn (array $row): string => implode(':', [$row['customerId'], $row['subscriptionId'], $row['routerId']]))
+            ->map(function (Collection $rows, string $key): array {
+                $first = $rows->first();
+                $download = (int) $rows->sum('download');
+                $upload = (int) $rows->sum('upload');
+                $total = $download + $upload;
+                $last = $rows->sortByDesc('lastActivityDate')->first();
 
-        $multiplier = match ($plan->data_unit) {
-            'MB' => 1048576,
-            'TB' => 1099511627776,
-            default => 1073741824,
-        };
-
-        return (int) $plan->data_limit * $multiplier;
-    }
-
-    private function formatDuration(int $seconds): string
-    {
-        $hours = intdiv($seconds, 3600);
-        $minutes = intdiv($seconds % 3600, 60);
-
-        return "{$hours}h {$minutes}m";
+                return [
+                    ...$first,
+                    'id' => $key,
+                    'download' => $download,
+                    'upload' => $upload,
+                    'total' => $total,
+                    'usage' => $total,
+                    'maxUsage' => max($download, $upload, 1),
+                    'sessionSeconds' => (int) $rows->sum('sessionSeconds'),
+                    'sessionTime' => $this->radiusAccountingUsage->formatDuration((int) $rows->sum('sessionSeconds')),
+                    'sessions' => $rows->count(),
+                    'lastActivity' => $last['lastActivity'] ?? 'No usage yet',
+                    'lastActivityDate' => $last['lastActivityDate'] ?? null,
+                ];
+            })
+            ->values();
     }
 }
