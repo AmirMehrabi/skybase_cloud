@@ -32,11 +32,20 @@ class UpdateRouterRequest extends FormRequest
      */
     public function rules(): array
     {
+        $tenantId = (string) (tenant()?->id ?? $this->user()?->tenant_id);
+        $router = $this->route('router');
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'vendor' => ['required', 'string', 'in:Mikrotik,Cisco,Juniper,Huawei'],
-            'ip_address' => ['required', 'ip', Rule::unique('routers', 'ip_address')->ignore($this->route('router')?->id)],
+            'ip_address' => [
+                'required',
+                'ip',
+                Rule::unique('routers', 'ip_address')
+                    ->where(fn ($query) => $query->where('tenant_id', $tenantId))
+                    ->ignore($router),
+            ],
             'api_port' => ['required', 'integer', 'min:1', 'max:65535'],
             'api_username' => ['nullable', 'string', 'max:255'],
             'api_password' => ['nullable', 'string', 'max:255', 'sometimes'],
@@ -52,7 +61,6 @@ class UpdateRouterRequest extends FormRequest
             'netflow_version' => ['nullable', 'integer', 'in:5,9'],
             'netflow_interfaces' => ['nullable', 'string', 'max:255'],
             'netflow_sampling_interval' => ['nullable', 'integer', 'min:1', 'max:1000000'],
-            'tenant_id' => ['nullable', 'exists:tenants,id'],
         ];
     }
 
