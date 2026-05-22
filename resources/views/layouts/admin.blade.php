@@ -185,25 +185,7 @@
                             
                             <!-- Search Results -->
                             <div id="search-results" class="hidden">
-                                <!-- Customers Section -->
-                                <div id="customers-section" class="hidden">
-                                    <div class="px-4 py-2 border-b border-slate-900/10 bg-[#fbf7ed]">
-                                        <span class="text-xs font-semibold text-slate-700 uppercase">Customers</span>
-                                    </div>
-                                    <div id="customers-list" class="py-1">
-                                        <!-- Customer results will be populated here -->
-                                    </div>
-                                </div>
-                                
-                                <!-- Instances Section -->
-                                <div id="instances-section" class="hidden">
-                                    <div class="px-4 py-2 border-b border-slate-900/10 bg-[#fbf7ed]">
-                                        <span class="text-xs font-semibold text-slate-700 uppercase">Instances</span>
-                                    </div>
-                                    <div id="instances-list" class="py-1">
-                                        <!-- Instance results will be populated here -->
-                                    </div>
-                                </div>
+                                <div id="modules-list" class="py-1"></div>
                                 
                                 <!-- No Results -->
                                 <div id="no-results" class="hidden px-4 py-3 text-sm text-slate-500 text-center">
@@ -345,16 +327,13 @@
             const recentSearchesList = document.getElementById('recent-searches-list');
             const noRecentSearches = document.getElementById('no-recent-searches');
             const searchResults = document.getElementById('search-results');
-            const customersSection = document.getElementById('customers-section');
-            const customersList = document.getElementById('customers-list');
-            const instancesSection = document.getElementById('instances-section');
-            const instancesList = document.getElementById('instances-list');
+            const modulesList = document.getElementById('modules-list');
             const noResults = document.getElementById('no-results');
             const clearRecentSearchesBtn = document.getElementById('clear-recent-searches');
             
             const RECENT_SEARCHES_KEY = 'admin_recent_searches';
             const MAX_RECENT_SEARCHES = 10;
-            const DEBOUNCE_DELAY = 300;
+            const DEBOUNCE_DELAY = 400;
             
             let searchTimeout = null;
             let currentRequest = null;
@@ -492,12 +471,11 @@
                 searchLoading.classList.remove('hidden');
                 recentSearches.classList.add('hidden');
                 searchResults.classList.add('hidden');
-                customersSection.classList.add('hidden');
-                instancesSection.classList.add('hidden');
+                modulesList.innerHTML = '';
                 noResults.classList.add('hidden');
                 
                 // Make request
-                const url = new URL('#', window.location.origin);
+                const url = new URL('{{ route('search.resources') }}', window.location.origin);
                 url.searchParams.append('q', query);
                 
                 const xhr = new XMLHttpRequest();
@@ -539,78 +517,49 @@
                 recentSearches.classList.add('hidden');
                 searchResults.classList.remove('hidden');
                 
-                const customers = data.customers || [];
-                const instances = data.instances || [];
+                const modules = data.modules || [];
                 currentResults = [];
                 selectedIndex = -1;
-                
-                // Display customers
-                if (customers.length > 0) {
-                    customersSection.classList.remove('hidden');
-                    customersList.innerHTML = customers.map((customer, index) => {
-                        const resultIndex = currentResults.length;
-                        currentResults.push({ type: 'customer', url: customer.url });
-                        return `
-                            <a href="${escapeHtml(customer.url)}" class="block px-4 py-3 hover:bg-[#fbf7ed] focus:bg-[#fbf7ed] focus:outline-none search-result-item" data-index="${resultIndex}">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-medium text-slate-900">${safeHtml(customer.name)}</div>
-                                        ${customer.email ? `<div class="text-xs text-slate-500 mt-1">${safeHtml(customer.email)}</div>` : ''}
-                                        ${customer.phone ? `<div class="text-xs text-slate-500">${safeHtml(customer.phone)}</div>` : ''}
-                                        ${customer.company ? `<div class="text-xs text-slate-500">${safeHtml(customer.company)}</div>` : ''}
-                                    </div>
-                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                        customer.status === 'active' ? 'bg-green-100 text-green-800' : 
-                                        customer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                        'bg-gray-100 text-gray-800'
-                                    }">
-                                        ${escapeHtml(customer.status)}
-                                    </span>
-                                </div>
-                            </a>
-                        `;
-                    }).join('');
-                } else {
-                    customersSection.classList.add('hidden');
-                }
-                
-                // Display instances
-                if (instances.length > 0) {
-                    instancesSection.classList.remove('hidden');
-                    instancesList.innerHTML = instances.map((instance, index) => {
-                        const resultIndex = currentResults.length;
-                        currentResults.push({ type: 'instance', url: instance.url });
-                        return `
-                            <a href="${escapeHtml(instance.url)}" class="block px-4 py-3 hover:bg-[#fbf7ed] focus:bg-[#fbf7ed] focus:outline-none search-result-item" data-index="${resultIndex}">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-medium text-slate-900">${safeHtml(instance.name)}</div>
-                                        ${instance.description ? `<div class="text-xs text-slate-500 mt-1">${safeHtml(instance.description)}</div>` : ''}
-                                        ${instance.customer_name ? `<div class="text-xs text-slate-500">${safeHtml(instance.customer_name)}</div>` : ''}
-                                        <div class="text-xs text-slate-500 mt-1">${escapeHtml(instance.region || '')}</div>
-                                    </div>
-                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                        instance.status === 'active' ? 'bg-green-100 text-green-800' : 
-                                        instance.status === 'building' ? 'bg-blue-100 text-blue-800' : 
-                                        instance.status === 'error' ? 'bg-red-100 text-red-800' : 
-                                        'bg-gray-100 text-gray-800'
-                                    }">
-                                        ${escapeHtml(instance.status)}
-                                    </span>
-                                </div>
-                            </a>
-                        `;
-                    }).join('');
-                } else {
-                    instancesSection.classList.add('hidden');
-                }
-                
-                // Show no results
-                if (customers.length === 0 && instances.length === 0) {
+
+                if (modules.length === 0) {
+                    modulesList.innerHTML = '';
                     noResults.classList.remove('hidden');
-                } else {
-                    noResults.classList.add('hidden');
+
+                    return;
                 }
+
+                noResults.classList.add('hidden');
+                modulesList.innerHTML = modules.map((module) => {
+                    const rows = (module.items || []).map((item) => {
+                        const resultIndex = currentResults.length;
+                        currentResults.push({ type: module.key, url: item.url });
+                        const metaHtml = (item.meta || [])
+                            .map((entry) => `<div class="text-xs text-slate-500 truncate">${safeHtml(entry)}</div>`)
+                            .join('');
+
+                        return `
+                            <a href="${escapeHtml(item.url)}" class="block px-4 py-3 hover:bg-[#fbf7ed] focus:bg-[#fbf7ed] focus:outline-none search-result-item" data-index="${resultIndex}">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-[11px] uppercase tracking-wide text-slate-500 mb-1">${escapeHtml(module.label)}</div>
+                                        <div class="text-sm font-medium text-slate-900 truncate">${safeHtml(item.title || '')}</div>
+                                        ${metaHtml}
+                                    </div>
+                                    ${item.status ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">${escapeHtml(item.status)}</span>` : ''}
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="border-b border-slate-900/10 last:border-b-0">
+                            <div class="px-4 py-2 bg-[#fbf7ed]">
+                                <span class="text-xs font-semibold text-slate-700 uppercase">${escapeHtml(module.label)}</span>
+                            </div>
+                            <div class="py-1">${rows}</div>
+                        </div>
+                    `;
+                }).join('');
             }
             
             // Show recent searches
@@ -626,8 +575,7 @@
                 searchLoading.classList.add('hidden');
                 recentSearches.classList.add('hidden');
                 searchResults.classList.remove('hidden');
-                customersSection.classList.add('hidden');
-                instancesSection.classList.add('hidden');
+                modulesList.innerHTML = '';
                 noResults.classList.remove('hidden');
             }
             

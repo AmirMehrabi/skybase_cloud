@@ -19,6 +19,7 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ReportController as GeneralReportController;
+use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SubscriptionController;
@@ -61,6 +62,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
 
     // Dashboard
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/search/resources', ResourceSearchController::class)->name('search.resources');
 
     // Tenant User Management
     Route::prefix('settings/users')->name('admin.tenant.users.')->group(function () {

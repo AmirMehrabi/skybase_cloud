@@ -206,14 +206,14 @@
                         </x-ui.card>
                     </div>
 
-                @case('services')
-                    <!-- Services Tab -->
+                @case('subscriptions')
+                    <!-- Subscriptions Tab -->
                     <x-ui.card>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Service ID</th>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Subscription</th>
                                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Plan</th>
                                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Router</th>
                                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">IP</th>
@@ -223,17 +223,17 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    @foreach($this->services as $service)
+                                    @foreach($this->subscriptions as $subscription)
                                         <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4 text-sm font-medium text-gray-900">#SRV-{{ $service['id'] }}</td>
-                                            <td class="px-6 py-4 text-sm text-gray-700">{{ $service['plan'] }}</td>
-                                            <td class="px-6 py-4 text-sm text-gray-700">{{ $service['router'] }}</td>
-                                            <td class="px-6 py-4 text-sm font-mono text-gray-700">{{ $service['ip'] }}</td>
+                                            <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $subscription['code'] }}</td>
+                                            <td class="px-6 py-4 text-sm text-gray-700">{{ $subscription['plan'] }}</td>
+                                            <td class="px-6 py-4 text-sm text-gray-700">{{ $subscription['router'] }}</td>
+                                            <td class="px-6 py-4 text-sm font-mono text-gray-700">{{ $subscription['ip'] }}</td>
                                             <td class="px-6 py-4">
-                                                <x-ui.badge :status="$service['status']">{{ ucfirst($service['status']) }}</x-ui-badge>
+                                                <x-ui.badge :status="$subscription['status']">{{ ucfirst($subscription['status']) }}</x-ui-badge>
                                             </td>
-                                            <td class="px-6 py-4 text-sm text-gray-500">{{ $service['activated_at'] }}</td>
-                                            <td class="px-6 py-4 text-sm text-gray-700">{{ $service['data_used'] }}</td>
+                                            <td class="px-6 py-4 text-sm text-gray-500">{{ $subscription['activated_at'] }}</td>
+                                            <td class="px-6 py-4 text-sm text-gray-700">{{ $subscription['data_used'] }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
