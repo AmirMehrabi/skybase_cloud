@@ -136,9 +136,11 @@ class CustomerController extends Controller
         $this->authorizeTenantAccess($customer);
 
         $customer->load([
+            'payments.invoice',
+            'invoices.payments',
+            'invoices.subscription',
             'subscriptions.plan',
             'subscriptions.router',
-            'invoices',
             'organization',
         ]);
 

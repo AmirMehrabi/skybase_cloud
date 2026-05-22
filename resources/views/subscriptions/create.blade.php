@@ -607,8 +607,8 @@
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Initial Status <span class="text-red-500">*</span></label>
                     <select name="status" id="status" x-model="form.status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
-                        <option value="pending">Pending Activation</option>
                         <option value="active">Active</option>
+                        <option value="pending">Pending Activation</option>
                         <option value="suspended">Suspended</option>
                     </select>
                     @error('status')
@@ -701,7 +701,7 @@ function subscriptionCreateForm() {
             billing_cycle: 'monthly',
             billing_enabled: true,
             grace_period_days: '',
-            status: 'pending',
+            status: 'active',
             start_date: '',
             end_date: '',
             notes: '',

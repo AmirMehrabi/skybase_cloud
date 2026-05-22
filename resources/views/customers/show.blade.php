@@ -33,6 +33,8 @@
         'ip_address' => $activeSubscription?->ip_address ?? 'N/A',
         'billing_cycle' => $activeSubscription?->billing_cycle ?? 'monthly',
         'activated_at' => optional($activeSubscription?->activation_date ?? $activeSubscription?->created_at)->format('M d, Y'),
+        'subscriptions_count' => $customer->subscriptions->count(),
+        'open_balance' => (float) $customer->invoices->sum('balance_due'),
     ];
 
     $services = $customer->subscriptions
@@ -46,6 +48,10 @@
             'ip_address' => $subscription->ip_address ?? 'N/A',
             'status' => $subscription->status,
             'activated_at' => optional($subscription->activation_date ?? $subscription->created_at)->format('M d, Y'),
+            'billing_cycle' => $subscription->billing_cycle,
+            'total_price' => (float) $subscription->total_price,
+            'url' => route('subscriptions.show', $subscription),
+            'edit_url' => route('subscriptions.edit', $subscription),
         ])->all();
 
     $invoices = $customer->invoices
@@ -55,8 +61,29 @@
             'id' => $invoice->id,
             'number' => $invoice->invoice_number,
             'amount' => (float) $invoice->total,
+            'paid_amount' => (float) $invoice->paid_amount,
+            'balance_due' => (float) $invoice->balance_due,
             'due_date' => optional($invoice->due_date)->format('Y-m-d'),
+            'issue_date' => optional($invoice->issue_date)->format('Y-m-d'),
             'status' => $invoice->status,
+            'subscription' => $invoice->subscription?->subscription_code ?? 'N/A',
+            'url' => route('billing.invoices.show', $invoice),
+        ])->all();
+
+    $payments = $customer->payments
+        ->sortByDesc(fn ($payment) => optional($payment->paid_at ?? $payment->created_at)->timestamp ?? 0)
+        ->values()
+        ->map(fn ($payment) => [
+            'id' => $payment->id,
+            'reference' => $payment->payment_reference,
+            'invoice_id' => $payment->invoice_id,
+            'invoice_number' => $payment->invoice?->invoice_number ?? 'N/A',
+            'amount' => (float) $payment->amount,
+            'method' => $payment->payment_method ?? 'cash',
+            'paid_at' => optional($payment->paid_at ?? $payment->created_at)->format('Y-m-d'),
+            'status' => $payment->status,
+            'url' => route('billing.payments.show', $payment),
+            'invoice_url' => $payment->invoice ? route('billing.invoices.show', $payment->invoice) : '#',
         ])->all();
 
     $activity = $activityLog->values()->all();
@@ -69,7 +96,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-6" x-data="customerShow(@js($customerData), @js($services), @js($invoices), @js($activity))" x-cloak>
+<div class="space-y-6" x-data="customerShow(@js($customerData), @js($services), @js($invoices), @js($payments), @js($activity), @js(route('billing.payments.store')))" x-cloak>
     <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="flex items-center gap-4">
@@ -101,8 +128,8 @@
                 <p class="text-lg font-semibold mt-1" x-text="customer?.plan || 'N/A'"></p>
             </div>
             <div>
-                <p class="text-blue-100 text-xs uppercase tracking-wider">Balance</p>
-                <p class="text-lg font-semibold mt-1" :class="customer?.balance < 0 ? 'text-green-300' : 'text-red-300'" x-text="formatBalance(customer?.balance || 0)"></p>
+                <p class="text-blue-100 text-xs uppercase tracking-wider">Open Balance</p>
+                <p class="text-lg font-semibold mt-1" :class="customer?.open_balance <= 0 ? 'text-green-300' : 'text-red-300'" x-text="formatBalance(customer?.open_balance || 0)"></p>
             </div>
             <div>
                 <p class="text-blue-100 text-xs uppercase tracking-wider">IP Address</p>
@@ -177,15 +204,18 @@
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">IP</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Activated</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <template x-if="services.length === 0">
-                                    <tr><td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">No subscriptions found.</td></tr>
+                                    <tr><td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">No subscriptions found.</td></tr>
                                 </template>
                                 <template x-for="service in services" :key="service.id">
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900" x-text="service.service_id"></td>
+                                        <td class="px-6 py-4">
+                                            <a :href="service.url" class="text-sm font-medium text-blue-600 hover:text-blue-700" x-text="service.service_id"></a>
+                                        </td>
                                         <td class="px-6 py-4 text-sm text-gray-700" x-text="service.plan"></td>
                                         <td class="px-6 py-4 text-sm text-gray-700" x-text="service.router"></td>
                                         <td class="px-6 py-4 text-sm font-mono text-gray-700" x-text="service.ip_address"></td>
@@ -195,6 +225,12 @@
                                                   x-text="formatStatus(service.status)"></span>
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-500" x-text="service.activated_at || '—'"></td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <a :href="service.url" class="text-sm font-medium text-blue-600 hover:text-blue-700">View</a>
+                                                <a :href="service.edit_url" class="text-sm font-medium text-gray-600 hover:text-gray-900">Edit</a>
+                                            </div>
+                                        </td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -211,23 +247,90 @@
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Invoice</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Balance</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Due Date</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <template x-if="invoices.length === 0">
-                                    <tr><td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500">No invoices found.</td></tr>
+                                    <tr><td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">No invoices found.</td></tr>
                                 </template>
                                 <template x-for="invoice in invoices" :key="invoice.id">
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 text-sm font-medium text-blue-600" x-text="invoice.number"></td>
+                                        <td class="px-6 py-4">
+                                            <a :href="invoice.url" class="text-sm font-medium text-blue-600 hover:text-blue-700" x-text="invoice.number"></a>
+                                            <p class="text-xs text-gray-500" x-text="invoice.subscription"></p>
+                                        </td>
                                         <td class="px-6 py-4 text-sm font-semibold text-gray-900" x-text="formatBalance(invoice.amount)"></td>
+                                        <td class="px-6 py-4 text-sm font-semibold text-gray-900" x-text="formatBalance(invoice.balance_due)"></td>
                                         <td class="px-6 py-4 text-sm text-gray-500" x-text="invoice.due_date || '—'"></td>
                                         <td class="px-6 py-4">
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
                                                   :class="getStatusBadgeClass(invoice.status)"
                                                   x-text="formatStatus(invoice.status)"></span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <a :href="invoice.url" class="text-sm font-medium text-blue-600 hover:text-blue-700">View</a>
+                                                <button type="button" x-show="Number(invoice.balance_due) > 0" @click="openPayment(invoice)" class="text-sm font-medium text-emerald-700 hover:text-emerald-800">Record Payment</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="activeTab === 'payments'" style="display: none;">
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Payments</h3>
+                            <p class="text-sm text-gray-500">Real payments recorded against this customer's invoices.</p>
+                        </div>
+                        <button type="button" x-show="outstandingInvoices.length > 0" @click="openPayment(outstandingInvoices[0])" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                            Record Payment
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reference</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Invoice</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Method</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Paid At</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <template x-if="payments.length === 0">
+                                    <tr><td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">No payments recorded.</td></tr>
+                                </template>
+                                <template x-for="payment in payments" :key="payment.id">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            <a :href="payment.url" class="text-sm font-medium text-blue-600 hover:text-blue-700" x-text="payment.reference"></a>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <a :href="payment.invoice_url" class="text-sm text-gray-700 hover:text-blue-600" x-text="payment.invoice_number"></a>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm font-semibold text-gray-900" x-text="formatBalance(payment.amount)"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-700 capitalize" x-text="String(payment.method || 'cash').replace('_', ' ')"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500" x-text="payment.paid_at || '—'"></td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                                                  :class="getStatusBadgeClass(payment.status)"
+                                                  x-text="formatStatus(payment.status)"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <a :href="payment.url" class="text-sm font-medium text-blue-600 hover:text-blue-700">View</a>
                                         </td>
                                     </tr>
                                 </template>
@@ -264,22 +367,83 @@
             </div>
         </div>
     </div>
+
+    <div x-show="paymentModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" style="display: none;">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-xl" @click.outside="closePayment()">
+            <div class="border-b border-gray-200 px-6 py-4">
+                <h3 class="text-lg font-semibold text-gray-900">Record Payment</h3>
+                <p class="text-sm text-gray-500" x-text="paymentModal.invoice ? paymentModal.invoice.number + ' balance ' + formatBalance(paymentModal.invoice.balance_due) : ''"></p>
+            </div>
+            <form class="space-y-4 p-6" @submit.prevent="submitPayment()">
+                <input type="hidden" x-model="paymentForm.invoice_id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Invoice</label>
+                    <select x-model="paymentForm.invoice_id" @change="selectPaymentInvoice()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <template x-for="invoice in outstandingInvoices" :key="invoice.id">
+                            <option :value="invoice.id" x-text="invoice.number + ' - ' + formatBalance(invoice.balance_due)"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                    <input type="number" min="0.01" step="0.01" x-model="paymentForm.amount" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                    <select x-model="paymentForm.payment_method" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                        <option value="cash">Cash</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="card">Card</option>
+                        <option value="online">Online</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Paid At</label>
+                    <input type="date" x-model="paymentForm.paid_at" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                </div>
+                <p x-show="paymentModal.error" class="text-sm text-red-600" x-text="paymentModal.error"></p>
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" @click="closePayment()" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                    <button type="submit" :disabled="paymentModal.submitting" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60" x-text="paymentModal.submitting ? 'Saving...' : 'Save Payment'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @push('scripts')
 <script>
-function customerShow(customer, services, invoices, activityLog) {
+function customerShow(customer, services, invoices, payments, activityLog, paymentStoreUrl) {
     return {
         customer,
         services,
         invoices,
+        payments,
         activityLog,
+        paymentStoreUrl,
         activeTab: 'overview',
+        paymentModal: {
+            open: false,
+            invoice: null,
+            submitting: false,
+            error: '',
+        },
+        paymentForm: {
+            invoice_id: '',
+            amount: '',
+            payment_method: 'cash',
+            paid_at: new Date().toISOString().slice(0, 10),
+        },
         tabs: {
             overview: 'Overview',
             services: 'Services',
             invoices: 'Invoices',
+            payments: 'Payments',
             activity: 'Activity Log',
+        },
+
+        get outstandingInvoices() {
+            return this.invoices.filter((invoice) => Number(invoice.balance_due || 0) > 0);
         },
 
         formatBalance(amount) {
@@ -308,6 +472,63 @@ function customerShow(customer, services, invoices, activityLog) {
             };
 
             return classes[status] || classes.inactive;
+        },
+
+        openPayment(invoice) {
+            this.paymentModal.open = true;
+            this.paymentModal.invoice = invoice;
+            this.paymentModal.error = '';
+            this.paymentForm.invoice_id = invoice?.id || '';
+            this.paymentForm.amount = Number(invoice?.balance_due || 0).toFixed(2);
+            this.paymentForm.payment_method = 'cash';
+            this.paymentForm.paid_at = new Date().toISOString().slice(0, 10);
+        },
+
+        closePayment() {
+            this.paymentModal.open = false;
+            this.paymentModal.invoice = null;
+            this.paymentModal.error = '';
+        },
+
+        selectPaymentInvoice() {
+            const invoice = this.invoices.find((item) => String(item.id) === String(this.paymentForm.invoice_id));
+            this.paymentModal.invoice = invoice || null;
+            this.paymentForm.amount = Number(invoice?.balance_due || 0).toFixed(2);
+        },
+
+        async submitPayment() {
+            this.paymentModal.submitting = true;
+            this.paymentModal.error = '';
+
+            try {
+                const response = await fetch(this.paymentStoreUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        invoice_id: this.paymentForm.invoice_id,
+                        amount: this.paymentForm.amount,
+                        payment_method: this.paymentForm.payment_method,
+                        paid_at: this.paymentForm.paid_at,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    this.paymentModal.error = data.message || 'Payment could not be recorded.';
+                    return;
+                }
+
+                window.location.reload();
+            } catch (error) {
+                this.paymentModal.error = 'Payment could not be recorded.';
+            } finally {
+                this.paymentModal.submitting = false;
+            }
         },
     };
 }

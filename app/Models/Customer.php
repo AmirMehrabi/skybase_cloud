@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\LogsTenantActivity;
+use App\Services\RadiusProvisioningService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -172,6 +173,14 @@ class Customer extends Model implements LdapImportable
             if (auth()->check() && empty($customer->tenant_id)) {
                 $customer->tenant_id = auth()->user()->tenant_id;
             }
+        });
+
+        static::saved(function (Customer $customer): void {
+            if (! $customer->wasChanged('billing_enabled') && ! $customer->wasChanged('organization_id')) {
+                return;
+            }
+
+            app(RadiusProvisioningService::class)->syncSubscriptionsForCustomer($customer);
         });
     }
 

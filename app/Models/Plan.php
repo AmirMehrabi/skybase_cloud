@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\LogsTenantActivity;
+use App\Services\RadiusProvisioningService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -102,5 +103,23 @@ class Plan extends Model
             ->where('plan_id', $this->id)
             ->where('status', 'active')
             ->count();
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function (Plan $plan): void {
+            if (! $plan->wasRecentlyCreated && ! $plan->wasChanged([
+                'status',
+                'download_speed',
+                'upload_speed',
+                'bandwidth_unit',
+                'internal_name',
+                'router_profile',
+            ])) {
+                return;
+            }
+
+            app(RadiusProvisioningService::class)->syncSubscriptionsForPlan($plan);
+        });
     }
 }

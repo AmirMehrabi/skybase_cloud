@@ -21,6 +21,7 @@ $subscription = [
     'ip_address' => $subscription->ip_address ?? 'N/A',
     'mac_address' => $subscription->mac_address ?? 'N/A',
     'pppoe_username' => $subscription->pppoe_username ?? 'N/A',
+    'pppoe_password' => $subscription->pppoe_password ?? 'N/A',
     'start_date' => optional($subscription->start_date ?? $subscription->activation_date ?? $subscription->created_at)->toDateString(),
     'end_date' => optional($subscription->end_date ?? $subscription->created_at?->copy()->addYear())->toDateString(),
     'billing_enabled' => (bool) $subscription->billing_enabled,
@@ -105,7 +106,30 @@ function getStatusBadgeClass($status)
 @endphp
 
 @section('content')
-<div x-data="{ tab: 'overview' }" class="space-y-6">
+<div
+    x-data="{
+        tab: 'overview',
+        copiedField: null,
+        async copyCredential(field, value) {
+            if (! value || value === 'N/A') {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(value);
+                this.copiedField = field;
+                setTimeout(() => {
+                    if (this.copiedField === field) {
+                        this.copiedField = null;
+                    }
+                }, 1200);
+            } catch (error) {
+                this.copiedField = null;
+            }
+        },
+    }"
+    class="space-y-6"
+>
     <!-- Top Header Card -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -316,9 +340,29 @@ function getStatusBadgeClass($status)
                                 <dt class="text-sm text-gray-500">MAC Address</dt>
                                 <dd class="text-sm font-medium text-gray-900">{{ $subscription['mac_address'] }}</dd>
                             </div>
-                            <div class="flex justify-between">
-                                <dt class="text-sm text-gray-500">PPPoE Username</dt>
-                                <dd class="text-sm font-medium text-gray-900">{{ $subscription['pppoe_username'] }}</dd>
+                            <div class="pt-3 border-t border-gray-200 space-y-3">
+                                <dt class="text-sm text-gray-500">PPPoE Credentials</dt>
+                                <dd class="space-y-2">
+                                    <button
+                                        type="button"
+                                        @click="copyCredential('username', @js($subscription['pppoe_username']))"
+                                        class="w-full inline-flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left hover:bg-gray-100 transition-colors"
+                                    >
+                                        <span class="text-xs text-gray-500 uppercase tracking-wide">Username</span>
+                                        <span class="font-mono text-sm font-medium text-gray-900">{{ $subscription['pppoe_username'] }}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="copyCredential('password', @js($subscription['pppoe_password']))"
+                                        class="w-full inline-flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left hover:bg-gray-100 transition-colors"
+                                    >
+                                        <span class="text-xs text-gray-500 uppercase tracking-wide">Password</span>
+                                        <span class="font-mono text-sm font-medium text-gray-900">{{ $subscription['pppoe_password'] }}</span>
+                                    </button>
+                                    <p class="text-xs text-green-600" x-show="copiedField" x-transition>
+                                        <span x-text="copiedField === 'username' ? 'Username copied' : 'Password copied'"></span>
+                                    </p>
+                                </dd>
                             </div>
                         </dl>
                     </div>

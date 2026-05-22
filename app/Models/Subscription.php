@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\LogsTenantActivity;
+use App\Services\RadiusProvisioningService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -358,6 +359,17 @@ class Subscription extends Model implements LdapImportable
             if ($subscription->isDirty('status') && $subscription->status === 'active' && ! $subscription->activation_date) {
                 $subscription->activation_date = now();
             }
+        });
+
+        static::saved(function (Subscription $subscription): void {
+            app(RadiusProvisioningService::class)->syncSubscription(
+                $subscription,
+                $subscription->wasChanged('pppoe_username') ? $subscription->getOriginal('pppoe_username') : null,
+            );
+        });
+
+        static::deleted(function (Subscription $subscription): void {
+            app(RadiusProvisioningService::class)->removeSubscription($subscription);
         });
     }
 
