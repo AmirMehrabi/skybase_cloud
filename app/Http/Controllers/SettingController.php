@@ -209,6 +209,11 @@ class SettingController extends Controller
         );
 
         Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'ldap.organization_sync'],
+            ['value' => $settings['organization_sync'], 'type' => 'json', 'group' => 'ldap']
+        );
+
+        Setting::updateOrCreate(
             ['tenant_id' => $tenant->id, 'key' => 'ldap.subscription_sync'],
             ['value' => $settings['subscription_sync'], 'type' => 'json', 'group' => 'ldap']
         );
@@ -414,7 +419,7 @@ class SettingController extends Controller
     }
 
     /**
-     * @return array{connection: array<string, mixed>, customer_sync: array<string, mixed>, subscription_sync: array<string, mixed>}
+     * @return array{connection: array<string, mixed>, organization_sync: array<string, mixed>, customer_sync: array<string, mixed>, subscription_sync: array<string, mixed>}
      */
     private function ldapSettingsFromRequest(UpdateLdapSettingRequest $request, string $tenantId): array
     {
@@ -437,11 +442,25 @@ class SettingController extends Controller
                 'sync_interval_minutes' => $request->filled('sync_interval_minutes') ? $request->integer('sync_interval_minutes') : 15,
                 'missing_action' => $request->input('missing_action', 'mark_inactive'),
             ],
+            'organization_sync' => [
+                'base_dn' => $request->input('organization_base_dn'),
+                'filter' => $request->input('organization_filter'),
+                'unique_attribute' => $request->input('organization_unique_attribute', 'objectGUID'),
+                'match_attribute' => $request->input('organization_match_attribute', $request->input('organization_unique_attribute', 'objectGUID')),
+                'map' => [
+                    'code' => $request->input('organization_map_code'),
+                    'name' => $request->input('organization_map_name'),
+                    'description' => $request->input('organization_map_description'),
+                    'status' => $request->input('organization_map_status'),
+                ],
+            ],
             'customer_sync' => [
                 'base_dn' => $request->input('customer_base_dn'),
                 'filter' => $request->input('customer_filter', '(objectClass=*)'),
                 'unique_attribute' => $request->input('customer_unique_attribute', 'uid'),
                 'match_attribute' => $request->input('customer_match_attribute', $request->input('customer_unique_attribute', 'uid')),
+                'organization_attribute' => $request->input('customer_organization_attribute'),
+                'organization_match_field' => $request->input('customer_organization_match_field', 'code'),
                 'map' => [
                     'name' => $request->input('customer_map_name'),
                     'email' => $request->input('customer_map_email'),
@@ -483,8 +502,12 @@ class SettingController extends Controller
     private function ldapResultMessage(string $prefix, array $result): string
     {
         return sprintf(
-            '%s Customers: %d created, %d updated, %d skipped, %d missing. Subscriptions: %d created, %d updated, %d skipped, %d missing.',
+            '%s Organizations: %d created, %d updated, %d skipped, %d missing. Customers: %d created, %d updated, %d skipped, %d missing. Subscriptions: %d created, %d updated, %d skipped, %d missing.',
             $prefix,
+            $result['organizations']['created'],
+            $result['organizations']['updated'],
+            $result['organizations']['skipped'],
+            $result['organizations']['missing'],
             $result['customers']['created'],
             $result['customers']['updated'],
             $result['customers']['skipped'],

@@ -29,10 +29,21 @@ class UpdateLdapSettingRequest extends FormRequest
             'sync_interval_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
             'missing_action' => ['required', Rule::in(['mark_inactive', 'ignore', 'soft_delete'])],
 
+            'organization_base_dn' => ['nullable', 'string', 'max:1000'],
+            'organization_filter' => ['nullable', 'string', 'max:1000'],
+            'organization_unique_attribute' => ['nullable', 'string', 'max:255'],
+            'organization_match_attribute' => ['nullable', 'string', 'max:255'],
+            'organization_map_code' => ['nullable', 'string', 'max:255'],
+            'organization_map_name' => ['nullable', 'string', 'max:255'],
+            'organization_map_description' => ['nullable', 'string', 'max:255'],
+            'organization_map_status' => ['nullable', 'string', 'max:255'],
+
             'customer_base_dn' => [$enabled ? 'required' : 'nullable', 'string', 'max:1000'],
             'customer_filter' => [$enabled ? 'required' : 'nullable', 'string', 'max:1000'],
             'customer_unique_attribute' => [$enabled ? 'required' : 'nullable', 'string', 'max:255'],
             'customer_match_attribute' => ['nullable', 'string', 'max:255'],
+            'customer_organization_attribute' => ['nullable', 'string', 'max:255'],
+            'customer_organization_match_field' => ['nullable', Rule::in(['code', 'name', 'ldap_guid'])],
             'customer_map_name' => ['nullable', 'string', 'max:255'],
             'customer_map_email' => ['nullable', 'string', 'max:255'],
             'customer_map_phone' => ['nullable', 'string', 'max:255'],
@@ -58,6 +69,9 @@ class UpdateLdapSettingRequest extends FormRequest
     {
         return [
             'base_dn' => 'base DN',
+            'organization_base_dn' => 'organization base DN',
+            'organization_filter' => 'organization LDAP filter',
+            'organization_unique_attribute' => 'organization unique attribute',
             'customer_base_dn' => 'customer base DN',
             'customer_filter' => 'customer LDAP filter',
             'customer_unique_attribute' => 'customer unique attribute',

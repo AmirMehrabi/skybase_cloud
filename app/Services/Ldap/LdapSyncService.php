@@ -3,8 +3,10 @@
 namespace App\Services\Ldap;
 
 use App\Models\Customer;
+use App\Models\Organization;
 use App\Models\Setting;
 use App\Models\Subscription;
+use App\Models\SubscriptionItem;
 use App\Models\Tenant;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -36,11 +38,25 @@ class LdapSyncService
                 'sync_interval_minutes' => 15,
                 'missing_action' => 'mark_inactive',
             ],
+            'organization_sync' => [
+                'base_dn' => null,
+                'filter' => null,
+                'unique_attribute' => 'objectGUID',
+                'match_attribute' => 'objectGUID',
+                'map' => [
+                    'code' => 'sAMAccountName',
+                    'name' => 'cn',
+                    'description' => 'description',
+                    'status' => null,
+                ],
+            ],
             'customer_sync' => [
                 'base_dn' => null,
                 'filter' => '(objectClass=*)',
                 'unique_attribute' => 'uid',
                 'match_attribute' => 'uid',
+                'organization_attribute' => null,
+                'organization_match_field' => 'code',
                 'map' => [
                     'name' => 'cn',
                     'email' => 'mail',
@@ -83,6 +99,7 @@ class LdapSyncService
 
         return [
             'connection' => array_replace_recursive($defaults['connection'], Setting::get('ldap.connection', [], $tenantId) ?? []),
+            'organization_sync' => array_replace_recursive($defaults['organization_sync'], Setting::get('ldap.organization_sync', [], $tenantId) ?? []),
             'customer_sync' => array_replace_recursive($defaults['customer_sync'], Setting::get('ldap.customer_sync', [], $tenantId) ?? []),
             'subscription_sync' => array_replace_recursive($defaults['subscription_sync'], Setting::get('ldap.subscription_sync', [], $tenantId) ?? []),
             'sync_status' => array_replace_recursive($defaults['sync_status'], Setting::get('ldap.sync_status', [], $tenantId) ?? []),
@@ -106,12 +123,30 @@ class LdapSyncService
 
         try {
             $connection = $this->connections->register($tenant->id, $settings['connection']);
+            Log::info('LDAP sync search started.', [
+                'tenant_id' => $tenant->id,
+                'dry_run' => $dryRun,
+                'organization_base_dn' => $settings['organization_sync']['base_dn'] ?? null,
+                'customer_base_dn' => $settings['customer_sync']['base_dn'] ?? null,
+                'subscription_base_dn' => $settings['subscription_sync']['base_dn'] ?? null,
+            ]);
+            $organizations = filled($settings['organization_sync']['base_dn']) && filled($settings['organization_sync']['filter'])
+                ? $this->search($connection, $settings['organization_sync'])
+                : collect();
             $customers = $this->search($connection, $settings['customer_sync']);
             $subscriptions = filled($settings['subscription_sync']['base_dn']) && filled($settings['subscription_sync']['filter'])
                 ? $this->search($connection, $settings['subscription_sync'])
                 : collect();
 
-            $result = $this->syncTenantFromEntries($tenant, $settings, $customers, $subscriptions, $dryRun);
+            Log::info('LDAP sync search completed.', [
+                'tenant_id' => $tenant->id,
+                'dry_run' => $dryRun,
+                'organizations_found' => $organizations->count(),
+                'customers_found' => $customers->count(),
+                'subscriptions_found' => $subscriptions->count(),
+            ]);
+
+            $result = $this->syncTenantFromEntries($tenant, $settings, $customers, $subscriptions, $dryRun, $organizations);
 
             if (! $dryRun) {
                 $this->writeStatus($tenant->id, [
@@ -136,11 +171,53 @@ class LdapSyncService
      * @param  iterable<int, LdapModel|array<string, mixed>>  $subscriptionEntries
      * @return array<string, mixed>
      */
-    public function syncTenantFromEntries(Tenant $tenant, array $settings, iterable $customerEntries, iterable $subscriptionEntries, bool $dryRun = false): array
+    public function syncTenantFromEntries(Tenant $tenant, array $settings, iterable $customerEntries, iterable $subscriptionEntries, bool $dryRun = false, iterable $organizationEntries = []): array
     {
         $result = $this->emptyResult($dryRun ? 'preview' : 'synced');
+        $syncedOrganizationGuids = [];
         $syncedCustomerGuids = [];
         $syncedSubscriptionGuids = [];
+
+        foreach ($organizationEntries as $entry) {
+            $guid = $this->guid($entry, $settings['organization_sync']['unique_attribute']);
+
+            if (! filled($guid)) {
+                $result['organizations']['skipped']++;
+                $this->logSkippedEntry($tenant->id, 'organization', 'missing_unique_attribute', $entry, [
+                    'unique_attribute' => $settings['organization_sync']['unique_attribute'] ?? null,
+                    'available_attributes' => $this->attributeNames($entry),
+                ]);
+
+                continue;
+            }
+
+            $organization = $this->findOrganization($tenant->id, $guid, $entry, $settings);
+            $result['organizations'][$organization?->exists ? 'updated' : 'created']++;
+            $syncedOrganizationGuids[] = $guid;
+
+            Log::info('LDAP organization sync prepared.', [
+                'tenant_id' => $tenant->id,
+                'dry_run' => $dryRun,
+                'action' => $organization?->exists ? 'updated' : 'created',
+                'ldap_guid' => $guid,
+                'dn' => $this->dn($entry),
+                'mapped_code' => $this->mapped($entry, $settings['organization_sync']['map']['code'] ?? null),
+                'mapped_name' => $this->mapped($entry, $settings['organization_sync']['map']['name'] ?? null),
+            ]);
+
+            if (! $dryRun) {
+                $attributes = $this->organizationAttributes($tenant->id, $entry, $settings['organization_sync'], $guid);
+                $organization ??= new Organization;
+                $this->restoreIfTrashed($organization);
+                $organization->forceFill($attributes)->save();
+                Log::info('LDAP organization saved.', [
+                    'tenant_id' => $tenant->id,
+                    'organization_id' => $organization->id,
+                    'code' => $organization->code,
+                    'ldap_guid' => $guid,
+                ]);
+            }
+        }
 
         foreach ($customerEntries as $entry) {
             $guid = $this->guid($entry, $settings['customer_sync']['unique_attribute']);
@@ -163,7 +240,25 @@ class LdapSyncService
                 $attributes = $this->customerAttributes($tenant->id, $entry, $settings['customer_sync'], $guid);
                 $customer ??= new Customer;
                 $this->restoreIfTrashed($customer);
+                Log::info('LDAP customer save starting.', [
+                    'tenant_id' => $tenant->id,
+                    'existing_customer_id' => $customer->exists ? $customer->id : null,
+                    'ldap_guid' => $guid,
+                    'customer_code' => $attributes['customer_code'] ?? null,
+                    'name' => $attributes['name'] ?? null,
+                    'email' => $attributes['email'] ?? null,
+                    'organization_id' => $attributes['organization_id'] ?? null,
+                    'status' => $attributes['status'] ?? null,
+                    'dn' => $this->dn($entry),
+                ]);
                 $customer->forceFill($attributes)->save();
+                Log::info('LDAP customer saved.', [
+                    'tenant_id' => $tenant->id,
+                    'customer_id' => $customer->id,
+                    'customer_code' => $customer->customer_code,
+                    'organization_id' => $customer->organization_id,
+                    'ldap_guid' => $guid,
+                ]);
             }
         }
 
@@ -202,11 +297,44 @@ class LdapSyncService
                 $attributes = $this->subscriptionAttributes($tenant->id, $customer, $entry, $settings['subscription_sync'], $guid);
                 $subscription ??= new Subscription;
                 $this->restoreIfTrashed($subscription);
+                Log::info('LDAP subscription save starting.', [
+                    'tenant_id' => $tenant->id,
+                    'existing_subscription_id' => $subscription->exists ? $subscription->id : null,
+                    'ldap_guid' => $guid,
+                    'subscription_code' => $attributes['subscription_code'] ?? null,
+                    'customer_id' => $customer->id,
+                    'customer_code' => $customer->customer_code,
+                    'organization_id' => $customer->organization_id,
+                    'plan_id' => $attributes['plan_id'] ?? null,
+                    'billing_cycle' => $attributes['billing_cycle'] ?? null,
+                    'billing_enabled' => $attributes['billing_enabled'] ?? null,
+                    'status' => $attributes['status'] ?? null,
+                    'pppoe_username' => $attributes['pppoe_username'] ?? null,
+                    'ip_address' => $attributes['ip_address'] ?? null,
+                    'mac_address' => $attributes['mac_address'] ?? null,
+                    'dn' => $this->dn($entry),
+                ]);
                 $subscription->forceFill($attributes)->save();
+                $this->syncOrganizationBillingForSubscription($subscription->fresh(['customer.organization.defaultPlan']), $settings['subscription_sync']);
+                Log::info('LDAP subscription saved.', [
+                    'tenant_id' => $tenant->id,
+                    'subscription_id' => $subscription->id,
+                    'subscription_code' => $subscription->subscription_code,
+                    'customer_id' => $customer->id,
+                    'organization_id' => $customer->organization_id,
+                    'plan_id' => $subscription->plan_id,
+                    'billing_cycle' => $subscription->billing_cycle,
+                    'billing_enabled' => $subscription->billing_enabled,
+                    'ldap_guid' => $guid,
+                ]);
             }
         }
 
         if (! $dryRun) {
+            if (filled($settings['organization_sync']['base_dn'] ?? null) && filled($settings['organization_sync']['filter'] ?? null)) {
+                $result['organizations']['missing'] = $this->handleMissingOrganizations($tenant->id, $syncedOrganizationGuids, $settings['connection']['missing_action']);
+            }
+
             $result['customers']['missing'] = $this->handleMissingCustomers($tenant->id, $syncedCustomerGuids, $settings['connection']['missing_action']);
             $result['subscriptions']['missing'] = $this->handleMissingSubscriptions($tenant->id, $syncedSubscriptionGuids, $settings['connection']['missing_action']);
         }
@@ -233,7 +361,7 @@ class LdapSyncService
     private function selects(array $syncSettings): array
     {
         return collect($syncSettings['map'] ?? [])
-            ->merge(Arr::only($syncSettings, ['unique_attribute', 'match_attribute', 'customer_attribute']))
+            ->merge(Arr::only($syncSettings, ['unique_attribute', 'match_attribute', 'customer_attribute', 'organization_attribute']))
             ->filter()
             ->push('dn')
             ->unique()
@@ -257,6 +385,28 @@ class LdapSyncService
 
                 if (filled($code)) {
                     $query->orWhere('customer_code', $code);
+                }
+            });
+
+        return $query->first();
+    }
+
+    /**
+     * @param  LdapModel|array<string, mixed>  $entry
+     * @param  array<string, mixed>  $settings
+     */
+    private function findOrganization(string $tenantId, string $guid, LdapModel|array $entry, array $settings): ?Organization
+    {
+        $query = Organization::withoutGlobalScopes()
+            ->withTrashed()
+            ->where('tenant_id', $tenantId)
+            ->where(function ($query) use ($guid, $entry, $settings): void {
+                $query->where('ldap_guid', $guid);
+
+                $code = $this->mapped($entry, $settings['organization_sync']['map']['code'] ?? null);
+
+                if (filled($code)) {
+                    $query->orWhere('code', $code);
                 }
             });
 
@@ -295,13 +445,56 @@ class LdapSyncService
         $field = $settings['subscription_sync']['customer_match_field'] ?? 'customer_code';
 
         if (! filled($value)) {
+            Log::warning('LDAP subscription customer link is blank.', [
+                'tenant_id' => $tenantId,
+                'customer_attribute' => $settings['subscription_sync']['customer_attribute'] ?? null,
+                'customer_match_field' => $field,
+                'dn' => $this->dn($entry),
+                'available_attributes' => $this->attributeNames($entry),
+            ]);
+
             return null;
         }
 
-        return Customer::withoutGlobalScopes()
+        $customer = Customer::withoutGlobalScopes()
             ->where('tenant_id', $tenantId)
             ->where($field, $value)
             ->first();
+
+        Log::info('LDAP subscription customer lookup completed.', [
+            'tenant_id' => $tenantId,
+            'customer_attribute' => $settings['subscription_sync']['customer_attribute'] ?? null,
+            'customer_attribute_value' => $value,
+            'customer_match_field' => $field,
+            'customer_found' => (bool) $customer,
+            'customer_id' => $customer?->id,
+            'dn' => $this->dn($entry),
+        ]);
+
+        return $customer;
+    }
+
+    /**
+     * @param  LdapModel|array<string, mixed>  $entry
+     * @param  array<string, mixed>  $syncSettings
+     * @return array<string, mixed>
+     */
+    private function organizationAttributes(string $tenantId, LdapModel|array $entry, array $syncSettings, string $guid): array
+    {
+        $code = $this->mapped($entry, $syncSettings['map']['code'] ?? null) ?: $guid;
+        $name = $this->mapped($entry, $syncSettings['map']['name'] ?? null) ?: $code;
+
+        return [
+            'tenant_id' => $tenantId,
+            'ldap_guid' => $guid,
+            'ldap_domain' => $this->domain($entry),
+            'ldap_dn' => $this->dn($entry),
+            'ldap_synced_at' => now(),
+            'code' => $code,
+            'name' => $name,
+            'description' => $this->mapped($entry, $syncSettings['map']['description'] ?? null),
+            'status' => $this->status($this->mapped($entry, $syncSettings['map']['status'] ?? null), ['active', 'inactive'], 'active'),
+        ];
     }
 
     /**
@@ -313,9 +506,11 @@ class LdapSyncService
     {
         $name = $this->mapped($entry, $syncSettings['map']['name'] ?? null) ?: 'LDAP Customer '.$guid;
         [$firstName, $lastName] = $this->splitName($name);
+        $organization = $this->customerOrganization($tenantId, $entry, $syncSettings);
 
         return [
             'tenant_id' => $tenantId,
+            'organization_id' => $organization?->id,
             'ldap_guid' => $guid,
             'ldap_domain' => $this->domain($entry),
             'ldap_dn' => $this->dn($entry),
@@ -337,11 +532,51 @@ class LdapSyncService
     /**
      * @param  LdapModel|array<string, mixed>  $entry
      * @param  array<string, mixed>  $syncSettings
+     */
+    private function customerOrganization(string $tenantId, LdapModel|array $entry, array $syncSettings): ?Organization
+    {
+        $attribute = $syncSettings['organization_attribute'] ?? null;
+        $value = $this->mapped($entry, $attribute);
+        $field = $syncSettings['organization_match_field'] ?? 'code';
+
+        if (! filled($attribute) || ! filled($value)) {
+            Log::info('LDAP customer organization link skipped.', [
+                'tenant_id' => $tenantId,
+                'organization_attribute' => $attribute,
+                'organization_attribute_value' => $value,
+                'organization_match_field' => $field,
+                'dn' => $this->dn($entry),
+            ]);
+
+            return null;
+        }
+
+        $organization = Organization::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where($field, $value)
+            ->first();
+
+        Log::info('LDAP customer organization lookup completed.', [
+            'tenant_id' => $tenantId,
+            'organization_attribute' => $attribute,
+            'organization_attribute_value' => $value,
+            'organization_match_field' => $field,
+            'organization_found' => (bool) $organization,
+            'organization_id' => $organization?->id,
+            'dn' => $this->dn($entry),
+        ]);
+
+        return $organization;
+    }
+
+    /**
+     * @param  LdapModel|array<string, mixed>  $entry
+     * @param  array<string, mixed>  $syncSettings
      * @return array<string, mixed>
      */
     private function subscriptionAttributes(string $tenantId, Customer $customer, LdapModel|array $entry, array $syncSettings, string $guid): array
     {
-        return [
+        $attributes = [
             'tenant_id' => $tenantId,
             'customer_id' => $customer->id,
             'ldap_guid' => $guid,
@@ -360,6 +595,30 @@ class LdapSyncService
             'start_date' => now(),
             'activation_date' => now(),
         ];
+
+        $customer->loadMissing('organization.defaultPlan');
+
+        if ($customer->organization?->billing_enabled) {
+            $organization = $customer->organization;
+            $attributes['plan_id'] = $organization->default_plan_id;
+            $attributes['base_price'] = $organization->defaultPlan?->price ?? 0;
+            $attributes['billing_cycle'] = $organization->default_billing_cycle;
+            $attributes['billing_enabled'] = true;
+            $attributes['billing_disabled_at'] = null;
+            $attributes['grace_period_days'] = $organization->default_grace_period_days;
+
+            Log::info('LDAP subscription organization billing defaults applied.', [
+                'tenant_id' => $tenantId,
+                'customer_id' => $customer->id,
+                'organization_id' => $organization->id,
+                'default_plan_id' => $organization->default_plan_id,
+                'default_billing_cycle' => $organization->default_billing_cycle,
+                'default_grace_period_days' => $organization->default_grace_period_days,
+                'subscription_guid' => $guid,
+            ]);
+        }
+
+        return $attributes;
     }
 
     /**
@@ -384,6 +643,42 @@ class LdapSyncService
         }
 
         return $query->update(['status' => 'inactive']);
+    }
+
+    /**
+     * @param  array<int, string>  $syncedGuids
+     */
+    private function handleMissingOrganizations(string $tenantId, array $syncedGuids, string $action): int
+    {
+        if ($action === 'ignore') {
+            return 0;
+        }
+
+        $query = Organization::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('ldap_guid')
+            ->when($syncedGuids !== [], fn ($query) => $query->whereNotIn('ldap_guid', $syncedGuids));
+
+        if ($action === 'soft_delete') {
+            $organizations = $query->get();
+            $organizations->each->delete();
+
+            Log::info('LDAP missing organizations soft deleted.', [
+                'tenant_id' => $tenantId,
+                'count' => $organizations->count(),
+            ]);
+
+            return $organizations->count();
+        }
+
+        $count = $query->update(['status' => 'inactive']);
+
+        Log::info('LDAP missing organizations marked inactive.', [
+            'tenant_id' => $tenantId,
+            'count' => $count,
+        ]);
+
+        return $count;
     }
 
     /**
@@ -504,6 +799,72 @@ class LdapSyncService
     }
 
     /**
+     * @param  array<string, mixed>  $syncSettings
+     */
+    private function syncOrganizationBillingForSubscription(Subscription $subscription, array $syncSettings): void
+    {
+        $subscription->loadMissing('customer.organization.defaultPlan');
+        $organization = $subscription->customer?->organization;
+
+        if (! $organization?->billing_enabled) {
+            Log::info('LDAP subscription organization billing skipped.', [
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'customer_id' => $subscription->customer_id,
+                'organization_id' => $organization?->id,
+                'reason' => $organization ? 'organization_billing_disabled' : 'customer_has_no_organization',
+            ]);
+
+            return;
+        }
+
+        if (! $organization->default_plan_id || ! $organization->defaultPlan) {
+            Log::warning('LDAP subscription organization billing could not create plan item.', [
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'customer_id' => $subscription->customer_id,
+                'organization_id' => $organization->id,
+                'reason' => 'organization_default_plan_missing',
+            ]);
+
+            return;
+        }
+
+        $item = $subscription->items()
+            ->where('item_type', 'plan')
+            ->oldest()
+            ->first() ?? new SubscriptionItem(['subscription_id' => $subscription->id, 'item_type' => 'plan']);
+
+        $item->fill([
+            'description' => $organization->defaultPlan->name,
+            'plan_id' => $organization->default_plan_id,
+            'quantity' => 1,
+            'unit_price' => $organization->defaultPlan->price,
+            'discount_type' => $organization->default_discount_type,
+            'discount_amount' => $organization->default_discount_amount,
+            'tax_percentage' => $organization->default_tax_percentage,
+            'recurring' => true,
+            'billing_cycle' => $organization->default_billing_cycle,
+        ]);
+        $item->calculateTotals();
+        $item->save();
+
+        $subscription->calculateTotalPrice();
+
+        Log::info('LDAP subscription organization billing plan item synced.', [
+            'tenant_id' => $subscription->tenant_id,
+            'subscription_id' => $subscription->id,
+            'subscription_code' => $subscription->subscription_code,
+            'customer_id' => $subscription->customer_id,
+            'organization_id' => $organization->id,
+            'plan_id' => $organization->default_plan_id,
+            'subscription_item_id' => $item->id,
+            'line_total' => (float) $item->total,
+            'subscription_total' => (float) $subscription->fresh()->total_price,
+        ]);
+    }
+
+    /**
      * @return array{0: string|null, 1: string|null}
      */
     private function splitName(string $name): array
@@ -513,7 +874,7 @@ class LdapSyncService
         return [$parts[0] ?? $name, $parts[1] ?? null];
     }
 
-    private function restoreIfTrashed(Customer|Subscription $model): void
+    private function restoreIfTrashed(Customer|Organization|Subscription $model): void
     {
         if (method_exists($model, 'trashed') && $model->trashed()) {
             $model->restore();
@@ -527,6 +888,7 @@ class LdapSyncService
     {
         return [
             'status' => $status,
+            'organizations' => ['created' => 0, 'updated' => 0, 'skipped' => 0, 'missing' => 0],
             'customers' => ['created' => 0, 'updated' => 0, 'skipped' => 0, 'missing' => 0],
             'subscriptions' => ['created' => 0, 'updated' => 0, 'skipped' => 0, 'missing' => 0],
         ];

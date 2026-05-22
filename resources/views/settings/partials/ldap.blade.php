@@ -1,5 +1,6 @@
 @php
     $connection = $ldapSettings['connection'];
+    $organizationSync = $ldapSettings['organization_sync'];
     $customerSync = $ldapSettings['customer_sync'];
     $subscriptionSync = $ldapSettings['subscription_sync'];
     $syncStatus = $ldapSettings['sync_status'];
@@ -11,7 +12,7 @@
         @csrf
         @method('PUT')
 
-        <x-ui.card title="LDAP Sync" subtitle="Configure one-way LDAP synchronization for tenant customers and subscriptions.">
+        <x-ui.card title="LDAP Sync" subtitle="Configure one-way Active Directory / LDAP synchronization for tenant organizations, customers, and subscriptions.">
             <div class="mb-5 flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                 <div>
                     <p class="text-sm font-medium text-gray-900">Sync status</p>
@@ -68,12 +69,34 @@
             </div>
         </x-ui.card>
 
+        <x-ui.card title="Organization Mapping" subtitle="Optional mapping for App\Models\Organization. For Active Directory, this is usually an OU or group search.">
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+                <x-ui.input.text name="organization_base_dn" label="Organization Base DN" :value="old('organization_base_dn', $organizationSync['base_dn'])" placeholder="ou=organizations,dc=example,dc=com" :error="$errors->first('organization_base_dn')" />
+                <x-ui.input.text name="organization_filter" label="Organization Filter" :value="old('organization_filter', $organizationSync['filter'])" placeholder="(|(objectClass=organizationalUnit)(objectClass=group))" :error="$errors->first('organization_filter')" />
+                <x-ui.input.text name="organization_unique_attribute" label="Unique Attribute" :value="old('organization_unique_attribute', $organizationSync['unique_attribute'])" placeholder="objectGUID" :error="$errors->first('organization_unique_attribute')" />
+                <x-ui.input.text name="organization_match_attribute" label="Organization Match Attribute" :value="old('organization_match_attribute', $organizationSync['match_attribute'])" placeholder="sAMAccountName" :error="$errors->first('organization_match_attribute')" />
+                <x-ui.input.text name="organization_map_code" label="code <-" :value="old('organization_map_code', $organizationSync['map']['code'])" placeholder="sAMAccountName" :error="$errors->first('organization_map_code')" />
+                <x-ui.input.text name="organization_map_name" label="name <-" :value="old('organization_map_name', $organizationSync['map']['name'])" placeholder="cn" :error="$errors->first('organization_map_name')" />
+                <x-ui.input.text name="organization_map_description" label="description <-" :value="old('organization_map_description', $organizationSync['map']['description'])" placeholder="description" :error="$errors->first('organization_map_description')" />
+                <x-ui.input.text name="organization_map_status" label="status <-" :value="old('organization_map_status', $organizationSync['map']['status'])" placeholder="accountStatus" :error="$errors->first('organization_map_status')" />
+            </div>
+        </x-ui.card>
+
         <x-ui.card title="Customer Mapping" subtitle="Map LDAP customer entries into App\Models\Customer.">
             <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
                 <x-ui.input.text name="customer_base_dn" label="Customer Base DN" :value="old('customer_base_dn', $customerSync['base_dn'])" placeholder="ou=customers,dc=example,dc=com" :error="$errors->first('customer_base_dn')" />
                 <x-ui.input.text name="customer_filter" label="Customer Filter" :value="old('customer_filter', $customerSync['filter'])" placeholder="(objectClass=inetOrgPerson)" :error="$errors->first('customer_filter')" />
                 <x-ui.input.text name="customer_unique_attribute" label="Unique Attribute" :value="old('customer_unique_attribute', $customerSync['unique_attribute'])" placeholder="uid" :error="$errors->first('customer_unique_attribute')" />
                 <x-ui.input.text name="customer_match_attribute" label="Customer Match Attribute" :value="old('customer_match_attribute', $customerSync['match_attribute'])" placeholder="uid" :error="$errors->first('customer_match_attribute')" />
+                <x-ui.input.text name="customer_organization_attribute" label="Organization Link Attribute" :value="old('customer_organization_attribute', $customerSync['organization_attribute'])" placeholder="department" :error="$errors->first('customer_organization_attribute')" />
+                <x-ui.input.select
+                    name="customer_organization_match_field"
+                    label="Matches Organization Field"
+                    :options="['code' => 'code', 'name' => 'name', 'ldap_guid' => 'ldap_guid']"
+                    :value="old('customer_organization_match_field', $customerSync['organization_match_field'])"
+                    :error="$errors->first('customer_organization_match_field')"
+                    :placeholder="null"
+                />
                 <x-ui.input.text name="customer_map_customer_code" label="customer_code <-" :value="old('customer_map_customer_code', $customerSync['map']['customer_code'])" placeholder="uid" :error="$errors->first('customer_map_customer_code')" />
                 <x-ui.input.text name="customer_map_name" label="name <-" :value="old('customer_map_name', $customerSync['map']['name'])" placeholder="cn" :error="$errors->first('customer_map_name')" />
                 <x-ui.input.text name="customer_map_email" label="email <-" :value="old('customer_map_email', $customerSync['map']['email'])" placeholder="mail" :error="$errors->first('customer_map_email')" />
@@ -153,6 +176,10 @@
 
     <x-ui.card title="Mapping Guide" subtitle="Use LDAP attribute names on the right side of each mapping field.">
         <div class="grid grid-cols-1 gap-4 text-sm text-gray-600 md:grid-cols-2">
+            <div>
+                <p class="font-medium text-gray-900">Organization linking</p>
+                <p class="mt-1">For Active Directory, map organizations from OUs/groups first, then set Customer Organization Link Attribute to a customer attribute such as department, company, memberOf, or extensionAttribute.</p>
+            </div>
             <div>
                 <p class="font-medium text-gray-900">Customer minimums</p>
                 <p class="mt-1">Map a stable unique attribute to both Unique Attribute and customer_code. Common choices are uid, employeeNumber, customerNumber, or sAMAccountName.</p>

@@ -64,8 +64,12 @@ class SyncLdap extends Command
     private function message(string $tenantId, array $result): string
     {
         return sprintf(
-            'Synced %s: customers %d created / %d updated / %d skipped / %d missing; subscriptions %d created / %d updated / %d skipped / %d missing.',
+            'Synced %s: organizations %d created / %d updated / %d skipped / %d missing; customers %d created / %d updated / %d skipped / %d missing; subscriptions %d created / %d updated / %d skipped / %d missing.',
             $tenantId,
+            $result['organizations']['created'],
+            $result['organizations']['updated'],
+            $result['organizations']['skipped'],
+            $result['organizations']['missing'],
             $result['customers']['created'],
             $result['customers']['updated'],
             $result['customers']['skipped'],

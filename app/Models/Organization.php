@@ -29,6 +29,10 @@ class Organization extends Model
         'default_discount_type',
         'default_discount_amount',
         'default_tax_percentage',
+        'ldap_guid',
+        'ldap_domain',
+        'ldap_dn',
+        'ldap_synced_at',
     ];
 
     protected function casts(): array
@@ -39,6 +43,7 @@ class Organization extends Model
             'default_grace_period_days' => 'integer',
             'default_discount_amount' => 'decimal:2',
             'default_tax_percentage' => 'decimal:2',
+            'ldap_synced_at' => 'datetime',
         ];
     }
 
