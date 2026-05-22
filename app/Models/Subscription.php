@@ -17,7 +17,7 @@ class Subscription extends Model implements LdapImportable
 {
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at'];
+    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at'];
 
     protected function activityLogExcept(): array
     {
@@ -36,6 +36,7 @@ class Subscription extends Model implements LdapImportable
             'next_billing_date' => 'date',
             'last_billed_at' => 'datetime',
             'billing_disabled_at' => 'datetime',
+            'connection_status_checked_at' => 'datetime',
             'start_date' => 'datetime',
             'end_date' => 'datetime',
             'activation_date' => 'datetime',
@@ -43,6 +44,52 @@ class Subscription extends Model implements LdapImportable
             'cancelled_at' => 'datetime',
             'ldap_synced_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('tenant', function ($query): void {
+            if (auth()->check() && auth()->user()->tenant_id) {
+                $query->where('tenant_id', auth()->user()->tenant_id);
+            }
+        });
+
+        static::creating(function (Subscription $subscription): void {
+            if (empty($subscription->subscription_code)) {
+                $subscription->subscription_code = self::generateSubscriptionCode();
+            }
+
+            if (auth()->check() && empty($subscription->tenant_id)) {
+                $subscription->tenant_id = auth()->user()->tenant_id;
+            }
+
+            if (! $subscription->isPppoe()) {
+                $subscription->connection_status = null;
+
+                return;
+            }
+
+            if (blank($subscription->connection_status)) {
+                $subscription->connection_status = 'offline';
+            }
+        });
+
+        static::updating(function (Subscription $subscription): void {
+            if ($subscription->isDirty('status') && $subscription->status === 'active' && ! $subscription->activation_date) {
+                $subscription->activation_date = now();
+            }
+        });
+
+        static::saved(function (Subscription $subscription): void {
+            app(RadiusProvisioningService::class)->syncSubscription(
+                $subscription,
+                $subscription->wasChanged('pppoe_username') ? $subscription->getOriginal('pppoe_username') : null,
+            );
+        });
+
+        static::deleted(function (Subscription $subscription): void {
+            app(RadiusProvisioningService::class)->removeSubscription($subscription);
+        });
     }
 
     public function getLdapGuidColumn(): string
@@ -335,42 +382,6 @@ class Subscription extends Model implements LdapImportable
         $this->update(['total_price' => $total]);
 
         return $total;
-    }
-
-    protected static function booted(): void
-    {
-        static::addGlobalScope('tenant', function ($query) {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where('tenant_id', auth()->user()->tenant_id);
-            }
-        });
-
-        static::creating(function ($subscription) {
-            if (empty($subscription->subscription_code)) {
-                $subscription->subscription_code = self::generateSubscriptionCode();
-            }
-
-            if (auth()->check() && empty($subscription->tenant_id)) {
-                $subscription->tenant_id = auth()->user()->tenant_id;
-            }
-        });
-
-        static::updating(function ($subscription) {
-            if ($subscription->isDirty('status') && $subscription->status === 'active' && ! $subscription->activation_date) {
-                $subscription->activation_date = now();
-            }
-        });
-
-        static::saved(function (Subscription $subscription): void {
-            app(RadiusProvisioningService::class)->syncSubscription(
-                $subscription,
-                $subscription->wasChanged('pppoe_username') ? $subscription->getOriginal('pppoe_username') : null,
-            );
-        });
-
-        static::deleted(function (Subscription $subscription): void {
-            app(RadiusProvisioningService::class)->removeSubscription($subscription);
-        });
     }
 
     public static function generateSubscriptionCode(): string

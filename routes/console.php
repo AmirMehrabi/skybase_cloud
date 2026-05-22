@@ -19,3 +19,7 @@ Schedule::command('ldap:sync --all')
 Schedule::command('routers:check-status')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+Schedule::command('subscriptions:sync-connection-status')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

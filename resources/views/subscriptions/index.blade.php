@@ -112,8 +112,11 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Router</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Connection Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -121,14 +124,14 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     <template x-if="loading">
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="11" class="px-6 py-12 text-center text-gray-500">
                                 Loading...
                             </td>
                         </tr>
                     </template>
                     <template x-if="!loading && subscriptions.length === 0">
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center">
+                            <td colspan="11" class="px-6 py-12 text-center">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
@@ -156,6 +159,38 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="subscription.plan"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="subscription.router"></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="space-y-1">
+                                <button
+                                    type="button"
+                                    class="w-full inline-flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm font-mono text-gray-900 transition-colors hover:bg-gray-100"
+                                    @click="copyCredential(`username-${subscription.id}`, subscription.pppoe_username)"
+                                >
+                                    <span x-text="subscription.pppoe_username || '—'"></span>
+                                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-9 8h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                                <p class="text-xs text-green-600" x-show="copiedCredential === `username-${subscription.id}`" x-transition>Copied</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="space-y-1">
+                                <button
+                                    type="button"
+                                    class="w-full inline-flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm font-mono text-gray-900 transition-colors hover:bg-gray-100"
+                                    @click="togglePassword(subscription.id, subscription.pppoe_password)"
+                                >
+                                    <span x-text="visiblePasswords[subscription.id] ? (subscription.pppoe_password || '—') : maskPassword(subscription.pppoe_password)"></span>
+                                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path x-show="!visiblePasswords[subscription.id]" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path x-show="!visiblePasswords[subscription.id]" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        <path x-show="visiblePasswords[subscription.id]" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.453 10.453 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.48 10.48 0 012.119-3.675m2.303-2.188A9.961 9.961 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.451 10.451 0 01-4.184 5.216M15 12a3 3 0 01-3 3m-2.121-.879A3 3 0 009 12"></path>
+                                    </svg>
+                                </button>
+                                <p class="text-xs text-green-600" x-show="copiedCredential === `password-${subscription.id}`" x-transition>Copied</p>
+                                </div>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="'$' + subscription.total_price"></td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -165,6 +200,17 @@
                                           'bg-red-100 text-red-800': subscription.status === 'suspended',
                                           'bg-gray-100 text-gray-800': subscription.status === 'cancelled'
                                       }" x-text="subscription.status"></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span
+                                    class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                    :class="{
+                                        'bg-green-100 text-green-800': subscription.connection_status === 'online',
+                                        'bg-red-100 text-red-800': subscription.connection_status === 'offline',
+                                        'bg-gray-100 text-gray-800': !subscription.connection_status
+                                    }"
+                                    x-text="subscription.connection_status || 'N/A'"
+                                ></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="subscription.activation_date || '-'"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -215,6 +261,8 @@ function subscriptionsIndex() {
     return {
         subscriptions: [],
         stats: { total: 0, active: 0, pending: 0, suspended: 0, cancelled: 0 },
+        visiblePasswords: {},
+        copiedCredential: null,
         filters: {
             search: '',
             status: ''
@@ -263,6 +311,38 @@ function subscriptionsIndex() {
             } finally {
                 this.loading = false;
             }
+        },
+
+        maskPassword(password) {
+            return password ? '••••••••' : '—';
+        },
+
+        async copyCredential(key, value) {
+            if (!value) {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(value);
+                this.copiedCredential = key;
+
+                window.setTimeout(() => {
+                    if (this.copiedCredential === key) {
+                        this.copiedCredential = null;
+                    }
+                }, 1200);
+            } catch (error) {
+                console.error('Unable to copy credential:', error);
+            }
+        },
+
+        togglePassword(subscriptionId, password) {
+            if (!password) {
+                return;
+            }
+
+            this.visiblePasswords[subscriptionId] = !this.visiblePasswords[subscriptionId];
+            this.copyCredential(`password-${subscriptionId}`, password);
         },
 
         debounceFetch() {
