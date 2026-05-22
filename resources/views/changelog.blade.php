@@ -1,0 +1,272 @@
+@extends('layouts.layout')
+
+@section('title', 'Changelog | SkyBase Cloud')
+@section('meta_description', 'Track SkyBase Cloud product updates, release notes, and platform improvements for MikroTik-focused ISP operators.')
+@section('meta_keywords', 'SkyBase changelog, ISP software updates, MikroTik ISP platform release notes, NetFlow monitoring')
+@section('og_title', 'SkyBase Cloud Changelog')
+@section('og_description', 'Release notes and product updates for SkyBase Cloud.')
+@section('og_url', url('/changelog'))
+@section('body_class', 'bg-[#f6f1e8] text-slate-950')
+
+@php
+    $releases = [
+        [
+            'version' => '0.8.0',
+            'date' => 'May 23, 2026',
+            'title' => 'Router NetFlow, Operational Alerts, and CRUD Polish',
+            'summary' => 'This release expands router observability with MikroTik NetFlow support and cleans up browser form flows across core CRUD screens.',
+            'sections' => [
+                'Added' => [
+                    'MikroTik NetFlow configuration on routers, including collector host, port, version, interfaces, and sampling settings.',
+                    'RouterOS Traffic Flow setup service for enabling NetFlow and creating or updating MikroTik export targets through the RouterOS API.',
+                    'Python-based NetFlow collector command, exposed through php artisan netflow:collect, for parsing flow exports and storing normalized records.',
+                    'Tenant-scoped NetFlow flow storage, model, factory, migrations, and router summary service.',
+                    'Router show-page NetFlow panel with setup status, test connection action, throughput, top sources, top destinations, protocols, and latest flows.',
+                    'Focused NetFlow feature tests covering MikroTik setup, non-MikroTik rejection, packet test status, and tenant-scoped summary data.',
+                    'Reusable admin flash alert component for success and error messages across create and edit flows.',
+                    'LDAP diagnostic command and richer LDAP connection/sync logging for skipped entries and connection tests.',
+                ],
+                'Changed' => [
+                    'Router create and edit screens now include NetFlow settings for MikroTik deployments.',
+                    'Router create, update, and delete actions now redirect browser form submissions with flash messages while preserving JSON responses for AJAX requests.',
+                    'Subscription create, update, and delete actions now provide browser redirect fallbacks while keeping existing JSON behavior for JavaScript flows.',
+                    'Admin layout now renders shared flash alerts, reducing duplicated success/error blocks in individual pages.',
+                    'Router validation now uses typed unique rules to avoid malformed validation strings during edits.',
+                    'Environment example now documents NetFlow collector configuration values.',
+                ],
+                'Fixed' => [
+                    'Router edit no longer displays raw JSON after a browser form submit.',
+                    'Router IP validation no longer throws an internal Laravel validation error when editing an existing router.',
+                    'Duplicate success banners were removed from router, settings, and VPN user screens now covered by the shared alert component.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.7.0',
+            'date' => 'May 8, 2026',
+            'title' => 'VPN Users and Network Monitoring',
+            'summary' => 'Introduced VPN account management and the first operational network monitoring dashboards.',
+            'sections' => [
+                'Added' => [
+                    'OpenVPN user CRUD with active/online status fields and client onboarding details.',
+                    'Network status dashboard with router health, uptime, active sessions, and alert visibility.',
+                    'Bandwidth and usage dashboards powered by router, customer, and subscription data.',
+                    'Network alert, bandwidth sample, and usage record factories and seed data for realistic local demos.',
+                ],
+                'Changed' => [
+                    'Dashboard network cards were updated to show more operational router and customer signals.',
+                    'Navigation was expanded to expose VPN users and network monitoring areas for tenant users.',
+                ],
+                'Fixed' => [
+                    'Tenant scoping was tightened across new VPN and network monitoring models.',
+                    'Network demo data now generates per tenant instead of relying on global sample records.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.6.0',
+            'date' => 'May 6, 2026',
+            'title' => 'Billing, Invoices, Payments, and Credits',
+            'summary' => 'Added the first complete billing workflow for tenant operators, from plans and subscriptions through invoices and payments.',
+            'sections' => [
+                'Added' => [
+                    'Billing dashboard with revenue, invoice, payment, and overdue customer metrics.',
+                    'Invoice, invoice item, payment, and customer credit models with tenant-aware relationships.',
+                    'Recurring invoice generation command and billing service support for subscription billing.',
+                    'Payment recording screens and customer credit tracking for account adjustments.',
+                ],
+                'Changed' => [
+                    'Customers, plans, and subscriptions now include billing controls such as billing status, cycles, grace periods, and billable totals.',
+                    'Reports were expanded with financial and usage-focused views for operators.',
+                ],
+                'Fixed' => [
+                    'Billing records now use tenant-specific references to prevent collisions across tenants.',
+                    'Subscription billing dates now remain consistent when billing is disabled or re-enabled.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.5.0',
+            'date' => 'Mar 20, 2026',
+            'title' => 'Subscriptions and Router Assignment',
+            'summary' => 'Connected customers, plans, routers, and service lifecycle management into a subscription workflow.',
+            'sections' => [
+                'Added' => [
+                    'Subscription and subscription item models for recurring and one-time customer services.',
+                    'Subscription create, edit, show, and index pages with customer, plan, router, site, IP, and PPPoE fields.',
+                    'Router and plan relationships on customer and subscription records.',
+                    'Connection type and IP management fields for router-managed, static, DHCP, and PPPoE services.',
+                ],
+                'Changed' => [
+                    'Customer service fields were moved into subscriptions so customers can hold multiple services over time.',
+                    'Plan forms now support router profile and service-level configuration details.',
+                ],
+                'Fixed' => [
+                    'PPPoE username checks now account for tenant and existing subscription exclusions.',
+                    'Subscription status transitions now preserve activation and cancellation dates more consistently.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.4.0',
+            'date' => 'Mar 18, 2026',
+            'title' => 'IPAM and Router Operations',
+            'summary' => 'Delivered the first network inventory foundation with routers, IP pools, and IP address management.',
+            'sections' => [
+                'Added' => [
+                    'Router CRUD with vendor, model, API, SSH, monitoring, provisioning, status, and site metadata.',
+                    'IP pool management with CIDR validation, capacity calculations, router assignment, and tenant ownership.',
+                    'IP address inventory pages with reserve, block, release, and assignment actions.',
+                    'Router sessions, queues, profiles, interfaces, IP pools, and logs placeholder routes for operational expansion.',
+                ],
+                'Changed' => [
+                    'Tenant data generation now creates router and network records per ISP tenant.',
+                    'Admin sidebar and network pages were expanded around router-first workflows.',
+                ],
+                'Fixed' => [
+                    'IP pool uniqueness is enforced per tenant and network range.',
+                    'IP pool delete flow blocks removal when assigned addresses are present.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.3.0',
+            'date' => 'Feb 21, 2026',
+            'title' => 'Tenant Settings, Roles, and Activity',
+            'summary' => 'Added the tenant administration layer needed for account settings, users, roles, and auditability.',
+            'sections' => [
+                'Added' => [
+                    'Tenant user management screens for owner and staff accounts.',
+                    'Settings sections for general company information, branding, email, and LDAP configuration.',
+                    'Role and permission foundations for tenant-level access control.',
+                    'Activity log models, formatting service, and reusable activity-log component.',
+                ],
+                'Changed' => [
+                    'Middleware now initializes tenant context from the logged-in user before tenant queries run.',
+                    'Admin layout gained a persistent sidebar and top navigation for authenticated tenant users.',
+                ],
+                'Fixed' => [
+                    'Cross-tenant user access now aborts when the authenticated user does not belong to the current tenant.',
+                    'Suspended and pending tenant statuses are handled before protected pages are rendered.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.2.0',
+            'date' => 'Feb 17, 2026',
+            'title' => 'Tenant Registration and Customer CRM',
+            'summary' => 'Established tenant onboarding and the first customer management workflows.',
+            'sections' => [
+                'Added' => [
+                    'Tenant registration and login flows for single-domain SkyBase accounts.',
+                    'Customer CRUD with customer type, contact details, billing type, status, and tenant assignment.',
+                    'Customer factories and seeders for representative ISP account data.',
+                    'Marketing contact and demo request capture forms.',
+                ],
+                'Changed' => [
+                    'Application routes were organized into guest-facing marketing pages and authenticated tenant pages.',
+                    'Customer forms were expanded with reusable validation and input patterns.',
+                ],
+                'Fixed' => [
+                    'Customer creation now sets the tenant automatically for authenticated users.',
+                    'Customer queries are scoped to the active tenant to prevent cross-tenant visibility.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.1.0',
+            'date' => 'Jan 19, 2026',
+            'title' => 'Initial Cloud ISP Foundation',
+            'summary' => 'Started the Laravel application foundation for a MikroTik-focused ISP management platform.',
+            'sections' => [
+                'Added' => [
+                    'Laravel application shell with authentication, database, queue, cache, and Vite/Tailwind setup.',
+                    'Public home, pricing, features, and contact pages for early SkyBase positioning.',
+                    'Base models and migrations for users, tenants, plans, routers, settings, and roles.',
+                    'Admin and marketing layouts with responsive navigation and brand styling.',
+                ],
+                'Changed' => [
+                    'Default Laravel scaffolding was adapted around the SkyBase Cloud tenant and ISP domain.',
+                    'Frontend assets were organized for Blade and Alpine.js driven pages.',
+                ],
+                'Fixed' => [
+                    'Initial environment defaults were aligned for local development and testing.',
+                    'Base route names were standardized for marketing, auth, and protected dashboard areas.',
+                ],
+            ],
+        ],
+    ];
+@endphp
+
+@section('content')
+    <section class="relative isolate overflow-hidden bg-[#0d2f35] py-16 text-white sm:py-20">
+        <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_18%,rgba(34,197,94,0.26),transparent_28%),radial-gradient(circle_at_82%_12%,rgba(245,197,66,0.22),transparent_30%),linear-gradient(135deg,#09252b_0%,#0d2f35_48%,#123f3d_100%)]"></div>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl">
+                <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Release Notes</p>
+                <h1 class="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">SkyBase Cloud Changelog</h1>
+                <p class="mt-5 text-lg leading-8 text-teal-50/85">
+                    Product updates for ISP operators using SkyBase to manage MikroTik routers, subscribers, billing, IPAM, VPN users, and tenant operations.
+                </p>
+                <div class="mt-8 flex flex-wrap gap-3">
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.8.0</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated May 23, 2026</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-[#f6f1e8] py-14 sm:py-16">
+        <div class="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8">
+            <aside class="lg:sticky lg:top-24 lg:self-start">
+                <div class="rounded-lg border border-slate-950/10 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Versions</p>
+                    <nav class="mt-4 space-y-2">
+                        @foreach($releases as $release)
+                            <a href="#v{{ str_replace('.', '-', $release['version']) }}" class="block rounded-lg px-3 py-2 text-sm font-bold text-slate-700 hover:bg-[#fbf7ed] hover:text-slate-950">
+                                {{ $release['version'] }}
+                                <span class="block text-xs font-medium text-slate-500">{{ $release['date'] }}</span>
+                            </a>
+                        @endforeach
+                    </nav>
+                </div>
+            </aside>
+
+            <div class="space-y-8">
+                @foreach($releases as $release)
+                    <article id="v{{ str_replace('.', '-', $release['version']) }}" class="scroll-mt-28 rounded-lg border border-slate-950/10 bg-white p-6 shadow-sm sm:p-8">
+                        <div class="flex flex-col gap-4 border-b border-slate-950/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <span class="rounded-full bg-[#0d2f35] px-3 py-1 text-sm font-bold text-white">v{{ $release['version'] }}</span>
+                                    @if($loop->first)
+                                        <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-800">Current</span>
+                                    @endif
+                                </div>
+                                <h2 class="mt-4 text-2xl font-bold text-slate-950 sm:text-3xl">{{ $release['title'] }}</h2>
+                                <p class="mt-3 max-w-3xl text-base leading-7 text-slate-600">{{ $release['summary'] }}</p>
+                            </div>
+                            <time class="shrink-0 text-sm font-bold text-slate-500">{{ $release['date'] }}</time>
+                        </div>
+
+                        <div class="mt-6 grid gap-6 lg:grid-cols-3">
+                            @foreach($release['sections'] as $sectionTitle => $items)
+                                <div class="rounded-lg border border-slate-950/10 bg-[#fbf7ed] p-5">
+                                    <h3 class="text-sm font-bold uppercase tracking-[0.18em] text-teal-800">{{ $sectionTitle }}</h3>
+                                    <ul class="mt-4 space-y-3">
+                                        @foreach($items as $item)
+                                            <li class="flex gap-3 text-sm leading-6 text-slate-700">
+                                                <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f5c542]"></span>
+                                                <span>{{ $item }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endforeach
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+    </section>
+@endsection
