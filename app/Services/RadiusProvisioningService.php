@@ -43,17 +43,31 @@ class RadiusProvisioningService
             $plan = $subscription->plan;
             $groupName = $this->groupNameForPlan($plan);
 
-            RadiusCheck::withoutGlobalScopes()->updateOrCreate(
-                [
-                    'tenant_id' => $tenantId,
-                    'username' => $username,
-                    'attribute' => 'Cleartext-Password',
-                ],
-                [
-                    'op' => ':=',
-                    'value' => (string) $subscription->pppoe_password,
-                ],
-            );
+$password = (string) $subscription->pppoe_password;
+
+RadiusCheck::withoutGlobalScopes()->updateOrCreate(
+    [
+        'tenant_id' => $tenantId,
+        'username' => $username,
+        'attribute' => 'Cleartext-Password',
+    ],
+    [
+        'op' => ':=',
+        'value' => $password,
+    ],
+);
+
+RadiusCheck::withoutGlobalScopes()->updateOrCreate(
+    [
+        'tenant_id' => $tenantId,
+        'username' => $username,
+        'attribute' => 'NT-Password',
+    ],
+    [
+        'op' => ':=',
+        'value' => $this->makeNtPasswordHash($password),
+    ],
+);
 
             $rateLimit = $this->rateLimitForPlan($plan);
             if ($rateLimit !== null) {

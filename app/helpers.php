@@ -25,3 +25,10 @@ if (! function_exists('tenant_id')) {
         return tenant()?->id;
     }
 }
+private function makeNtPasswordHash(string $password): string
+{
+    return strtoupper(hash(
+        'md4',
+        mb_convert_encoding($password, 'UTF-16LE', 'UTF-8')
+    ));
+}
