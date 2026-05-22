@@ -9,6 +9,7 @@ use App\Models\RadiusReply;
 use App\Models\RadiusUserGroup;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -66,6 +67,64 @@ class RadiusProvisioningTest extends TestCase
                 ->where('attribute', 'Mikrotik-Rate-Limit')
                 ->value('value'),
         );
+    }
+
+    public function test_activating_pending_subscription_pushes_radius_entries(): void
+    {
+        [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::create([
+            ...$this->subscriptionAttributes($tenant, $customer, $plan),
+            'status' => 'pending',
+            'activation_date' => null,
+        ]);
+
+        $this->assertSame(0, RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
+
+        $this->actingAs($user)->post(route('subscriptions.activate', $subscription))->assertRedirect(route('subscriptions.show', $subscription));
+
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'secret-pass',
+        ]);
+
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '20M/100M',
+        ]);
+    }
+
+    public function test_active_pppoe_subscription_without_plan_speed_still_pushes_radcheck(): void
+    {
+        [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
+        $plan->update([
+            'download_speed' => 0,
+            'upload_speed' => 0,
+        ]);
+
+        Subscription::create($this->subscriptionAttributes($tenant, $customer, $plan));
+
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'secret-pass',
+        ]);
+
+        $this->assertSame(0, RadiusReply::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', 'jane.doe')
+            ->where('attribute', 'Mikrotik-Rate-Limit')
+            ->count());
     }
 
     public function test_billing_disabled_subscription_removes_radius_authorization(): void

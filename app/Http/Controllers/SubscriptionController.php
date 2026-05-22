@@ -12,6 +12,7 @@ use App\Models\SubscriptionItem;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
 use App\Services\OrganizationBillingService;
+use App\Services\RadiusProvisioningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -299,19 +300,28 @@ class SubscriptionController extends Controller
     /**
      * Activate a subscription.
      */
-    public function activate(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
+    public function activate(Request $request, Subscription $subscription, RadiusProvisioningService $radiusProvisioning): JsonResponse|RedirectResponse
     {
         $subscription->activate();
+        $subscription = $subscription->fresh(['customer.organization', 'plan']);
+        $radiusProvisioning->syncSubscription($subscription);
+        $radiusSkipReason = $radiusProvisioning->provisioningSkipReason($subscription);
+        $radiusWarning = $radiusSkipReason !== null
+            ? ' Radius entries were not created: '.$radiusSkipReason.'.'
+            : '';
+        $radiusWarning = $radiusWarning === '' && $radiusProvisioning->rateLimitForPlan($subscription->plan) === null
+            ? ' Radius credentials were created, but no Mikrotik-Rate-Limit was written because the plan has no upload/download speed.'
+            : $radiusWarning;
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Subscription activated successfully.',
+                'message' => 'Subscription activated successfully.'.$radiusWarning,
             ]);
         }
 
         return redirect()
             ->route('subscriptions.show', $subscription)
-            ->with('success', 'Subscription activated successfully.');
+            ->with('success', 'Subscription activated successfully.'.$radiusWarning);
     }
 
     /**

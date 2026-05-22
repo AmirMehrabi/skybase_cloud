@@ -9,6 +9,7 @@ use App\Models\RadiusReply;
 use App\Models\RadiusUserGroup;
 use App\Models\Subscription;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class RadiusProvisioningService
@@ -22,7 +23,16 @@ class RadiusProvisioningService
                 $this->removeUsername((string) $subscription->tenant_id, $previousUsername);
             }
 
-            if (! $this->isProvisionable($subscription)) {
+            $skipReason = $this->provisioningSkipReason($subscription);
+            if ($skipReason !== null) {
+                Log::info('Radius provisioning skipped', [
+                    'tenant_id' => $subscription->tenant_id,
+                    'subscription_id' => $subscription->id,
+                    'subscription_code' => $subscription->subscription_code,
+                    'pppoe_username' => $subscription->pppoe_username,
+                    'reason' => $skipReason,
+                ]);
+
                 $this->removeUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
 
                 return;
@@ -31,13 +41,6 @@ class RadiusProvisioningService
             $tenantId = (string) $subscription->tenant_id;
             $username = (string) $subscription->pppoe_username;
             $plan = $subscription->plan;
-            $rateLimit = $this->rateLimitForPlan($plan);
-            if ($rateLimit === null) {
-                $this->removeUsername($tenantId, $username);
-
-                return;
-            }
-
             $groupName = $this->groupNameForPlan($plan);
 
             RadiusCheck::withoutGlobalScopes()->updateOrCreate(
@@ -52,17 +55,26 @@ class RadiusProvisioningService
                 ],
             );
 
-            RadiusReply::withoutGlobalScopes()->updateOrCreate(
-                [
-                    'tenant_id' => $tenantId,
-                    'username' => $username,
-                    'attribute' => 'Mikrotik-Rate-Limit',
-                ],
-                [
-                    'op' => ':=',
-                    'value' => $rateLimit,
-                ],
-            );
+            $rateLimit = $this->rateLimitForPlan($plan);
+            if ($rateLimit !== null) {
+                RadiusReply::withoutGlobalScopes()->updateOrCreate(
+                    [
+                        'tenant_id' => $tenantId,
+                        'username' => $username,
+                        'attribute' => 'Mikrotik-Rate-Limit',
+                    ],
+                    [
+                        'op' => ':=',
+                        'value' => $rateLimit,
+                    ],
+                );
+            } else {
+                RadiusReply::withoutGlobalScopes()
+                    ->where('tenant_id', $tenantId)
+                    ->where('username', $username)
+                    ->where('attribute', 'Mikrotik-Rate-Limit')
+                    ->delete();
+            }
 
             RadiusUserGroup::withoutGlobalScopes()->where('tenant_id', $tenantId)
                 ->where('username', $username)
@@ -145,35 +157,42 @@ class RadiusProvisioningService
         return ((int) $plan->upload_speed).$suffix.'/'.((int) $plan->download_speed).$suffix;
     }
 
-    protected function isProvisionable(Subscription $subscription): bool
+    public function provisioningSkipReason(Subscription $subscription): ?string
     {
         if ((string) $subscription->tenant_id === '') {
-            return false;
+            return 'missing tenant_id';
         }
 
         if (! $subscription->isPppoe()) {
-            return false;
+            return 'connection type is not pppoe';
         }
 
         if ($subscription->status !== 'active' || ! $subscription->billing_enabled) {
-            return false;
+            return $subscription->status !== 'active'
+                ? 'subscription status is not active'
+                : 'subscription billing is disabled';
         }
 
         if (! $subscription->pppoe_username || ! $subscription->pppoe_password) {
-            return false;
+            return ! $subscription->pppoe_username
+                ? 'missing pppoe username'
+                : 'missing pppoe password';
         }
 
         if (! $subscription->customer?->billing_enabled) {
-            return false;
+            return 'customer billing is disabled';
         }
 
         if ($subscription->customer?->organization?->billing_enabled
             && (int) $subscription->customer->organization->default_plan_id !== (int) $subscription->plan_id) {
-            return false;
+            return 'subscription plan does not match organization billing plan';
         }
 
-        return $subscription->plan?->status === 'active'
-            && $this->rateLimitForPlan($subscription->plan) !== null;
+        if ($subscription->plan?->status !== 'active') {
+            return 'plan is not active';
+        }
+
+        return null;
     }
 
     protected function rateSuffix(string $unit): string
