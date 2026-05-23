@@ -3,6 +3,7 @@
     $organizationSync = $ldapSettings['organization_sync'];
     $customerSync = $ldapSettings['customer_sync'];
     $subscriptionSync = $ldapSettings['subscription_sync'];
+    $radiusAuth = $ldapSettings['radius_auth'];
     $syncStatus = $ldapSettings['sync_status'];
     $hosts = implode("\n", $connection['hosts'] ?? []);
     $excludedOuDns = old('organization_excluded_ou_dns', $organizationSync['excluded_ou_dns'] ?? []);
@@ -79,6 +80,43 @@
             <div class="mt-5 flex flex-wrap gap-5">
                 <x-ui.input.checkbox name="use_tls" label="Use LDAPS / TLS" :checked="old('use_tls', $connection['use_tls'])" />
                 <x-ui.input.checkbox name="use_starttls" label="Use STARTTLS" :checked="old('use_starttls', $connection['use_starttls'])" />
+            </div>
+        </x-ui.card>
+
+        <x-ui.card title="FreeRADIUS Authentication" subtitle="Choose whether PPPoE passwords are verified from SkyBase RADIUS SQL records or by binding against LDAP / Active Directory.">
+            <div class="space-y-5">
+                <div class="flex flex-col justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 md:flex-row md:items-center">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">LDAP password authentication</p>
+                        <p class="mt-1 text-sm text-gray-500">When enabled, SkyBase stops writing local RADIUS password check rows. FreeRADIUS must be configured to use LDAP bind authentication for this tenant.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <x-ui.badge :status="$radiusAuth['enabled'] ? 'active' : 'inactive'">
+                            {{ $radiusAuth['enabled'] ? 'LDAP Auth' : 'SQL Auth' }}
+                        </x-ui.badge>
+                        <x-ui.input.checkbox
+                            name="radius_auth_enabled"
+                            label="Enabled"
+                            :checked="old('radius_auth_enabled', $radiusAuth['enabled'])"
+                        />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+                    <x-ui.input.select
+                        name="radius_auth_mode"
+                        label="Authentication Mode"
+                        :options="['ldap_bind' => 'LDAP bind']"
+                        :value="old('radius_auth_mode', $radiusAuth['mode'])"
+                        :error="$errors->first('radius_auth_mode')"
+                        :placeholder="null"
+                    />
+                    <x-ui.input.text name="radius_auth_username_attribute" label="LDAP Username Attribute" :value="old('radius_auth_username_attribute', $radiusAuth['username_attribute'])" placeholder="uid or sAMAccountName" :error="$errors->first('radius_auth_username_attribute')" />
+                </div>
+
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    LDAP passwords cannot be read from Active Directory. This option makes FreeRADIUS authenticate the submitted PPPoE password directly against LDAP, while SkyBase can still provide SQL reply policy such as static IP and Mikrotik rate limit.
+                </div>
             </div>
         </x-ui.card>
 

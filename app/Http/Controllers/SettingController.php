@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Models\Tenant;
 use App\Services\Ldap\LdapConnectionFactory;
 use App\Services\Ldap\LdapSyncService;
+use App\Services\RadiusProvisioningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -195,7 +196,7 @@ class SettingController extends Controller
             ->with('success', 'Branding settings updated successfully.');
     }
 
-    public function updateLdap(UpdateLdapSettingRequest $request): RedirectResponse
+    public function updateLdap(UpdateLdapSettingRequest $request, RadiusProvisioningService $radiusProvisioning): RedirectResponse
     {
         $tenant = $this->getTenant();
         $settings = $this->ldapSettingsFromRequest($request, $tenant->id);
@@ -219,6 +220,13 @@ class SettingController extends Controller
             ['tenant_id' => $tenant->id, 'key' => 'ldap.subscription_sync'],
             ['value' => $settings['subscription_sync'], 'type' => 'json', 'group' => 'ldap']
         );
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'ldap.radius_auth'],
+            ['value' => $settings['radius_auth'], 'type' => 'json', 'group' => 'ldap']
+        );
+
+        $radiusProvisioning->syncSubscriptionsForTenant($tenant->id);
 
         return redirect()
             ->route('settings.index', ['tab' => 'ldap'])
@@ -467,7 +475,7 @@ class SettingController extends Controller
     }
 
     /**
-     * @return array{connection: array<string, mixed>, organization_sync: array<string, mixed>, customer_sync: array<string, mixed>, subscription_sync: array<string, mixed>}
+     * @return array{connection: array<string, mixed>, organization_sync: array<string, mixed>, customer_sync: array<string, mixed>, subscription_sync: array<string, mixed>, radius_auth: array<string, mixed>}
      */
     private function ldapSettingsFromRequest(UpdateLdapSettingRequest $request, string $tenantId): array
     {
@@ -516,6 +524,11 @@ class SettingController extends Controller
                     'mac_address' => $request->input('subscription_map_mac_address'),
                     'status' => $request->input('subscription_map_status'),
                 ],
+            ],
+            'radius_auth' => [
+                'enabled' => $request->boolean('radius_auth_enabled'),
+                'mode' => $request->input('radius_auth_mode', 'ldap_bind'),
+                'username_attribute' => $request->input('radius_auth_username_attribute', $request->input('subscription_map_pppoe_username', 'uid')),
             ],
         ];
     }

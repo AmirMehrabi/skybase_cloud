@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\RadiusCheck;
 use App\Models\RadiusReply;
 use App\Models\RadiusUserGroup;
+use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
@@ -125,6 +126,47 @@ class RadiusProvisioningTest extends TestCase
             ->where('username', 'jane.doe')
             ->where('attribute', 'Mikrotik-Rate-Limit')
             ->count());
+    }
+
+    public function test_ldap_radius_authentication_skips_local_password_checks_but_keeps_reply_policy(): void
+    {
+        [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
+
+        Setting::create([
+            'tenant_id' => $tenant->id,
+            'key' => 'ldap.radius_auth',
+            'value' => [
+                'enabled' => true,
+                'mode' => 'ldap_bind',
+                'username_attribute' => 'sAMAccountName',
+            ],
+            'type' => 'json',
+            'group' => 'ldap',
+        ]);
+
+        Subscription::create([
+            ...$this->subscriptionAttributes($tenant, $customer, $plan),
+            'pppoe_password' => null,
+        ]);
+
+        $this->assertSame(0, RadiusCheck::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', 'jane.doe')
+            ->whereIn('attribute', ['Cleartext-Password', 'NT-Password'])
+            ->count());
+
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '20M/100M',
+        ]);
+
+        $this->assertDatabaseHas('radusergroup', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'groupname' => 'skybase-plan-fiber-100',
+        ]);
     }
 
     public function test_billing_disabled_subscription_removes_radius_authorization(): void

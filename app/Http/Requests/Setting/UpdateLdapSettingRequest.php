@@ -15,12 +15,14 @@ class UpdateLdapSettingRequest extends FormRequest
     public function rules(): array
     {
         $enabled = $this->boolean('enabled');
+        $radiusAuthEnabled = $this->boolean('radius_auth_enabled');
+        $connectionRequired = $enabled || $radiusAuthEnabled;
 
         return [
             'enabled' => ['nullable', 'boolean'],
-            'hosts' => [$enabled ? 'required' : 'nullable', 'string', 'max:1000'],
-            'port' => [$enabled ? 'required' : 'nullable', 'integer', 'between:1,65535'],
-            'base_dn' => [$enabled ? 'required' : 'nullable', 'string', 'max:1000'],
+            'hosts' => [$connectionRequired ? 'required' : 'nullable', 'string', 'max:1000'],
+            'port' => [$connectionRequired ? 'required' : 'nullable', 'integer', 'between:1,65535'],
+            'base_dn' => [$connectionRequired ? 'required' : 'nullable', 'string', 'max:1000'],
             'username' => ['nullable', 'string', 'max:1000'],
             'password' => ['nullable', 'string', 'max:1000'],
             'timeout' => ['nullable', 'integer', 'between:1,60'],
@@ -28,6 +30,9 @@ class UpdateLdapSettingRequest extends FormRequest
             'use_starttls' => ['nullable', 'boolean'],
             'sync_interval_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
             'missing_action' => ['required', Rule::in(['mark_inactive', 'ignore', 'soft_delete'])],
+            'radius_auth_enabled' => ['nullable', 'boolean'],
+            'radius_auth_mode' => [$radiusAuthEnabled ? 'required' : 'nullable', Rule::in(['ldap_bind'])],
+            'radius_auth_username_attribute' => [$radiusAuthEnabled ? 'required' : 'nullable', 'string', 'max:255'],
 
             'organization_base_dn' => ['nullable', 'string', 'max:1000'],
             'organization_filter' => ['nullable', 'string', 'max:1000'],
@@ -81,6 +86,7 @@ class UpdateLdapSettingRequest extends FormRequest
             'subscription_filter' => 'subscription LDAP filter',
             'subscription_unique_attribute' => 'subscription unique attribute',
             'subscription_customer_attribute' => 'subscription customer attribute',
+            'radius_auth_username_attribute' => 'RADIUS LDAP username attribute',
         ];
     }
 }

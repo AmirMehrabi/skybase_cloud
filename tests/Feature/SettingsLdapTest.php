@@ -30,6 +30,7 @@ class SettingsLdapTest extends TestCase
         $organizations = Setting::forTenant($tenant->id)->where('key', 'ldap.organization_sync')->firstOrFail();
         $customers = Setting::forTenant($tenant->id)->where('key', 'ldap.customer_sync')->firstOrFail();
         $subscriptions = Setting::forTenant($tenant->id)->where('key', 'ldap.subscription_sync')->firstOrFail();
+        $radiusAuth = Setting::forTenant($tenant->id)->where('key', 'ldap.radius_auth')->firstOrFail();
 
         $this->assertSame('ldap', $connection->group);
         $this->assertTrue($connection->value['enabled']);
@@ -39,6 +40,9 @@ class SettingsLdapTest extends TestCase
         $this->assertSame('ou=customers,dc=alpha,dc=test', $customers->value['base_dn']);
         $this->assertSame('uid', $customers->value['map']['customer_code']);
         $this->assertSame('customerUid', $subscriptions->value['customer_attribute']);
+        $this->assertTrue($radiusAuth->value['enabled']);
+        $this->assertSame('ldap_bind', $radiusAuth->value['mode']);
+        $this->assertSame('sAMAccountName', $radiusAuth->value['username_attribute']);
     }
 
     public function test_blank_password_keeps_existing_ldap_password(): void
@@ -99,6 +103,9 @@ class SettingsLdapTest extends TestCase
             'timeout' => 5,
             'sync_interval_minutes' => 15,
             'missing_action' => 'mark_inactive',
+            'radius_auth_enabled' => '1',
+            'radius_auth_mode' => 'ldap_bind',
+            'radius_auth_username_attribute' => 'sAMAccountName',
             'organization_unique_attribute' => 'objectGUID',
             'organization_match_attribute' => 'objectGUID',
             'organization_map_code' => 'ou',

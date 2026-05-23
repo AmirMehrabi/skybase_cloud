@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\RadiusCheck;
 use App\Models\RadiusReply;
 use App\Models\RadiusUserGroup;
+use App\Models\Setting;
 use App\Models\Subscription;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -43,31 +44,35 @@ class RadiusProvisioningService
             $plan = $subscription->plan;
             $groupName = $this->groupNameForPlan($plan);
 
-            $password = (string) $subscription->pppoe_password;
+            if ($this->usesLdapRadiusAuthentication($tenantId)) {
+                $this->removePasswordChecks($tenantId, $username);
+            } else {
+                $password = (string) $subscription->pppoe_password;
 
-            RadiusCheck::withoutGlobalScopes()->updateOrCreate(
-                [
-                    'tenant_id' => $tenantId,
-                    'username' => $username,
-                    'attribute' => 'Cleartext-Password',
-                ],
-                [
-                    'op' => ':=',
-                    'value' => $password,
-                ],
-            );
+                RadiusCheck::withoutGlobalScopes()->updateOrCreate(
+                    [
+                        'tenant_id' => $tenantId,
+                        'username' => $username,
+                        'attribute' => 'Cleartext-Password',
+                    ],
+                    [
+                        'op' => ':=',
+                        'value' => $password,
+                    ],
+                );
 
-            RadiusCheck::withoutGlobalScopes()->updateOrCreate(
-                [
-                    'tenant_id' => $tenantId,
-                    'username' => $username,
-                    'attribute' => 'NT-Password',
-                ],
-                [
-                    'op' => ':=',
-                    'value' => $this->makeNtPasswordHash($password),
-                ],
-            );
+                RadiusCheck::withoutGlobalScopes()->updateOrCreate(
+                    [
+                        'tenant_id' => $tenantId,
+                        'username' => $username,
+                        'attribute' => 'NT-Password',
+                    ],
+                    [
+                        'op' => ':=',
+                        'value' => $this->makeNtPasswordHash($password),
+                    ],
+                );
+            }
 
             if (! empty($subscription->ip_address)) {
                 RadiusReply::withoutGlobalScopes()->updateOrCreate(
@@ -120,10 +125,12 @@ class RadiusProvisioningService
             );
         });
     }
+
     private function makeNtPasswordHash(string $password): string
     {
         return strtoupper(hash('md4', mb_convert_encoding($password, 'UTF-16LE', 'UTF-8')));
     }
+
     public function removeSubscription(Subscription $subscription): void
     {
         $this->removeUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
@@ -154,6 +161,18 @@ class RadiusProvisioningService
             });
     }
 
+    public function syncSubscriptionsForTenant(string $tenantId): void
+    {
+        Subscription::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->with(['customer.organization', 'plan'])
+            ->chunkById(100, function ($subscriptions): void {
+                foreach ($subscriptions as $subscription) {
+                    $this->syncSubscription($subscription);
+                }
+            });
+    }
+
     public function removeUsername(string $tenantId, string $username): void
     {
         if ($tenantId === '' || $username === '') {
@@ -169,13 +188,13 @@ class RadiusProvisioningService
 
     public function rateLimitForPlan(?Plan $plan): ?string
     {
-        if (!$plan || !$plan->upload_speed || !$plan->download_speed) {
+        if (! $plan || ! $plan->upload_speed || ! $plan->download_speed) {
             return null;
         }
 
         $suffix = $this->rateSuffix((string) $plan->bandwidth_unit);
 
-        return ((int) $plan->upload_speed) . $suffix . '/' . ((int) $plan->download_speed) . $suffix;
+        return ((int) $plan->upload_speed).$suffix.'/'.((int) $plan->download_speed).$suffix;
     }
 
     public function provisioningSkipReason(Subscription $subscription): ?string
@@ -184,19 +203,23 @@ class RadiusProvisioningService
             return 'missing tenant_id';
         }
 
-        if (!$subscription->isPppoe()) {
+        if (! $subscription->isPppoe()) {
             return 'connection type is not pppoe';
         }
 
-        if ($subscription->status !== 'active' || !$subscription->billing_enabled) {
+        if ($subscription->status !== 'active' || ! $subscription->billing_enabled) {
             return $subscription->status !== 'active' ? 'subscription status is not active' : 'subscription billing is disabled';
         }
 
-        if (!$subscription->pppoe_username || !$subscription->pppoe_password) {
-            return !$subscription->pppoe_username ? 'missing pppoe username' : 'missing pppoe password';
+        if (! $subscription->pppoe_username) {
+            return 'missing pppoe username';
         }
 
-        if (!$subscription->customer?->billing_enabled) {
+        if (! $this->usesLdapRadiusAuthentication((string) $subscription->tenant_id) && ! $subscription->pppoe_password) {
+            return 'missing pppoe password';
+        }
+
+        if (! $subscription->customer?->billing_enabled) {
             return 'customer billing is disabled';
         }
 
@@ -222,12 +245,28 @@ class RadiusProvisioningService
 
     protected function groupNameForPlan(?Plan $plan): string
     {
-        if (!$plan) {
+        if (! $plan) {
             return 'skybase-plan-unassigned';
         }
 
-        $name = $plan->router_profile ?: $plan->internal_name ?: 'plan-' . $plan->id;
+        $name = $plan->router_profile ?: $plan->internal_name ?: 'plan-'.$plan->id;
 
-        return 'skybase-plan-' . Str::slug($name);
+        return 'skybase-plan-'.Str::slug($name);
+    }
+
+    private function usesLdapRadiusAuthentication(string $tenantId): bool
+    {
+        $settings = Setting::get('ldap.radius_auth', [], $tenantId) ?? [];
+
+        return (bool) ($settings['enabled'] ?? false);
+    }
+
+    private function removePasswordChecks(string $tenantId, string $username): void
+    {
+        RadiusCheck::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('username', $username)
+            ->whereIn('attribute', ['Cleartext-Password', 'NT-Password'])
+            ->delete();
     }
 }

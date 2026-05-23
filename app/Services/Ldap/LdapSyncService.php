@@ -82,6 +82,11 @@ class LdapSyncService
                     'status' => null,
                 ],
             ],
+            'radius_auth' => [
+                'enabled' => false,
+                'mode' => 'ldap_bind',
+                'username_attribute' => 'uid',
+            ],
             'sync_status' => [
                 'last_run_at' => null,
                 'last_success_at' => null,
@@ -103,6 +108,7 @@ class LdapSyncService
             'organization_sync' => array_replace_recursive($defaults['organization_sync'], Setting::get('ldap.organization_sync', [], $tenantId) ?? []),
             'customer_sync' => array_replace_recursive($defaults['customer_sync'], Setting::get('ldap.customer_sync', [], $tenantId) ?? []),
             'subscription_sync' => array_replace_recursive($defaults['subscription_sync'], Setting::get('ldap.subscription_sync', [], $tenantId) ?? []),
+            'radius_auth' => array_replace_recursive($defaults['radius_auth'], Setting::get('ldap.radius_auth', [], $tenantId) ?? []),
             'sync_status' => array_replace_recursive($defaults['sync_status'], Setting::get('ldap.sync_status', [], $tenantId) ?? []),
         ];
     }
