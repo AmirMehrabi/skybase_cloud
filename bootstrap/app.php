@@ -21,7 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'can' => CheckPermission::class,
         ]);
 
-        $middleware->redirectGuestsTo('/auth/login');
+        $middleware->redirectGuestsTo(function ($request): string {
+            if ($request->routeIs('customer.*')) {
+                return route('customer.login');
+            }
+
+            return '/auth/login';
+        });
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

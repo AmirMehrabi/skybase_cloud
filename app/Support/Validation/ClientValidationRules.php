@@ -29,6 +29,7 @@ class ClientValidationRules
             'billing_type' => ['required', 'in:prepaid,postpaid'],
             'balance' => ['numeric', 'min:-99999999.99', 'max:99999999.99'],
             'credit_limit' => ['numeric', 'min:0', 'max:99999999.99'],
+            'password' => ['min:8', 'max:72'],
         ];
 
         if ($includeStatus) {

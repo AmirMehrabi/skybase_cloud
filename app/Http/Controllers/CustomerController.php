@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Activity;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
+use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Organization;
 use App\Services\ActivityLogFormatter;
@@ -114,6 +114,10 @@ class CustomerController extends Controller
 
         $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : now();
 
+        if (blank($validated['password'] ?? null)) {
+            unset($validated['password']);
+        }
+
         $customer = Customer::create($validated);
 
         if ($request->expectsJson()) {
@@ -207,6 +211,10 @@ class CustomerController extends Controller
         }
 
         $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($customer->billing_disabled_at ?? now());
+
+        if (blank($validated['password'] ?? null)) {
+            unset($validated['password']);
+        }
 
         $customer->update($validated);
 

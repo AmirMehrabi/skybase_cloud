@@ -144,6 +144,24 @@
             </div>
         </div>
 
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 mb-1">Portal Access</h3>
+            <p class="text-sm text-gray-500 mb-4">Set a password only if this customer should be able to log in to the customer portal.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Portal Password</label>
+                    <input type="password" name="password" id="password" autocomplete="new-password" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    @error('password')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirm Portal Password</label>
+                    <input type="password" name="password_confirmation" id="password_confirmation" autocomplete="new-password" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                </div>
+            </div>
+        </div>
+
         <!-- Section 3: Address Information -->
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>

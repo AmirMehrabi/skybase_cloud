@@ -11,6 +11,11 @@ use App\Http\Controllers\Billing\PaymentController;
 use App\Http\Controllers\Billing\ReportController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerPortal\Auth\LoginController as CustomerPortalLoginController;
+use App\Http\Controllers\CustomerPortal\DashboardController as CustomerPortalDashboardController;
+use App\Http\Controllers\CustomerPortal\InvoiceController as CustomerPortalInvoiceController;
+use App\Http\Controllers\CustomerPortal\SubscriptionController as CustomerPortalSubscriptionController;
+use App\Http\Controllers\CustomerPortal\SupportController as CustomerPortalSupportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\IpamController;
@@ -25,6 +30,28 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\VpnUserController;
 use Illuminate\Support\Facades\Route;
+
+$customerPortalRoutes = function (): void {
+    Route::middleware('guest:customer')->group(function (): void {
+        Route::get('/login', [CustomerPortalLoginController::class, 'show'])->name('customer.login');
+        Route::post('/login', [CustomerPortalLoginController::class, 'store'])->name('customer.login.store');
+    });
+
+    Route::middleware(['auth:customer', 'initialize_tenancy', 'check_tenant_status'])->name('customer.')->group(function (): void {
+        Route::post('/logout', [CustomerPortalLoginController::class, 'destroy'])->name('logout');
+        Route::get('/', CustomerPortalDashboardController::class)->name('dashboard');
+        Route::get('/dashboard', CustomerPortalDashboardController::class)->name('dashboard.redirect');
+        Route::get('/subscriptions', [CustomerPortalSubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::get('/invoices', [CustomerPortalInvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/support', CustomerPortalSupportController::class)->name('support.index');
+    });
+};
+
+if (filled(config('app.customer_portal_domain'))) {
+    Route::domain(config('app.customer_portal_domain'))->group($customerPortalRoutes);
+} else {
+    Route::prefix('customer-portal')->group($customerPortalRoutes);
+}
 
 // Landing page - redirect authenticated users to dashboard
 Route::get('/', [PagesController::class, 'index'])->name('home');

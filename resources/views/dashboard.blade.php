@@ -48,10 +48,10 @@
                         <p class="text-sm font-medium text-sky-100/80">Welcome back</p>
                         <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{{ $dashboard['tenant']['name'] }}</h1>
                     </div>
-                    <p class="max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
+                    {{-- <p class="max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
                         A live operations view of your subscribers, service health, routers, and IP capacity.
                         Every metric on this page is scoped to your current tenant.
-                    </p>
+                    </p> --}}
                 </div>
 
                 <div class="flex flex-wrap gap-3">

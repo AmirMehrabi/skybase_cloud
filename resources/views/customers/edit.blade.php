@@ -116,6 +116,22 @@
         </div>
 
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 mb-1">Portal Access</h3>
+            <p class="text-sm text-gray-500 mb-4">Leave both fields empty to keep the current customer portal password.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">New Portal Password</label>
+                    <input type="password" name="password" id="password" autocomplete="new-password" x-model="form.password" @input="validator.clear('password')" :class="'block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border ' + validator.fieldClass('password')">
+                    <p x-show="validator.error('password')" x-text="validator.error('password')" class="mt-1 text-sm text-red-600"></p>
+                </div>
+                <div>
+                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Portal Password</label>
+                    <input type="password" name="password_confirmation" id="password_confirmation" autocomplete="new-password" x-model="form.password_confirmation" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <template x-for="field in addressFields" :key="field.name">
@@ -225,6 +241,8 @@ function customerEditForm() {
             credit_limit: @js(old('credit_limit', $customer->credit_limit)),
             tax_exempt: @js((bool) old('tax_exempt', $customer->tax_exempt)),
             status: @js(old('status', $customer->status ?? 'active')),
+            password: '',
+            password_confirmation: '',
         },
         contactFields: [
             { name: 'email', label: 'Email Address', type: 'email', required: true },

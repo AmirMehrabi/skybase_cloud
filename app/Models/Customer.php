@@ -4,17 +4,19 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use LdapRecord\Laravel\ImportableFromLdap;
 use LdapRecord\Laravel\LdapImportable;
 
-class Customer extends Model implements LdapImportable
+class Customer extends Authenticatable implements LdapImportable
 {
-    use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
+    use HasFactory, ImportableFromLdap, LogsTenantActivity, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
@@ -43,10 +45,17 @@ class Customer extends Model implements LdapImportable
         'balance',
         'credit_limit',
         'tax_exempt',
+        'password',
+        'last_login_at',
         'ldap_guid',
         'ldap_domain',
         'ldap_dn',
         'ldap_synced_at',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     protected function casts(): array
@@ -57,8 +66,15 @@ class Customer extends Model implements LdapImportable
             'billing_enabled' => 'boolean',
             'billing_disabled_at' => 'datetime',
             'tax_exempt' => 'boolean',
+            'password' => 'hashed',
+            'last_login_at' => 'datetime',
             'ldap_synced_at' => 'datetime',
         ];
+    }
+
+    protected function activityLogExcept(): array
+    {
+        return ['password', 'remember_token', 'updated_at', 'deleted_at'];
     }
 
     public function getLdapGuidColumn(): string
@@ -159,9 +175,11 @@ class Customer extends Model implements LdapImportable
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query) {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
+        static::addGlobalScope('tenant', function (Builder $query): void {
+            $tenantId = auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
+
+            if ($tenantId) {
+                $query->where($query->qualifyColumn('tenant_id'), $tenantId);
             }
         });
 
@@ -170,8 +188,8 @@ class Customer extends Model implements LdapImportable
                 $customer->customer_code = self::generateCustomerCode();
             }
 
-            if (auth()->check() && empty($customer->tenant_id)) {
-                $customer->tenant_id = auth()->user()->tenant_id;
+            if (empty($customer->tenant_id)) {
+                $customer->tenant_id = tenant_id() ?? auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
             }
         });
 

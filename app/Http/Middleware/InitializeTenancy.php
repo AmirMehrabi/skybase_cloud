@@ -11,11 +11,13 @@ class InitializeTenancy
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! auth()->check()) {
+        $guard = auth()->check() ? auth() : auth('customer');
+
+        if (! $guard->check()) {
             return $next($request);
         }
 
-        $user = auth()->user();
+        $user = $guard->user();
 
         if (! $user->tenant_id) {
             return $next($request);
@@ -24,16 +26,16 @@ class InitializeTenancy
         $tenant = Tenant::find($user->tenant_id);
 
         if (! $tenant) {
-            auth()->logout();
+            $guard->logout();
 
-            return redirect()->route('auth.login')->with('error', 'Tenant not found.');
+            return redirect()->route($request->routeIs('customer.*') ? 'customer.login' : 'auth.login')->with('error', 'Tenant not found.');
         }
 
         // Verify the user belongs to the tenant (security check)
         if ($user->tenant_id !== $tenant->id) {
-            auth()->logout();
+            $guard->logout();
 
-            return redirect()->route('auth.login')->with('error', 'Invalid tenant access.');
+            return redirect()->route($request->routeIs('customer.*') ? 'customer.login' : 'auth.login')->with('error', 'Invalid tenant access.');
         }
 
         // Store the tenant in the app container for global access

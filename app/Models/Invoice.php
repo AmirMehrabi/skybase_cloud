@@ -112,9 +112,11 @@ class Invoice extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query) {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where('tenant_id', auth()->user()->tenant_id);
+        static::addGlobalScope('tenant', function (Builder $query): void {
+            $tenantId = auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
+
+            if ($tenantId) {
+                $query->where('tenant_id', $tenantId);
             }
         });
     }

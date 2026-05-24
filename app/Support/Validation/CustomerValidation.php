@@ -45,6 +45,7 @@ class CustomerValidation
             'balance' => ['nullable', 'numeric', 'min:-99999999.99', 'max:99999999.99'],
             'credit_limit' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'tax_exempt' => ['boolean'],
+            'password' => ['nullable', 'string', 'min:8', 'max:72', 'confirmed'],
         ];
 
         if ($includeStatus) {
@@ -66,6 +67,8 @@ class CustomerValidation
             'mobile.required' => 'The mobile number field is required.',
             'address_line1.required' => 'The address field is required.',
             'city.required' => 'The city field is required.',
+            'password.confirmed' => 'The customer portal password confirmation does not match.',
+            'password.min' => 'The customer portal password must be at least 8 characters.',
         ];
     }
 }
