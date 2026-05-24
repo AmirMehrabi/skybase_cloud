@@ -176,7 +176,7 @@ class Customer extends Authenticatable implements LdapImportable
     protected static function booted(): void
     {
         static::addGlobalScope('tenant', function (Builder $query): void {
-            $tenantId = auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
+            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
 
             if ($tenantId) {
                 $query->where($query->qualifyColumn('tenant_id'), $tenantId);
@@ -189,7 +189,7 @@ class Customer extends Authenticatable implements LdapImportable
             }
 
             if (empty($customer->tenant_id)) {
-                $customer->tenant_id = tenant_id() ?? auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
+                $customer->tenant_id = tenant_id() ?? auth()->user()?->tenant_id;
             }
         });
 

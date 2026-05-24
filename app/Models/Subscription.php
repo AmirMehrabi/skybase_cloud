@@ -49,7 +49,7 @@ class Subscription extends Model implements LdapImportable
     protected static function booted(): void
     {
         static::addGlobalScope('tenant', function ($query): void {
-            $tenantId = auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
+            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
 
             if ($tenantId) {
                 $query->where('tenant_id', $tenantId);
@@ -62,7 +62,7 @@ class Subscription extends Model implements LdapImportable
             }
 
             if (empty($subscription->tenant_id)) {
-                $subscription->tenant_id = tenant_id() ?? auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
+                $subscription->tenant_id = tenant_id() ?? auth()->user()?->tenant_id;
             }
 
             if (! $subscription->isPppoe()) {
