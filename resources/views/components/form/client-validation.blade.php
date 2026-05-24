@@ -37,6 +37,7 @@
                     validateField(field, value, data, fieldRules = this.rules[field] || []) {
                         const label = this.label(field);
                         const normalizedValue = value === null || value === undefined ? '' : String(value).trim();
+                        const hasNumericRule = fieldRules.includes('numeric');
 
                         for (const rule of fieldRules) {
                             if (rule === 'required' && normalizedValue === '') {
@@ -60,18 +61,26 @@
                                 return `${label} must be a number.`;
                             }
 
-                            if (rule.startsWith('min:') && normalizedValue !== '' && Number(normalizedValue) < Number(rule.slice(4))) {
-                                return `${label} is too small.`;
+                            if (rule.startsWith('min:') && normalizedValue !== '') {
+                                const min = Number(rule.slice(4));
+
+                                if (hasNumericRule && Number(normalizedValue) < min) {
+                                    return `${label} is too small.`;
+                                }
+
+                                if (!hasNumericRule && normalizedValue.length < min) {
+                                    return `${label} must be at least ${min} characters.`;
+                                }
                             }
 
                             if (rule.startsWith('max:') && normalizedValue !== '') {
                                 const max = Number(rule.slice(4));
 
-                                if (Number.isNaN(Number(normalizedValue)) && normalizedValue.length > max) {
+                                if (!hasNumericRule && normalizedValue.length > max) {
                                     return `${label} may not be greater than ${max} characters.`;
                                 }
 
-                                if (!Number.isNaN(Number(normalizedValue)) && Number(normalizedValue) > max) {
+                                if (hasNumericRule && Number(normalizedValue) > max) {
                                     return `${label} is too large.`;
                                 }
                             }
