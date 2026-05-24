@@ -40,7 +40,7 @@ class LoginRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'tenant' => str($this->input('tenant'))->trim()->lower()->toString(),
+            'tenant' => str($this->input('tenant'))->trim()->toString(),
             'email' => str($this->input('email'))->trim()->lower()->toString(),
             'remember' => $this->boolean('remember'),
         ]);
