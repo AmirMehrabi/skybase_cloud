@@ -63,6 +63,11 @@ class Tenant extends Model
         return $this->hasMany(Router::class);
     }
 
+    public function sites(): HasMany
+    {
+        return $this->hasMany(Site::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

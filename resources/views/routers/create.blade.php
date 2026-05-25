@@ -60,11 +60,20 @@
                 />
 
                 <x-ui.input.text
-                    label="Site"
+                    label="Legacy Site Name"
                     name="site"
                     placeholder="e.g., Main Site"
                     :value="old('site')"
                     :error="$errors->first('site')"
+                />
+
+                <x-ui.input.select
+                    label="Managed Site"
+                    name="site_id"
+                    :options="$sites->mapWithKeys(fn ($site) => [$site->id => $site->name . ' (' . $site->code . ')'])->toArray()"
+                    :value="old('site_id')"
+                    placeholder="Select managed site"
+                    :error="$errors->first('site_id')"
                 />
             </div>
         </div>

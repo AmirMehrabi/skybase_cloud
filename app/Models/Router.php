@@ -20,6 +20,7 @@ class Router extends Model
      */
     protected $fillable = [
         'tenant_id',
+        'site_id',
         'name',
         'model',
         'vendor',
@@ -92,6 +93,11 @@ class Router extends Model
         return $this->belongsTo(Tenant::class);
     }
 
+    public function siteRecord(): BelongsTo
+    {
+        return $this->belongsTo(Site::class, 'site_id');
+    }
+
     public function netflowFlows(): HasMany
     {
         return $this->hasMany(NetflowFlow::class);
@@ -117,7 +123,10 @@ class Router extends Model
         })->when($filters['vendor'] ?? null, function ($query, $vendor) {
             $query->where('vendor', $vendor);
         })->when($filters['site'] ?? null, function ($query, $site) {
-            $query->where('site', $site);
+            $query->where(function ($query) use ($site) {
+                $query->where('site', $site)
+                    ->orWhereHas('siteRecord', fn ($query) => $query->where('name', $site));
+            });
         });
     }
 
@@ -129,11 +138,19 @@ class Router extends Model
             ->distinct()
             ->pluck('site')
             ->map(fn ($site) => ['value' => $site, 'label' => $site])
-            ->values()
-            ->toArray();
+            ->values();
+
+        $managedSites = Site::query()
+            ->orderBy('name')
+            ->get(['name'])
+            ->map(fn (Site $site) => ['value' => $site->name, 'label' => $site->name]);
 
         return [
-            'sites' => $sites,
+            'sites' => $managedSites
+                ->concat($sites)
+                ->unique('value')
+                ->values()
+                ->toArray(),
         ];
     }
 

@@ -27,6 +27,7 @@ use App\Http\Controllers\ReportController as GeneralReportController;
 use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\VpnUserController;
 use Illuminate\Support\Facades\Route;
@@ -201,6 +202,19 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{router}/interfaces', [RouterController::class, 'interfaces'])->name('interfaces');
         Route::get('/{router}/ip-pools', [RouterController::class, 'ipPools'])->name('ip-pools');
         Route::get('/{router}/logs', [RouterController::class, 'logs'])->name('logs');
+    });
+
+    Route::prefix('sites')->name('sites.')->group(function () {
+        Route::get('/', [SiteController::class, 'index'])->name('index');
+        Route::get('/data', [SiteController::class, 'data'])->name('data');
+        Route::get('/stats', [SiteController::class, 'stats'])->name('stats');
+        Route::get('/map-data', [SiteController::class, 'mapData'])->name('map-data');
+        Route::get('/create', [SiteController::class, 'create'])->name('create');
+        Route::post('/', [SiteController::class, 'store'])->name('store');
+        Route::get('/{site}', [SiteController::class, 'show'])->name('show');
+        Route::get('/{site}/edit', [SiteController::class, 'edit'])->name('edit');
+        Route::put('/{site}', [SiteController::class, 'update'])->name('update');
+        Route::delete('/{site}', [SiteController::class, 'destroy'])->name('destroy');
     });
 
     // IP Address Management (IPAM) Routes

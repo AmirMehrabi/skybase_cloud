@@ -7,8 +7,10 @@ use App\Http\Requests\Router\StoreRouterRequest;
 use App\Http\Requests\Router\UpdateRouterRequest;
 use App\Models\NetflowFlow;
 use App\Models\Router;
+use App\Models\Site;
 use App\Services\Netflow\NetflowSummaryService;
 use App\Services\RouterOs\RouterOsTrafficFlowService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +34,9 @@ class RouterController extends Controller
     {
         $filters = $request->only(['search', 'status', 'vendor', 'site']);
 
-        $routers = Router::filter($filters)
+        $routers = Router::query()
+            ->with('siteRecord')
+            ->filter($filters)
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('per_page', 15))
             ->through(fn ($router) => [
@@ -44,7 +48,8 @@ class RouterController extends Controller
                 'api_port' => $router->api_port,
                 'ssh_port' => $router->ssh_port,
                 'location' => $router->location,
-                'site' => $router->site,
+                'site_id' => $router->site_id,
+                'site' => $router->siteRecord?->name ?? $router->site,
                 'status' => $router->status ?? 'offline',
                 'version' => $router->version,
                 'uptime' => $router->uptime,
@@ -91,7 +96,9 @@ class RouterController extends Controller
      */
     public function create(): View
     {
-        return view('routers.create');
+        return view('routers.create', [
+            'sites' => $this->activeSites(),
+        ]);
     }
 
     /**
@@ -147,7 +154,10 @@ class RouterController extends Controller
     {
         $this->authorizeTenantAccess($router);
 
-        return view('routers.edit', ['router' => $router]);
+        return view('routers.edit', [
+            'router' => $router,
+            'sites' => $this->activeSites(),
+        ]);
     }
 
     /**
@@ -299,6 +309,17 @@ class RouterController extends Controller
         if (auth()->check() && auth()->user()->tenant_id && $router->tenant_id !== auth()->user()->tenant_id) {
             abort(403, 'You do not have access to this router.');
         }
+    }
+
+    /**
+     * @return Collection<int, Site>
+     */
+    protected function activeSites(): Collection
+    {
+        return Site::query()
+            ->active()
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
     }
 
     /**

@@ -37,6 +37,10 @@ class UpdateRouterRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
+            'site_id' => [
+                'nullable',
+                Rule::exists('sites', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+            ],
             'model' => ['nullable', 'string', 'max:255'],
             'vendor' => ['required', 'string', 'in:Mikrotik,Cisco,Juniper,Huawei'],
             'ip_address' => [
