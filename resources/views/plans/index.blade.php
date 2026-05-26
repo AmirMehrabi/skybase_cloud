@@ -239,29 +239,25 @@ function getStatusBadgeClass($status)
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border" :class="getStatusBadgeClass(plan.status)" x-text="capitalize(plan.status)"></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right">
-                                <div x-data="{ open: false }" class="relative inline-block text-left">
-                                    <button @click="open = !open" @click.outside="open = false" class="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100">
-                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
-                                        </svg>
-                                    </button>
+                                <div class="flex items-center justify-end gap-2">
+                                    <x-ui.action-icon x-bind:href="`/plans/${plan.id}`" icon="view" label="View" />
+                                    <x-ui.action-icon x-bind:href="`/plans/${plan.id}/edit`" icon="edit" label="Edit" />
+                                    <x-ui.action-icon as="button" icon="delete" label="Delete" @click="confirmDelete(plan)" />
+                                    <div x-data="{ open: false }" class="relative inline-block text-left">
+                                        <x-ui.action-icon as="button" icon="more" label="More actions" @click="open = !open" @click.outside="open = false" />
 
-                                    <div x-show="open"
-                                         x-transition:enter="transition ease-out duration-100"
-                                         x-transition:enter-start="transform opacity-0 scale-95"
-                                         x-transition:enter-end="transform opacity-100 scale-100"
-                                         x-transition:leave="transition ease-in duration-75"
-                                         x-transition:leave-start="transform opacity-100 scale-100"
-                                         x-transition:leave-end="transform opacity-0 scale-95"
-                                         class="absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white border border-gray-200 py-1 z-50"
-                                         style="display: none;">
-                                        <a :href="`/plans/${plan.id}`" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">View</a>
-                                        <a :href="`/plans/${plan.id}/edit`" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Edit</a>
-                                        <div class="border-t border-gray-200 my-1"></div>
-                                        <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Clone Plan</button>
-                                        <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">View Subscribers</button>
-                                        <div class="border-t border-gray-200 my-1"></div>
-                                        <button class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Delete</button>
+                                        <div x-show="open"
+                                             x-transition:enter="transition ease-out duration-100"
+                                             x-transition:enter-start="transform opacity-0 scale-95"
+                                             x-transition:enter-end="transform opacity-100 scale-100"
+                                             x-transition:leave="transition ease-in duration-75"
+                                             x-transition:leave-start="transform opacity-100 scale-100"
+                                             x-transition:leave-end="transform opacity-0 scale-95"
+                                             class="absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white border border-gray-200 py-1 z-50"
+                                             style="display: none;">
+                                            <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Clone Plan</button>
+                                            <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">View Subscribers</button>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -286,6 +282,12 @@ function getStatusBadgeClass($status)
             </div>
         </div>
     </div>
+
+    <x-ui.delete-modal
+        title="Delete Plan"
+        name="deleteModal.plan?.name"
+        confirm-action="deletePlan()"
+    />
 </div>
 
 <script>
@@ -297,6 +299,11 @@ function plansModule() {
         filterCategory: '',
         filterBillingCycle: '',
         plans: @js($plans->toArray()),
+        deleteModal: {
+            show: false,
+            plan: null,
+            deleting: false,
+        },
 
         get filteredPlans() {
             return this.plans.filter(plan => {
@@ -331,7 +338,34 @@ function plansModule() {
                 'archived': 'bg-red-100 text-red-800 border-red-200',
             };
             return classes[status] || 'bg-gray-100 text-gray-800 border-gray-200';
-        }
+        },
+        confirmDelete(plan) {
+            this.deleteModal.plan = plan;
+            this.deleteModal.show = true;
+        },
+        async deletePlan() {
+            if (!this.deleteModal.plan) return;
+
+            this.deleteModal.deleting = true;
+            try {
+                const response = await fetch(`/plans/${this.deleteModal.plan.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    this.plans = this.plans.filter((plan) => plan.id !== this.deleteModal.plan.id);
+                    this.deleteModal.show = false;
+                } else {
+                    alert('Error deleting plan. Please try again.');
+                }
+            } finally {
+                this.deleteModal.deleting = false;
+            }
+        },
     };
 }
 </script>

@@ -214,7 +214,12 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="subscription.activation_date || '-'"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a :href="'/subscriptions/' + subscription.id" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
+                                <div class="flex items-center justify-end gap-2">
+                                    <x-ui.action-icon x-bind:href="'/subscriptions/' + subscription.id" icon="view" label="View" />
+                                    <x-ui.action-icon x-bind:href="'/subscriptions/' + subscription.id + '/edit'" icon="edit" label="Edit" />
+                                    <x-ui.action-icon as="button" icon="suspend" label="Suspend" x-show="subscription.status === 'active'" @click="suspendSubscription(subscription)" />
+                                    <x-ui.action-icon as="button" icon="delete" label="Delete" @click="confirmDelete(subscription)" />
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -253,6 +258,12 @@
             </div>
         </div>
     </div>
+
+    <x-ui.delete-modal
+        title="Delete Subscription"
+        name="deleteModal.subscription?.subscription_code"
+        confirm-action="deleteSubscription()"
+    />
 </div>
 
 @push('scripts')
@@ -277,6 +288,11 @@ function subscriptionsIndex() {
         },
         loading: false,
         debounceTimer: null,
+        deleteModal: {
+            show: false,
+            subscription: null,
+            deleting: false
+        },
 
         init() {
             this.fetchStats();
@@ -364,6 +380,51 @@ function subscriptionsIndex() {
             if (this.pagination.current_page < this.pagination.last_page) {
                 this.pagination.current_page++;
                 this.fetchData();
+            }
+        },
+
+        confirmDelete(subscription) {
+            this.deleteModal.subscription = subscription;
+            this.deleteModal.show = true;
+        },
+
+        async deleteSubscription() {
+            if (!this.deleteModal.subscription) return;
+
+            this.deleteModal.deleting = true;
+            try {
+                const response = await fetch(`/subscriptions/${this.deleteModal.subscription.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    this.deleteModal.show = false;
+                    await Promise.all([this.fetchData(), this.fetchStats()]);
+                } else {
+                    alert('Error deleting subscription. Please try again.');
+                }
+            } finally {
+                this.deleteModal.deleting = false;
+            }
+        },
+
+        async suspendSubscription(subscription) {
+            const response = await fetch(`/subscriptions/${subscription.id}/suspend`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                await Promise.all([this.fetchData(), this.fetchStats()]);
+            } else {
+                alert('Error suspending subscription. Please try again.');
             }
         }
     };

@@ -170,35 +170,33 @@
                     {{ $tenant->created_at->format('M d, Y') }}
                 </td>
                 <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                        <a href="{{ route('admin.super-admin.tenants.show', $tenant) }}" class="text-blue-600 hover:text-blue-900" title="View">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="{{ route('admin.super-admin.tenants.edit', $tenant) }}" class="text-gray-600 hover:text-gray-900" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </a>
+                    <div class="flex items-center justify-end gap-2" x-data="{ deleting: false }">
+                        <x-ui.action-icon href="{{ route('admin.super-admin.tenants.show', $tenant) }}" icon="view" label="View" />
+                        <x-ui.action-icon href="{{ route('admin.super-admin.tenants.edit', $tenant) }}" icon="edit" label="Edit" />
                         @if($tenant->isActive())
-                        <form method="POST" action="{{ route('admin.super-admin.tenants.suspend', $tenant) }}" class="inline" onsubmit="return confirm('Are you sure you want to suspend this tenant?')">
+                        <form method="POST" action="{{ route('admin.super-admin.tenants.suspend', $tenant) }}" class="inline">
                             @csrf
-                            <button type="submit" class="text-yellow-600 hover:text-yellow-900" title="Suspend">
-                                <i class="fas fa-pause"></i>
-                            </button>
+                            <x-ui.action-icon as="button" type="submit" icon="suspend" label="Suspend" />
                         </form>
                         @else
                         <form method="POST" action="{{ route('admin.super-admin.tenants.activate', $tenant) }}" class="inline">
                             @csrf
-                            <button type="submit" class="text-green-600 hover:text-green-900" title="Activate">
-                                <i class="fas fa-play"></i>
-                            </button>
+                            <x-ui.action-icon as="button" type="submit" icon="activate" label="Activate" />
                         </form>
                         @endif
-                        <form method="POST" action="{{ route('admin.super-admin.tenants.destroy', $tenant) }}" class="inline" onsubmit="return confirm('Are you sure? This will permanently delete this tenant and all associated data.')">
+                        <x-ui.action-icon as="button" icon="delete" label="Delete" @click="deleting = true" />
+                        <form x-ref="deleteForm" method="POST" action="{{ route('admin.super-admin.tenants.destroy', $tenant) }}" class="hidden">
                             @csrf
                             @method('delete')
-                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
                         </form>
+                        <x-ui.delete-modal
+                            show="deleting"
+                            title="Delete Tenant"
+                            message="Are you sure? This will permanently delete this tenant and all associated data."
+                            confirm-action="$refs.deleteForm.submit()"
+                            cancel-action="deleting = false"
+                            loading="false"
+                        />
                     </div>
                 </td>
             </tr>

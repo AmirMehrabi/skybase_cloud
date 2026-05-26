@@ -226,12 +226,11 @@ function getUsageColor($percentage)
                                 </span>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
-                                <div x-data="{ open: false }" class="relative inline-block text-left">
-                                    <button @click="open = !open" @click.outside="open = false" class="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100">
-                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
-                                        </svg>
-                                    </button>
+                                <div x-data="{ open: false, deleting: false }" class="relative flex items-center justify-end gap-2">
+                                    <x-ui.action-icon href="{{ route('ipam.pools.show', $pool) }}" icon="view" label="View Pool" />
+                                    <x-ui.action-icon href="{{ route('ipam.pools.edit', $pool) }}" icon="edit" label="Edit Pool" />
+                                    <x-ui.action-icon as="button" icon="delete" label="Delete Pool" @click="deleting = true" />
+                                    <x-ui.action-icon as="button" icon="more" label="More actions" @click="open = !open" @click.outside="open = false" />
 
                                     <div x-show="open"
                                          x-transition:enter="transition ease-out duration-100"
@@ -242,20 +241,23 @@ function getUsageColor($percentage)
                                          x-transition:leave-end="transform opacity-0 scale-95"
                                          class="absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white border border-gray-200 py-1 z-50"
                                          style="display: none;">
-                                        <a href="{{ route('ipam.pools.show', $pool) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">View Pool</a>
-                                        <a href="{{ route('ipam.pools.edit', $pool) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Edit Pool</a>
                                         @if($pool->status === 'active')
                                             <a href="#" class="block px-4 py-2 text-sm text-yellow-600 hover:bg-gray-50">Disable</a>
                                         @else
                                             <a href="#" class="block px-4 py-2 text-sm text-green-600 hover:bg-gray-50">Enable</a>
                                         @endif
-                                        <div class="border-t border-gray-200 my-1"></div>
-                                        <form action="{{ route('ipam.pools.destroy', $pool) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this IP pool?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Delete Pool</button>
-                                        </form>
                                     </div>
+                                    <form x-ref="deleteForm" action="{{ route('ipam.pools.destroy', $pool) }}" method="POST" class="hidden">
+                                        @csrf
+                                        @method('DELETE')
+                                    </form>
+                                    <x-ui.delete-modal
+                                        show="deleting"
+                                        title="Delete IP Pool"
+                                        confirm-action="$refs.deleteForm.submit()"
+                                        cancel-action="deleting = false"
+                                        loading="false"
+                                    />
                                 </div>
                             </td>
                         </tr>

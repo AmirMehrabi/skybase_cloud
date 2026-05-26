@@ -77,8 +77,8 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
-                                    <a :href="`/organizations/${organization.id}`" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="View">View</a>
-                                    <a :href="`/organizations/${organization.id}/edit`" class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Edit">Edit</a>
+                                    <x-ui.action-icon x-bind:href="`/organizations/${organization.id}`" icon="view" label="View" />
+                                    <x-ui.action-icon x-bind:href="`/organizations/${organization.id}/edit`" icon="edit" label="Edit" />
                                 </div>
                             </td>
                         </tr>

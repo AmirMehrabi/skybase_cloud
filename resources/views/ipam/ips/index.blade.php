@@ -254,7 +254,9 @@ function getIpStatusBadge($status)
                                 <div class="text-sm text-gray-900">{{ $ip['assigned_at'] ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
-                                <a href="{{ route('ipam.ips.show', $ip['ip_address']) }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">View</a>
+                                <div class="flex items-center justify-end gap-2">
+                                    <x-ui.action-icon href="{{ route('ipam.ips.show', $ip['ip_address']) }}" icon="view" label="View" />
+                                </div>
                             </td>
                         </tr>
                     @endforeach

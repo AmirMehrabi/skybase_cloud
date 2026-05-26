@@ -109,9 +109,9 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
-                                    <a :href="urls.show + '/' + site.id" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="View">View</a>
-                                    <a :href="urls.edit + '/' + site.id" class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Edit">Edit</a>
-                                    <button @click="confirmDelete(site)" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete">Delete</button>
+                                    <x-ui.action-icon x-bind:href="urls.show + '/' + site.id" icon="view" label="View" />
+                                    <x-ui.action-icon x-bind:href="urls.edit + '/' + site.id" icon="edit" label="Edit" />
+                                    <x-ui.action-icon as="button" icon="delete" label="Delete" @click="confirmDelete(site)" />
                                 </div>
                             </td>
                         </tr>
@@ -125,25 +125,12 @@
         <div x-show="loading" class="px-6 py-12 text-center text-sm text-gray-500" style="display: none;">Loading sites...</div>
     </div>
 
-    <div x-show="deleteModal.show" class="fixed inset-0 z-[2000] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
-        <div class="relative z-[2000] flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 z-[2000] bg-gray-500 bg-opacity-75 transition-opacity"></div>
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div class="relative z-[2010] inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Delete Site</h3>
-                    <p class="text-sm text-gray-500 mt-2">Are you sure you want to delete "<span x-text="deleteModal.site?.name"></span>"? Assigned routers will keep their legacy site text but lose this managed site link.</p>
-                </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button @click="deleteSite" :disabled="deleteModal.deleting" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50">
-                        <span x-show="!deleteModal.deleting">Delete</span>
-                        <span x-show="deleteModal.deleting">Deleting...</span>
-                    </button>
-                    <button @click="deleteModal.show = false" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-ui.delete-modal
+        title="Delete Site"
+        name="deleteModal.site?.name"
+        confirm-action="deleteSite()"
+        message="Are you sure you want to delete &quot;<span x-text='deleteModal.site?.name'></span>&quot;? Assigned routers will keep their legacy site text but lose this managed site link."
+    />
 </div>
 
 @push('scripts')
