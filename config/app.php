@@ -56,6 +56,11 @@ return [
 
     'customer_portal_domain' => parse_url((string) env('CUSTOMER_PORTAL_DOMAIN', ''), PHP_URL_HOST) ?: env('CUSTOMER_PORTAL_DOMAIN'),
 
+    'cloud' => [
+        'enabled' => (bool) env('SKYBASE_CLOUD_ENABLED', true),
+        'guest_entry' => env('SKYBASE_CLOUD_GUEST_ENTRY', 'admin'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

@@ -5,17 +5,27 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TenantLoginRequest;
 use App\Models\User;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TenantLoginController extends Controller
 {
-    public function showLoginForm()
+    public function showLoginForm(): View|RedirectResponse
     {
+        if (Auth::guard('customer')->check()) {
+            return redirect()->route('customer.dashboard');
+        }
+
+        if (! config('app.cloud.enabled') && config('app.cloud.guest_entry') === 'customer') {
+            return redirect()->route('customer.login');
+        }
+
         return view('auth.login');
     }
 
-    public function login(TenantLoginRequest $request)
+    public function login(TenantLoginRequest $request): RedirectResponse
     {
         $credentials = $request->only('email', 'password');
 
@@ -46,8 +56,6 @@ class TenantLoginController extends Controller
             }
         }
 
-        
-
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withInput()
                 ->withErrors([
@@ -62,7 +70,7 @@ class TenantLoginController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
 

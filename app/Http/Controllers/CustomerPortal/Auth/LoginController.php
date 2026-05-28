@@ -14,8 +14,16 @@ use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    public function show(): View
+    public function show(): View|RedirectResponse
     {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
+        if (! config('app.cloud.enabled') && config('app.cloud.guest_entry') !== 'customer') {
+            return redirect()->route('auth.login');
+        }
+
         return view('customer.auth.login');
     }
 

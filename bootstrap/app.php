@@ -29,6 +29,14 @@ return Application::configure(basePath: dirname(__DIR__))
             return '/auth/login';
         });
 
+        $middleware->redirectUsersTo(function ($request): string {
+            if ($request->routeIs('customer.*')) {
+                return route('customer.dashboard');
+            }
+
+            return route('dashboard');
+        });
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
