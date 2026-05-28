@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use LdapRecord\Laravel\ImportableFromLdap;
 use LdapRecord\Laravel\LdapImportable;
 
@@ -117,6 +118,11 @@ class Customer extends Authenticatable implements LdapImportable
         return $this->hasMany(CustomerCredit::class);
     }
 
+    public function networkUsageRecords(): HasMany
+    {
+        return $this->hasMany(NetworkUsageRecord::class);
+    }
+
     public function activeSubscription(): ?Subscription
     {
         return $this->subscriptions()->active()->latest()->first();
@@ -181,6 +187,33 @@ class Customer extends Authenticatable implements LdapImportable
             if ($tenantId) {
                 $query->where($query->qualifyColumn('tenant_id'), $tenantId);
             }
+        });
+
+        static::deleting(function (Customer $customer): void {
+            DB::transaction(function () use ($customer): void {
+                $invoices = $customer->invoices()->withTrashed()->get();
+                $subscriptions = $customer->subscriptions()->withTrashed()->get();
+
+                foreach ($invoices as $invoice) {
+                    $invoice->items()->delete();
+                }
+
+                foreach ($subscriptions as $subscription) {
+                    $customer->isForceDeleting() ? $subscription->forceDelete() : $subscription->delete();
+                }
+
+                if ($customer->isForceDeleting()) {
+                    $customer->payments()->withTrashed()->forceDelete();
+                    $customer->credits()->withTrashed()->forceDelete();
+                    $customer->invoices()->withTrashed()->forceDelete();
+                } else {
+                    $customer->payments()->delete();
+                    $customer->credits()->delete();
+                    $customer->invoices()->delete();
+                }
+
+                $customer->networkUsageRecords()->delete();
+            });
         });
 
         static::creating(function ($customer) {

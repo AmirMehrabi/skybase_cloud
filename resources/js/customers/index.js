@@ -149,6 +149,36 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async deleteCustomer(customer) {
+            if (!customer || !customer.id) {
+                return;
+            }
+
+            const confirmed = window.confirm(`Delete ${customer.name} and all related data? This action cannot be undone.`);
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/customers/${customer.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector("meta[name=\"csrf-token\"]")?.content ?? "",
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error("Delete request failed");
+                }
+
+                await Promise.all([this.fetchCustomers(), this.fetchStats()]);
+            } catch (error) {
+                console.error("Error deleting customer:", error);
+                window.alert("Unable to delete customer. Please try again.");
+            }
+        },
+
         // Helper methods
         formatBalance(amount) {
             const formatted = new Intl.NumberFormat('en-US', {
