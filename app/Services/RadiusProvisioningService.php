@@ -207,8 +207,8 @@ class RadiusProvisioningService
             return 'connection type is not pppoe';
         }
 
-        if ($subscription->status !== 'active' || ! $subscription->billing_enabled) {
-            return $subscription->status !== 'active' ? 'subscription status is not active' : 'subscription billing is disabled';
+        if ($subscription->status !== 'active') {
+            return 'subscription status is not active';
         }
 
         if (! $subscription->pppoe_username) {
@@ -217,10 +217,6 @@ class RadiusProvisioningService
 
         if (! $this->usesLdapRadiusAuthentication((string) $subscription->tenant_id) && ! $subscription->pppoe_password) {
             return 'missing pppoe password';
-        }
-
-        if (! $subscription->customer?->billing_enabled) {
-            return 'customer billing is disabled';
         }
 
         if ($subscription->customer?->organization?->billing_enabled && (int) $subscription->customer->organization->default_plan_id !== (int) $subscription->plan_id) {

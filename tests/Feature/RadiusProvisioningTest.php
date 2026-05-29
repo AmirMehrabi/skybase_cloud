@@ -6,7 +6,6 @@ use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\RadiusCheck;
 use App\Models\RadiusReply;
-use App\Models\RadiusUserGroup;
 use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\Tenant;
@@ -169,7 +168,7 @@ class RadiusProvisioningTest extends TestCase
         ]);
     }
 
-    public function test_billing_disabled_subscription_removes_radius_authorization(): void
+    public function test_billing_disabled_subscription_keeps_radius_authorization(): void
     {
         [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
 
@@ -177,12 +176,49 @@ class RadiusProvisioningTest extends TestCase
 
         $subscription->update(['billing_enabled' => false]);
 
-        $this->assertSame(0, RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
-        $this->assertSame(0, RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
-        $this->assertSame(0, RadiusUserGroup::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'secret-pass',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '20M/100M',
+        ]);
+        $this->assertDatabaseHas('radusergroup', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'groupname' => 'skybase-plan-fiber-100',
+        ]);
     }
 
-    public function test_customer_billing_disabled_removes_radius_authorization(): void
+    public function test_subscription_created_with_billing_disabled_pushes_radius_authorization(): void
+    {
+        [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
+
+        Subscription::create([
+            ...$this->subscriptionAttributes($tenant, $customer, $plan),
+            'billing_enabled' => false,
+        ]);
+
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'secret-pass',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '20M/100M',
+        ]);
+    }
+
+    public function test_customer_billing_disabled_keeps_radius_authorization(): void
     {
         [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
 
@@ -190,8 +226,39 @@ class RadiusProvisioningTest extends TestCase
 
         $customer->update(['billing_enabled' => false]);
 
-        $this->assertSame(0, RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
-        $this->assertSame(0, RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'secret-pass',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '20M/100M',
+        ]);
+    }
+
+    public function test_subscription_for_customer_with_billing_disabled_pushes_radius_authorization(): void
+    {
+        [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
+        $customer->update(['billing_enabled' => false]);
+
+        Subscription::create($this->subscriptionAttributes($tenant, $customer, $plan));
+
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'secret-pass',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '20M/100M',
+        ]);
     }
 
     public function test_suspended_subscription_removes_radius_authorization(): void
@@ -229,7 +296,7 @@ class RadiusProvisioningTest extends TestCase
         Subscription::create($this->subscriptionAttributes($tenantA, $customerA, $planA, 'SUB-A', 'shared.user', 'alpha-pass'));
         Subscription::create($this->subscriptionAttributes($tenantB, $customerB, $planB, 'SUB-B', 'shared.user', 'beta-pass'));
 
-        $this->assertSame(2, RadiusCheck::withoutGlobalScopes()->where('username', 'shared.user')->count());
+        $this->assertSame(2, RadiusCheck::withoutGlobalScopes()->where('username', 'shared.user')->where('attribute', 'Cleartext-Password')->count());
 
         $this->assertDatabaseHas('radcheck', [
             'tenant_id' => $tenantA->id,
@@ -282,6 +349,7 @@ class RadiusProvisioningTest extends TestCase
         $plan = Plan::factory()->create([
             'name' => 'Fiber 100',
             'internal_name' => $slug === 'alpha-net' ? 'fiber_100' : Str::slug($slug, '_').'_fiber_100',
+            'router_profile' => 'fiber_100',
             'status' => 'active',
             'type' => 'pppoe',
             'download_speed' => 100,
