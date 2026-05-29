@@ -7,6 +7,7 @@ use App\Models\Concerns\LogsTenantActivity;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -72,6 +73,18 @@ class User extends Authenticatable
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    public function ticketTeams(): BelongsToMany
+    {
+        return $this->belongsToMany(TicketTeam::class)
+            ->withPivot(['tenant_id', 'is_active', 'accepts_auto_assignment'])
+            ->withTimestamps();
+    }
+
+    public function assignedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'assigned_user_id');
     }
 
     public function getRoleDisplayName(): string

@@ -144,6 +144,11 @@ class Subscription extends Model implements LdapImportable
         return $this->hasMany(Invoice::class);
     }
 
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
     public function scopeActive($query)
     {
         $query->where('status', 'active');

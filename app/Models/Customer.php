@@ -118,6 +118,11 @@ class Customer extends Authenticatable implements LdapImportable
         return $this->hasMany(CustomerCredit::class);
     }
 
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
     public function networkUsageRecords(): HasMany
     {
         return $this->hasMany(NetworkUsageRecord::class);

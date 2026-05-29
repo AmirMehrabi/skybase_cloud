@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             SiteSeeder::class,
             IpPoolSeeder::class,
             NetworkMonitoringSeeder::class,
+            TicketTeamSeeder::class,
         ]);
     }
 }

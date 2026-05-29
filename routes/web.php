@@ -15,7 +15,7 @@ use App\Http\Controllers\CustomerPortal\Auth\LoginController as CustomerPortalLo
 use App\Http\Controllers\CustomerPortal\DashboardController as CustomerPortalDashboardController;
 use App\Http\Controllers\CustomerPortal\InvoiceController as CustomerPortalInvoiceController;
 use App\Http\Controllers\CustomerPortal\SubscriptionController as CustomerPortalSubscriptionController;
-use App\Http\Controllers\CustomerPortal\SupportController as CustomerPortalSupportController;
+use App\Http\Controllers\CustomerPortal\TicketController as CustomerPortalTicketController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\IpamController;
@@ -29,6 +29,8 @@ use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\Support\TicketController as SupportTicketController;
+use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamController;
 use App\Http\Controllers\VpnUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,7 +46,15 @@ $customerPortalRoutes = function (): void {
         Route::get('/dashboard', CustomerPortalDashboardController::class)->name('dashboard.redirect');
         Route::get('/subscriptions', [CustomerPortalSubscriptionController::class, 'index'])->name('subscriptions.index');
         Route::get('/invoices', [CustomerPortalInvoiceController::class, 'index'])->name('invoices.index');
-        Route::get('/support', CustomerPortalSupportController::class)->name('support.index');
+        Route::prefix('support')->name('support.')->group(function (): void {
+            Route::get('/', [CustomerPortalTicketController::class, 'index'])->name('index');
+            Route::get('/create', [CustomerPortalTicketController::class, 'create'])->name('create');
+            Route::post('/', [CustomerPortalTicketController::class, 'store'])->name('store');
+            Route::get('/{ticket}', [CustomerPortalTicketController::class, 'show'])->name('show');
+            Route::post('/{ticket}/reply', [CustomerPortalTicketController::class, 'reply'])->name('reply');
+            Route::post('/{ticket}/close', [CustomerPortalTicketController::class, 'close'])->name('close');
+            Route::get('/{ticket}/attachments/{attachment}', [CustomerPortalTicketController::class, 'download'])->name('attachments.download');
+        });
     });
 };
 
@@ -116,6 +126,26 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::post('/ldap/preview', [SettingController::class, 'previewLdap'])->name('preview.ldap');
         Route::post('/ldap/sync', [SettingController::class, 'syncLdap'])->name('sync.ldap');
         Route::delete('/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
+    });
+
+    Route::prefix('support')->name('support.')->group(function () {
+        Route::get('/tickets', [SupportTicketController::class, 'index'])->name('tickets.index');
+        Route::get('/tickets/create', [SupportTicketController::class, 'create'])->name('tickets.create');
+        Route::post('/tickets', [SupportTicketController::class, 'store'])->name('tickets.store');
+        Route::get('/tickets/{ticket}', [SupportTicketController::class, 'show'])->name('tickets.show');
+        Route::post('/tickets/{ticket}/reply', [SupportTicketController::class, 'reply'])->name('tickets.reply');
+        Route::patch('/tickets/{ticket}/status', [SupportTicketController::class, 'updateStatus'])->name('tickets.status');
+        Route::patch('/tickets/{ticket}/priority', [SupportTicketController::class, 'updatePriority'])->name('tickets.priority');
+        Route::patch('/tickets/{ticket}/assign', [SupportTicketController::class, 'assign'])->name('tickets.assign');
+        Route::patch('/tickets/{ticket}/team', [SupportTicketController::class, 'moveTeam'])->name('tickets.team');
+        Route::get('/tickets/{ticket}/attachments/{attachment}', [SupportTicketController::class, 'download'])->name('tickets.attachments.download');
+
+        Route::get('/teams', [SupportTicketTeamController::class, 'index'])->name('teams.index');
+        Route::get('/teams/create', [SupportTicketTeamController::class, 'create'])->name('teams.create');
+        Route::post('/teams', [SupportTicketTeamController::class, 'store'])->name('teams.store');
+        Route::get('/teams/{team}/edit', [SupportTicketTeamController::class, 'edit'])->name('teams.edit');
+        Route::put('/teams/{team}', [SupportTicketTeamController::class, 'update'])->name('teams.update');
+        Route::delete('/teams/{team}', [SupportTicketTeamController::class, 'destroy'])->name('teams.destroy');
     });
 
     // Customer Management Routes
