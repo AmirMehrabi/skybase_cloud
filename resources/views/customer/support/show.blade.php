@@ -26,7 +26,7 @@
                             <div class="text-xs text-slate-500">{{ $message->created_at?->format('Y-m-d H:i') }}</div>
                         </div>
                     </div>
-                    <div class="whitespace-pre-line text-sm leading-6 text-slate-800">{{ $message->body }}</div>
+                    <x-tickets.message-body :message="$message" />
                     @if($message->attachments->where('visibility', 'public')->isNotEmpty())
                         <div class="mt-4 flex flex-wrap gap-2">
                             @foreach($message->attachments->where('visibility', 'public') as $attachment)
@@ -42,7 +42,7 @@
             <form method="POST" action="{{ route('customer.support.reply', $ticket) }}" enctype="multipart/form-data" class="rounded-xl border border-slate-900/10 bg-white p-6 shadow-sm">
                 @csrf
                 <h2 class="mb-4 text-lg font-semibold text-slate-950">Add reply</h2>
-                <x-input.textarea id="body" name="body" label="Message" rows="6" required />
+                <x-tickets.markdown-composer id="body" name="body" label="Message" rows="6" required />
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-slate-700" for="attachments">Attachments</label>
                     <input id="attachments" name="attachments[]" type="file" multiple class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">

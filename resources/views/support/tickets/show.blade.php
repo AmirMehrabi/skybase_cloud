@@ -27,7 +27,7 @@
                             </div>
                             <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $item->visibility === 'internal' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700' }}">{{ ucfirst($item->visibility) }}</span>
                         </div>
-                        <div class="whitespace-pre-line text-sm leading-6 text-slate-800">{{ $item->body }}</div>
+                        <x-tickets.message-body :message="$item" />
                         @if($item->attachments->isNotEmpty())
                             <div class="mt-4 flex flex-wrap gap-2">
                                 @foreach($item->attachments as $attachment)
@@ -48,7 +48,7 @@
             @csrf
             <h2 class="mb-4 text-lg font-semibold text-slate-950">Add response</h2>
             <x-input.select id="visibility" name="visibility" label="Visibility" :options="['public' => 'Public reply', 'internal' => 'Internal note']" :value="old('visibility', 'public')" required />
-            <x-input.textarea id="body" name="body" label="Message" rows="6" required />
+            <x-tickets.markdown-composer id="body" name="body" label="Message" rows="6" required />
             <div class="mb-4">
                 <label class="block text-sm font-medium text-slate-700" for="attachments">Attachments</label>
                 <input id="attachments" name="attachments[]" type="file" multiple class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">

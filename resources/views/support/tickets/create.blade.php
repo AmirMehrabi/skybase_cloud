@@ -44,7 +44,7 @@
         </div>
 
         <x-input.text id="subject" name="subject" label="Subject" required />
-        <x-input.textarea id="message" name="message" label="Opening message" rows="7" required />
+        <x-tickets.markdown-composer id="message" name="message" label="Opening message" rows="7" required />
 
         <div class="mb-4">
             <label class="block text-sm font-medium text-slate-700" for="attachments">Attachments</label>
