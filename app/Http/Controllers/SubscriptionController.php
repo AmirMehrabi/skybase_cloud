@@ -15,6 +15,7 @@ use App\Services\BillingService;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\RadiusProvisioningService;
+use App\Services\SubscriptionSessionDisconnectService;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -300,19 +301,29 @@ class SubscriptionController extends Controller
     /**
      * Suspend a subscription.
      */
-    public function suspend(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
+    public function suspend(Request $request, Subscription $subscription, SubscriptionSessionDisconnectService $disconnectService): JsonResponse|RedirectResponse
     {
         $subscription->suspend();
+        $subscription = $subscription->fresh(['router']);
+        $disconnectResult = $disconnectService->disconnect($subscription);
+        $disconnectService->recordActivity($subscription, $disconnectResult);
+
+        $message = 'Subscription suspended successfully.';
+
+        if ($disconnectResult->shouldAlert()) {
+            $message .= ' Router session disconnect warning: '.$disconnectResult->message;
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Subscription suspended successfully.',
+                'message' => $message,
+                'disconnect' => $disconnectResult->context(),
             ]);
         }
 
         return redirect()
             ->route('subscriptions.show', $subscription)
-            ->with('success', 'Subscription suspended successfully.');
+            ->with($disconnectResult->shouldAlert() ? 'warning' : 'success', $message);
     }
 
     /**

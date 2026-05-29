@@ -23,3 +23,7 @@ Schedule::command('routers:check-status')
 Schedule::command('subscriptions:sync-connection-status')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+Schedule::command('subscriptions:kick-suspended-online')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

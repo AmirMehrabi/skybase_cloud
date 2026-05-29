@@ -269,8 +269,16 @@ class RadiusProvisioningTest extends TestCase
 
         $subscription->suspend();
 
-        $this->assertSame(0, RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
+        $this->assertSame(0, RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->where('attribute', 'Cleartext-Password')->count());
         $this->assertSame(0, RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
+
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Auth-Type',
+            'op' => ':=',
+            'value' => 'Reject',
+        ]);
     }
 
     public function test_non_pppoe_subscription_is_ignored(): void

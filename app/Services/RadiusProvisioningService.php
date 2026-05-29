@@ -36,6 +36,10 @@ class RadiusProvisioningService
 
                 $this->removeUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
 
+                if ($subscription->status === 'suspended') {
+                    $this->rejectUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
+                }
+
                 return;
             }
 
@@ -43,6 +47,8 @@ class RadiusProvisioningService
             $username = (string) $subscription->pppoe_username;
             $plan = $subscription->plan;
             $groupName = $this->groupNameForPlan($plan);
+
+            $this->removeReject($tenantId, $username);
 
             if ($this->usesLdapRadiusAuthentication($tenantId)) {
                 $this->removePasswordChecks($tenantId, $username);
@@ -184,6 +190,35 @@ class RadiusProvisioningService
         RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->delete();
 
         RadiusUserGroup::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->delete();
+    }
+
+    public function rejectUsername(string $tenantId, string $username): void
+    {
+        if ($tenantId === '' || $username === '') {
+            return;
+        }
+
+        RadiusCheck::withoutGlobalScopes()->updateOrCreate(
+            [
+                'tenant_id' => $tenantId,
+                'username' => $username,
+                'attribute' => 'Auth-Type',
+            ],
+            [
+                'op' => ':=',
+                'value' => 'Reject',
+            ],
+        );
+    }
+
+    private function removeReject(string $tenantId, string $username): void
+    {
+        RadiusCheck::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('username', $username)
+            ->where('attribute', 'Auth-Type')
+            ->where('value', 'Reject')
+            ->delete();
     }
 
     public function rateLimitForPlan(?Plan $plan): ?string

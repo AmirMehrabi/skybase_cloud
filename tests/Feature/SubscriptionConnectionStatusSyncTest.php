@@ -67,10 +67,24 @@ class SubscriptionConnectionStatusSyncTest extends TestCase
     {
         $tenant = $this->createTenant('alpha-net');
 
-        $customer = Customer::factory()->create([
+        $customer = Customer::create([
             'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-'.Str::upper(Str::random(8)),
+            'customer_type' => 'individual',
+            'first_name' => 'Alpha',
+            'last_name' => 'User',
+            'name' => 'Alpha User',
+            'email' => Str::random(8).'@example.com',
+            'mobile' => '555-0101',
+            'address_line1' => '123 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
             'status' => 'active',
+            'billing_type' => 'postpaid',
             'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
         ]);
 
         $plan = Plan::factory()->create([
