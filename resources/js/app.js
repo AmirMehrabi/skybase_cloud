@@ -19,40 +19,40 @@ window.initializeTicketEditors = function initializeTicketEditors() {
 
     ticketEditorLoader.then((Editor) => {
         containers.forEach((container) => {
-        if (container.dataset.initialized === 'true') {
-            return;
-        }
+            if (container.dataset.initialized === 'true') {
+                return;
+            }
 
-        const textarea = document.getElementById(container.dataset.target);
+            const textarea = document.getElementById(container.dataset.target);
 
-        if (! textarea) {
-            return;
-        }
+            if (! textarea) {
+                return;
+            }
 
-        const editor = new Editor({
-            el: container,
-            height: container.dataset.height || '280px',
-            initialEditType: 'wysiwyg',
-            previewStyle: 'vertical',
-            initialValue: textarea.value || '',
-            usageStatistics: false,
-            toolbarItems: [
-                ['bold', 'italic', 'quote'],
-                ['ul', 'ol'],
-                ['link'],
-                ['scrollSync'],
-            ],
-        });
+            const editor = new Editor({
+                el: container,
+                height: container.dataset.height || '280px',
+                initialEditType: 'wysiwyg',
+                previewStyle: 'vertical',
+                initialValue: textarea.value || '',
+                usageStatistics: false,
+                toolbarItems: [
+                    ['bold', 'italic', 'quote'],
+                    ['ul', 'ol'],
+                    ['link'],
+                    ['scrollSync'],
+                ],
+            });
 
-        const syncTextarea = () => {
-            textarea.value = editor.getMarkdown();
-        };
+            const syncTextarea = () => {
+                textarea.value = editor.getMarkdown();
+            };
 
-        editor.on('change', syncTextarea);
-        textarea.form?.addEventListener('submit', syncTextarea);
+            editor.on('change', syncTextarea);
+            textarea.form?.addEventListener('submit', syncTextarea);
 
-        container.dataset.initialized = 'true';
-        container.editor = editor;
+            container.dataset.initialized = 'true';
+            container.editor = editor;
         });
     });
 };
