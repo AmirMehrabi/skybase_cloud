@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Subscription;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -27,11 +28,13 @@ class StoreSubscriptionRequest extends FormRequest
 
         return [
             'customer_id' => 'required|exists:customers,id',
+            'name' => 'required|string|max:255',
+            'service_type' => 'required|in:hotspot,pppoe,vpn',
             'plan_id' => 'required|exists:plans,id',
             'router_id' => 'required|exists:routers,id',
             'site' => 'nullable|string|max:255',
             'connection_type' => 'required|in:pppoe,dhcp,static',
-            // PPPoE credentials (required for PPPoE)
+            // PPP credentials (required for PPP connections)
             'pppoe_username' => $connectionType === 'pppoe' ? 'required|string|max:255' : 'nullable|string|max:255',
             'pppoe_password' => $connectionType === 'pppoe' ? 'required|string|max:255' : 'nullable|string|max:255',
             // MAC address (required for DHCP)
@@ -71,14 +74,17 @@ class StoreSubscriptionRequest extends FormRequest
         return [
             'customer_id.required' => 'Please select a customer.',
             'customer_id.exists' => 'The selected customer is invalid.',
+            'name.required' => 'Please enter a subscription name.',
+            'service_type.required' => 'Please select a subscription type.',
+            'service_type.in' => 'Invalid subscription type selected.',
             'plan_id.required' => 'Please select a service plan.',
             'plan_id.exists' => 'The selected plan is invalid.',
             'router_id.required' => 'Please select a router/NAS.',
             'router_id.exists' => 'The selected router is invalid.',
             'connection_type.required' => 'Please select a connection type.',
             'connection_type.in' => 'Invalid connection type selected.',
-            'pppoe_username.required' => 'PPPoE username is required for PPPoE connections.',
-            'pppoe_password.required' => 'PPPoE password is required for PPPoE connections.',
+            'pppoe_username.required' => 'PPP username is required for PPP connections.',
+            'pppoe_password.required' => 'PPP password is required for PPP connections.',
             'mac_address.required' => 'MAC address is required for DHCP connections.',
             'ip_pool_id.required' => 'Please select an IP pool for system-managed IPs.',
             'ip_pool_id.exists' => 'The selected IP pool is invalid.',
@@ -92,8 +98,12 @@ class StoreSubscriptionRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $customerId = $this->input('customer_id');
+
         $this->merge([
             'items' => $this->input('items', []),
+            'name' => $this->filled('name') ? $this->input('name') : ($customerId ? Subscription::defaultNameForCustomer((int) $customerId) : null),
+            'service_type' => $this->input('service_type', 'hotspot'),
             'billing_enabled' => $this->boolean('billing_enabled', true),
         ]);
     }

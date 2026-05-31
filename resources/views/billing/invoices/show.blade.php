@@ -9,6 +9,10 @@
 @endpush
 
 @section('content')
+@php
+    $invoiceLogoUrl = tenant()?->invoiceLogoUrl();
+@endphp
+
 <div class="space-y-6" x-data="invoiceShow()" x-cloak>
     <!-- Header Section -->
     <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
@@ -71,7 +75,12 @@
         <div class="xl:col-span-2 space-y-6">
             <!-- Invoice Summary -->
             <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Invoice Summary</h3>
+                <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Invoice Summary</h3>
+                    @if($invoiceLogoUrl)
+                        <img src="{{ $invoiceLogoUrl }}" alt="Invoice Logo" class="max-h-16 max-w-48 object-contain">
+                    @endif
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-3">
                         <div class="flex justify-between">

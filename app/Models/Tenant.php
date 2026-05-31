@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Tenant extends Model
 {
@@ -27,11 +28,90 @@ class Tenant extends Model
         'status',
         'plan_id',
         'trial_ends_at',
+        'tagline',
+        'business_license',
+        'tax_id',
+        'website_url',
+        'support_phone',
+        'address',
+        'city',
+        'state',
+        'zip',
+        'date_format',
+        'time_format',
+        'first_day_of_week',
+        'currency',
+        'currency_symbol_position',
+        'thousands_separator',
+        'decimal_separator',
+        'locale',
+        'maintenance_mode',
+        'custom_domain',
+        'primary_color',
+        'secondary_color',
+        'accent_color',
+        'dark_mode_enabled',
+        'custom_css',
+        'company_logo',
+        'company_logo_dark',
+        'favicon',
+        'login_logo',
+        'email_header_logo',
+        'email_footer_logo',
+        'invoice_logo',
+        'login_background',
     ];
 
     protected $casts = [
         'trial_ends_at' => 'datetime',
+        'dark_mode_enabled' => 'boolean',
+        'maintenance_mode' => 'boolean',
     ];
+
+    public const BRANDING_ASSETS = [
+        'company_logo',
+        'company_logo_dark',
+        'favicon',
+        'login_logo',
+        'email_header_logo',
+        'email_footer_logo',
+        'invoice_logo',
+        'login_background',
+    ];
+
+    public function brandingAssetUrl(string $asset): ?string
+    {
+        if (! in_array($asset, self::BRANDING_ASSETS, true)) {
+            return null;
+        }
+
+        $path = $this->getAttribute($asset);
+
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return route('branding.asset', ['asset' => $asset, 'v' => $this->updated_at?->timestamp]);
+    }
+
+    public function navbarLogoUrl(): string
+    {
+        return $this->brandingAssetUrl('company_logo_dark')
+            ?? $this->brandingAssetUrl('company_logo')
+            ?? asset('assets/images/logo/logo-black.png');
+    }
+
+    public function faviconUrl(): string
+    {
+        return $this->brandingAssetUrl('favicon') ?? asset('favicon.ico');
+    }
+
+    public function invoiceLogoUrl(): string
+    {
+        return $this->brandingAssetUrl('invoice_logo')
+            ?? $this->brandingAssetUrl('company_logo')
+            ?? asset('assets/images/logo/logo-black-big.png');
+    }
 
     public function plan(): BelongsTo
     {

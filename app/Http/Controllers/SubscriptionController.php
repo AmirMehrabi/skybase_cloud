@@ -53,6 +53,8 @@ class SubscriptionController extends Controller
                 fn ($subscription) => [
                     'id' => $subscription->id,
                     'subscription_code' => $subscription->subscription_code,
+                    'name' => $subscription->name,
+                    'service_type' => $subscription->service_type,
                     'connection_type' => $subscription->connection_type,
                     'customer_name' => $subscription->customer->full_name ?? 'N/A',
                     'customer_email' => $subscription->customer->email ?? 'N/A',
@@ -118,6 +120,8 @@ class SubscriptionController extends Controller
         $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes($validated);
         $validated['tenant_id'] = auth()->user()->tenant_id ?? null;
         $validated['subscription_code'] = Subscription::generateSubscriptionCode();
+        $validated['name'] = $validated['name'] ?: Subscription::defaultNameForCustomer((int) $validated['customer_id']);
+        $validated['service_type'] = $validated['service_type'] ?? 'hotspot';
 
         // Set base price from plan
         $plan = Plan::find($validated['plan_id']);
@@ -229,6 +233,8 @@ class SubscriptionController extends Controller
     {
         $validated = $request->validate([
             'plan_id' => 'nullable|exists:plans,id',
+            'name' => 'nullable|string|max:255',
+            'service_type' => 'nullable|in:hotspot,pppoe,vpn',
             'router_id' => 'nullable|exists:routers,id',
             'site' => 'nullable|string|max:255',
             'ip_address' => 'nullable|ip|max:255',
@@ -255,6 +261,10 @@ class SubscriptionController extends Controller
 
         if (array_key_exists('billing_enabled', $validated)) {
             $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now());
+        }
+
+        if (array_key_exists('name', $validated) && blank($validated['name'])) {
+            $validated['name'] = Subscription::defaultNameForCustomer((int) $subscription->customer_id);
         }
 
         $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes([

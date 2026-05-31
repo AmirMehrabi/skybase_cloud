@@ -3,6 +3,9 @@
     $language = config('ui.language', 'en');
     $isRtl = $direction === 'rtl';
     $customer = auth('customer')->user();
+    $brandingTenant = tenant() ?? $customer?->tenant;
+    $navbarLogoUrl = $brandingTenant?->navbarLogoUrl() ?? asset('assets/images/logo/logo-black.png');
+    $hasCustomNavbarLogo = (bool) ($brandingTenant?->brandingAssetUrl('company_logo_dark') ?? $brandingTenant?->brandingAssetUrl('company_logo'));
 @endphp
 
 <!DOCTYPE html>
@@ -12,6 +15,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@yield('title', 'Customer Portal') - {{ config('app.name', 'SkyBase') }}</title>
+        <link rel="icon" href="{{ $brandingTenant?->faviconUrl() ?? asset('favicon.ico') }}">
 
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -27,13 +31,17 @@
             <div class="flex h-full flex-col">
                 <div class="flex h-[60px] items-center border-b border-white/10 bg-white/[0.03] px-6 backdrop-blur-xl">
                     <a href="{{ route('customer.dashboard') }}" class="flex items-center gap-3 text-white">
-                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-                            <img src="{{ asset('assets/images/logo/logo-black.png') }}" class="max-w-6 brightness-0 invert" alt="SkyBase Cloud logo mark">
-                        </span>
-                        <span class="leading-none">
-                            <span class="block text-base font-bold tracking-tight">{{ config('app.name', 'SkyBase') }}</span>
-                            <span class="block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/80">Customer Portal</span>
-                        </span>
+                        @if($hasCustomNavbarLogo)
+                            <img src="{{ $navbarLogoUrl }}" class="max-h-9 max-w-36 object-contain" alt="{{ $brandingTenant?->company_name ?? config('app.name', 'SkyBase') }} logo">
+                        @else
+                            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                                <img src="{{ $navbarLogoUrl }}" class="max-w-6 brightness-0 invert" alt="SkyBase Cloud logo mark">
+                            </span>
+                            <span class="leading-none">
+                                <span class="block text-base font-bold tracking-tight">{{ config('app.name', 'SkyBase') }}</span>
+                                <span class="block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/80">Customer Portal</span>
+                            </span>
+                        @endif
                     </a>
                 </div>
 

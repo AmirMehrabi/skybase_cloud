@@ -17,7 +17,7 @@ class Subscription extends Model implements LdapImportable
 {
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at'];
+    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at'];
 
     protected function activityLogExcept(): array
     {
@@ -63,6 +63,14 @@ class Subscription extends Model implements LdapImportable
 
             if (empty($subscription->tenant_id)) {
                 $subscription->tenant_id = tenant_id() ?? auth()->user()?->tenant_id;
+            }
+
+            if (empty($subscription->name) && $subscription->customer_id) {
+                $subscription->name = self::defaultNameForCustomer((int) $subscription->customer_id);
+            }
+
+            if (empty($subscription->service_type)) {
+                $subscription->service_type = 'hotspot';
             }
 
             if (! $subscription->isPppoe()) {
@@ -191,9 +199,11 @@ class Subscription extends Model implements LdapImportable
         $query
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where('subscription_code', 'like', "%{$search}%")->orWhereHas('customer', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
-                    });
+                    $query->where('subscription_code', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%")
+                        ->orWhereHas('customer', function ($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
+                        });
                 });
             })
             ->when($filters['status'] ?? null, function ($query, $status) {
@@ -215,6 +225,19 @@ class Subscription extends Model implements LdapImportable
     public function getIsActiveAttribute(): bool
     {
         return $this->status === 'active' && (! $this->end_date || $this->end_date->isFuture());
+    }
+
+    public static function defaultNameForCustomer(int $customerId): ?string
+    {
+        $customer = Customer::query()->find($customerId);
+
+        if (! $customer) {
+            return null;
+        }
+
+        return trim($customer->first_name.' '.$customer->last_name)
+            ?: $customer->name
+            ?: $customer->company_name;
     }
 
     public function getIsExpiredAttribute(): bool

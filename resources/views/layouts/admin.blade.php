@@ -4,6 +4,9 @@
     $isRtl = $direction === 'rtl';
     $isFarsi = $language === 'fa';
     $user = auth()->user();
+    $brandingTenant = tenant() ?? $user?->tenant;
+    $navbarLogoUrl = $brandingTenant?->navbarLogoUrl() ?? asset('assets/images/logo/logo-black.png');
+    $hasCustomNavbarLogo = (bool) ($brandingTenant?->brandingAssetUrl('company_logo_dark') ?? $brandingTenant?->brandingAssetUrl('company_logo'));
 @endphp
 
 <!DOCTYPE html>
@@ -13,6 +16,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@yield('title', 'Dashboard') - {{ config('app.name', 'SkyBill') }}</title>
+        <link rel="icon" href="{{ $brandingTenant?->faviconUrl() ?? asset('favicon.ico') }}">
 
         <!-- Fonts removed - using system fonts -->
 
@@ -110,13 +114,17 @@
             <!-- Logo -->
             <div class="h-[60px] flex items-center px-6 border-b border-white/10 bg-white/[0.03] backdrop-blur-xl">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3 text-white">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-                        <img src="{{ asset('assets/images/logo/logo-black.png') }}" class="max-w-6 brightness-0 invert" alt="SkyBase Cloud logo mark">
-                    </span>
-                    <span class="leading-none">
-                        <span class="block text-base font-bold tracking-tight">{{ config('app.name', 'SkyBill') }}</span>
-                        <span class="block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/80">Cloud ISP</span>
-                    </span>
+                    @if($hasCustomNavbarLogo)
+                        <img src="{{ $navbarLogoUrl }}" class="max-h-9 max-w-36 object-contain" alt="{{ $brandingTenant?->company_name ?? config('app.name', 'SkyBill') }} logo">
+                    @else
+                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                            <img src="{{ $navbarLogoUrl }}" class="max-w-6 brightness-0 invert" alt="SkyBase Cloud logo mark">
+                        </span>
+                        <span class="leading-none">
+                            <span class="block text-base font-bold tracking-tight">{{ config('app.name', 'SkyBill') }}</span>
+                            <span class="block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/80">Cloud ISP</span>
+                        </span>
+                    @endif
                 </a>
             </div>
             
@@ -141,8 +149,12 @@
                 
                 <!-- Logo (Mobile) -->
                 <div class="lg:hidden">
-                    <a href="{{ route('dashboard') }}" class="text-lg font-semibold text-slate-950">
-                        {{ config('app.name', 'SkyBill') }}
+                    <a href="{{ route('dashboard') }}" class="flex items-center text-lg font-semibold text-slate-950">
+                        @if($hasCustomNavbarLogo)
+                            <img src="{{ $navbarLogoUrl }}" class="max-h-8 max-w-32 object-contain" alt="{{ $brandingTenant?->company_name ?? config('app.name', 'SkyBill') }} logo">
+                        @else
+                            {{ config('app.name', 'SkyBill') }}
+                        @endif
                     </a>
                 </div>
                 

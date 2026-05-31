@@ -94,7 +94,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: PNG or SVG, max 2MB</p>
                 @if($tenant->company_logo)
                     <div class="mt-2 relative">
-                        <img src="{{ Storage::url($tenant->company_logo) }}" alt="Company Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
+                        <img src="{{ $tenant->brandingAssetUrl('company_logo') }}" alt="Company Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'company_logo']) }}"
                            class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this logo?')">
@@ -118,7 +118,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: PNG or SVG with light colors, max 2MB</p>
                 @if($tenant->company_logo_dark)
                     <div class="mt-2 relative">
-                        <img src="{{ Storage::url($tenant->company_logo_dark) }}" alt="Company Logo Dark" class="h-20 w-auto object-contain border rounded p-2 bg-gray-800">
+                        <img src="{{ $tenant->brandingAssetUrl('company_logo_dark') }}" alt="Company Logo Dark" class="h-20 w-auto object-contain border rounded p-2 bg-gray-800">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'company_logo_dark']) }}"
                            class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this logo?')">
@@ -142,7 +142,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: PNG or ICO, 32x32 or 64x64, max 1MB</p>
                 @if($tenant->favicon)
                     <div class="mt-2 relative">
-                        <img src="{{ Storage::url($tenant->favicon) }}" alt="Favicon" class="h-8 w-8 object-contain border rounded p-1 bg-gray-50">
+                        <img src="{{ $tenant->brandingAssetUrl('favicon') }}" alt="Favicon" class="h-8 w-8 object-contain border rounded p-1 bg-gray-50">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'favicon']) }}"
                            class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this favicon?')">
@@ -166,7 +166,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: PNG or SVG, max 2MB</p>
                 @if($tenant->login_logo)
                     <div class="mt-2 relative">
-                        <img src="{{ Storage::url($tenant->login_logo) }}" alt="Login Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
+                        <img src="{{ $tenant->brandingAssetUrl('login_logo') }}" alt="Login Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'login_logo']) }}"
                            class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this logo?')">
@@ -190,7 +190,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: PNG or SVG, max 2MB</p>
                 @if($tenant->email_header_logo)
                     <div class="mt-2 relative">
-                        <img src="{{ Storage::url($tenant->email_header_logo) }}" alt="Email Header Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
+                        <img src="{{ $tenant->brandingAssetUrl('email_header_logo') }}" alt="Email Header Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'email_header_logo']) }}"
                            class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this logo?')">
@@ -214,7 +214,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: PNG or SVG, max 2MB</p>
                 @if($tenant->email_footer_logo)
                     <div class="mt-2 relative">
-                        <img src="{{ Storage::url($tenant->email_footer_logo) }}" alt="Email Footer Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
+                        <img src="{{ $tenant->brandingAssetUrl('email_footer_logo') }}" alt="Email Footer Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'email_footer_logo']) }}"
                            class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this logo?')">
@@ -238,7 +238,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: High-res PNG or SVG, max 2MB</p>
                 @if($tenant->invoice_logo)
                     <div class="mt-2 relative">
-                        <img src="{{ Storage::url($tenant->invoice_logo) }}" alt="Invoice Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
+                        <img src="{{ $tenant->brandingAssetUrl('invoice_logo') }}" alt="Invoice Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'invoice_logo']) }}"
                            class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this logo?')">
@@ -262,7 +262,7 @@
                 <p class="mt-1 text-xs text-gray-500">Recommended: JPG or PNG, 1920x1080, max 5MB</p>
                 @if($tenant->login_background)
                     <div class="mt-2 relative inline-block">
-                        <img src="{{ Storage::url($tenant->login_background) }}" alt="Login Background" class="h-32 w-auto object-cover border rounded">
+                        <img src="{{ $tenant->brandingAssetUrl('login_background') }}" alt="Login Background" class="h-32 w-auto object-cover border rounded">
                         <a href="{{ route('settings.delete.asset', ['asset' => 'login_background']) }}"
                            class="ml-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
                            onclick="return confirm('Are you sure you want to delete this background?')">

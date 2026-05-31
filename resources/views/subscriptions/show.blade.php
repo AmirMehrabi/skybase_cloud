@@ -6,6 +6,8 @@
 $subscription = [
     'id' => $subscription->id,
     'subscription_code' => $subscription->subscription_code,
+    'name' => $subscription->name ?: $subscription->customer?->full_name ?? 'N/A',
+    'service_type' => $subscription->service_type ?? 'hotspot',
     'customer' => [
         'id' => $subscription->customer?->id,
         'name' => $subscription->customer?->full_name ?? 'N/A',
@@ -105,12 +107,14 @@ function getStatusBadgeClass($status)
                 </div>
                 <div>
                     <div class="flex items-center gap-3">
-                        <h1 class="text-2xl font-bold text-gray-900">{{ $subscription['subscription_code'] }}</h1>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ $subscription['name'] }}</h1>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border {{ getStatusBadgeClass($subscription['status']) }}">
                             {{ ucfirst($subscription['status']) }}
                         </span>
                     </div>
                     <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+                        <span>{{ $subscription['subscription_code'] }}</span>
+                        <span>•</span>
                         <span>{{ $subscription['customer']['name'] }}</span>
                         <span>&bull;</span>
                         <span>{{ $subscription['plan_name'] }}</span>
@@ -255,6 +259,14 @@ function getStatusBadgeClass($status)
                                 <dd class="text-sm font-medium text-gray-900">{{ $subscription['subscription_code'] }}</dd>
                             </div>
                             <div class="flex justify-between">
+                                <dt class="text-sm text-gray-500">Name</dt>
+                                <dd class="text-sm font-medium text-gray-900">{{ $subscription['name'] }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-sm text-gray-500">Subscription Type</dt>
+                                <dd class="text-sm font-medium text-gray-900">{{ ['hotspot' => 'Hotspot', 'pppoe' => 'PPPoE', 'vpn' => 'VPN'][$subscription['service_type']] ?? ucfirst($subscription['service_type']) }}</dd>
+                            </div>
+                            <div class="flex justify-between">
                                 <dt class="text-sm text-gray-500">Status</dt>
                                 <dd><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($subscription['status']) }}">{{ ucfirst($subscription['status']) }}</span></dd>
                             </div>
@@ -310,7 +322,7 @@ function getStatusBadgeClass($status)
                                 <dd class="text-sm font-medium text-gray-900">{{ $subscription['mac_address'] }}</dd>
                             </div>
                             <div class="pt-3 border-t border-gray-200 space-y-3">
-                                <dt class="text-sm text-gray-500">PPPoE Credentials</dt>
+                                <dt class="text-sm text-gray-500">PPP Credentials</dt>
                                 <dd class="space-y-2">
                                     <button
                                         type="button"
@@ -516,7 +528,7 @@ function getStatusBadgeClass($status)
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <div class="mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">RADIUS Accounting Sessions</h3>
-                        <p class="text-sm text-gray-500 mt-1">Latest sessions from FreeRADIUS accounting for this PPPoE username</p>
+                        <p class="text-sm text-gray-500 mt-1">Latest sessions from FreeRADIUS accounting for this PPP username</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">

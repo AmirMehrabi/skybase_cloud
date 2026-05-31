@@ -9,6 +9,7 @@ use App\Http\Controllers\Billing\DashboardController as BillingDashboardControll
 use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PaymentController;
 use App\Http\Controllers\Billing\ReportController;
+use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPortal\Auth\LoginController as CustomerPortalLoginController;
@@ -83,6 +84,8 @@ Route::get('/brochure/government-fa', [PagesController::class, 'governmentBrochu
 Route::get('/contact', [PagesController::class, 'contact'])->name('contact.show');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 Route::post('/demo-requests', [DemoRequestController::class, 'store'])->name('demo-requests.store');
+
+Route::get('/branding-assets/{asset}', BrandingAssetController::class)->name('branding.asset');
 
 // Authentication Routes (Guest only)
 Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {

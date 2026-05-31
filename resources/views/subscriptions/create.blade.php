@@ -50,10 +50,10 @@
                         <input type="text" :value="'{{ $customer->full_name }} ({{ $customer->customer_code }})'" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
                         <input type="hidden" name="customer_id" value="{{ $customer->id }}">
                     @else
-                        <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="applyOrganizationDefaults()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="handleCustomerChange($event)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
                             <option value="">Select a customer</option>
                             @foreach($customers ?? [] as $cust)
-                                <option value="{{ $cust->id }}">{{ $cust->full_name }} ({{ $cust->customer_code }})</option>
+                                <option value="{{ $cust->id }}" data-name="{{ $cust->full_name }}">{{ $cust->full_name }} ({{ $cust->customer_code }})</option>
                             @endforeach
                         </select>
                     @endif
@@ -62,8 +62,51 @@
                     @enderror
                 </div>
 
+                <!-- Subscription Name -->
+                <div class="lg:col-span-1">
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" id="name" x-model="form.name" @input="subscriptionNameTouched = true" placeholder="Subscription name" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                    @error('name')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <div x-show="selectedOrganizationBilling" class="lg:col-span-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900" style="display: none;">
                     Billing is managed by <span class="font-semibold" x-text="selectedOrganizationBilling?.organization"></span>. The default service, cycle, grace period, discount, and tax will be enforced.
+                </div>
+
+                <!-- Subscription Type -->
+                <div class="lg:col-span-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="block text-sm font-medium text-gray-700">Subscription Type <span class="text-red-500">*</span></label>
+                        <span class="text-xs text-gray-500">Controls how this subscription is categorized.</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label class="relative cursor-pointer" @click="form.service_type = 'hotspot'">
+                            <input type="radio" name="service_type" value="hotspot" x-model="form.service_type" class="peer sr-only">
+                            <div class="rounded-xl border-2 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                                <p class="text-sm font-semibold text-gray-900">Hotspot</p>
+                                <p class="mt-1 text-xs text-gray-500">Captive portal or voucher-based service</p>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer" @click="form.service_type = 'pppoe'">
+                            <input type="radio" name="service_type" value="pppoe" x-model="form.service_type" class="peer sr-only">
+                            <div class="rounded-xl border-2 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                                <p class="text-sm font-semibold text-gray-900">PPPoE</p>
+                                <p class="mt-1 text-xs text-gray-500">Broadband access authenticated by PPPoE</p>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer" @click="form.service_type = 'vpn'">
+                            <input type="radio" name="service_type" value="vpn" x-model="form.service_type" class="peer sr-only">
+                            <div class="rounded-xl border-2 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                                <p class="text-sm font-semibold text-gray-900">VPN</p>
+                                <p class="mt-1 text-xs text-gray-500">Remote access or private tunnel service</p>
+                            </div>
+                        </label>
+                    </div>
+                    @error('service_type')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Plan -->
@@ -122,7 +165,7 @@
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-3">Connection Type <span class="text-red-500">*</span></label>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- PPPoE Option -->
+                    <!-- PPP Option -->
                     <label class="relative cursor-pointer" @click="form.connection_type = 'pppoe'">
                         <input type="radio" name="connection_type" value="pppoe" x-model="form.connection_type" class="peer sr-only">
                         <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
@@ -133,7 +176,7 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <h4 class="text-sm font-semibold text-gray-900">PPPoE</h4>
+                                    <h4 class="text-sm font-semibold text-gray-900">PPP</h4>
                                     <p class="text-xs text-gray-500">Username/Password auth</p>
                                 </div>
                             </div>
@@ -181,12 +224,12 @@
                 @enderror
             </div>
 
-            <!-- PPPoE Credentials (shown only for PPPoE) -->
+            <!-- PPP Credentials (shown only for PPP) -->
             <div x-show="form.connection_type === 'pppoe'" x-transition class="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <h4 class="text-sm font-semibold text-gray-900 mb-3">PPPoE Credentials</h4>
+                <h4 class="text-sm font-semibold text-gray-900 mb-3">PPP Credentials</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username <span class="text-red-500">*</span></label>
+                        <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPP Username <span class="text-red-500">*</span></label>
                         <div class="relative">
                             <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" @input="validatePppoeUsername" placeholder="e.g., customer001" :class="'block w-full rounded-lg sm:text-sm py-2 px-3 pr-10 border ' + (pppoeValidation.isValid ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-500' : pppoeValidation.isError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500')">
                             <!-- Validation status indicator -->
@@ -217,7 +260,7 @@
                         @enderror
                     </div>
                     <div>
-                        <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPPoE Password <span class="text-red-500">*</span></label>
+                        <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPP Password <span class="text-red-500">*</span></label>
                         <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoe_password" placeholder="••••••••" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                         @error('pppoe_password')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -662,6 +705,10 @@
 
 @push('scripts')
 @php
+    $customerNames = $customers
+        ->mapWithKeys(fn ($customer) => [(string) $customer->id => $customer->full_name])
+        ->all();
+
     $customerBillingProfiles = $customers
         ->mapWithKeys(function ($customer) {
             if (! $customer->organization?->billing_enabled) {
@@ -688,6 +735,8 @@ function subscriptionCreateForm() {
         // Basic form data
         form: {
             customer_id: '{{ $customer?->id ?? '' }}',
+            name: @js(old('name', $customer?->full_name ?? '')),
+            service_type: @js(old('service_type', 'hotspot')),
             plan_id: '',
             router_id: '',
             site: '',
@@ -713,6 +762,7 @@ function subscriptionCreateForm() {
 
         // IP pools data
         ipPools: @json( $ipPools ),
+        customerNames: @json($customerNames),
         customerBillingProfiles: @json($customerBillingProfiles),
 
         // Plan line item (always present)
@@ -733,6 +783,7 @@ function subscriptionCreateForm() {
         additionalItems: [],
 
         submitting: false,
+        subscriptionNameTouched: @js(filled(old('name'))),
 
         // IP validation state
         ipValidation: {
@@ -784,6 +835,11 @@ function subscriptionCreateForm() {
             this.applyOrganizationDefaults();
         },
 
+        handleCustomerChange(event) {
+            const selectedOption = event.target.options[event.target.selectedIndex];
+            this.updateCustomerInfo(selectedOption?.dataset.name || '', this.form.customer_id);
+        },
+
         updatePlanPrice() {
             const planSelect = document.getElementById('plan_id');
             const selectedOption = planSelect.options[planSelect.selectedIndex];
@@ -797,6 +853,9 @@ function subscriptionCreateForm() {
 
         updateCustomerInfo(name, id) {
             this.form.customer_id = id;
+            if (!this.subscriptionNameTouched || !this.form.name) {
+                this.form.name = name || this.customerNames[String(id)] || '';
+            }
             this.applyOrganizationDefaults();
         },
 
@@ -1097,6 +1156,8 @@ function subscriptionCreateForm() {
 
             // Add basic fields
             if (this.form.customer_id) formData.append('customer_id', this.form.customer_id);
+            if (this.form.name) formData.append('name', this.form.name);
+            formData.append('service_type', this.form.service_type || 'hotspot');
             if (this.form.plan_id) formData.append('plan_id', this.form.plan_id);
             if (this.form.router_id) formData.append('router_id', this.form.router_id);
             if (this.form.site) formData.append('site', this.form.site);
