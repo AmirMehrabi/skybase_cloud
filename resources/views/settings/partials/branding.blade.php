@@ -1,3 +1,16 @@
+@php
+    $brandingDeleteAssets = [
+        'company_logo',
+        'company_logo_dark',
+        'favicon',
+        'login_logo',
+        'email_header_logo',
+        'email_footer_logo',
+        'invoice_logo',
+        'login_background',
+    ];
+@endphp
+
 <form action="{{ route('settings.update.branding') }}" method="POST" enctype="multipart/form-data">
     @csrf
     @method('PUT')
@@ -95,14 +108,15 @@
                 @if($tenant->company_logo)
                     <div class="mt-2 relative">
                         <img src="{{ $tenant->brandingAssetUrl('company_logo') }}" alt="Company Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'company_logo']) }}"
-                           class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this logo?')">
+                        <button type="submit"
+                                form="delete-asset-company-logo-form"
+                                class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this logo?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="company_logo" id="company_logo" accept="image/png,image/jpeg,image/jpeg,image/svg+xml,image/webp"
@@ -119,14 +133,15 @@
                 @if($tenant->company_logo_dark)
                     <div class="mt-2 relative">
                         <img src="{{ $tenant->brandingAssetUrl('company_logo_dark') }}" alt="Company Logo Dark" class="h-20 w-auto object-contain border rounded p-2 bg-gray-800">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'company_logo_dark']) }}"
-                           class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this logo?')">
+                        <button type="submit"
+                                form="delete-asset-company-logo-dark-form"
+                                class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this logo?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="company_logo_dark" id="company_logo_dark" accept="image/png,image/jpeg,image/jpeg,image/svg+xml,image/webp"
@@ -143,14 +158,15 @@
                 @if($tenant->favicon)
                     <div class="mt-2 relative">
                         <img src="{{ $tenant->brandingAssetUrl('favicon') }}" alt="Favicon" class="h-8 w-8 object-contain border rounded p-1 bg-gray-50">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'favicon']) }}"
-                           class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this favicon?')">
+                        <button type="submit"
+                                form="delete-asset-favicon-form"
+                                class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this favicon?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="favicon" id="favicon" accept="image/png,image/vnd.microsoft.icon,image/svg+xml"
@@ -167,14 +183,15 @@
                 @if($tenant->login_logo)
                     <div class="mt-2 relative">
                         <img src="{{ $tenant->brandingAssetUrl('login_logo') }}" alt="Login Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'login_logo']) }}"
-                           class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this logo?')">
+                        <button type="submit"
+                                form="delete-asset-login-logo-form"
+                                class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this logo?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="login_logo" id="login_logo" accept="image/png,image/jpeg,image/jpeg,image/svg+xml,image/webp"
@@ -191,14 +208,15 @@
                 @if($tenant->email_header_logo)
                     <div class="mt-2 relative">
                         <img src="{{ $tenant->brandingAssetUrl('email_header_logo') }}" alt="Email Header Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'email_header_logo']) }}"
-                           class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this logo?')">
+                        <button type="submit"
+                                form="delete-asset-email-header-logo-form"
+                                class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this logo?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="email_header_logo" id="email_header_logo" accept="image/png,image/jpeg,image/jpeg,image/svg+xml,image/webp"
@@ -215,14 +233,15 @@
                 @if($tenant->email_footer_logo)
                     <div class="mt-2 relative">
                         <img src="{{ $tenant->brandingAssetUrl('email_footer_logo') }}" alt="Email Footer Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'email_footer_logo']) }}"
-                           class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this logo?')">
+                        <button type="submit"
+                                form="delete-asset-email-footer-logo-form"
+                                class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this logo?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="email_footer_logo" id="email_footer_logo" accept="image/png,image/jpeg,image/jpeg,image/svg+xml,image/webp"
@@ -239,14 +258,15 @@
                 @if($tenant->invoice_logo)
                     <div class="mt-2 relative">
                         <img src="{{ $tenant->brandingAssetUrl('invoice_logo') }}" alt="Invoice Logo" class="h-20 w-auto object-contain border rounded p-2 bg-gray-50">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'invoice_logo']) }}"
-                           class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this logo?')">
+                        <button type="submit"
+                                form="delete-asset-invoice-logo-form"
+                                class="mt-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this logo?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="invoice_logo" id="invoice_logo" accept="image/png,image/jpeg,image/jpeg,image/svg+xml,image/webp"
@@ -263,14 +283,15 @@
                 @if($tenant->login_background)
                     <div class="mt-2 relative inline-block">
                         <img src="{{ $tenant->brandingAssetUrl('login_background') }}" alt="Login Background" class="h-32 w-auto object-cover border rounded">
-                        <a href="{{ route('settings.delete.asset', ['asset' => 'login_background']) }}"
-                           class="ml-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                           onclick="return confirm('Are you sure you want to delete this background?')">
+                        <button type="submit"
+                                form="delete-asset-login-background-form"
+                                class="ml-2 inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                onclick="return confirm('Are you sure you want to delete this background?')">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Delete
-                        </a>
+                        </button>
                     </div>
                 @endif
                 <input type="file" name="login_background" id="login_background" accept="image/png,image/jpeg,image/webp"
@@ -292,6 +313,13 @@
         </button>
     </div>
 </form>
+
+@foreach($brandingDeleteAssets as $asset)
+    <form id="delete-asset-{{ str_replace('_', '-', $asset) }}-form" action="{{ route('settings.delete.asset', ['asset' => $asset]) }}" method="POST" class="hidden">
+        @csrf
+        @method('DELETE')
+    </form>
+@endforeach
 
 <script>
     // Update color text inputs when color picker changes
