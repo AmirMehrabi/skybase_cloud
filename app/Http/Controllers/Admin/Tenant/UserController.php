@@ -16,32 +16,38 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $users = User::where('tenant_id', tenant_id())
+        $tenantId = $this->currentTenantId($request);
+
+        $users = User::where('tenant_id', $tenantId)
             ->with('tenant')
-            ->when(request('search'), function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
             })
-            ->when(request('role'), function ($query, $role) {
+            ->when($request->input('role'), function ($query, $role) {
                 $query->where('role', $role);
             })
-            ->when(request('status'), function ($query, $status) {
+            ->when($request->input('status'), function ($query, $status) {
                 $query->where('status', $status);
             })
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        $roles = Role::where('tenant_id', tenant_id())->pluck('name', 'name');
+        $roles = Role::where('tenant_id', $tenantId)->pluck('name', 'name');
 
         return view('admin.tenant.users.index', compact('users', 'roles'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        $roles = Role::where('tenant_id', tenant_id())
+        $tenantId = $this->currentTenantId($request);
+
+        $roles = Role::where('tenant_id', $tenantId)
             ->get()
             ->map(function ($role) {
                 return [
@@ -73,11 +79,7 @@ class UserController extends Controller
             'send_invite' => ['nullable', 'boolean'],
         ]);
 
-        $tenantId = tenant_id() ?? $request->user()?->tenant_id;
-
-        if (! $tenantId) {
-            abort(403, 'Tenant context is required.');
-        }
+        $tenantId = $this->currentTenantId($request);
 
         $user = User::create([
             'tenant_id' => $tenantId,
@@ -175,7 +177,7 @@ class UserController extends Controller
 
         // Log activity
         ActivityLog::create([
-            'tenant_id' => tenant_id(),
+            'tenant_id' => $this->currentTenantId($request),
             'user_id' => auth()->id(),
             'action' => 'user.updated',
             'model_type' => User::class,
@@ -206,7 +208,7 @@ class UserController extends Controller
 
         // Log activity
         ActivityLog::create([
-            'tenant_id' => tenant_id(),
+            'tenant_id' => $this->currentTenantId($request),
             'user_id' => auth()->id(),
             'action' => 'user.deleted',
             'model_type' => User::class,
@@ -229,7 +231,9 @@ class UserController extends Controller
             'action' => ['required', 'in:activate,deactivate,delete'],
         ]);
 
-        $users = User::where('tenant_id', tenant_id())
+        $tenantId = $this->currentTenantId($request);
+
+        $users = User::where('tenant_id', $tenantId)
             ->whereIn('id', $validated['users'])
             ->where('id', '!=', auth()->id())
             ->get();
@@ -253,7 +257,7 @@ class UserController extends Controller
 
         // Log activity
         ActivityLog::create([
-            'tenant_id' => tenant_id(),
+            'tenant_id' => $tenantId,
             'user_id' => auth()->id(),
             'action' => 'user.bulk_'.strtolower($validated['action']),
             'model_type' => User::class,
@@ -269,8 +273,19 @@ class UserController extends Controller
 
     protected function authorizeUserAccess(User $user): void
     {
-        if ($user->tenant_id !== tenant_id()) {
+        if ($user->tenant_id !== $this->currentTenantId(request())) {
             abort(403, 'Unauthorized access.');
         }
+    }
+
+    private function currentTenantId(Request $request): string
+    {
+        $tenantId = tenant_id() ?? $request->user()?->tenant_id;
+
+        if (! $tenantId) {
+            abort(403, 'Tenant context is required.');
+        }
+
+        return (string) $tenantId;
     }
 }
