@@ -153,12 +153,13 @@
                 
                 <!-- Logo (Mobile) -->
                 <div class="lg:hidden">
-                    <a href="{{ route('dashboard') }}" class="flex items-center text-lg font-semibold text-slate-950">
+                    <a href="{{ route('dashboard') }}" class="flex max-w-48 items-center gap-2 text-lg font-semibold text-slate-950">
                         @if($hasCustomNavbarLogo)
-                            <img src="{{ $navbarLogoUrl }}" class="max-h-8 max-w-32 object-contain" alt="{{ $brandingTenant?->company_name ?? config('app.name', 'SkyBill') }} logo">
+                            <img src="{{ $navbarLogoUrl }}" class="max-h-8 max-w-12 shrink-0 object-contain" alt="{{ $brandName }} logo">
                         @else
-                            {{ config('app.name', 'SkyBill') }}
+                            <img src="{{ $navbarLogoUrl }}" class="max-h-7 max-w-7 shrink-0 object-contain" alt="{{ $brandName }} logo mark">
                         @endif
+                        <span class="truncate">{{ $brandName }}</span>
                     </a>
                 </div>
                 
