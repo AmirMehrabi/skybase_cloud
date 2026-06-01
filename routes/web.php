@@ -140,7 +140,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::put('/ldap/organizational-units/discover', [SettingController::class, 'discoverLdapOrganizationalUnits'])->name('discover.ldap-organizational-units');
         Route::post('/ldap/preview', [SettingController::class, 'previewLdap'])->name('preview.ldap');
         Route::post('/ldap/sync', [SettingController::class, 'syncLdap'])->name('sync.ldap');
-        Route::delete('/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
+        Route::match(['post', 'delete'], '/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
     });
 
     Route::prefix('support')->name('support.')->group(function () {
