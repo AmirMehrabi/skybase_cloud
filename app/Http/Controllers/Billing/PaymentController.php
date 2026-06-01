@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\TenantNotificationService;
+use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,7 +66,7 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse|RedirectResponse
+    public function store(Request $request, TenantNotificationService $notifications): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'invoice_id' => ['required', 'exists:invoices,id'],
@@ -88,11 +90,29 @@ class PaymentController extends Controller
         ]);
 
         $invoice->increment('paid_amount', $payment->amount);
-        $invoice->fresh()->recalculateTotals();
+        $invoice = $invoice->fresh(['customer']);
+        $invoice->recalculateTotals();
+        $payment = $payment->fresh(['customer', 'invoice']);
+
+        if ($payment->customer) {
+            $notifications->notifyCustomer($payment->customer, NotificationEventRegistry::PAYMENT_RECEIVED, [
+                'title' => 'Payment received',
+                'body' => "Payment {$payment->payment_reference} was recorded.",
+                'category' => 'billing',
+                'severity' => 'success',
+                'action_url' => route('customer.invoices.index'),
+            ], $payment);
+        }
+
+        $notifications->notifyAdmins($payment->tenant_id, NotificationEventRegistry::PAYMENT_RECEIVED, [
+            'title' => 'Payment received',
+            'body' => "Payment {$payment->payment_reference} was recorded.",
+            'action_url' => route('billing.payments.show', $payment),
+        ], $payment);
 
         return response()->json([
             'message' => 'Payment recorded successfully.',
-            'payment' => $this->transformPayment($payment->fresh(['customer', 'invoice'])),
+            'payment' => $this->transformPayment($payment),
             'invoice' => Invoice::query()->find($invoice->id),
         ], 201);
     }

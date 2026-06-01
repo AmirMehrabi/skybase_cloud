@@ -179,6 +179,33 @@
                     </div>
 
                     <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">Notifications</h3>
+                        <p class="text-sm text-gray-500 mb-4">{{ $unreadNotificationsCount }} unread notification(s)</p>
+
+                        <form method="POST" action="{{ route('customers.notifications.update', $customer) }}" class="space-y-3">
+                            @csrf
+                            @method('PATCH')
+
+                            @foreach([
+                                'notifications_enabled' => 'Enable notifications',
+                                'in_app_enabled' => 'In-app',
+                                'email_enabled' => 'Email preference',
+                                'sms_enabled' => 'SMS preference',
+                            ] as $field => $label)
+                                <label class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2">
+                                    <span class="text-sm font-medium text-gray-700">{{ $label }}</span>
+                                    <span>
+                                        <input type="hidden" name="{{ $field }}" value="0">
+                                        <input type="checkbox" name="{{ $field }}" value="1" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" @checked(old($field, $notificationPreference[$field]))>
+                                    </span>
+                                </label>
+                            @endforeach
+
+                            <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Save Notification Preferences</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
                         <div class="space-y-3 text-sm">
                             <div><span class="text-gray-500 block">Address</span><span class="font-medium text-gray-900" x-text="customer?.address || '—'"></span></div>

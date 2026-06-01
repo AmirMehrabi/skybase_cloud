@@ -21,6 +21,10 @@
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @endif
 
+        <style>
+            [x-cloak] { display: none !important; }
+        </style>
+
         @stack('styles')
     </head>
     <body class="bg-[#f6f1e8] text-slate-950" style="direction: {{ $direction }};">
@@ -60,6 +64,8 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
                         </button>
+
+                        <x-notifications.dropdown guard="customer" />
 
                         <div class="relative">
                             <button id="user-menu-button" type="button" class="flex items-center gap-2 rounded-lg p-2 text-slate-700 hover:bg-[#fbf7ed]">

@@ -16,6 +16,8 @@ use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\TenantNotificationService;
+use App\Support\Notifications\NotificationEventRegistry;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -311,12 +313,34 @@ class SubscriptionController extends Controller
     /**
      * Suspend a subscription.
      */
-    public function suspend(Request $request, Subscription $subscription, SubscriptionSessionDisconnectService $disconnectService): JsonResponse|RedirectResponse
+    public function suspend(Request $request, Subscription $subscription, SubscriptionSessionDisconnectService $disconnectService, TenantNotificationService $notifications): JsonResponse|RedirectResponse
     {
         $subscription->suspend();
-        $subscription = $subscription->fresh(['router']);
+        $subscription = $subscription->fresh(['customer', 'plan', 'router']);
         $disconnectResult = $disconnectService->disconnect($subscription);
         $disconnectService->recordActivity($subscription, $disconnectResult);
+        $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
+            'title' => 'Subscription suspended',
+            'body' => "{$subscription->subscription_code} was suspended.",
+            'action_url' => route('subscriptions.show', $subscription),
+        ], $subscription);
+
+        if ($subscription->customer) {
+            $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
+                'title' => 'Your subscription was suspended',
+                'body' => "{$subscription->subscription_code} is currently suspended.",
+                'category' => 'service',
+                'action_url' => route('customer.subscriptions.index'),
+            ], $subscription);
+        }
+
+        if ($disconnectResult->shouldAlert()) {
+            $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::OPERATIONAL_FAILURE, [
+                'title' => 'Router disconnect failed',
+                'body' => $disconnectResult->message,
+                'action_url' => route('subscriptions.show', $subscription),
+            ], $subscription);
+        }
 
         $message = 'Subscription suspended successfully.';
 
@@ -339,11 +363,25 @@ class SubscriptionController extends Controller
     /**
      * Activate a subscription.
      */
-    public function activate(Request $request, Subscription $subscription, RadiusProvisioningService $radiusProvisioning): JsonResponse|RedirectResponse
+    public function activate(Request $request, Subscription $subscription, RadiusProvisioningService $radiusProvisioning, TenantNotificationService $notifications): JsonResponse|RedirectResponse
     {
         $subscription->activate();
         $subscription = $subscription->fresh(['customer.organization', 'plan']);
         $radiusProvisioning->syncSubscription($subscription);
+        $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
+            'title' => 'Subscription activated',
+            'body' => "{$subscription->subscription_code} was activated.",
+            'action_url' => route('subscriptions.show', $subscription),
+        ], $subscription);
+
+        if ($subscription->customer) {
+            $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
+                'title' => 'Your subscription is active',
+                'body' => "{$subscription->subscription_code} is now active.",
+                'category' => 'service',
+                'action_url' => route('customer.subscriptions.index'),
+            ], $subscription);
+        }
         $radiusSkipReason = $radiusProvisioning->provisioningSkipReason($subscription);
         $radiusWarning = $radiusSkipReason !== null
             ? ' Radius entries were not created: '.$radiusSkipReason.'.'

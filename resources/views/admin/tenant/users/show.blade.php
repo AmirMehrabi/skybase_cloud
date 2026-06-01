@@ -78,8 +78,35 @@
         </div>
     </div>
 
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">Notifications</h3>
+        <p class="text-sm text-gray-500 mb-4">{{ $unreadNotificationsCount }} unread notification(s)</p>
+
+        <form method="POST" action="{{ route('admin.tenant.users.notifications.update', $user) }}" class="space-y-3">
+            @csrf
+            @method('PATCH')
+
+            @foreach([
+                'notifications_enabled' => 'Enable notifications',
+                'in_app_enabled' => 'In-app',
+                'email_enabled' => 'Email preference',
+                'sms_enabled' => 'SMS preference',
+            ] as $field => $label)
+                <label class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2">
+                    <span class="text-sm font-medium text-gray-700">{{ $label }}</span>
+                    <span>
+                        <input type="hidden" name="{{ $field }}" value="0">
+                        <input type="checkbox" name="{{ $field }}" value="1" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" @checked(old($field, $notificationPreference[$field]))>
+                    </span>
+                </label>
+            @endforeach
+
+            <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Save Notification Preferences</button>
+        </form>
+    </div>
+
     <!-- Activity Log -->
-    <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="lg:col-span-1 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
         <x-activity-log :activities="$recentActivity" empty-message="No recent activity" />
     </div>

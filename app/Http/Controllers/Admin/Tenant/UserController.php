@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\NotificationPreferenceRequest;
 use App\Models\ActivityLog;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\ActivityLogFormatter;
+use App\Services\NotificationPreferenceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -110,8 +112,14 @@ class UserController extends Controller
         $user->load('tenant');
 
         $recentActivity = app(ActivityLogFormatter::class)->forSubject($user, $user->tenant_id);
+        $notificationPreference = app(NotificationPreferenceService::class)->settingsFor($user);
+        $unreadNotificationsCount = $user->notifications()
+            ->where('tenant_id', $user->tenant_id)
+            ->whereNull('read_at')
+            ->whereNull('archived_at')
+            ->count();
 
-        return view('admin.tenant.users.show', compact('user', 'recentActivity'));
+        return view('admin.tenant.users.show', compact('user', 'recentActivity', 'notificationPreference', 'unreadNotificationsCount'));
     }
 
     public function edit(User $user): View
@@ -126,6 +134,14 @@ class UserController extends Controller
         ];
 
         return view('admin.tenant.users.edit', compact('user', 'roles'));
+    }
+
+    public function updateNotifications(NotificationPreferenceRequest $request, User $user, NotificationPreferenceService $preferences): RedirectResponse
+    {
+        $this->authorizeUserAccess($user);
+        $preferences->updateFor($user, $request->validated());
+
+        return back()->with('success', "Notification preferences updated for {$user->name}.");
     }
 
     public function update(Request $request, User $user): RedirectResponse

@@ -15,12 +15,14 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPortal\Auth\LoginController as CustomerPortalLoginController;
 use App\Http\Controllers\CustomerPortal\DashboardController as CustomerPortalDashboardController;
 use App\Http\Controllers\CustomerPortal\InvoiceController as CustomerPortalInvoiceController;
+use App\Http\Controllers\CustomerPortal\NotificationController as CustomerPortalNotificationController;
 use App\Http\Controllers\CustomerPortal\SubscriptionController as CustomerPortalSubscriptionController;
 use App\Http\Controllers\CustomerPortal\TicketController as CustomerPortalTicketController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\NetworkController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
@@ -47,6 +49,10 @@ $customerPortalRoutes = function (): void {
         Route::get('/dashboard', CustomerPortalDashboardController::class)->name('dashboard.redirect');
         Route::get('/subscriptions', [CustomerPortalSubscriptionController::class, 'index'])->name('subscriptions.index');
         Route::get('/invoices', [CustomerPortalInvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/notifications', [CustomerPortalNotificationController::class, 'index'])->name('notifications.index');
+        Route::patch('/notifications/read-all', [CustomerPortalNotificationController::class, 'readAll'])->name('notifications.read-all');
+        Route::patch('/notifications/{notification}/read', [CustomerPortalNotificationController::class, 'read'])->name('notifications.read');
+        Route::delete('/notifications/{notification}', [CustomerPortalNotificationController::class, 'archive'])->name('notifications.archive');
         Route::prefix('support')->name('support.')->group(function (): void {
             Route::get('/', [CustomerPortalTicketController::class, 'index'])->name('index');
             Route::get('/create', [CustomerPortalTicketController::class, 'create'])->name('create');
@@ -104,6 +110,10 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     // Dashboard
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/search/resources', ResourceSearchController::class)->name('search.resources');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'archive'])->name('notifications.archive');
 
     // Tenant User Management
     Route::prefix('settings/users')->name('admin.tenant.users.')->group(function () {
@@ -113,6 +123,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{user}', [UserController::class, 'show'])->name('show');
         Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
         Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::patch('/{user}/notifications', [UserController::class, 'updateNotifications'])->name('notifications.update');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
     });
 
@@ -123,6 +134,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::put('/branding', [SettingController::class, 'updateBranding'])->name('update.branding');
         Route::put('/email', [SettingController::class, 'updateEmail'])->name('update.email');
         Route::post('/email/test', [SettingController::class, 'testEmail'])->name('test.email');
+        Route::put('/notifications', [SettingController::class, 'updateNotifications'])->name('update.notifications');
         Route::put('/ldap', [SettingController::class, 'updateLdap'])->name('update.ldap');
         Route::post('/ldap/test', [SettingController::class, 'testLdap'])->name('test.ldap');
         Route::put('/ldap/organizational-units/discover', [SettingController::class, 'discoverLdapOrganizationalUnits'])->name('discover.ldap-organizational-units');
@@ -174,6 +186,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
         Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
         Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
+        Route::patch('/{customer}/notifications', [CustomerController::class, 'updateNotifications'])->name('notifications.update');
         Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
         Route::patch('/{customer}/billing', [CustomerController::class, 'updateBilling'])->name('billing.update');
         Route::post('/{customer}/suspend', [CustomerController::class, 'suspend'])->name('suspend');

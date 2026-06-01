@@ -9,6 +9,7 @@ use App\Models\TicketAttachment;
 use App\Models\TicketMessage;
 use App\Models\TicketTeam;
 use App\Models\User;
+use App\Services\TenantNotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +20,7 @@ class TicketService
         private TicketNumberService $numberService,
         private TicketSlaService $slaService,
         private TicketEventService $eventService,
+        private TenantNotificationService $notifications,
     ) {}
 
     /**
@@ -43,6 +45,7 @@ class TicketService
                 'source' => 'customer_portal',
                 'message_id' => $message->id,
             ], 'customer', $customer->id);
+            $this->notifications->ticketCreated($ticket);
 
             return $ticket->fresh(['team', 'assignedUser', 'messages.attachments']);
         });
@@ -70,6 +73,7 @@ class TicketService
                 'source' => 'admin_portal',
                 'message_id' => $message->id,
             ], 'user', $user->id);
+            $this->notifications->ticketStaffReply($ticket->load('customer'), $message);
 
             return $ticket->fresh(['customer', 'team', 'assignedUser', 'messages.attachments']);
         });
@@ -120,6 +124,7 @@ class TicketService
                 'last_customer_reply_at' => now(),
                 'last_activity_at' => now(),
             ])->save();
+            $this->notifications->ticketCustomerReply($ticket, $message);
 
             return $message;
         });
@@ -140,6 +145,7 @@ class TicketService
                     'last_staff_reply_at' => now(),
                     'last_activity_at' => now(),
                 ])->save();
+                $this->notifications->ticketStaffReply($ticket, $message);
             } else {
                 $ticket->forceFill(['last_activity_at' => now()])->save();
             }

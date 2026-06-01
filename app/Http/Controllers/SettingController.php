@@ -7,11 +7,14 @@ use App\Http\Requests\Setting\UpdateBrandingSettingRequest;
 use App\Http\Requests\Setting\UpdateEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateGeneralSettingRequest;
 use App\Http\Requests\Setting\UpdateLdapSettingRequest;
+use App\Http\Requests\Setting\UpdateNotificationSettingRequest;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Services\Ldap\LdapConnectionFactory;
 use App\Services\Ldap\LdapSyncService;
+use App\Services\NotificationPreferenceService;
 use App\Services\RadiusProvisioningService;
+use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,8 +33,36 @@ class SettingController extends Controller
         $locales = $this->getLocales();
         $emailSettings = $this->getEmailSettings($tenant->id);
         $ldapSettings = app(LdapSyncService::class)->settingsForTenant($tenant->id);
+        $notificationSettings = app(NotificationPreferenceService::class)->tenantSettings($tenant->id);
+        $notificationEvents = NotificationEventRegistry::events();
 
-        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings', 'ldapSettings'));
+        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings', 'ldapSettings', 'notificationSettings', 'notificationEvents'));
+    }
+
+    public function updateNotifications(UpdateNotificationSettingRequest $request): RedirectResponse
+    {
+        $tenant = $this->getTenant();
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'notifications.rules'],
+            [
+                'value' => [
+                    'enabled' => $request->boolean('notifications_enabled'),
+                    'channels' => [
+                        'in_app' => $request->boolean('in_app_enabled'),
+                        'email' => $request->boolean('email_enabled'),
+                        'sms' => $request->boolean('sms_enabled'),
+                    ],
+                    'events' => $request->input('events', []),
+                ],
+                'type' => 'json',
+                'group' => 'notifications',
+            ]
+        );
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'notifications'])
+            ->with('success', 'Notification settings updated successfully.');
     }
 
     public function updateEmail(UpdateEmailSettingRequest $request): RedirectResponse

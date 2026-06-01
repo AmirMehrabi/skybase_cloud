@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\Subscription;
+use App\Support\Notifications\NotificationEventRegistry;
 use Carbon\CarbonInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
@@ -102,13 +103,23 @@ class BillingService
             }
 
             $invoice->recalculateTotals();
+            $invoice = $invoice->fresh(['items', 'customer', 'subscription']);
+
+            if ($invoice->customer) {
+                app(TenantNotificationService::class)->notifyCustomer($invoice->customer, NotificationEventRegistry::INVOICE_CREATED, [
+                    'title' => 'Your invoice is ready',
+                    'body' => "Invoice {$invoice->invoice_number} is ready for review.",
+                    'category' => 'billing',
+                    'action_url' => route('customer.invoices.index'),
+                ], $invoice);
+            }
 
             $lockedSubscription->update([
                 'next_billing_date' => $periodEnd->copy()->addDay()->toDateString(),
                 'last_billed_at' => now(),
             ]);
 
-            return $invoice->fresh(['items', 'customer', 'subscription']);
+            return $invoice;
         });
     }
 

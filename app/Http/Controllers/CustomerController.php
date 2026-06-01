@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
+use App\Http\Requests\NotificationPreferenceRequest;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Organization;
 use App\Services\ActivityLogFormatter;
+use App\Services\NotificationPreferenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -174,6 +176,12 @@ class CustomerController extends Controller
         return view('customers.show', [
             'customer' => $customer,
             'activityLog' => $activityLog,
+            'notificationPreference' => app(NotificationPreferenceService::class)->settingsFor($customer),
+            'unreadNotificationsCount' => $customer->notifications()
+                ->where('tenant_id', $customer->tenant_id)
+                ->whereNull('read_at')
+                ->whereNull('archived_at')
+                ->count(),
         ]);
     }
 
@@ -228,6 +236,14 @@ class CustomerController extends Controller
             'message' => 'Customer updated successfully.',
             'customer' => $customer->fresh(),
         ]);
+    }
+
+    public function updateNotifications(NotificationPreferenceRequest $request, Customer $customer, NotificationPreferenceService $preferences): RedirectResponse
+    {
+        $this->authorizeTenantAccess($customer);
+        $preferences->updateFor($customer, $request->validated());
+
+        return back()->with('success', "Notification preferences updated for {$customer->full_name}.");
     }
 
     /**
