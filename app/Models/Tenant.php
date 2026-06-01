@@ -94,6 +94,16 @@ class Tenant extends Model
         return route('branding.asset', ['asset' => $asset, 'v' => $this->updated_at?->timestamp]);
     }
 
+    public function brandName(): string
+    {
+        return filled($this->company_name) ? $this->company_name : 'SkyBase Cloud';
+    }
+
+    public function brandTagline(): string
+    {
+        return filled($this->tagline) ? $this->tagline : 'Complete ISP Management Platform';
+    }
+
     public function navbarLogoUrl(): string
     {
         return $this->brandingAssetUrl('company_logo_dark')
