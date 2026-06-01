@@ -23,6 +23,15 @@ class BrandingAssetController extends Controller
         return Storage::disk('public')->response($path);
     }
 
+    public function settings(string $path): StreamedResponse
+    {
+        $path = 'settings/'.ltrim($path, '/');
+
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path);
+    }
+
     private function currentTenant(): ?Tenant
     {
         if (tenant()) {

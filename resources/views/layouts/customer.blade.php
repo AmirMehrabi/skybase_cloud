@@ -36,7 +36,7 @@
                 <div class="flex h-[60px] items-center border-b border-white/10 bg-white/[0.03] px-6 backdrop-blur-xl">
                     <a href="{{ route('customer.dashboard') }}" class="flex items-center gap-3 text-white">
                         @if($hasCustomNavbarLogo)
-                            <img src="{{ $navbarLogoUrl }}" class="max-h-9 max-w-36 object-contain" alt="{{ $brandingTenant?->company_name ?? config('app.name', 'SkyBase') }} logo">
+                            <img src="{{ $navbarLogoUrl }}" class="max-h-9 max-w-36 object-contain py-2" alt="{{ $brandingTenant?->company_name ?? config('app.name', 'SkyBase') }} logo">
                         @else
                             <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
                                 <img src="{{ $navbarLogoUrl }}" class="max-w-6 brightness-0 invert" alt="SkyBase Cloud logo mark">

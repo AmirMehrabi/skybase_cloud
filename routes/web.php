@@ -91,6 +91,7 @@ Route::get('/contact', [PagesController::class, 'contact'])->name('contact.show'
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 Route::post('/demo-requests', [DemoRequestController::class, 'store'])->name('demo-requests.store');
 
+Route::get('/storage/settings/{path}', [BrandingAssetController::class, 'settings'])->where('path', '.*')->name('branding.asset.storage');
 Route::get('/branding-assets/{asset}', BrandingAssetController::class)->name('branding.asset');
 
 // Authentication Routes (Guest only)

@@ -27,6 +27,21 @@ class SettingsBrandingAssetTest extends TestCase
         $this->assertStringNotContainsString('/storage/', $url);
     }
 
+    public function test_public_storage_settings_logo_url_is_served_by_application_route(): void
+    {
+        Storage::fake('public');
+
+        $tenant = $this->createTenant('alpha-net');
+        $path = 'settings/'.$tenant->id.'/logo.png';
+
+        Storage::disk('public')->put($path, 'logo');
+
+        $response = $this->get('/storage/'.$path);
+
+        $response->assertOk();
+        $this->assertSame('logo', $response->streamedContent());
+    }
+
     public function test_admin_can_delete_company_logo_with_plain_post_submission(): void
     {
         Storage::fake('public');
