@@ -51,7 +51,7 @@ class CustomerPortalAuthenticationTest extends TestCase
         $response = $this->actingAs($customer, 'customer')->get(route('customer.dashboard'));
 
         $response->assertOk();
-        $response->assertSee('Customer Portal - AlphaNet Communications', false);
+        $response->assertSee('Dashboard - AlphaNet Communications', false);
         $response->assertSee('AlphaNet Communications');
         $response->assertSee('Simple customer self care');
     }

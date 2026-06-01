@@ -5,7 +5,7 @@
     $isFarsi = $language === 'fa';
     $user = auth()->user();
     $brandingTenant = tenant() ?? $user?->tenant;
-    $brandName = $brandingTenant?->brandName() ?? 'SkyBase Cloud';
+    $brandName = $brandingTenant?->brandName() ?? env('APP_NAME');
     $brandTagline = $brandingTenant?->brandTagline() ?? 'Complete ISP Management Platform';
     $navbarLogoUrl = $brandingTenant?->navbarLogoUrl() ?? asset('assets/images/logo/logo-black.png');
     $hasCustomNavbarLogo = (bool) ($brandingTenant?->brandingAssetUrl('company_logo_dark') ?? $brandingTenant?->brandingAssetUrl('company_logo'));
