@@ -38,6 +38,24 @@ class CustomerPortalAuthenticationTest extends TestCase
             ->assertSee('Dashboard');
     }
 
+    public function test_customer_portal_layout_uses_tenant_company_name_and_tagline_for_branding(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $tenant->forceFill([
+            'company_name' => 'AlphaNet Communications',
+            'tagline' => 'Simple customer self care',
+        ])->save();
+
+        $customer = $this->createCustomer($tenant);
+
+        $response = $this->actingAs($customer, 'customer')->get(route('customer.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Customer Portal - AlphaNet Communications', false);
+        $response->assertSee('AlphaNet Communications');
+        $response->assertSee('Simple customer self care');
+    }
+
     public function test_customer_login_requires_the_matching_tenant(): void
     {
         $alpha = $this->createTenant('alpha-net');

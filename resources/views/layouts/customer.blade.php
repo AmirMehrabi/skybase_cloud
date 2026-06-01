@@ -4,6 +4,8 @@
     $isRtl = $direction === 'rtl';
     $customer = auth('customer')->user();
     $brandingTenant = tenant() ?? $customer?->tenant;
+    $brandName = $brandingTenant?->brandName() ?? 'SkyBase Cloud';
+    $brandTagline = $brandingTenant?->brandTagline() ?? 'Complete ISP Management Platform';
     $navbarLogoUrl = $brandingTenant?->navbarLogoUrl() ?? asset('assets/images/logo/logo-black.png');
     $hasCustomNavbarLogo = (bool) ($brandingTenant?->brandingAssetUrl('company_logo_dark') ?? $brandingTenant?->brandingAssetUrl('company_logo'));
 @endphp
@@ -14,7 +16,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>@yield('title', 'Customer Portal') - {{ config('app.name', 'SkyBase') }}</title>
+        <title>@yield('title', 'Customer Portal') - {{ $brandName }}</title>
         <link rel="icon" href="{{ $brandingTenant?->faviconUrl() ?? asset('favicon.ico') }}">
 
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
@@ -34,18 +36,18 @@
             <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_15%,rgba(34,197,94,0.24),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(245,158,11,0.18),transparent_30%),linear-gradient(135deg,#09252b_0%,#0d2f35_48%,#123f3d_100%)]"></div>
             <div class="flex h-full flex-col">
                 <div class="flex h-[60px] items-center border-b border-white/10 bg-white/[0.03] px-6 backdrop-blur-xl">
-                    <a href="{{ route('customer.dashboard') }}" class="flex items-center gap-3 text-white">
+                    <a href="{{ route('customer.dashboard') }}" class="flex min-w-0 items-center gap-3 text-white">
                         @if($hasCustomNavbarLogo)
-                            <img src="{{ $navbarLogoUrl }}" class="max-h-9 max-w-36 object-contain py-2" alt="{{ $brandingTenant?->company_name ?? config('app.name', 'SkyBase') }} logo">
+                            <img src="{{ $navbarLogoUrl }}" class="max-h-9 max-w-14 shrink-0 object-contain py-2" alt="{{ $brandName }} logo">
                         @else
-                            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-                                <img src="{{ $navbarLogoUrl }}" class="max-w-6 brightness-0 invert" alt="SkyBase Cloud logo mark">
-                            </span>
-                            <span class="leading-none">
-                                <span class="block text-base font-bold tracking-tight">{{ config('app.name', 'SkyBase') }}</span>
-                                <span class="block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100/80">Customer Portal</span>
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                                <img src="{{ $navbarLogoUrl }}" class="max-w-6 brightness-0 invert" alt="{{ $brandName }} logo mark">
                             </span>
                         @endif
+                        <span class="min-w-0 leading-tight">
+                            <span class="block truncate text-base font-bold tracking-tight">{{ $brandName }}</span>
+                            <span class="block truncate text-[10px] font-bold tracking-[0.08em] text-emerald-100/80">{{ $brandTagline }}</span>
+                        </span>
                     </a>
                 </div>
 

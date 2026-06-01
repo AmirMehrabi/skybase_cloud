@@ -197,6 +197,25 @@ class DashboardTest extends TestCase
         });
     }
 
+    public function test_admin_layout_uses_tenant_company_name_and_tagline_for_branding(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $tenant->forceFill(['tagline' => 'Fiber billing without busywork'])->save();
+
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Dashboard - AlphaNet Communications', false);
+        $response->assertSee('AlphaNet Communications');
+        $response->assertSee('Fiber billing without busywork');
+    }
+
     private function createTenant(string $slug, string $companyName): Tenant
     {
         return Tenant::create([
