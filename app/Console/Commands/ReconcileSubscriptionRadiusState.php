@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-#[Signature('app:reconcile-subscription-radius-state')]
+#[Signature('subscriptions:reconcile-radius-state')]
 #[Description('Reconcile RADIUS rows for active and suspended subscriptions')]
 class ReconcileSubscriptionRadiusState extends Command
 {
@@ -24,10 +24,9 @@ class ReconcileSubscriptionRadiusState extends Command
         Log::info('Subscription RADIUS reconciliation started.');
 
         Subscription::withoutGlobalScopes()
+            ->whereNull('deleted_at')
             ->whereIn('status', ['active', 'suspended'])
-            ->where(function ($query): void {
-                $query->whereNotNull('pppoe_username');
-            })
+            ->whereNotNull('pppoe_username')
             ->with(['customer.organization', 'plan'])
             ->orderBy('id')
             ->chunkById(100, function ($subscriptions) use ($radiusProvisioning, &$processed, &$active, &$suspended, &$failed): void {
