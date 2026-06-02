@@ -209,7 +209,17 @@ class RrdToolService
 
     private function ensureDirectory(string $path): void
     {
-        File::ensureDirectoryExists(dirname($path));
+        $directory = dirname($path);
+
+        try {
+            File::ensureDirectoryExists($directory);
+        } catch (Throwable $exception) {
+            throw new MonitoringStorageUnavailable("Unable to create monitoring RRD directory {$directory}: {$exception->getMessage()}", previous: $exception);
+        }
+
+        if (! is_writable($directory)) {
+            throw new MonitoringStorageUnavailable("Monitoring RRD directory is not writable: {$directory}");
+        }
     }
 
     private function step(): int
