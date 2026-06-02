@@ -154,6 +154,66 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <div class="mt-6 rounded-xl border border-blue-100 bg-white p-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900">IP Route</h4>
+                            <p class="mt-1 text-xs text-gray-500">Optional routed destinations. RouterOS uses each destination as dst-address and the primary IP above as gateway.</p>
+                        </div>
+                        <button type="button" @click="addIpRoute()" class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Add IP Route
+                        </button>
+                    </div>
+
+                    <div x-show="ipRoutes.length === 0" class="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+                        No IP routes configured. Add a row when this customer needs a routed host or subnet behind their primary IP.
+                    </div>
+
+                    <div class="mt-4 space-y-3">
+                        <template x-for="(route, index) in ipRoutes" :key="route.key">
+                            <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-12 md:items-end">
+                                <div class="md:col-span-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">IPAM</label>
+                                    <select :name="'ip_routes[' + index + '][ip_pool_id]'" x-model="route.ip_pool_id" @change="route.ip_address = ''" class="block w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                        <option value="">Select IPAM</option>
+                                        @foreach($ipPools ?? [] as $pool)
+                                            <option value="{{ $pool->id }}">{{ $pool->name }} ({{ $pool->cidr_notation }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="md:col-span-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
+                                    <select :name="'ip_routes[' + index + '][ip_address]'" x-model="route.ip_address" class="block w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                        <option value="">Select IP address</option>
+                                        <template x-for="address in availableRouteAddresses(route, index)" :key="address.id">
+                                            <option :value="address.ip_address" x-text="address.ip_address"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Subnet</label>
+                                    <div class="flex rounded-lg shadow-sm">
+                                        <span class="inline-flex items-center rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 px-3 text-sm text-gray-500">/</span>
+                                        <input type="number" min="1" max="32" :name="'ip_routes[' + index + '][cidr]'" x-model="route.cidr" class="block w-full rounded-r-lg border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <button type="button" @click="removeIpRoute(index)" class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="mt-3 text-xs text-gray-500">
+                        Use /32 for a single routed IP. Use a smaller subnet only when the destination is a routed network.
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -781,6 +841,8 @@ function subscriptionCreateForm() {
 
         // Additional service items
         additionalItems: [],
+        ipRoutes: [],
+        nextIpRouteKey: 1,
 
         submitting: false,
         subscriptionNameTouched: @js(filled(old('name'))),
@@ -956,6 +1018,41 @@ function subscriptionCreateForm() {
         removeAdditionalItem(index) {
             this.additionalItems.splice(index, 1);
             this.calculateFormTotal();
+        },
+
+        addIpRoute() {
+            this.ipRoutes.push({
+                key: this.nextIpRouteKey++,
+                ip_pool_id: '',
+                ip_address: '',
+                cidr: 32
+            });
+        },
+
+        removeIpRoute(index) {
+            this.ipRoutes.splice(index, 1);
+        },
+
+        routeIpPool(route) {
+            if (!route.ip_pool_id) return null;
+
+            return this.ipPools.find(pool => pool.id == route.ip_pool_id);
+        },
+
+        availableRouteAddresses(route, index) {
+            const pool = this.routeIpPool(route);
+            if (!pool || !Array.isArray(pool.available_addresses)) return [];
+
+            const selectedAddresses = this.ipRoutes
+                .filter((item, itemIndex) => itemIndex !== index)
+                .map(item => item.ip_address)
+                .filter(Boolean);
+
+            return pool.available_addresses.filter(address => {
+                if (address.ip_address === this.form.ip_address) return false;
+
+                return !selectedAddresses.includes(address.ip_address);
+            });
         },
 
         formatCurrency(value) {
@@ -1168,6 +1265,15 @@ function subscriptionCreateForm() {
             if (this.form.ip_management) formData.append('ip_management', this.form.ip_management);
             if (this.form.ip_pool_id) formData.append('ip_pool_id', this.form.ip_pool_id);
             if (this.form.ip_address) formData.append('ip_address', this.form.ip_address);
+            if (this.form.ip_management === 'system') {
+                this.ipRoutes.forEach((route, index) => {
+                    if (!route.ip_pool_id && !route.ip_address) return;
+
+                    formData.append(`ip_routes[${index}][ip_pool_id]`, route.ip_pool_id || '');
+                    formData.append(`ip_routes[${index}][ip_address]`, route.ip_address || '');
+                    formData.append(`ip_routes[${index}][cidr]`, route.cidr || '32');
+                });
+            }
             if (this.form.pppoe_username) formData.append('pppoe_username', this.form.pppoe_username);
             if (this.form.pppoe_password) formData.append('pppoe_password', this.form.pppoe_password);
 

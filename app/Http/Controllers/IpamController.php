@@ -154,7 +154,7 @@ class IpamController extends Controller
 
         $ipAddresses = $pool->ipAddresses()
             ->with('customer')
-            ->orderByRaw('INET_ATON(ip_address)')
+            ->orderBy('ip_address')
             ->paginate(50);
 
         return view('ipam.pools.show', compact('pool', 'ipAddresses'));

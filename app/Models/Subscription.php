@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
+use App\Services\SubscriptionIpRouteSyncService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -96,6 +97,14 @@ class Subscription extends Model implements LdapImportable
                 $subscription,
                 $subscription->wasChanged('pppoe_username') ? $subscription->getOriginal('pppoe_username') : null,
             );
+
+            if ($subscription->wasChanged(['ip_address', 'router_id', 'status'])) {
+                app(SubscriptionIpRouteSyncService::class)->syncRoutes($subscription);
+            }
+        });
+
+        static::deleting(function (Subscription $subscription): void {
+            app(SubscriptionIpRouteSyncService::class)->removeRoutes($subscription);
         });
 
         static::deleted(function (Subscription $subscription): void {
@@ -156,6 +165,11 @@ class Subscription extends Model implements LdapImportable
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
+    }
+
+    public function ipRoutes(): HasMany
+    {
+        return $this->hasMany(SubscriptionIpRoute::class);
     }
 
     public function bandwidthState(): HasOne
@@ -358,6 +372,68 @@ class Subscription extends Model implements LdapImportable
         $pool->updateStatistics();
 
         return $ip;
+    }
+
+    /**
+     * Suggest the next available IP address from the current pool.
+     */
+    public function suggestIpAddress(): ?IpAddress
+    {
+        if (! $this->ip_pool_id || $this->ip_management !== 'system') {
+            return null;
+        }
+
+        $availableAddresses = $this->ipPool
+            ?->availableAddresses()
+            ->when($this->ip_address, function ($query): void {
+                $query->where('ip_address', '!=', $this->ip_address);
+            })
+            ->get();
+
+        return $availableAddresses?->sortBy(fn (IpAddress $ipAddress): int => (int) sprintf('%u', ip2long($ipAddress->ip_address)))->first();
+    }
+
+    /**
+     * Update the subscription IP address while keeping system-managed pools in sync.
+     */
+    public function updateIpAddress(?string $ipAddress): ?IpAddress
+    {
+        if (! $this->isSystemManagedIp()) {
+            $this->update(['ip_address' => $ipAddress]);
+
+            return null;
+        }
+
+        if (blank($ipAddress)) {
+            $this->releaseIpAddress();
+
+            return null;
+        }
+
+        if ($this->ip_address === $ipAddress) {
+            return $this->ipAddress;
+        }
+
+        $assignedIp = $this->ipPool?->ipAddresses()
+            ->where('ip_address', $ipAddress)
+            ->first();
+
+        if (! $assignedIp || ! $assignedIp->isAvailable()) {
+            return null;
+        }
+
+        if ($this->ipAddress) {
+            $this->ipAddress->release();
+        }
+
+        $assignedIp->assignTo($this->customer, $this->mac_address, $this->subscription_code);
+        $this->update(['ip_address' => $ipAddress]);
+
+        if ($this->ipPool) {
+            $this->ipPool->updateStatistics();
+        }
+
+        return $assignedIp;
     }
 
     /**

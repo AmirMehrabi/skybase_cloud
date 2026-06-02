@@ -5,10 +5,17 @@
 @php
     $organization = $subscription->customer?->organization;
     $organizationBilling = $organization?->billing_enabled;
+    $currentIpAddress = old('ip_address', $subscription->ip_address);
 @endphp
 
+@push('styles')
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+@endpush
+
 @section('content')
-<div class="space-y-6 pb-24">
+<div class="space-y-6 pb-24" x-data="subscriptionEditForm(@js(route('subscriptions.suggest-ip', $subscription)), @js($subscription->isSystemManagedIp() && $subscription->ipPool !== null), @js((string) $currentIpAddress))" x-cloak>
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
             <a href="{{ route('subscriptions.show', $subscription) }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
@@ -83,10 +90,64 @@
                     <input type="text" name="site" id="site" value="{{ old('site', $subscription->site) }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                     @error('site')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
-                <div>
-                    <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
-                    <input type="text" name="ip_address" id="ip_address" value="{{ old('ip_address', $subscription->ip_address) }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
-                    @error('ip_address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                <div class="lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <label for="ip_address" class="block text-sm font-medium text-gray-700">IP Address</label>
+                                @if($subscription->isSystemManagedIp() && $subscription->ipPool)
+                                    <span class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                                        {{ $subscription->ipPool->name }}
+                                    </span>
+                                @endif
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                {{ $subscription->isSystemManagedIp() && $subscription->ipPool
+                                    ? 'Use the suggest button to pick a free IP from the current pool. Saving will update the IPAM inventory.'
+                                    : 'You can still change the subscription IP manually.' }}
+                            </p>
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <div class="sm:max-w-md flex-1">
+                                    <input type="text" name="ip_address" id="ip_address" x-model="form.ip_address" value="{{ $currentIpAddress }}" placeholder="192.168.1.100" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="suggestIpAddress()"
+                                    :disabled="suggestingIp || ! canSuggestIp"
+                                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <svg x-show="! suggestingIp" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    <svg x-show="suggestingIp" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span x-text="suggestingIp ? 'Finding...' : 'Suggest free IP'"></span>
+                                </button>
+                            </div>
+                            @error('ip_address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="grid gap-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 lg:min-w-72">
+                            <div class="flex items-center justify-between gap-4">
+                                <span>Current IP</span>
+                                <span class="font-mono text-gray-900">{{ $subscription->ip_address ?: 'Not set' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-4">
+                                <span>IP Mode</span>
+                                <span class="font-medium text-gray-900">{{ $subscription->isSystemManagedIp() ? 'System managed' : 'Router managed' }}</span>
+                            </div>
+                            @if($subscription->ipPool)
+                                <div class="flex items-center justify-between gap-4">
+                                    <span>Available</span>
+                                    <span class="font-medium text-gray-900">{{ $subscription->ipPool->available_ips }}</span>
+                                </div>
+                            @endif
+                            <div class="min-h-5 text-xs" :class="ipMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'">
+                                <span x-text="ipMessage.text"></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -181,3 +242,64 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function subscriptionEditForm(suggestIpUrl, canSuggestIp, currentIpAddress) {
+    return {
+        form: {
+            ip_address: currentIpAddress || '',
+        },
+        canSuggestIp,
+        suggestingIp: false,
+        ipMessage: {
+            type: 'info',
+            text: canSuggestIp ? 'Click suggest to fetch the next free IP from the current pool.' : 'IP suggestions are only available for system-managed pools.',
+        },
+        async suggestIpAddress() {
+            if (! this.canSuggestIp || this.suggestingIp) {
+                return;
+            }
+
+            this.suggestingIp = true;
+            this.ipMessage = {
+                type: 'info',
+                text: 'Looking up a free IP address...',
+            };
+
+            try {
+                const response = await fetch(suggestIpUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+
+                const payload = await response.json();
+
+                if (! response.ok) {
+                    this.ipMessage = {
+                        type: 'error',
+                        text: payload.message || 'No free IP address is available right now.',
+                    };
+
+                    return;
+                }
+
+                this.form.ip_address = payload.ip_address;
+                this.ipMessage = {
+                    type: 'success',
+                    text: `Suggested ${payload.ip_address} from ${payload.pool_name}.`,
+                };
+            } catch (error) {
+                this.ipMessage = {
+                    type: 'error',
+                    text: 'Unable to fetch a suggested IP address.',
+                };
+            } finally {
+                this.suggestingIp = false;
+            }
+        },
+    };
+}
+</script>
+@endpush

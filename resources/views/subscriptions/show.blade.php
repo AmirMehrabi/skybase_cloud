@@ -3,7 +3,10 @@
 @section('title', 'Subscription Details')
 
 @php
-$subscription = [
+    $subscriptionModel = $subscription;
+    $currentIpAddress = old('ip_address', $subscriptionModel->ip_address ?? '');
+    $canSuggestIp = $subscriptionModel->isSystemManagedIp() && $subscriptionModel->ipPool;
+    $subscription = [
     'id' => $subscription->id,
     'subscription_code' => $subscription->subscription_code,
     'name' => $subscription->name ?: $subscription->customer?->full_name ?? 'N/A',
@@ -55,18 +58,20 @@ $quotaLabel = $usageSummary['quota_label'] ?? 'Unlimited';
 $billingInvoices = collect($billingInvoices ?? []);
 $usageSessions = collect($usageSessions ?? []);
 
-function getStatusBadgeClass($status)
-{
-    $classes = [
-        'active' => 'bg-green-100 text-green-800 border-green-200',
-        'pending' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        'suspended' => 'bg-red-100 text-red-800 border-red-200',
-        'cancelled' => 'bg-gray-100 text-gray-800 border-gray-200',
-        'expired' => 'bg-gray-100 text-gray-800 border-gray-200',
-        'paid' => 'bg-green-100 text-green-800 border-green-200',
-    ];
+if (! function_exists('getStatusBadgeClass')) {
+    function getStatusBadgeClass($status)
+    {
+        $classes = [
+            'active' => 'bg-green-100 text-green-800 border-green-200',
+            'pending' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
+            'suspended' => 'bg-red-100 text-red-800 border-red-200',
+            'cancelled' => 'bg-gray-100 text-gray-800 border-gray-200',
+            'expired' => 'bg-gray-100 text-gray-800 border-gray-200',
+            'paid' => 'bg-green-100 text-green-800 border-green-200',
+        ];
 
-    return $classes[$status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
+        return $classes[$status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
+    }
 }
 @endphp
 
@@ -75,6 +80,17 @@ function getStatusBadgeClass($status)
     x-data="{
         tab: 'overview',
         copiedField: null,
+        ipChange: {
+            open: {{ $errors->has('ip_address') ? 'true' : 'false' }},
+            form: {
+                ip_address: @js($currentIpAddress),
+            },
+            suggestedIp: @js($currentIpAddress),
+            submitting: false,
+            suggesting: false,
+            message: null,
+            error: null,
+        },
         bandwidth: {
             live: { rx_bps: 0, tx_bps: 0, interface_name: null, source: 'routeros', sampled_at: null, error: null },
             history: [],
@@ -102,6 +118,49 @@ function getStatusBadgeClass($status)
                 }, 1200);
             } catch (error) {
                 this.copiedField = null;
+            }
+        },
+        openIpModal() {
+            this.ipChange.open = true;
+            this.ipChange.error = null;
+            this.ipChange.message = null;
+            this.ipChange.form.ip_address = this.ipChange.form.ip_address || this.ipChange.suggestedIp || '';
+        },
+        closeIpModal() {
+            this.ipChange.open = false;
+            this.ipChange.error = null;
+        },
+        async suggestIpAddress() {
+            if (! @js((bool) $canSuggestIp)) {
+                this.ipChange.error = 'IP suggestions are only available for system-managed pools.';
+                return;
+            }
+
+            this.ipChange.suggesting = true;
+            this.ipChange.error = null;
+            this.ipChange.message = 'Looking up a free IP address...';
+
+            try {
+                const response = await fetch(@js(route('subscriptions.suggest-ip', $subscriptionModel)), {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const payload = await response.json();
+
+                if (! response.ok) {
+                    this.ipChange.error = payload.message || 'No free IP address is available right now.';
+                    this.ipChange.message = null;
+                    return;
+                }
+
+                this.ipChange.suggestedIp = payload.ip_address;
+                this.ipChange.form.ip_address = payload.ip_address;
+                this.ipChange.message = `Suggested ${payload.ip_address} from ${payload.pool_name}.`;
+                this.ipChange.error = null;
+            } catch (error) {
+                this.ipChange.error = 'Unable to fetch a suggested IP address.';
+                this.ipChange.message = null;
+            } finally {
+                this.ipChange.suggesting = false;
             }
         },
         async refreshLiveBandwidth() {
@@ -250,6 +309,65 @@ function getStatusBadgeClass($status)
                 <p class="text-xs text-gray-500 uppercase tracking-wide">Contract Ends</p>
                 <p class="text-xl font-bold text-gray-900 mt-1">{{ \Carbon\Carbon::parse($subscription['contract_end'])->format('M d, Y') }}</p>
             </div>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-gray-200 bg-gradient-to-r from-slate-50 to-white p-4">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">IP Assignment</h2>
+                        @if($subscriptionModel->isSystemManagedIp() && $subscriptionModel->ipPool)
+                            <span class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                                {{ $subscriptionModel->ipPool->name }}
+                            </span>
+                        @endif
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                        <span class="rounded-lg bg-white px-3 py-2 font-mono text-gray-900 ring-1 ring-inset ring-gray-200">
+                            {{ $subscription['ip_address'] }}
+                        </span>
+                        <span>{{ $subscriptionModel->isSystemManagedIp() ? 'System managed' : 'Router managed' }}</span>
+                        @if($subscriptionModel->ipPool)
+                            <span>•</span>
+                            <span>{{ $subscriptionModel->ipPool->available_ips }} free</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button type="button" @click="openIpModal()" class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Change IP
+                    </button>
+                    <a href="{{ route('subscriptions.edit', $subscription['id']) }}#ip_address" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                        Open Edit Form
+                    </a>
+                </div>
+            </div>
+            @if($subscriptionModel->ipRoutes->isNotEmpty())
+                <div class="mt-4 border-t border-gray-200 pt-4">
+                    <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">IP Routes</h3>
+                    <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        @foreach($subscriptionModel->ipRoutes as $ipRoute)
+                            <div class="rounded-xl border border-gray-200 bg-white p-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="font-mono text-sm font-semibold text-gray-900">{{ $ipRoute->destinationAddress() }}</span>
+                                    <span class="rounded-full border px-2 py-0.5 text-xs font-medium {{ $ipRoute->routeros_sync_status === 'synced' ? 'border-green-200 bg-green-50 text-green-700' : ($ipRoute->routeros_sync_status === 'failed' ? 'border-red-200 bg-red-50 text-red-700' : 'border-yellow-200 bg-yellow-50 text-yellow-700') }}">
+                                        {{ ucfirst($ipRoute->routeros_sync_status) }}
+                                    </span>
+                                </div>
+                                <div class="mt-2 text-xs text-gray-500">
+                                    {{ $ipRoute->ipPool?->name ?? 'IPAM removed' }} via {{ $subscription['ip_address'] }}
+                                </div>
+                                @if($ipRoute->routeros_sync_error)
+                                    <div class="mt-2 text-xs text-red-600">{{ $ipRoute->routeros_sync_error }}</div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -858,6 +976,86 @@ function getStatusBadgeClass($status)
                     <x-activity-log :activities="$activityLog" />
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div x-show="ipChange.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+        <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" @click="closeIpModal()"></div>
+        <div class="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5">
+            <div class="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Change IP</p>
+                    <h3 class="mt-1 text-lg font-semibold text-gray-900">{{ $subscription['subscription_code'] }}</h3>
+                    <p class="mt-1 text-sm text-gray-500">Keep the subscription and IPAM inventory in sync.</p>
+                </div>
+                <button type="button" @click="closeIpModal()" class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('subscriptions.update', $subscription['id']) }}" class="space-y-5 px-6 py-5" @submit="ipChange.submitting = true">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label for="show_ip_address" class="block text-sm font-medium text-gray-700">IP Address</label>
+                    <input
+                        type="text"
+                        name="ip_address"
+                        id="show_ip_address"
+                        x-model="ipChange.form.ip_address"
+                        placeholder="192.168.1.100"
+                        class="mt-1 block w-full rounded-xl border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                    @error('ip_address')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                    <div class="flex items-center justify-between gap-4">
+                        <span>Current IP</span>
+                        <span class="font-mono text-gray-900">{{ $subscription['ip_address'] }}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-4">
+                        <span>Mode</span>
+                        <span class="font-medium text-gray-900">{{ $subscriptionModel->isSystemManagedIp() ? 'System managed' : 'Router managed' }}</span>
+                    </div>
+                    @if($subscriptionModel->ipPool)
+                        <div class="flex items-center justify-between gap-4">
+                            <span>Free IPs</span>
+                            <span class="font-medium text-gray-900">{{ $subscriptionModel->ipPool->available_ips }}</span>
+                        </div>
+                    @endif
+                    <p class="text-xs text-gray-500">You can enter an IP manually or suggest a free one from the current pool.</p>
+                    <p x-show="ipChange.message" class="text-xs text-emerald-700" x-text="ipChange.message"></p>
+                    <p x-show="ipChange.error" class="text-xs text-red-600" x-text="ipChange.error"></p>
+                </div>
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                        type="button"
+                        @click="suggestIpAddress()"
+                        :disabled="ipChange.suggesting || ! {{ $canSuggestIp ? 'true' : 'false' }}"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <svg x-show="! ipChange.suggesting" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <svg x-show="ipChange.suggesting" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span x-text="ipChange.suggesting ? 'Finding...' : 'Suggest free IP'"></span>
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <button type="button" @click="closeIpModal()" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700">
+                            Save IP
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>

@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreSubscriptionRequest;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Models\SubscriptionIpRoute;
 use App\Models\SubscriptionItem;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
@@ -17,6 +19,7 @@ use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\RadiusProvisioningService;
+use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionSessionDisconnectService;
 use App\Services\TenantNotificationService;
 use App\Support\Notifications\NotificationEventRegistry;
@@ -24,6 +27,8 @@ use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SubscriptionController extends Controller
@@ -109,7 +114,7 @@ class SubscriptionController extends Controller
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
-        $ipPools = IpPool::active()->with('router')->get();
+        $ipPools = IpPool::active()->with(['router', 'availableAddresses'])->get();
 
         return view('subscriptions.create', compact('customer', 'customers', 'plans', 'routers', 'ipPools'));
     }
@@ -120,6 +125,8 @@ class SubscriptionController extends Controller
     public function store(StoreSubscriptionRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
+        $ipRoutes = $this->normalizedIpRouteRows($validated['ip_routes'] ?? []);
+        unset($validated['ip_routes']);
 
         $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes($validated);
         $validated['tenant_id'] = auth()->user()->tenant_id ?? null;
@@ -140,41 +147,71 @@ class SubscriptionController extends Controller
         $validated['next_billing_date'] = $validated['start_date'] ?? now()->toDateString();
         $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : now();
 
-        $subscription = Subscription::create($validated);
+        $items = $validated['items'];
+        unset($validated['items']);
 
-        // Create line items
-        $totalPrice = 0;
-        foreach ($validated['items'] as $itemData) {
-            $item = new SubscriptionItem([
-                'subscription_id' => $subscription->id,
-                'item_type' => $itemData['item_type'],
-                'description' => $itemData['description'],
-                'plan_id' => $itemData['item_type'] === 'plan' ? $validated['plan_id'] : null,
-                'router_id' => $itemData['item_type'] === 'plan' ? $validated['router_id'] : null,
-                'quantity' => $itemData['quantity'],
-                'unit_price' => $itemData['unit_price'],
-                'discount_amount' => $itemData['discount_amount'] ?? 0,
-                'discount_type' => $itemData['discount_type'] ?? 'none',
-                'tax_percentage' => $itemData['tax_percentage'] ?? 0,
-                'recurring' => $itemData['recurring'],
-                'billing_cycle' => $itemData['billing_cycle'] ?? $validated['billing_cycle'],
-            ]);
-
-            if ($item->item_type === 'plan' && $subscription->customer?->organization?->billing_enabled) {
-                $this->organizationBilling->applyDefaultsToPlanItem($item, $subscription->customer->organization);
-                $totalPrice += $item->total;
-
-                continue;
-            }
-
-            $item->calculateTotals();
-            $totalPrice += $item->total;
+        $primaryIpAddress = null;
+        if (($validated['ip_management'] ?? null) === 'system') {
+            $primaryIpAddress = $validated['ip_address'] ?? null;
+            unset($validated['ip_address']);
         }
 
-        // Update subscription total
-        $subscription->update(['total_price' => $totalPrice]);
+        [$subscription, $invoice] = DB::transaction(function () use ($validated, $items, $primaryIpAddress, $ipRoutes): array {
+            $subscription = Subscription::create($validated);
 
-        $invoice = $this->billing->createInvoiceForSubscription($subscription->fresh(['customer', 'plan', 'items']), includeOneTimeItems: true);
+            if ($subscription->isSystemManagedIp()) {
+                $assignedPrimaryIp = $subscription->assignIpAddress($primaryIpAddress);
+
+                if (filled($primaryIpAddress) && ! $assignedPrimaryIp) {
+                    throw ValidationException::withMessages([
+                        'ip_address' => 'The selected primary IP address is not available in the current pool.',
+                    ]);
+                }
+
+                if ($ipRoutes !== [] && blank($subscription->fresh()->ip_address)) {
+                    throw ValidationException::withMessages([
+                        'ip_address' => 'A primary IP address is required before IP routes can be configured.',
+                    ]);
+                }
+
+                $this->replaceSubscriptionIpRoutes($subscription->fresh(['customer']), $ipRoutes);
+            }
+
+            $totalPrice = 0;
+            foreach ($items as $itemData) {
+                $item = new SubscriptionItem([
+                    'subscription_id' => $subscription->id,
+                    'item_type' => $itemData['item_type'],
+                    'description' => $itemData['description'],
+                    'plan_id' => $itemData['item_type'] === 'plan' ? $validated['plan_id'] : null,
+                    'router_id' => $itemData['item_type'] === 'plan' ? $validated['router_id'] : null,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'discount_amount' => $itemData['discount_amount'] ?? 0,
+                    'discount_type' => $itemData['discount_type'] ?? 'none',
+                    'tax_percentage' => $itemData['tax_percentage'] ?? 0,
+                    'recurring' => $itemData['recurring'],
+                    'billing_cycle' => $itemData['billing_cycle'] ?? $validated['billing_cycle'],
+                ]);
+
+                if ($item->item_type === 'plan' && $subscription->customer?->organization?->billing_enabled) {
+                    $this->organizationBilling->applyDefaultsToPlanItem($item, $subscription->customer->organization);
+                    $totalPrice += $item->total;
+
+                    continue;
+                }
+
+                $item->calculateTotals();
+                $totalPrice += $item->total;
+            }
+
+            $subscription->update(['total_price' => $totalPrice]);
+            $invoice = $this->billing->createInvoiceForSubscription($subscription->fresh(['customer', 'plan', 'items']), includeOneTimeItems: true);
+
+            return [$subscription->fresh(['ipRoutes', 'router']), $invoice];
+        });
+
+        app(SubscriptionIpRouteSyncService::class)->syncRoutes($subscription);
 
         if ($request->expectsJson()) {
             return response()->json(
@@ -201,7 +238,7 @@ class SubscriptionController extends Controller
      */
     public function show(Subscription $subscription): View
     {
-        $subscription->load(['customer.organization', 'plan', 'router', 'items', 'invoices.payments']);
+        $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments']);
         $activityLog = app(ActivityLogFormatter::class)->forSubject($subscription, $subscription->tenant_id);
         $billingInvoices = $this->billingInvoicesForSubscription($subscription);
         $usageSummary = $this->usageSummaryForSubscription($subscription);
@@ -221,13 +258,15 @@ class SubscriptionController extends Controller
      */
     public function edit(Subscription $subscription): View
     {
-        $subscription->load(['items', 'customer.organization.defaultPlan']);
+        $subscription->load(['items', 'customer.organization.defaultPlan', 'ipPool.router', 'ipRoutes.ipPool']);
         $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
 
-        return view('subscriptions.edit', compact('subscription', 'plans', 'routers'));
+        $ipPools = IpPool::active()->with(['router', 'availableAddresses'])->get();
+
+        return view('subscriptions.edit', compact('subscription', 'plans', 'routers', 'ipPools'));
     }
 
     /**
@@ -252,35 +291,77 @@ class SubscriptionController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
             'notes' => 'nullable|string',
+            'ip_routes' => 'nullable|array',
+            'ip_routes.*' => 'array',
+            'ip_routes.*.ip_pool_id' => 'nullable|integer|exists:ip_pools,id',
+            'ip_routes.*.ip_address' => 'nullable|ip|max:255',
+            'ip_routes.*.cidr' => 'nullable|integer|min:1|max:32',
         ]);
+        $ipRoutesProvided = array_key_exists('ip_routes', $validated);
+        $ipRoutes = $this->normalizedIpRouteRows($validated['ip_routes'] ?? []);
+        unset($validated['ip_routes']);
+        $ipAddress = array_key_exists('ip_address', $validated) ? $validated['ip_address'] : null;
+        $ipAddressProvided = array_key_exists('ip_address', $validated);
+        unset($validated['ip_address']);
 
-        if (array_key_exists('plan_id', $validated)) {
-            $this->organizationBilling->assertPlanAllowedForCustomer($subscription->customer_id, (int) $validated['plan_id']);
-        }
+        DB::transaction(function () use ($subscription, $validated, $ipAddress, $ipAddressProvided, $ipRoutesProvided, $ipRoutes): void {
+            if (array_key_exists('plan_id', $validated)) {
+                $this->organizationBilling->assertPlanAllowedForCustomer($subscription->customer_id, (int) $validated['plan_id']);
+            }
 
-        // Handle activation
-        if (isset($validated['status']) && $validated['status'] === 'active' && ! $subscription->activation_date) {
-            $validated['activation_date'] = now();
-        }
+            if (isset($validated['status']) && $validated['status'] === 'active' && ! $subscription->activation_date) {
+                $validated['activation_date'] = now();
+            }
 
-        if (array_key_exists('billing_enabled', $validated)) {
-            $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now());
-        }
+            if (array_key_exists('billing_enabled', $validated)) {
+                $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now());
+            }
 
-        if (array_key_exists('name', $validated) && blank($validated['name'])) {
-            $validated['name'] = Subscription::defaultNameForCustomer((int) $subscription->customer_id);
-        }
+            if (array_key_exists('name', $validated) && blank($validated['name'])) {
+                $validated['name'] = Subscription::defaultNameForCustomer((int) $subscription->customer_id);
+            }
 
-        $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes([
-            ...$subscription->only(['customer_id', 'plan_id', 'billing_cycle', 'billing_enabled']),
-            ...$validated,
-        ]);
+            $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes([
+                ...$subscription->only(['customer_id', 'plan_id', 'billing_cycle', 'billing_enabled']),
+                ...$validated,
+            ]);
 
-        $subscription->update($validated);
+            $subscription->update($validated);
 
-        if ($subscription->customer?->organization?->billing_enabled) {
-            $this->organizationBilling->applyDefaultsToExistingSubscription($subscription->fresh(['items']), $subscription->customer->organization);
-        }
+            if ($ipAddressProvided) {
+                $updatedIp = $subscription->updateIpAddress($ipAddress);
+
+                if ($ipAddress !== null && blank($ipAddress) === false && ! $updatedIp && $subscription->ip_address !== $ipAddress) {
+                    throw ValidationException::withMessages([
+                        'ip_address' => 'The selected IP address is not available in the current pool.',
+                    ]);
+                }
+            }
+
+            if ($ipRoutesProvided) {
+                $subscription->refresh();
+
+                if (! $subscription->isSystemManagedIp()) {
+                    throw ValidationException::withMessages([
+                        'ip_routes' => 'IP routes are only available when IP Management is set to System Managed.',
+                    ]);
+                }
+
+                if ($ipRoutes !== [] && blank($subscription->ip_address)) {
+                    throw ValidationException::withMessages([
+                        'ip_address' => 'A primary IP address is required before IP routes can be configured.',
+                    ]);
+                }
+
+                $this->replaceSubscriptionIpRoutes($subscription->fresh(['customer', 'ipRoutes']), $ipRoutes);
+            }
+
+            if ($subscription->customer?->organization?->billing_enabled) {
+                $this->organizationBilling->applyDefaultsToExistingSubscription($subscription->fresh(['items']), $subscription->customer->organization);
+            }
+        });
+
+        app(SubscriptionIpRouteSyncService::class)->syncRoutes($subscription->fresh(['router', 'ipRoutes']));
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -294,11 +375,37 @@ class SubscriptionController extends Controller
             ->with('success', 'Subscription updated successfully.');
     }
 
+    public function suggestIp(Subscription $subscription): JsonResponse
+    {
+        $subscription->loadMissing('ipPool');
+
+        if (! $subscription->isSystemManagedIp() || ! $subscription->ipPool) {
+            return response()->json([
+                'message' => 'This subscription does not use a system-managed IP pool.',
+            ], 422);
+        }
+
+        $suggestedIp = $subscription->suggestIpAddress();
+
+        if (! $suggestedIp) {
+            return response()->json([
+                'message' => 'No free IP address is available in the current pool.',
+            ], 422);
+        }
+
+        return response()->json([
+            'ip_address' => $suggestedIp->ip_address,
+            'pool_name' => $subscription->ipPool->name,
+            'available_ips' => $subscription->ipPool->available_ips,
+        ]);
+    }
+
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
+        $this->releaseSubscriptionIpRoutes($subscription->loadMissing('ipRoutes'));
         $subscription->delete();
 
         if ($request->expectsJson()) {
@@ -578,6 +685,166 @@ class SubscriptionController extends Controller
         if (auth()->check() && auth()->user()->tenant_id && $subscription->tenant_id !== auth()->user()->tenant_id) {
             abort(403, 'You do not have access to this subscription.');
         }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $routes
+     * @return array<int, array{ip_pool_id: int, ip_address: string, cidr: int}>
+     */
+    private function normalizedIpRouteRows(array $routes): array
+    {
+        return collect($routes)
+            ->filter(fn (array $route): bool => filled($route['ip_pool_id'] ?? null) || filled($route['ip_address'] ?? null))
+            ->map(fn (array $route): array => [
+                'ip_pool_id' => (int) ($route['ip_pool_id'] ?? 0),
+                'ip_address' => (string) ($route['ip_address'] ?? ''),
+                'cidr' => (int) ($route['cidr'] ?? 32),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array{ip_pool_id: int, ip_address: string, cidr: int}>  $routeRows
+     */
+    private function replaceSubscriptionIpRoutes(Subscription $subscription, array $routeRows): void
+    {
+        $subscription->loadMissing(['customer', 'ipRoutes']);
+
+        $destinations = [];
+        foreach ($routeRows as $index => $routeRow) {
+            $destination = $routeRow['ip_address'].'/'.$routeRow['cidr'];
+            if (in_array($destination, $destinations, true)) {
+                throw ValidationException::withMessages([
+                    "ip_routes.{$index}.ip_address" => 'Duplicate IP route destinations are not allowed.',
+                ]);
+            }
+            $destinations[] = $destination;
+        }
+
+        $existingRoutes = $subscription->ipRoutes->keyBy(fn (SubscriptionIpRoute $route): string => $route->destinationAddress());
+        $submittedDestinations = collect($routeRows)
+            ->map(fn (array $routeRow): string => $routeRow['ip_address'].'/'.$routeRow['cidr'])
+            ->all();
+
+        foreach ($subscription->ipRoutes as $existingRoute) {
+            if (in_array($existingRoute->destinationAddress(), $submittedDestinations, true)) {
+                continue;
+            }
+
+            app(SubscriptionIpRouteSyncService::class)->removeRoute($existingRoute, $subscription);
+            $this->releaseRouteIpAddress($existingRoute);
+            $existingRoute->delete();
+        }
+
+        foreach ($routeRows as $index => $routeRow) {
+            $destination = $routeRow['ip_address'].'/'.$routeRow['cidr'];
+            $route = $existingRoutes->get($destination);
+            $ipAddress = $this->availableRouteIpAddress($subscription, $routeRow, $route, $index);
+
+            if (! $route) {
+                $route = SubscriptionIpRoute::create([
+                    'tenant_id' => $subscription->tenant_id,
+                    'subscription_id' => $subscription->id,
+                    'ip_pool_id' => $routeRow['ip_pool_id'],
+                    'ip_address' => $routeRow['ip_address'],
+                    'cidr' => $routeRow['cidr'],
+                ]);
+
+                $route->forceFill([
+                    'routeros_comment' => $route->routerOsComment(),
+                ])->save();
+            }
+
+            if ($route->ip_address_id && (int) $route->ip_address_id !== (int) $ipAddress->id) {
+                $this->releaseRouteIpAddress($route);
+            }
+
+            $route->forceFill([
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'ip_pool_id' => $routeRow['ip_pool_id'],
+                'ip_address_id' => $ipAddress->id,
+                'ip_address' => $routeRow['ip_address'],
+                'cidr' => $routeRow['cidr'],
+                'routeros_sync_status' => 'pending',
+                'routeros_sync_error' => null,
+            ])->save();
+
+            $this->assignRouteIpAddress($ipAddress, $subscription, $route);
+        }
+    }
+
+    /**
+     * @param  array{ip_pool_id: int, ip_address: string, cidr: int}  $routeRow
+     */
+    private function availableRouteIpAddress(Subscription $subscription, array $routeRow, ?SubscriptionIpRoute $route, int $index): IpAddress
+    {
+        $ipAddress = IpAddress::query()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->where('ip_pool_id', $routeRow['ip_pool_id'])
+            ->where('ip_address', $routeRow['ip_address'])
+            ->first();
+
+        if (! $ipAddress) {
+            throw ValidationException::withMessages([
+                "ip_routes.{$index}.ip_address" => 'The selected IP route address does not belong to the selected IPAM pool.',
+            ]);
+        }
+
+        if (! $ipAddress->isAvailable() && (! $route || (int) $route->ip_address_id !== (int) $ipAddress->id)) {
+            throw ValidationException::withMessages([
+                "ip_routes.{$index}.ip_address" => 'The selected IP route address is not available.',
+            ]);
+        }
+
+        return $ipAddress;
+    }
+
+    private function assignRouteIpAddress(IpAddress $ipAddress, Subscription $subscription, SubscriptionIpRoute $route): void
+    {
+        $ipAddress->forceFill([
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'mac_address' => null,
+            'subscription_code' => null,
+            'assigned_at' => now(),
+            'released_at' => null,
+            'notes' => 'Subscription IP route '.$subscription->subscription_code,
+            'metadata' => [
+                'purpose' => 'subscription_ip_route',
+                'subscription_id' => $subscription->id,
+                'subscription_ip_route_id' => $route->id,
+            ],
+        ])->save();
+    }
+
+    private function releaseSubscriptionIpRoutes(Subscription $subscription): void
+    {
+        $subscription->loadMissing('ipRoutes');
+
+        foreach ($subscription->ipRoutes as $route) {
+            $this->releaseRouteIpAddress($route);
+        }
+    }
+
+    private function releaseRouteIpAddress(SubscriptionIpRoute $route): void
+    {
+        if (! $route->ip_address_id) {
+            return;
+        }
+
+        $ipAddress = IpAddress::query()->find($route->ip_address_id);
+
+        if (! $ipAddress) {
+            return;
+        }
+
+        $ipAddress->release();
+        $ipAddress->forceFill([
+            'notes' => null,
+            'metadata' => null,
+        ])->save();
     }
 
     /**

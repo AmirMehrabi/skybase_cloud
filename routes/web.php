@@ -208,6 +208,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/create', [SubscriptionController::class, 'create'])->name('create');
         Route::post('/', [SubscriptionController::class, 'store'])->name('store');
         Route::get('/{subscription}', [SubscriptionController::class, 'show'])->name('show');
+        Route::get('/{subscription}/suggest-ip', [SubscriptionController::class, 'suggestIp'])->name('suggest-ip');
         Route::get('/{subscription}/bandwidth/live', [SubscriptionController::class, 'liveBandwidth'])->name('bandwidth.live');
         Route::get('/{subscription}/bandwidth/history', [SubscriptionController::class, 'bandwidthHistory'])->name('bandwidth.history');
         Route::get('/{subscription}/edit', [SubscriptionController::class, 'edit'])->name('edit');
