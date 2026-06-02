@@ -58,7 +58,7 @@ class RrdToolService
             'online',
             'cpu_usage',
             'memory_usage',
-            'active_sessions_count',
+            'active_sessions_count' => 'sessions',
         ]);
     }
 
@@ -94,7 +94,7 @@ class RrdToolService
             "DS:online:GAUGE:{$heartbeat}:0:1",
             "DS:cpu_usage:GAUGE:{$heartbeat}:0:100",
             "DS:memory_usage:GAUGE:{$heartbeat}:0:100",
-            "DS:active_sessions_count:GAUGE:{$heartbeat}:0:U",
+            "DS:sessions:GAUGE:{$heartbeat}:0:U",
             'RRA:AVERAGE:0.5:1:1440',
             'RRA:AVERAGE:0.5:5:2016',
             'RRA:AVERAGE:0.5:60:2160',
@@ -144,7 +144,7 @@ class RrdToolService
     }
 
     /**
-     * @param  array<int, string>  $fields
+     * @param  array<int|string, string>  $fields
      * @return array<int, array<string, mixed>>
      */
     private function fetch(string $path, string $range, array $fields): array
@@ -180,8 +180,10 @@ class RrdToolService
             $columns = preg_split('/\s+/', trim($values)) ?: [];
             $row = ['timestamp' => (int) $timestamp];
 
-            foreach ($fields as $index => $field) {
-                $row[$field] = $this->rrdValue($columns[$index] ?? null);
+            foreach (array_values($fields) as $index => $field) {
+                $outputField = array_search($field, $fields, true);
+                $outputField = is_string($outputField) ? $outputField : $field;
+                $row[$outputField] = $this->rrdValue($columns[$index] ?? null);
             }
 
             $rows[] = $row;
