@@ -271,7 +271,7 @@
                     :value="old('custom_domain', $tenant->custom_domain)"
                     placeholder="app.yourcompany.com"
                 />
-                <p class="mt-1 text-sm text-gray-500">Optional: Point your custom domain to this tenant.</p>
+                {{-- <p class="mt-1 text-sm text-gray-500">Optional: Point your custom domain to this tenant.</p> --}}
             </div>
         </div>
     </x-settings-section>
