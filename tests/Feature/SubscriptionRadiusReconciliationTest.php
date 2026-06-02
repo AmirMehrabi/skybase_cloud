@@ -33,7 +33,7 @@ class SubscriptionRadiusReconciliationTest extends TestCase
         ]);
 
         $this->artisan('subscriptions:reconcile-radius-state')
-            ->expectsOutputToContain('Processed: 1, active: 1, suspended: 0, failed: 0')
+            ->expectsOutputToContain('Processed: 1, active: 1, suspended: 0, skipped: 0, failed: 0')
             ->assertExitCode(0);
 
         $this->assertDatabaseHas('radcheck', [
@@ -106,7 +106,7 @@ class SubscriptionRadiusReconciliationTest extends TestCase
         ]);
 
         $this->artisan('subscriptions:reconcile-radius-state')
-            ->expectsOutputToContain('Processed: 1, active: 0, suspended: 1, failed: 0')
+            ->expectsOutputToContain('Processed: 1, active: 0, suspended: 1, skipped: 1, failed: 0')
             ->assertExitCode(0);
 
         $this->assertSame(0, RadiusCheck::withoutGlobalScopes()

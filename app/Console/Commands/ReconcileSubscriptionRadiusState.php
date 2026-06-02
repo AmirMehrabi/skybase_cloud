@@ -19,6 +19,7 @@ class ReconcileSubscriptionRadiusState extends Command
         $processed = 0;
         $active = 0;
         $suspended = 0;
+        $skipped = 0;
         $failed = 0;
 
         Log::info('Subscription RADIUS reconciliation started.');
@@ -26,20 +27,24 @@ class ReconcileSubscriptionRadiusState extends Command
         Subscription::withoutGlobalScopes()
             ->whereNull('deleted_at')
             ->whereIn('status', ['active', 'suspended'])
-            ->whereNotNull('pppoe_username')
             ->with(['customer.organization', 'plan'])
             ->orderBy('id')
-            ->chunkById(100, function ($subscriptions) use ($radiusProvisioning, &$processed, &$active, &$suspended, &$failed): void {
+            ->chunkById(100, function ($subscriptions) use ($radiusProvisioning, &$processed, &$active, &$suspended, &$skipped, &$failed): void {
                 foreach ($subscriptions as $subscription) {
                     $processed++;
 
+                    if ($subscription->status === 'active') {
+                        $active++;
+                    } elseif ($subscription->status === 'suspended') {
+                        $suspended++;
+                    }
+
                     try {
+                        $skipReason = $radiusProvisioning->provisioningSkipReason($subscription);
                         $radiusProvisioning->syncSubscription($subscription);
 
-                        if ($subscription->status === 'active') {
-                            $active++;
-                        } elseif ($subscription->status === 'suspended') {
-                            $suspended++;
+                        if ($skipReason !== null) {
+                            $skipped++;
                         }
                     } catch (Throwable $exception) {
                         $failed++;
@@ -60,10 +65,11 @@ class ReconcileSubscriptionRadiusState extends Command
             'processed' => $processed,
             'active' => $active,
             'suspended' => $suspended,
+            'skipped' => $skipped,
             'failed' => $failed,
         ]);
 
-        $this->components->info("Subscription RADIUS reconciliation completed. Processed: {$processed}, active: {$active}, suspended: {$suspended}, failed: {$failed}.");
+        $this->components->info("Subscription RADIUS reconciliation completed. Processed: {$processed}, active: {$active}, suspended: {$suspended}, skipped: {$skipped}, failed: {$failed}.");
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
