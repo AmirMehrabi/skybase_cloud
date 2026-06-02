@@ -130,6 +130,58 @@ class ImportExportFeatureTest extends TestCase
         ]);
     }
 
+    public function test_plan_import_generates_internal_name_from_name_when_missing(): void
+    {
+        Storage::fake('local');
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_PLANS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_PLANS), [[
+            'Super Fiber 200',
+            null,
+            null,
+            'active',
+            'public',
+            'pppoe',
+            'Residential',
+            200,
+            100,
+            0,
+            0,
+            'Mbps',
+            null,
+            'GB',
+            'yes',
+            89.99,
+            'USD',
+            'monthly',
+            7,
+            0,
+            null,
+            null,
+            null,
+            5,
+            'no',
+            null,
+            null,
+            null,
+            null,
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+        $this->assertSame(1, $run->created_count);
+        $this->assertDatabaseHas('plans', [
+            'name' => 'Super Fiber 200',
+            'internal_name' => 'super-fiber-200',
+        ]);
+    }
+
     public function test_subscription_import_creates_customer_and_subscription_from_one_row(): void
     {
         Storage::fake('local');

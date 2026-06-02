@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -459,9 +460,12 @@ class SpreadsheetImportExportService
      */
     protected function normalizePlanRow(array $row): array
     {
+        $name = $this->stringOrNull($row['name'] ?? null);
+        $internalName = $this->stringOrNull($row['internal_name'] ?? null);
+
         return [
-            'name' => $this->stringOrNull($row['name'] ?? null),
-            'internal_name' => $this->stringOrNull($row['internal_name'] ?? null),
+            'name' => $name,
+            'internal_name' => $internalName ?: ($name ? Str::slug($name) : null),
             'description' => $this->stringOrNull($row['description'] ?? null),
             'status' => $this->stringOrDefault($row['status'] ?? null, 'active'),
             'visibility' => $this->stringOrDefault($row['visibility'] ?? null, 'public'),
