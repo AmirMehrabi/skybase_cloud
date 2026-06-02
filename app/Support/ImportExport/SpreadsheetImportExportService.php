@@ -589,9 +589,9 @@ class SpreadsheetImportExportService
             'pppoe_username' => $data['pppoe_username'] ?: $existingSubscription?->pppoe_username,
             'pppoe_password' => $data['pppoe_password'] ?: $existingSubscription?->pppoe_password,
             'base_price' => $basePrice,
-            'discount_amount' => $data['discount_amount'] ?? $existingSubscription?->discount_amount,
+            'discount_amount' => $data['discount_amount'] ?? $existingSubscription?->discount_amount ?? 0,
             'discount_type' => $data['discount_type'] ?: $existingSubscription?->discount_type ?: 'none',
-            'tax_amount' => $data['tax_amount'] ?? $existingSubscription?->tax_amount,
+            'tax_amount' => $data['tax_amount'] ?? $existingSubscription?->tax_amount ?? 0,
             'total_price' => $data['total_price'] ?? $plan->price,
             'billing_cycle' => $billingCycle,
             'billing_enabled' => $data['billing_enabled'] ?? $existingSubscription?->billing_enabled ?? true,
@@ -748,6 +748,11 @@ class SpreadsheetImportExportService
     protected function decimalOrDefault(mixed $value, float|int $default): float|int
     {
         return filled($value) ? (float) $value : $default;
+    }
+
+    protected function decimalOrNull(mixed $value): ?float
+    {
+        return filled($value) ? (float) $value : null;
     }
 
     protected function dateOrNull(mixed $value): ?string
