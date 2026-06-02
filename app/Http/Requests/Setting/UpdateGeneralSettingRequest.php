@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Setting;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateGeneralSettingRequest extends FormRequest
 {
@@ -30,13 +31,13 @@ class UpdateGeneralSettingRequest extends FormRequest
 
             // Localization
             'timezone' => ['required', 'string', 'timezone'],
-            'date_format' => ['required', 'in:m/d/Y,d/m/Y,Y-m-d,d.m.Y,F j, Y,j F Y'],
+            'date_format' => ['required', Rule::in(['m/d/Y', 'd/m/Y', 'Y-m-d', 'd.m.Y', 'F j, Y', 'j F Y'])],
             'time_format' => ['required', 'in:12h,24h'],
             'first_day_of_week' => ['required', 'in:sunday,monday'],
             'currency' => ['required', 'string', 'max:3'],
-            'currency_symbol_position' => ['required', 'in:before,after'],
-            'thousands_separator' => ['required', 'in:,,., ,_'],
-            'decimal_separator' => ['required', 'in:.,,'],
+            'currency_symbol_position' => ['required', Rule::in(['before', 'after'])],
+            'thousands_separator' => ['required', Rule::in([',', '.', ' ', '_'])],
+            'decimal_separator' => ['required', Rule::in(['.', ','])],
             'locale' => ['required', 'string', 'max:5'],
 
             // System

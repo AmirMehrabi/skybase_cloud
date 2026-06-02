@@ -175,7 +175,7 @@
 
             <!-- Time Format -->
             <div class="col-span-2 md:col-span-1">
-                <x.input.select
+                <x-input.select
                     id="time_format"
                     name="time_format"
                     label="Time Format"
@@ -187,7 +187,7 @@
 
             <!-- First Day of Week -->
             <div class="col-span-2 md:col-span-1">
-                <x.input.select
+                <x-input.select
                     id="first_day_of_week"
                     name="first_day_of_week"
                     label="First Day of Week"
@@ -199,7 +199,7 @@
 
             <!-- Currency Symbol Position -->
             <div class="col-span-2 md:col-span-1">
-                <x.input.select
+                <x-input.select
                     id="currency_symbol_position"
                     name="currency_symbol_position"
                     label="Currency Symbol Position"
@@ -211,7 +211,7 @@
 
             <!-- Thousands Separator -->
             <div class="col-span-2 md:col-span-1">
-                <x.input.select
+                <x-input.select
                     id="thousands_separator"
                     name="thousands_separator"
                     label="Thousands Separator"
@@ -223,7 +223,7 @@
 
             <!-- Decimal Separator -->
             <div class="col-span-2 md:col-span-1">
-                <x.input.select
+                <x-input.select
                     id="decimal_separator"
                     name="decimal_separator"
                     label="Decimal Separator"
@@ -235,7 +235,7 @@
 
             <!-- Locale -->
             <div class="col-span-2 md:col-span-1">
-                <x.input.select
+                <x-input.select
                     id="locale"
                     name="locale"
                     label="Language / Locale"
@@ -264,7 +264,7 @@
 
             <!-- Custom Domain -->
             <div class="col-span-2 md:col-span-1">
-                <x.input.text
+                <x-input.text
                     id="custom_domain"
                     name="custom_domain"
                     label="Custom Domain"

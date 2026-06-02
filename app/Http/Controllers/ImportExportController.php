@@ -100,11 +100,17 @@ class ImportExportController extends Controller
             'original_filename' => $request->file('file')?->getClientOriginalName(),
         ]);
 
-        $path = $request->file('file')->storeAs(
-            ImportExportSchema::basePath($tenantId, $run->id),
+        $directory = ImportExportSchema::basePath($tenantId, $run->id);
+        Storage::disk('local')->makeDirectory($directory);
+
+        $uploadedFile = $request->file('file');
+        $path = $uploadedFile?->storeAs(
+            $directory,
             'import-'.$run->id.'.xlsx',
             'local',
         );
+
+        abort_unless($path && Storage::disk('local')->exists($path), 500, 'Unable to store the import file.');
 
         $run->update(['file_path' => $path]);
 

@@ -440,6 +440,7 @@ class SettingController extends Controller
             'SSP' => 'SSP - South Sudanese Pound (£)',
             'GMD' => 'GMD - Gambian Dalasi (D)',
             'CVE' => 'CVE - Cape Verdean Escudo ($)',
+            'SLE' => 'SLE - Sierra Leonean Leone (Le)',
             'SLL' => 'SLL - Sierra Leonean Leone (Le)',
             'LRD' => 'LRD - Liberian Dollar (L$)',
             'GNF' => 'GNF - Guinean Franc (FG)',

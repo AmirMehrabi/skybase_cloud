@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\ImportExport\ImportExportSchema;
 use App\Support\ImportExport\SpreadsheetImportExportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -47,6 +48,25 @@ class ImportExportFeatureTest extends TestCase
         $run = ImportExportRun::query()->firstOrFail();
         $this->assertSame(['status' => 'active', 'type' => 'pppoe'], $run->filters);
         Queue::assertPushed(ProcessExportJob::class);
+    }
+
+    public function test_plan_import_request_stores_the_uploaded_file_before_queueing(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+
+        $response = $this->actingAs($user)->post(route('plans.import'), [
+            'file' => UploadedFile::fake()->createWithContent('plans.xlsx', 'placeholder'),
+        ]);
+
+        $response->assertRedirect(route('plans.index'));
+        $run = ImportExportRun::query()->firstOrFail();
+
+        $this->assertNotNull($run->file_path);
+        Storage::disk('local')->assertExists($run->file_path);
+        Queue::assertPushed(ProcessImportJob::class);
     }
 
     public function test_plan_export_job_writes_filtered_xlsx_file(): void

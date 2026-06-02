@@ -49,6 +49,7 @@ class SpreadsheetImportExportService
 
     public function import(ImportExportRun $run): void
     {
+        abort_unless(Storage::disk($run->disk)->exists($run->file_path), 404, 'Imported file is missing from storage.');
         $path = Storage::disk($run->disk)->path($run->file_path);
         $rows = $this->readSpreadsheet($path);
         $counters = [

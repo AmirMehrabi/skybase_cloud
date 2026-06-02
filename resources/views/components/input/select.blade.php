@@ -9,6 +9,10 @@
     'xModel' => null,
 ])
 
+@php
+    $isList = array_is_list($options);
+@endphp
+
 <div class="mb-4">
     @if($label)
     <label for="{{ $id }}" class="block text-sm font-medium text-slate-700">
@@ -33,7 +37,12 @@
         @endif
 
         @foreach($options as $optionValue => $optionLabel)
-        <option value="{{ $optionValue }}" {{ old($name, $value) === $optionValue ? 'selected' : '' }}>{{ $optionLabel }}</option>
+        @if($isList)
+            @php
+                $optionValue = $optionLabel;
+            @endphp
+        @endif
+        <option value="{{ $optionValue }}" {{ (string) old($name, $value) === (string) $optionValue ? 'selected' : '' }}>{{ $optionLabel }}</option>
         @endforeach
     </select>
 
