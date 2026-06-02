@@ -74,7 +74,7 @@ class SpreadsheetImportExportService
             } catch (Throwable $exception) {
                 $result = [
                     'status' => 'failed',
-                    'identifier' => $row['internal_name'] ?? $row['subscription_code'] ?? $row['customer_code'] ?? null,
+                    'identifier' => $row['plan_name'] ?? $row['plan_internal_name'] ?? $row['subscription_code'] ?? $row['customer_code'] ?? null,
                     'action' => null,
                     'message' => $exception->getMessage(),
                 ];
@@ -512,11 +512,11 @@ class SpreadsheetImportExportService
         $normalized['plan_name'] = $this->stringOrNull($row['plan_name'] ?? $row['plan_internal_name'] ?? null);
 
         foreach (['customer_billing_enabled', 'tax_exempt', 'billing_enabled'] as $field) {
-            $normalized[$field] = $this->boolValue($row[$field] ?? true);
+            $normalized[$field] = filled($row[$field] ?? null) ? $this->boolValue($row[$field]) : null;
         }
 
         foreach (['balance', 'credit_limit', 'base_price', 'discount_amount', 'tax_amount', 'total_price'] as $field) {
-            $normalized[$field] = $this->decimalOrDefault($row[$field] ?? null, 0);
+            $normalized[$field] = $this->decimalOrNull($row[$field] ?? null);
         }
 
         $normalized['grace_period_days'] = $this->integerOrNull($row['grace_period_days'] ?? null);
@@ -533,37 +533,37 @@ class SpreadsheetImportExportService
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    protected function customerAttributes(array $data): array
+    protected function customerAttributes(array $data, ?Customer $existingCustomer = null): array
     {
-        $name = $data['customer_name']
-            ?: trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''))
-            ?: $data['company_name'];
+        $name = $this->customerDisplayName($data, $existingCustomer);
 
         return [
-            'customer_code' => $data['customer_code'] ?: null,
-            'customer_type' => $data['customer_type'] ?: (filled($data['company_name']) ? 'business' : 'individual'),
-            'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
-            'company_name' => $data['company_name'],
+            'customer_code' => $data['customer_code'] ?: $existingCustomer?->customer_code,
+            'customer_type' => $data['customer_type'] ?: $existingCustomer?->customer_type ?: (filled($data['company_name']) ? 'business' : 'individual'),
+            'first_name' => $this->blankToExisting($data['first_name'], $existingCustomer?->first_name),
+            'last_name' => $this->blankToExisting($data['last_name'], $existingCustomer?->last_name),
+            'company_name' => $this->blankToExisting($data['company_name'], $existingCustomer?->company_name),
             'name' => $name,
-            'national_id' => $data['national_id'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'mobile' => $data['mobile'],
-            'whatsapp' => $data['whatsapp'],
-            'address_line1' => $data['address_line1'],
-            'address_line2' => $data['address_line2'],
-            'city' => $data['city'],
-            'state' => $data['state'],
-            'postal_code' => $data['postal_code'],
-            'country' => $data['country'],
-            'status' => $data['customer_status'] ?: 'active',
-            'billing_type' => $data['billing_type'] ?: 'prepaid',
-            'billing_enabled' => $data['customer_billing_enabled'],
-            'billing_disabled_at' => $data['customer_billing_enabled'] ? null : now(),
-            'balance' => $data['balance'],
-            'credit_limit' => $data['credit_limit'],
-            'tax_exempt' => $data['tax_exempt'],
+            'national_id' => $this->blankToExisting($data['national_id'], $existingCustomer?->national_id),
+            'email' => $this->blankToExisting($data['email'], $existingCustomer?->email),
+            'phone' => $this->blankToExisting($data['phone'], $existingCustomer?->phone),
+            'mobile' => $this->blankToExisting($data['mobile'], $existingCustomer?->mobile),
+            'whatsapp' => $this->blankToExisting($data['whatsapp'], $existingCustomer?->whatsapp),
+            'address_line1' => $this->blankToExisting($data['address_line1'], $existingCustomer?->address_line1),
+            'address_line2' => $this->blankToExisting($data['address_line2'], $existingCustomer?->address_line2),
+            'city' => $this->blankToExisting($data['city'], $existingCustomer?->city),
+            'state' => $this->blankToExisting($data['state'], $existingCustomer?->state),
+            'postal_code' => $this->blankToExisting($data['postal_code'], $existingCustomer?->postal_code),
+            'country' => $this->blankToExisting($data['country'], $existingCustomer?->country),
+            'status' => $data['customer_status'] ?: $existingCustomer?->status ?: 'active',
+            'billing_type' => $data['billing_type'] ?: $existingCustomer?->billing_type ?: 'prepaid',
+            'billing_enabled' => $data['customer_billing_enabled'] ?? $existingCustomer?->billing_enabled ?? true,
+            'billing_disabled_at' => $data['customer_billing_enabled'] === null
+                ? $existingCustomer?->billing_disabled_at
+                : ($data['customer_billing_enabled'] ? null : now()),
+            'balance' => $data['balance'] ?? $existingCustomer?->balance ?? 0,
+            'credit_limit' => $data['credit_limit'] ?? $existingCustomer?->credit_limit ?? 0,
+            'tax_exempt' => $data['tax_exempt'] ?? $existingCustomer?->tax_exempt ?? false,
         ];
     }
 
@@ -571,37 +571,110 @@ class SpreadsheetImportExportService
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    protected function subscriptionAttributes(array $data, Customer $customer, Plan $plan, ?Router $router): array
+    protected function subscriptionAttributes(array $data, Customer $customer, Plan $plan, ?Router $router, ?Subscription $existingSubscription = null): array
     {
+        $basePrice = $data['base_price'] ?? $plan->price;
+        $billingCycle = $data['billing_cycle'] ?: $plan->billing_cycle;
+        $gracePeriodDays = $data['grace_period_days'] ?? $plan->grace_period_days;
+
         return [
-            'subscription_code' => $data['subscription_code'] ?: null,
-            'name' => $data['subscription_name'] ?: $customer->full_name,
-            'service_type' => $data['service_type'] ?: 'hotspot',
-            'site' => $data['site'] ?: $router?->site,
-            'connection_type' => $data['connection_type'] ?: 'pppoe',
-            'ip_address' => $data['ip_address'],
-            'mac_address' => $data['mac_address'],
-            'ip_management' => $data['ip_management'],
-            'pppoe_username' => $data['pppoe_username'],
-            'pppoe_password' => $data['pppoe_password'],
-            'base_price' => $data['base_price'] ?: $plan->price,
-            'discount_amount' => $data['discount_amount'],
-            'discount_type' => $data['discount_type'] ?: 'none',
-            'tax_amount' => $data['tax_amount'],
-            'total_price' => $data['total_price'] ?: $plan->price,
-            'billing_cycle' => $data['billing_cycle'] ?: $plan->billing_cycle,
-            'billing_enabled' => $data['billing_enabled'],
-            'grace_period_days' => $data['grace_period_days'],
+            'subscription_code' => $data['subscription_code'] ?: $existingSubscription?->subscription_code ?: null,
+            'name' => $data['subscription_name'] ?: $existingSubscription?->name ?: $customer->full_name,
+            'service_type' => $data['service_type'] ?: $existingSubscription?->service_type ?: 'hotspot',
+            'site' => $data['site'] ?: $existingSubscription?->site ?: $router?->site,
+            'connection_type' => $data['connection_type'] ?: $existingSubscription?->connection_type ?: 'pppoe',
+            'ip_address' => $this->blankToExisting($data['ip_address'], $existingSubscription?->ip_address),
+            'mac_address' => $this->blankToExisting($data['mac_address'], $existingSubscription?->mac_address),
+            'ip_management' => $data['ip_management'] ?: $existingSubscription?->ip_management,
+            'pppoe_username' => $data['pppoe_username'] ?: $existingSubscription?->pppoe_username,
+            'pppoe_password' => $data['pppoe_password'] ?: $existingSubscription?->pppoe_password,
+            'base_price' => $basePrice,
+            'discount_amount' => $data['discount_amount'] ?? $existingSubscription?->discount_amount,
+            'discount_type' => $data['discount_type'] ?: $existingSubscription?->discount_type ?: 'none',
+            'tax_amount' => $data['tax_amount'] ?? $existingSubscription?->tax_amount,
+            'total_price' => $data['total_price'] ?? $plan->price,
+            'billing_cycle' => $billingCycle,
+            'billing_enabled' => $data['billing_enabled'] ?? $existingSubscription?->billing_enabled ?? true,
+            'grace_period_days' => $gracePeriodDays,
             'next_billing_date' => $data['next_billing_date'],
-            'billing_disabled_at' => $data['billing_enabled'] ? null : now(),
-            'status' => $data['status'] ?: 'pending',
-            'start_date' => $data['start_date'],
-            'end_date' => $data['end_date'],
-            'activation_date' => $data['activation_date'],
-            'suspended_at' => $data['suspended_at'],
-            'cancelled_at' => $data['cancelled_at'],
-            'notes' => $data['notes'],
+            'billing_disabled_at' => $data['billing_enabled'] === null
+                ? $existingSubscription?->billing_disabled_at
+                : ($data['billing_enabled'] ? null : now()),
+            'status' => $data['status'] ?: $existingSubscription?->status ?: 'pending',
+            'start_date' => $data['start_date'] ?? $existingSubscription?->start_date,
+            'end_date' => $data['end_date'] ?? $existingSubscription?->end_date,
+            'activation_date' => $data['activation_date'] ?? $existingSubscription?->activation_date,
+            'suspended_at' => $data['suspended_at'] ?? $existingSubscription?->suspended_at,
+            'cancelled_at' => $data['cancelled_at'] ?? $existingSubscription?->cancelled_at,
+            'notes' => $data['notes'] ?? $existingSubscription?->notes,
         ];
+    }
+
+    protected function resolveCustomerForImport(ImportExportRun $run, array $data): Customer
+    {
+        if (filled($data['customer_code'] ?? null)) {
+            $customer = Customer::query()
+                ->where('tenant_id', $run->tenant_id)
+                ->where('customer_code', $data['customer_code'])
+                ->first();
+
+            if ($customer) {
+                return $customer;
+            }
+        }
+
+        if ($this->canMatchCustomerNaturally($data)) {
+            $customer = Customer::query()
+                ->where('tenant_id', $run->tenant_id)
+                ->whereRaw('LOWER(TRIM(first_name)) = ?', [mb_strtolower(trim((string) $data['first_name']))])
+                ->whereRaw('LOWER(TRIM(last_name)) = ?', [mb_strtolower(trim((string) $data['last_name']))])
+                ->whereRaw('LOWER(TRIM(email)) = ?', [mb_strtolower(trim((string) $data['email']))])
+                ->first();
+
+            if ($customer) {
+                return $customer;
+            }
+        }
+
+        return new Customer(['tenant_id' => $run->tenant_id]);
+    }
+
+    protected function findPlanByName(string $planName): ?Plan
+    {
+        $normalizedName = mb_strtolower(trim($planName));
+
+        $plans = Plan::query()
+            ->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedName])
+            ->get();
+
+        if ($plans->count() !== 1) {
+            return null;
+        }
+
+        return $plans->first();
+    }
+
+    protected function customerDisplayName(array $data, ?Customer $existingCustomer = null): string
+    {
+        $derivedName = trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''));
+
+        return $data['customer_name']
+            ?: $derivedName
+            ?: $data['company_name']
+            ?: $existingCustomer?->name
+            ?: '';
+    }
+
+    protected function canMatchCustomerNaturally(array $data): bool
+    {
+        return filled($data['first_name'] ?? null)
+            && filled($data['last_name'] ?? null)
+            && filled($data['email'] ?? null);
+    }
+
+    protected function blankToExisting(mixed $value, mixed $existingValue): mixed
+    {
+        return filled($value) ? $value : $existingValue;
     }
 
     /**

@@ -36,7 +36,7 @@ class RadiusProvisioningService
 
                 $this->removeUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
 
-                if ($subscription->status === 'suspended') {
+                if ($subscription->status === 'suspended' || $subscription->customer?->status === 'suspended') {
                     $this->rejectUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
                 }
 
@@ -248,6 +248,10 @@ class RadiusProvisioningService
 
         if (! $subscription->pppoe_username) {
             return 'missing pppoe username';
+        }
+
+        if ($subscription->customer?->status !== 'active') {
+            return 'customer status is not active';
         }
 
         if (! $this->usesLdapRadiusAuthentication((string) $subscription->tenant_id) && ! $subscription->pppoe_password) {
