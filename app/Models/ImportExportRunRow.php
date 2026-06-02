@@ -28,6 +28,11 @@ class ImportExportRunRow extends Model
         ];
     }
 
+    public function getConnectionName(): ?string
+    {
+        return config('tenancy.database.central_connection');
+    }
+
     public function run(): BelongsTo
     {
         return $this->belongsTo(ImportExportRun::class, 'import_export_run_id');

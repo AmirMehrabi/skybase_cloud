@@ -77,7 +77,7 @@ class ImportExportController extends Controller
             'direction' => ImportExportRun::DIRECTION_EXPORT,
             'status' => ImportExportRun::STATUS_QUEUED,
             'filters' => $this->filtersFor($module, $request),
-            'disk' => 'local',
+            'disk' => 'imports',
         ]);
 
         ProcessExportJob::dispatch($run->id);
@@ -96,21 +96,21 @@ class ImportExportController extends Controller
             'module' => $module,
             'direction' => ImportExportRun::DIRECTION_IMPORT,
             'status' => ImportExportRun::STATUS_QUEUED,
-            'disk' => 'local',
+            'disk' => 'imports',
             'original_filename' => $request->file('file')?->getClientOriginalName(),
         ]);
 
         $directory = ImportExportSchema::basePath($tenantId, $run->id);
-        Storage::disk('local')->makeDirectory($directory);
+        Storage::disk('imports')->makeDirectory($directory);
 
         $uploadedFile = $request->file('file');
         $path = $uploadedFile?->storeAs(
             $directory,
             'import-'.$run->id.'.xlsx',
-            'local',
+            'imports',
         );
 
-        abort_unless($path && Storage::disk('local')->exists($path), 500, 'Unable to store the import file.');
+        abort_unless($path && Storage::disk('imports')->exists($path), 500, 'Unable to store the import file.');
 
         $run->update(['file_path' => $path]);
 

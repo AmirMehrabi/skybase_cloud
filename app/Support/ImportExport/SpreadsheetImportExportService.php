@@ -408,9 +408,9 @@ class SpreadsheetImportExportService
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($columnIndex))->setAutoSize(true);
         }
 
-        Storage::disk('local')->makeDirectory(dirname($path));
+        Storage::disk('imports')->makeDirectory(dirname($path));
         $writer = new Xlsx($spreadsheet);
-        $writer->save(Storage::disk('local')->path($path));
+        $writer->save(Storage::disk('imports')->path($path));
         $spreadsheet->disconnectWorksheets();
     }
 

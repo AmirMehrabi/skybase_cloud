@@ -53,7 +53,7 @@ class ImportExportFeatureTest extends TestCase
     public function test_plan_import_request_stores_the_uploaded_file_before_queueing(): void
     {
         Queue::fake();
-        Storage::fake('local');
+        Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
 
@@ -65,13 +65,13 @@ class ImportExportFeatureTest extends TestCase
         $run = ImportExportRun::query()->firstOrFail();
 
         $this->assertNotNull($run->file_path);
-        Storage::disk('local')->assertExists($run->file_path);
+        Storage::disk('imports')->assertExists($run->file_path);
         Queue::assertPushed(ProcessImportJob::class);
     }
 
     public function test_plan_export_job_writes_filtered_xlsx_file(): void
     {
-        Storage::fake('local');
+        Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
 
@@ -95,7 +95,7 @@ class ImportExportFeatureTest extends TestCase
             'direction' => ImportExportRun::DIRECTION_EXPORT,
             'status' => ImportExportRun::STATUS_QUEUED,
             'filters' => ['status' => 'active'],
-            'disk' => 'local',
+            'disk' => 'imports',
         ]);
 
         (new ProcessExportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
@@ -103,9 +103,9 @@ class ImportExportFeatureTest extends TestCase
 
         $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
         $this->assertSame(1, $run->total_rows);
-        Storage::disk('local')->assertExists($run->file_path);
+        Storage::disk('imports')->assertExists($run->file_path);
 
-        $sheet = IOFactory::load(Storage::disk('local')->path($run->file_path))->getActiveSheet();
+        $sheet = IOFactory::load(Storage::disk('imports')->path($run->file_path))->getActiveSheet();
         $this->assertSame('internal_name', $sheet->getCell('B1')->getValue());
         $this->assertSame('exported_fiber', $sheet->getCell('B2')->getValue());
         $this->assertNull($sheet->getCell('B3')->getValue());
@@ -113,7 +113,7 @@ class ImportExportFeatureTest extends TestCase
 
     public function test_plan_import_upserts_rows_and_reports_validation_failures(): void
     {
-        Storage::fake('local');
+        Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
         Plan::factory()->create([
@@ -152,7 +152,7 @@ class ImportExportFeatureTest extends TestCase
 
     public function test_plan_import_generates_internal_name_from_name_when_missing(): void
     {
-        Storage::fake('local');
+        Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
 
@@ -204,7 +204,7 @@ class ImportExportFeatureTest extends TestCase
 
     public function test_subscription_import_creates_customer_and_subscription_from_one_row(): void
     {
-        Storage::fake('local');
+        Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
         $plan = Plan::factory()->create([
@@ -325,7 +325,7 @@ class ImportExportFeatureTest extends TestCase
             'module' => $module,
             'direction' => ImportExportRun::DIRECTION_IMPORT,
             'status' => ImportExportRun::STATUS_QUEUED,
-            'disk' => 'local',
+            'disk' => 'imports',
             'original_filename' => 'import.xlsx',
         ]);
     }
@@ -349,8 +349,8 @@ class ImportExportFeatureTest extends TestCase
             }
         }
 
-        Storage::disk('local')->makeDirectory(dirname($path));
-        (new Xlsx($spreadsheet))->save(Storage::disk('local')->path($path));
+        Storage::disk('imports')->makeDirectory(dirname($path));
+        (new Xlsx($spreadsheet))->save(Storage::disk('imports')->path($path));
         $spreadsheet->disconnectWorksheets();
     }
 }
