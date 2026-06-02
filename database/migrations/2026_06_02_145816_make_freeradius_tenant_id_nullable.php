@@ -6,19 +6,46 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        //
+        foreach ($this->tables() as $tableName) {
+            if (! Schema::hasTable($tableName)) {
+                continue;
+            }
+
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->string('tenant_id')->nullable()->change();
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        foreach (array_reverse($this->tables()) as $tableName) {
+            if (! Schema::hasTable($tableName)) {
+                continue;
+            }
+
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->string('tenant_id')->nullable(false)->change();
+            });
+        }
     }
 
     /**
-     * Reverse the migrations.
+     * @return array<int, string>
      */
-    public function down(): void
+    private function tables(): array
     {
-        //
+        return [
+            'radcheck',
+            'radreply',
+            'radgroupcheck',
+            'radgroupreply',
+            'radusergroup',
+            'radpostauth',
+            'nas',
+            'radippool',
+        ];
     }
 };
