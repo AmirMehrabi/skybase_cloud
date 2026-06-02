@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Router extends Model
 {
@@ -101,6 +102,11 @@ class Router extends Model
     public function netflowFlows(): HasMany
     {
         return $this->hasMany(NetflowFlow::class);
+    }
+
+    public function monitoringState(): HasOne
+    {
+        return $this->hasOne(RouterMonitoringState::class);
     }
 
     public function isMikrotik(): bool

@@ -123,6 +123,11 @@ class Customer extends Authenticatable implements LdapImportable
         return $this->hasMany(Ticket::class);
     }
 
+    public function notes(): HasMany
+    {
+        return $this->hasMany(CustomerNote::class);
+    }
+
     public function networkUsageRecords(): HasMany
     {
         return $this->hasMany(NetworkUsageRecord::class);

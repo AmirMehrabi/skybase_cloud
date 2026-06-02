@@ -9,7 +9,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-6" x-data="routerShow(@json($router), @json($netflowSummary))" x-cloak>
+<div class="space-y-6" x-data="routerShow(@json($router), @json($netflowSummary))" x-init="loadHealth()" x-cloak>
     <!-- Top Header -->
     <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -103,6 +103,54 @@
             </div>
             <p class="text-2xl font-bold text-gray-900" x-text="router.total_customers ?? 0"></p>
             <p class="text-xs text-gray-500 mt-3">Assigned customers</p>
+        </div>
+    </div>
+
+    <!-- Health Monitoring -->
+    <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Health Monitoring</h3>
+                <p class="text-sm text-gray-500 mt-1">Latency, packet loss, and resource history from RRD samples</p>
+            </div>
+            <select x-model="health.range" @change="loadHealth()" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-blue-500">
+                <option value="1h">1 hour</option>
+                <option value="6h">6 hours</option>
+                <option value="24h">24 hours</option>
+                <option value="7d">7 days</option>
+                <option value="30d">30 days</option>
+            </select>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Latest latency</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900" x-text="latestHealth('latency_ms', 'ms')"></p>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Packet loss</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900" x-text="latestHealth('packet_loss_percent', '%')"></p>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Online signal</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900" x-text="latestOnlineLabel()"></p>
+            </div>
+        </div>
+
+        <div class="mt-5 h-72 overflow-hidden rounded-xl bg-gray-50">
+            <template x-if="health.chartData.length > 1">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="h-full w-full">
+                    <polyline :points="healthLine('latency_ms')" fill="none" stroke="#2563eb" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
+                    <polyline :points="healthLine('packet_loss_percent')" fill="none" stroke="#dc2626" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
+                </svg>
+            </template>
+            <div x-show="health.chartData.length <= 1" class="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
+                No RRD history has been collected for this router yet.
+            </div>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-5 text-sm">
+            <span class="inline-flex items-center gap-2 text-gray-600"><span class="h-2.5 w-2.5 rounded-full bg-blue-600"></span>Latency</span>
+            <span class="inline-flex items-center gap-2 text-gray-600"><span class="h-2.5 w-2.5 rounded-full bg-red-600"></span>Packet loss</span>
         </div>
     </div>
 
@@ -399,6 +447,10 @@ function routerShow(router, netflowSummary) {
             message: '',
             ok: true
         },
+        health: {
+            range: '24h',
+            chartData: []
+        },
         deleteModal: {
             show: false,
             deleting: false
@@ -481,6 +533,47 @@ function routerShow(router, netflowSummary) {
             if (response.ok) {
                 this.netflow.summary = await response.json();
             }
+        },
+
+        async loadHealth() {
+            const response = await fetch(`{{ route('routers.monitoring.data', $router) }}?range=${this.health.range}`, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.health.chartData = data.chartData || [];
+            }
+        },
+
+        latestHealth(key, suffix) {
+            const value = [...this.health.chartData].reverse().find(point => point[key] !== null)?.[key];
+
+            return value === undefined ? '—' : `${Number(value).toFixed(1)} ${suffix}`;
+        },
+
+        latestOnlineLabel() {
+            const value = [...this.health.chartData].reverse().find(point => point.online !== null)?.online;
+
+            if (value === undefined) {
+                return '—';
+            }
+
+            return Number(value) >= 0.5 ? 'Online' : 'Offline';
+        },
+
+        healthLine(key) {
+            const max = Math.max(1, ...this.health.chartData.map(point => Number(point[key] || 0)));
+            const last = Math.max(1, this.health.chartData.length - 1);
+
+            return this.health.chartData.map((point, index) => {
+                const x = (index / last) * 100;
+                const y = 96 - ((Number(point[key] || 0) / max) * 88);
+
+                return `${x},${Math.max(4, Math.min(96, y))}`;
+            }).join(' ');
         },
 
         formatBytes(bytes) {

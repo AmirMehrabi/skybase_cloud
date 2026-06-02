@@ -87,6 +87,11 @@ class User extends Authenticatable
         return $this->hasMany(Ticket::class, 'assigned_user_id');
     }
 
+    public function customerNotes(): HasMany
+    {
+        return $this->hasMany(CustomerNote::class);
+    }
+
     public function getRoleDisplayName(): string
     {
         return match ($this->role) {

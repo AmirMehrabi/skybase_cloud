@@ -8,6 +8,7 @@ use App\Http\Requests\Router\UpdateRouterRequest;
 use App\Models\NetflowFlow;
 use App\Models\Router;
 use App\Models\Site;
+use App\Services\Monitoring\RrdToolService;
 use App\Services\Netflow\NetflowSummaryService;
 use App\Services\RouterOs\RouterOsTrafficFlowService;
 use Illuminate\Database\Eloquent\Collection;
@@ -299,6 +300,26 @@ class RouterController extends Controller
         $this->authorizeTenantAccess($router);
 
         return response()->json($netflowSummary->forRouter($router->fresh()));
+    }
+
+    public function monitoringData(Request $request, Router $router, RrdToolService $rrdTool): JsonResponse
+    {
+        $this->authorizeTenantAccess($router);
+
+        try {
+            $chartData = collect($rrdTool->routerHealthSeries($router, (string) $request->query('range', '24h')))
+                ->map(fn (array $row): array => [
+                    ...$row,
+                    'time' => date('H:i', (int) $row['timestamp']),
+                ])
+                ->values();
+        } catch (Throwable) {
+            $chartData = collect();
+        }
+
+        return response()->json([
+            'chartData' => $chartData,
+        ]);
     }
 
     /**

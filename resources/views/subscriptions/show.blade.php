@@ -75,6 +75,18 @@ function getStatusBadgeClass($status)
     x-data="{
         tab: 'overview',
         copiedField: null,
+        bandwidth: {
+            live: { rx_bps: 0, tx_bps: 0, interface_name: null, source: 'routeros', sampled_at: null, error: null },
+            history: [],
+            range: '1h',
+            timer: null,
+            loading: false,
+        },
+        initBandwidth() {
+            this.loadBandwidthHistory();
+            this.refreshLiveBandwidth();
+            this.bandwidth.timer = setInterval(() => this.refreshLiveBandwidth(), 5000);
+        },
         async copyCredential(field, value) {
             if (! value || value === 'N/A') {
                 return;
@@ -92,7 +104,59 @@ function getStatusBadgeClass($status)
                 this.copiedField = null;
             }
         },
+        async refreshLiveBandwidth() {
+            this.bandwidth.loading = true;
+
+            try {
+                const response = await fetch(@js(route('subscriptions.bandwidth.live', $subscription['id'])), {
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (response.ok) {
+                    this.bandwidth.live = await response.json();
+                }
+            } finally {
+                this.bandwidth.loading = false;
+            }
+        },
+        async loadBandwidthHistory() {
+            const response = await fetch(`${@js(route('subscriptions.bandwidth.history', $subscription['id']))}?range=${this.bandwidth.range}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.bandwidth.history = data.chartData || [];
+            }
+        },
+        bandwidthMax() {
+            return Math.max(1, ...this.bandwidth.history.map(point => Math.max(Number(point.rx_bps || 0), Number(point.tx_bps || 0))));
+        },
+        bandwidthLine(key) {
+            const max = this.bandwidthMax();
+            const last = Math.max(1, this.bandwidth.history.length - 1);
+
+            return this.bandwidth.history.map((point, index) => {
+                const x = (index / last) * 100;
+                const y = 96 - ((Number(point[key] || 0) / max) * 88);
+
+                return `${x},${Math.max(4, Math.min(96, y))}`;
+            }).join(' ');
+        },
+        formatSpeed(bits) {
+            const units = ['bps', 'Kbps', 'Mbps', 'Gbps'];
+            let size = Number(bits || 0);
+            let unit = 0;
+
+            while (size >= 1000 && unit < units.length - 1) {
+                size = size / 1000;
+                unit++;
+            }
+
+            return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+        },
     }"
+    x-init="initBandwidth()"
     class="space-y-6"
 >
     <!-- Top Header Card -->
@@ -479,6 +543,64 @@ function getStatusBadgeClass($status)
 
             <!-- TAB: Usage -->
             <div x-show="tab === 'usage'" x-transition class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Live Bandwidth</h3>
+                            <p class="text-sm text-gray-500 mt-1">Current PPPoE throughput and RRD-backed history for this subscription</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <select x-model="bandwidth.range" @change="loadBandwidthHistory()" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:ring-blue-500">
+                                <option value="1h">1 hour</option>
+                                <option value="6h">6 hours</option>
+                                <option value="24h">24 hours</option>
+                                <option value="7d">7 days</option>
+                            </select>
+                            <button type="button" @click="refreshLiveBandwidth(); loadBandwidthHistory();" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">RX</p>
+                            <p class="mt-2 text-2xl font-bold text-blue-600" x-text="formatSpeed(bandwidth.live.rx_bps)"></p>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">TX</p>
+                            <p class="mt-2 text-2xl font-bold text-emerald-600" x-text="formatSpeed(bandwidth.live.tx_bps)"></p>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Interface</p>
+                            <p class="mt-2 text-lg font-semibold text-gray-900" x-text="bandwidth.live.interface_name || '—'"></p>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Last sample</p>
+                            <p class="mt-2 text-lg font-semibold text-gray-900" x-text="bandwidth.live.sampled_at || 'No sample'"></p>
+                        </div>
+                    </div>
+
+                    <div x-show="bandwidth.live.error" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" x-text="bandwidth.live.error"></div>
+
+                    <div class="mt-5 h-72 overflow-hidden rounded-xl bg-gray-50">
+                        <template x-if="bandwidth.history.length > 1">
+                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="h-full w-full">
+                                <polyline :points="bandwidthLine('rx_bps')" fill="none" stroke="#2563eb" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
+                                <polyline :points="bandwidthLine('tx_bps')" fill="none" stroke="#059669" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
+                            </svg>
+                        </template>
+                        <div x-show="bandwidth.history.length <= 1" class="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
+                            No RRD bandwidth history has been collected for this subscription yet.
+                        </div>
+                    </div>
+                    <div class="mt-4 flex flex-wrap items-center gap-5 text-sm">
+                        <span class="inline-flex items-center gap-2 text-gray-600"><span class="h-2.5 w-2.5 rounded-full bg-blue-600"></span>RX</span>
+                        <span class="inline-flex items-center gap-2 text-gray-600"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>TX</span>
+                        <span class="text-gray-500">Source: <span x-text="bandwidth.live.source"></span></span>
+                    </div>
+                </div>
+
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                     <div class="mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Usage Summary</h3>

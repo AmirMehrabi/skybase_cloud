@@ -6,9 +6,13 @@ use App\Models\Customer;
 use App\Models\NetworkAlert;
 use App\Models\NetworkBandwidthSample;
 use App\Models\Router;
+use App\Models\RouterMonitoringState;
 use App\Models\Subscription;
+use App\Services\Monitoring\RrdToolService;
 use App\Services\RadiusAccountingUsageService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class NetworkController extends Controller
@@ -145,9 +149,115 @@ class NetworkController extends Controller
         return view('network.data-usage', compact('networkUsage'));
     }
 
+    public function monitoring(): View
+    {
+        $tenantId = $this->tenantId();
+        $routers = Router::query()
+            ->where('tenant_id', $tenantId)
+            ->with('monitoringState')
+            ->orderBy('name')
+            ->get();
+
+        $states = $routers->map(fn (Router $router): ?RouterMonitoringState => $router->monitoringState)->filter();
+        $online = $states->where('status', 'online')->count();
+        $warning = $states->where('status', 'warning')->count();
+        $offline = max(0, $routers->count() - $online - $warning);
+        $latest = $states->sortByDesc('sampled_at')->first();
+
+        $monitoring = [
+            'stats' => [
+                'totalRouters' => $routers->count(),
+                'onlineRouters' => $online,
+                'warningRouters' => $warning,
+                'offlineRouters' => $offline,
+                'avgLatency' => (float) round((float) $states->whereNotNull('latency_ms')->avg('latency_ms'), 2),
+                'avgPacketLoss' => (float) round((float) $states->whereNotNull('packet_loss_percent')->avg('packet_loss_percent'), 2),
+                'lastSampledAt' => $latest?->sampled_at?->diffForHumans() ?? 'No samples yet',
+                'rrdAvailable' => app(RrdToolService::class)->isAvailable(),
+            ],
+            'routers' => $routers->map(fn (Router $router): array => $this->routerMonitoringRow($router))->values(),
+        ];
+
+        return view('network.monitoring', compact('monitoring'));
+    }
+
+    public function monitoringData(Request $request, RrdToolService $rrdTool): JsonResponse
+    {
+        $tenantId = $this->tenantId();
+        $range = (string) $request->query('range', '24h');
+        $routerId = $request->query('router_id');
+
+        $routers = Router::query()
+            ->where('tenant_id', $tenantId)
+            ->when($routerId, fn ($query) => $query->whereKey($routerId))
+            ->orderBy('name')
+            ->get();
+
+        $series = $routers->flatMap(function (Router $router) use ($rrdTool, $range): array {
+            try {
+                return $rrdTool->routerHealthSeries($router, $range);
+            } catch (\Throwable) {
+                return [];
+            }
+        });
+
+        $chartData = $series
+            ->groupBy('timestamp')
+            ->map(function (Collection $rows, int|string $timestamp): array {
+                return [
+                    'timestamp' => (int) $timestamp,
+                    'time' => date('H:i', (int) $timestamp),
+                    'latency_ms' => $this->averageNullable($rows, 'latency_ms'),
+                    'packet_loss_percent' => $this->averageNullable($rows, 'packet_loss_percent'),
+                    'online_percent' => $this->averageNullable($rows, 'online') !== null ? round((float) $this->averageNullable($rows, 'online') * 100, 2) : null,
+                    'cpu_usage' => $this->averageNullable($rows, 'cpu_usage'),
+                    'memory_usage' => $this->averageNullable($rows, 'memory_usage'),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'range' => $range,
+            'chartData' => $chartData,
+        ]);
+    }
+
     private function tenantId(): string
     {
         return (string) (tenant()?->id ?? auth()->user()->tenant_id);
+    }
+
+    private function routerMonitoringRow(Router $router): array
+    {
+        $state = $router->monitoringState;
+
+        return [
+            'id' => $router->id,
+            'name' => $router->name,
+            'ipAddress' => $router->ip_address,
+            'site' => $router->siteRecord?->name ?? $router->site ?? 'Unassigned site',
+            'status' => $state?->status ?? $router->status ?? 'offline',
+            'latencyMs' => $state?->latency_ms,
+            'packetLossPercent' => $state?->packet_loss_percent,
+            'uptime' => $state?->uptime ?? $router->uptime,
+            'cpuUsage' => $state?->cpu_usage ?? $router->cpu_usage,
+            'memoryUsage' => $state?->memory_usage ?? $router->memory_usage,
+            'activeSessions' => $state?->active_sessions_count ?? $router->active_sessions_count,
+            'sampledAt' => $state?->sampled_at?->diffForHumans() ?? 'No sample yet',
+            'error' => $state?->error,
+            'url' => route('routers.show', $router),
+        ];
+    }
+
+    private function averageNullable(Collection $rows, string $key): ?float
+    {
+        $values = $rows->pluck($key)->filter(fn ($value): bool => $value !== null);
+
+        if ($values->isEmpty()) {
+            return null;
+        }
+
+        return round((float) $values->avg(), 2);
     }
 
     private function routerDisplayStatus(Router $router): string

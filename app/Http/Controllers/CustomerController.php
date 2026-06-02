@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Customer\StoreCustomerNoteRequest;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Http\Requests\NotificationPreferenceRequest;
@@ -148,6 +149,10 @@ class CustomerController extends Controller
             'invoices.subscription',
             'subscriptions.plan',
             'subscriptions.router',
+            'tickets.team',
+            'tickets.assignedUser',
+            'tickets.subscription',
+            'notes.author',
             'organization',
         ]);
 
@@ -183,6 +188,19 @@ class CustomerController extends Controller
                 ->whereNull('archived_at')
                 ->count(),
         ]);
+    }
+
+    public function storeNote(StoreCustomerNoteRequest $request, Customer $customer): RedirectResponse
+    {
+        $this->authorizeTenantAccess($customer);
+
+        $customer->notes()->create([
+            'tenant_id' => $customer->tenant_id,
+            'user_id' => $request->user()?->id,
+            'body' => $request->validated('body'),
+        ]);
+
+        return back()->with('success', 'Customer note added.');
     }
 
     /**

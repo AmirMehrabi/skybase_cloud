@@ -12,6 +12,8 @@ use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
+use App\Services\Monitoring\RrdToolService;
+use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\RadiusProvisioningService;
@@ -503,6 +505,47 @@ class SubscriptionController extends Controller
         ]);
     }
 
+    public function liveBandwidth(Subscription $subscription, SubscriptionBandwidthCollector $collector): JsonResponse
+    {
+        $this->authorizeTenantAccess($subscription);
+        $state = $subscription->bandwidthState;
+        $stale = ! $state?->sampled_at || $state->sampled_at->lte(now()->subSeconds((int) config('monitoring.subscription_live_ttl_seconds')));
+
+        if ($stale) {
+            $collector->collect($subscription->fresh(['router']));
+            $state = $subscription->fresh('bandwidthState')->bandwidthState;
+        }
+
+        return response()->json([
+            'rx_bps' => (int) ($state?->rx_bps ?? 0),
+            'tx_bps' => (int) ($state?->tx_bps ?? 0),
+            'interface_name' => $state?->interface_name,
+            'source' => $state?->source ?? 'routeros',
+            'sampled_at' => $state?->sampled_at?->diffForHumans(),
+            'error' => $state?->error,
+        ]);
+    }
+
+    public function bandwidthHistory(Request $request, Subscription $subscription, RrdToolService $rrdTool): JsonResponse
+    {
+        $this->authorizeTenantAccess($subscription);
+
+        try {
+            $chartData = collect($rrdTool->subscriptionBandwidthSeries($subscription, (string) $request->query('range', '1h')))
+                ->map(fn (array $row): array => [
+                    ...$row,
+                    'time' => date('H:i', (int) $row['timestamp']),
+                ])
+                ->values();
+        } catch (\Throwable) {
+            $chartData = collect();
+        }
+
+        return response()->json([
+            'chartData' => $chartData,
+        ]);
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */
@@ -528,6 +571,13 @@ class SubscriptionController extends Controller
                 ];
             })
             ->all();
+    }
+
+    private function authorizeTenantAccess(Subscription $subscription): void
+    {
+        if (auth()->check() && auth()->user()->tenant_id && $subscription->tenant_id !== auth()->user()->tenant_id) {
+            abort(403, 'You do not have access to this subscription.');
+        }
     }
 
     /**

@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
+use App\Models\CustomerNote;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Models\Ticket;
+use App\Models\TicketTeam;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -135,12 +138,136 @@ class CustomerControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('SUB-REAL-0001');
         $response->assertSee('Subscriptions');
+        $response->assertSee('Subscription Access');
+        $response->assertSee('jane.real');
+        $response->assertSee('Show');
         $response->assertSee('Fiber 300');
         $response->assertSee('INV-REAL-0001');
         $response->assertSee('PAY-REAL-0001');
         $response->assertDontSee('Services');
         $response->assertDontSee('INV-2024-0156');
         $response->assertDontSee('Mikrotik-01');
+    }
+
+    public function test_show_page_renders_customer_tickets_and_notes(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $customer = Customer::withoutGlobalScopes()->create(array_merge($this->validPayload(), [
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-TICKET-0001',
+            'name' => 'Jane Doe',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+        ]));
+
+        $team = TicketTeam::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Network Operations',
+            'slug' => 'network-operations',
+            'status' => 'active',
+            'assignment_strategy' => TicketTeam::STRATEGY_QUEUE,
+            'first_response_minutes' => 240,
+            'resolution_minutes' => 2880,
+        ]);
+
+        Ticket::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'ticket_number' => 'TCK-CUSTOMER-0001',
+            'customer_id' => $customer->id,
+            'ticket_team_id' => $team->id,
+            'opened_by_user_id' => $user->id,
+            'source' => 'admin_portal',
+            'subject' => 'Customer router follow up',
+            'priority' => Ticket::PRIORITY_HIGH,
+            'status' => Ticket::STATUS_OPEN,
+            'last_activity_at' => now(),
+        ]);
+
+        CustomerNote::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'user_id' => $user->id,
+            'body' => 'Prefers morning maintenance windows.',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('customers.show', $customer));
+
+        $response->assertOk();
+        $response->assertSee('TCK-CUSTOMER-0001');
+        $response->assertSee('Customer router follow up');
+        $response->assertSee('Network Operations');
+        $response->assertSee('customer_id='.$customer->id);
+        $response->assertSee('Prefers morning maintenance windows.');
+        $response->assertSee('Add Customer Note');
+    }
+
+    public function test_customer_note_can_be_added_from_profile(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+        $customer = Customer::withoutGlobalScopes()->create(array_merge($this->validPayload(), [
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-NOTE-0001',
+            'name' => 'Jane Doe',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+        ]));
+
+        $response = $this->actingAs($user)->post(route('customers.notes.store', $customer), [
+            'body' => 'Customer asked to call before any planned outage.',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success', 'Customer note added.');
+
+        $this->assertDatabaseHas('customer_notes', [
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'user_id' => $user->id,
+            'body' => 'Customer asked to call before any planned outage.',
+        ]);
+    }
+
+    public function test_customer_note_cannot_be_added_across_tenants(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $otherTenant = $this->createTenant('beta-net', 'BetaNet Communications');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+        $customer = Customer::withoutGlobalScopes()->create(array_merge($this->validPayload(), [
+            'tenant_id' => $otherTenant->id,
+            'customer_code' => 'CUS-OTHER-0001',
+            'email' => 'other@example.com',
+            'mobile' => '555-0202',
+            'name' => 'Other Customer',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+        ]));
+
+        $this->actingAs($user)->post(route('customers.notes.store', $customer), [
+            'body' => 'This should not be stored.',
+        ])->assertNotFound();
+
+        $this->assertDatabaseMissing('customer_notes', [
+            'customer_id' => $customer->id,
+            'body' => 'This should not be stored.',
+        ]);
     }
 
     private function createTenant(string $slug, string $companyName): Tenant

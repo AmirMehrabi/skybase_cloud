@@ -188,6 +188,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
         Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
         Route::patch('/{customer}/notifications', [CustomerController::class, 'updateNotifications'])->name('notifications.update');
+        Route::post('/{customer}/notes', [CustomerController::class, 'storeNote'])->name('notes.store');
         Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
         Route::patch('/{customer}/billing', [CustomerController::class, 'updateBilling'])->name('billing.update');
         Route::post('/{customer}/suspend', [CustomerController::class, 'suspend'])->name('suspend');
@@ -203,6 +204,8 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/create', [SubscriptionController::class, 'create'])->name('create');
         Route::post('/', [SubscriptionController::class, 'store'])->name('store');
         Route::get('/{subscription}', [SubscriptionController::class, 'show'])->name('show');
+        Route::get('/{subscription}/bandwidth/live', [SubscriptionController::class, 'liveBandwidth'])->name('bandwidth.live');
+        Route::get('/{subscription}/bandwidth/history', [SubscriptionController::class, 'bandwidthHistory'])->name('bandwidth.history');
         Route::get('/{subscription}/edit', [SubscriptionController::class, 'edit'])->name('edit');
         Route::put('/{subscription}', [SubscriptionController::class, 'update'])->name('update');
         Route::delete('/{subscription}', [SubscriptionController::class, 'destroy'])->name('destroy');
@@ -243,6 +246,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::post('/{router}/netflow/setup', [RouterController::class, 'setupNetflow'])->name('netflow.setup');
         Route::post('/{router}/netflow/test', [RouterController::class, 'testNetflow'])->name('netflow.test');
         Route::get('/{router}/netflow/data', [RouterController::class, 'netflowData'])->name('netflow.data');
+        Route::get('/{router}/monitoring/data', [RouterController::class, 'monitoringData'])->name('monitoring.data');
         Route::get('/{router}/sessions', [RouterController::class, 'sessions'])->name('sessions');
         Route::get('/{router}/queues', [RouterController::class, 'queues'])->name('queues');
         Route::get('/{router}/profiles', [RouterController::class, 'profiles'])->name('profiles');
@@ -312,6 +316,8 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     Route::prefix('network')->name('network.')->group(function () {
         Route::get('/data-usage', [NetworkController::class, 'dataUsage'])->name('data-usage');
         Route::get('/bandwidth', [NetworkController::class, 'bandwidth'])->name('bandwidth');
+        Route::get('/monitoring', [NetworkController::class, 'monitoring'])->name('monitoring');
+        Route::get('/monitoring/data', [NetworkController::class, 'monitoringData'])->name('monitoring.data');
         Route::get('/status', [NetworkController::class, 'status'])->name('status');
     });
 

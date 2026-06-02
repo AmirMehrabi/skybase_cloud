@@ -20,10 +20,22 @@ Schedule::command('routers:check-status')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
+Schedule::command('monitoring:collect-router-health')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::command('monitoring:collect-subscription-bandwidth')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 Schedule::command('subscriptions:sync-connection-status')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
 Schedule::command('subscriptions:kick-suspended-online')
     ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+Schedule::command('monitoring:prune-orphans')
+    ->daily()
     ->withoutOverlapping();

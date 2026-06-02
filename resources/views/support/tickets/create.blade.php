@@ -9,7 +9,7 @@
         <p class="text-sm text-slate-600">Create a customer-visible ticket on behalf of a customer.</p>
     </div>
 
-    <form method="POST" action="{{ route('support.tickets.store') }}" enctype="multipart/form-data" class="rounded-xl border border-slate-900/10 bg-white p-6 shadow-sm" x-data="supportTicketCreate(@js($subscriptionsByCustomer), @js((string) old('customer_id')), @js((string) old('subscription_id')))">
+    <form method="POST" action="{{ route('support.tickets.store') }}" enctype="multipart/form-data" class="rounded-xl border border-slate-900/10 bg-white p-6 shadow-sm" x-data="supportTicketCreate(@js($subscriptionsByCustomer), @js((string) old('customer_id', request('customer_id'))), @js((string) old('subscription_id', request('subscription_id'))))">
         @csrf
         <x-form.validation-summary />
 
