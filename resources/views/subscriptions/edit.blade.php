@@ -6,6 +6,24 @@
     $organization = $subscription->customer?->organization;
     $organizationBilling = $organization?->billing_enabled;
     $currentIpAddress = old('ip_address', $subscription->ip_address);
+    $initialIpRoutes = collect(old('ip_routes', $subscription->ipRoutes->map(fn ($route) => [
+        'ip_pool_id' => (string) $route->ip_pool_id,
+        'ip_address' => $route->ip_address,
+        'cidr' => (int) $route->cidr,
+        'sync_status' => $route->routeros_sync_status,
+        'sync_error' => $route->routeros_sync_error,
+    ])->all()))
+        ->filter(fn ($route) => is_array($route))
+        ->values()
+        ->map(fn ($route, $index) => [
+            'key' => $index + 1,
+            'ip_pool_id' => (string) ($route['ip_pool_id'] ?? ''),
+            'ip_address' => (string) ($route['ip_address'] ?? ''),
+            'cidr' => (int) ($route['cidr'] ?? 32),
+            'sync_status' => $route['sync_status'] ?? null,
+            'sync_error' => $route['sync_error'] ?? null,
+        ])
+        ->all();
 @endphp
 
 @push('styles')
@@ -15,7 +33,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-6 pb-24" x-data="subscriptionEditForm(@js(route('subscriptions.suggest-ip', $subscription)), @js($subscription->isSystemManagedIp() && $subscription->ipPool !== null), @js((string) $currentIpAddress))" x-cloak>
+<div class="space-y-6 pb-24" x-data="subscriptionEditForm(@js(route('subscriptions.suggest-ip', $subscription)), @js($subscription->isSystemManagedIp() && $subscription->ipPool !== null), @js((string) $currentIpAddress), @js($ipPools), @js($initialIpRoutes), @js((string) $subscription->ip_pool_id))" x-cloak>
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
             <a href="{{ route('subscriptions.show', $subscription) }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
@@ -90,65 +108,126 @@
                     <input type="text" name="site" id="site" value="{{ old('site', $subscription->site) }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                     @error('site')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
-                <div class="lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2">
-                                <label for="ip_address" class="block text-sm font-medium text-gray-700">IP Address</label>
-                                @if($subscription->isSystemManagedIp() && $subscription->ipPool)
+                @if($subscription->isSystemManagedIp() && $subscription->ipPool)
+                    <div class="lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                        <input type="hidden" name="sync_ip_routes" value="1">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <label for="ip_address" class="block text-sm font-medium text-gray-700">IP Pool Assignment</label>
                                     <span class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                                         {{ $subscription->ipPool->name }}
                                     </span>
-                                @endif
-                            </div>
-                            <p class="text-xs text-gray-500">
-                                {{ $subscription->isSystemManagedIp() && $subscription->ipPool
-                                    ? 'Use the suggest button to pick a free IP from the current pool. Saving will update the IPAM inventory.'
-                                    : 'You can still change the subscription IP manually.' }}
-                            </p>
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <div class="sm:max-w-md flex-1">
-                                    <input type="text" name="ip_address" id="ip_address" x-model="form.ip_address" value="{{ $currentIpAddress }}" placeholder="192.168.1.100" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
                                 </div>
-                                <button
-                                    type="button"
-                                    @click="suggestIpAddress()"
-                                    :disabled="suggestingIp || ! canSuggestIp"
-                                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    <svg x-show="! suggestingIp" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                    </svg>
-                                    <svg x-show="suggestingIp" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span x-text="suggestingIp ? 'Finding...' : 'Suggest free IP'"></span>
-                                </button>
+                                <p class="text-xs text-gray-500">Primary IP is selected from the subscription pool. Routes below use their own IPAM row and can include a subnet.</p>
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                    <div class="sm:max-w-md flex-1">
+                                        <select name="ip_address" id="ip_address" x-model="form.ip_address" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                            <option value="">Release primary IP</option>
+                                            <template x-for="address in availablePrimaryAddresses()" :key="address.id">
+                                                <option :value="address.ip_address" x-text="address.ip_address"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        @click="suggestIpAddress()"
+                                        :disabled="suggestingIp || ! canSuggestIp"
+                                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <svg x-show="! suggestingIp" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                        </svg>
+                                        <svg x-show="suggestingIp" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span x-text="suggestingIp ? 'Finding...' : 'Suggest free IP'"></span>
+                                    </button>
+                                </div>
+                                @error('ip_address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                             </div>
-                            @error('ip_address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                        </div>
-                        <div class="grid gap-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 lg:min-w-72">
-                            <div class="flex items-center justify-between gap-4">
-                                <span>Current IP</span>
-                                <span class="font-mono text-gray-900">{{ $subscription->ip_address ?: 'Not set' }}</span>
-                            </div>
-                            <div class="flex items-center justify-between gap-4">
-                                <span>IP Mode</span>
-                                <span class="font-medium text-gray-900">{{ $subscription->isSystemManagedIp() ? 'System managed' : 'Router managed' }}</span>
-                            </div>
-                            @if($subscription->ipPool)
+                            <div class="grid gap-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 lg:min-w-72">
+                                <div class="flex items-center justify-between gap-4">
+                                    <span>Current IP</span>
+                                    <span class="font-mono text-gray-900">{{ $subscription->ip_address ?: 'Not set' }}</span>
+                                </div>
                                 <div class="flex items-center justify-between gap-4">
                                     <span>Available</span>
                                     <span class="font-medium text-gray-900">{{ $subscription->ipPool->available_ips }}</span>
                                 </div>
-                            @endif
-                            <div class="min-h-5 text-xs" :class="ipMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'">
-                                <span x-text="ipMessage.text"></span>
+                                <div class="min-h-5 text-xs" :class="ipMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'">
+                                    <span x-text="ipMessage.text"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 rounded-xl border border-blue-100 bg-white p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900">IP Route</h4>
+                                    <p class="mt-1 text-xs text-gray-500">RouterOS route dst-address values. Gateway is the primary IP above.</p>
+                                </div>
+                                <button type="button" @click="addIpRoute()" class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    Add IP Route
+                                </button>
+                            </div>
+
+                            <div x-show="ipRoutes.length === 0" class="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+                                No IP routes configured.
+                            </div>
+
+                            <div class="mt-4 space-y-3">
+                                <template x-for="(route, index) in ipRoutes" :key="route.key">
+                                    <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-12 md:items-end">
+                                        <div class="md:col-span-4">
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">IPAM</label>
+                                            <select :name="'ip_routes[' + index + '][ip_pool_id]'" x-model="route.ip_pool_id" @change="route.ip_address = ''" class="block w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                <option value="">Select IPAM</option>
+                                                @foreach($ipPools ?? [] as $pool)
+                                                    <option value="{{ $pool->id }}">{{ $pool->name }} ({{ $pool->cidr_notation }})</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="md:col-span-4">
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
+                                            <select :name="'ip_routes[' + index + '][ip_address]'" x-model="route.ip_address" class="block w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                <option value="">Select IP address</option>
+                                                <template x-for="address in availableRouteAddresses(route, index)" :key="address.id">
+                                                    <option :value="address.ip_address" x-text="address.ip_address"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Subnet</label>
+                                            <div class="flex rounded-lg shadow-sm">
+                                                <span class="inline-flex items-center rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 px-3 text-sm text-gray-500">/</span>
+                                                <input type="number" min="1" max="32" :name="'ip_routes[' + index + '][cidr]'" x-model="route.cidr" class="block w-full rounded-r-lg border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                            </div>
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <button type="button" @click="removeIpRoute(index)" class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                                                Remove
+                                            </button>
+                                        </div>
+                                        <template x-if="route.sync_error">
+                                            <div class="md:col-span-12 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" x-text="route.sync_error"></div>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
-                </div>
+                @else
+                    <div class="lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                        <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">Manual IP Address</label>
+                        <input type="text" name="ip_address" id="ip_address" value="{{ $currentIpAddress }}" placeholder="192.168.1.100" class="block w-full max-w-md rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
+                        @error('ip_address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                @endif
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" id="status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
@@ -245,16 +324,94 @@
 
 @push('scripts')
 <script>
-function subscriptionEditForm(suggestIpUrl, canSuggestIp, currentIpAddress) {
+function subscriptionEditForm(suggestIpUrl, canSuggestIp, currentIpAddress, ipPools, initialIpRoutes, primaryPoolId) {
     return {
         form: {
             ip_address: currentIpAddress || '',
         },
+        ipPools,
+        ipRoutes: initialIpRoutes || [],
+        nextIpRouteKey: (initialIpRoutes || []).length + 1,
+        primaryPoolId,
         canSuggestIp,
         suggestingIp: false,
         ipMessage: {
             type: 'info',
             text: canSuggestIp ? 'Click suggest to fetch the next free IP from the current pool.' : 'IP suggestions are only available for system-managed pools.',
+        },
+        primaryPool() {
+            if (! this.primaryPoolId) return null;
+
+            return this.ipPools.find(pool => String(pool.id) === String(this.primaryPoolId));
+        },
+        routeIpPool(route) {
+            if (! route.ip_pool_id) return null;
+
+            return this.ipPools.find(pool => String(pool.id) === String(route.ip_pool_id));
+        },
+        uniqueAddresses(addresses) {
+            const seen = new Set();
+
+            return addresses.filter(address => {
+                if (! address || ! address.ip_address || seen.has(address.ip_address)) {
+                    return false;
+                }
+
+                seen.add(address.ip_address);
+
+                return true;
+            });
+        },
+        availablePrimaryAddresses() {
+            const pool = this.primaryPool();
+            if (! pool) return [];
+
+            const addresses = Array.isArray(pool.available_addresses) ? [...pool.available_addresses] : [];
+
+            if (this.form.ip_address && ! addresses.some(address => address.ip_address === this.form.ip_address)) {
+                addresses.unshift({
+                    id: `current-primary-${this.form.ip_address}`,
+                    ip_address: this.form.ip_address,
+                });
+            }
+
+            return this.uniqueAddresses(addresses);
+        },
+        availableRouteAddresses(route, index) {
+            const pool = this.routeIpPool(route);
+            if (! pool) return [];
+
+            const addresses = Array.isArray(pool.available_addresses) ? [...pool.available_addresses] : [];
+            if (route.ip_address && ! addresses.some(address => address.ip_address === route.ip_address)) {
+                addresses.unshift({
+                    id: `current-route-${index}-${route.ip_address}`,
+                    ip_address: route.ip_address,
+                });
+            }
+
+            const selectedAddresses = this.ipRoutes
+                .filter((item, itemIndex) => itemIndex !== index)
+                .map(item => item.ip_address)
+                .filter(Boolean);
+
+            return this.uniqueAddresses(addresses).filter(address => {
+                if (address.ip_address === this.form.ip_address && address.ip_address !== route.ip_address) return false;
+
+                return ! selectedAddresses.includes(address.ip_address);
+            });
+        },
+        addIpRoute() {
+            this.ipRoutes.push({
+                key: this.nextIpRouteKey++,
+                ip_pool_id: '',
+                ip_address: '',
+                cidr: 32,
+                sync_status: null,
+                sync_error: null,
+            });
+        },
+        removeIpRoute(index) {
+            this.ipRoutes.splice(index, 1);
         },
         async suggestIpAddress() {
             if (! this.canSuggestIp || this.suggestingIp) {

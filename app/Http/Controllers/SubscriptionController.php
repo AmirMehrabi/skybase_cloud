@@ -291,15 +291,16 @@ class SubscriptionController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
             'notes' => 'nullable|string',
+            'sync_ip_routes' => 'nullable|boolean',
             'ip_routes' => 'nullable|array',
             'ip_routes.*' => 'array',
             'ip_routes.*.ip_pool_id' => 'nullable|integer|exists:ip_pools,id',
             'ip_routes.*.ip_address' => 'nullable|ip|max:255',
             'ip_routes.*.cidr' => 'nullable|integer|min:1|max:32',
         ]);
-        $ipRoutesProvided = array_key_exists('ip_routes', $validated);
+        $ipRoutesProvided = $request->boolean('sync_ip_routes') || array_key_exists('ip_routes', $validated);
         $ipRoutes = $this->normalizedIpRouteRows($validated['ip_routes'] ?? []);
-        unset($validated['ip_routes']);
+        unset($validated['sync_ip_routes'], $validated['ip_routes']);
         $ipAddress = array_key_exists('ip_address', $validated) ? $validated['ip_address'] : null;
         $ipAddressProvided = array_key_exists('ip_address', $validated);
         unset($validated['ip_address']);
@@ -694,7 +695,7 @@ class SubscriptionController extends Controller
     private function normalizedIpRouteRows(array $routes): array
     {
         return collect($routes)
-            ->filter(fn (array $route): bool => filled($route['ip_pool_id'] ?? null) || filled($route['ip_address'] ?? null))
+            ->filter(fn (mixed $route): bool => is_array($route) && (filled($route['ip_pool_id'] ?? null) || filled($route['ip_address'] ?? null)))
             ->map(fn (array $route): array => [
                 'ip_pool_id' => (int) ($route['ip_pool_id'] ?? 0),
                 'ip_address' => (string) ($route['ip_address'] ?? ''),

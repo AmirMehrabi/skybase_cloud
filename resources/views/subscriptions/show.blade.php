@@ -315,7 +315,7 @@ if (! function_exists('getStatusBadgeClass')) {
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="space-y-2">
                     <div class="flex flex-wrap items-center gap-2">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">IP Assignment</h2>
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">{{ $subscriptionModel->isSystemManagedIp() ? 'IP Pool Assignment' : 'IP Assignment' }}</h2>
                         @if($subscriptionModel->isSystemManagedIp() && $subscriptionModel->ipPool)
                             <span class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                                 {{ $subscriptionModel->ipPool->name }}
@@ -345,7 +345,7 @@ if (! function_exists('getStatusBadgeClass')) {
                     </a>
                 </div>
             </div>
-            @if($subscriptionModel->ipRoutes->isNotEmpty())
+            @if($subscriptionModel->isSystemManagedIp() && $subscriptionModel->ipRoutes->isNotEmpty())
                 <div class="mt-4 border-t border-gray-200 pt-4">
                     <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">IP Routes</h3>
                     <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">

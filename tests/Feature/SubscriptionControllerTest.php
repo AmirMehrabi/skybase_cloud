@@ -168,11 +168,13 @@ class SubscriptionControllerTest extends TestCase
         $showResponse->assertOk();
         $showResponse->assertSee('Change IP');
         $showResponse->assertSee('System managed');
+        $showResponse->assertSee('IP Pool Assignment');
 
         $editResponse = $this->actingAs($user)->get(route('subscriptions.edit', $subscription));
         $editResponse->assertOk();
         $editResponse->assertSee('Suggest free IP');
-        $editResponse->assertSee('IP Address');
+        $editResponse->assertSee('IP Pool Assignment');
+        $editResponse->assertSee('IP Route');
     }
 
     public function test_suggest_ip_returns_the_next_free_ip_in_the_current_pool(): void
@@ -217,6 +219,65 @@ class SubscriptionControllerTest extends TestCase
             'ip_address' => '10.10.0.12',
             'status' => 'assigned',
             'subscription_code' => $subscription->subscription_code,
+        ]);
+    }
+
+    public function test_update_can_remove_all_subscription_ip_routes_from_edit_form(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
+        {
+            private array $lastSentence = [];
+
+            public function execute(Router $router, callable $callback): mixed
+            {
+                return $callback(null, $this);
+            }
+
+            public function writeSentence($connection, array $words): void
+            {
+                $this->lastSentence = $words;
+            }
+
+            public function readResponse($connection): array
+            {
+                return [];
+            }
+        });
+
+        $routeIp = IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.10.0.13',
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'metadata' => ['purpose' => 'subscription_ip_route'],
+        ]);
+        $ipRoute = SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address_id' => $routeIp->id,
+            'ip_address' => '10.10.0.13',
+            'cidr' => 32,
+            'routeros_comment' => 'skybase:subscription-ip-route:remove',
+            'routeros_sync_status' => 'synced',
+        ]);
+
+        $response = $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'sync_ip_routes' => '1',
+        ]);
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+
+        $this->assertDatabaseMissing('subscription_ip_routes', [
+            'id' => $ipRoute->id,
+        ]);
+        $this->assertDatabaseHas('ip_addresses', [
+            'id' => $routeIp->id,
+            'status' => 'available',
+            'customer_id' => null,
+            'subscription_code' => null,
         ]);
     }
 
