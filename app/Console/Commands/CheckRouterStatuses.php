@@ -47,7 +47,7 @@ class CheckRouterStatuses extends Command
 
             Router::query()
                 ->withoutGlobalScopes()
-                ->where('tenant_id', $tenant->id)
+                // ->where('tenant_id', $tenant->id)
                 ->where('enable_monitoring', true)
                 ->when($this->option('router'), fn ($query, string $routerId) => $query->whereKey($routerId))
                 ->when(! $this->option('force'), function ($query) use ($threshold): void {
