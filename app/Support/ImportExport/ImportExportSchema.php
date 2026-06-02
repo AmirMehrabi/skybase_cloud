@@ -72,7 +72,7 @@ final class ImportExportSchema
                 'subscription_code',
                 'subscription_name',
                 'service_type',
-                'plan_internal_name',
+                'plan_name',
                 'router_name',
                 'site',
                 'connection_type',

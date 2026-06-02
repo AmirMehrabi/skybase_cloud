@@ -8,6 +8,7 @@ use App\Models\ImportExportRunRow;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Services\RadiusProvisioningService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -191,7 +192,7 @@ class SpreadsheetImportExportService
                     $subscription->subscription_code,
                     $subscription->name,
                     $subscription->service_type,
-                    $subscription->plan?->internal_name,
+                    $subscription->plan?->name,
                     $subscription->router?->name,
                     $subscription->site,
                     $subscription->connection_type,
@@ -293,7 +294,7 @@ class SpreadsheetImportExportService
             'email' => ['nullable', 'email', 'max:255'],
             'customer_status' => ['nullable', Rule::in(['pending', 'active', 'inactive', 'suspended'])],
             'billing_type' => ['nullable', Rule::in(['prepaid', 'postpaid'])],
-            'plan_internal_name' => ['required', 'string', 'max:255'],
+            'plan_name' => ['required', 'string', 'max:255'],
             'router_name' => ['nullable', 'string', 'max:255'],
             'subscription_code' => ['nullable', 'string', 'max:255'],
             'subscription_name' => ['nullable', 'string', 'max:255'],
@@ -323,9 +324,9 @@ class SpreadsheetImportExportService
             return $this->failedResult($data['subscription_code'] ?? null, 'Customer identity is required.');
         }
 
-        $plan = Plan::query()->where('internal_name', $data['plan_internal_name'])->first();
+        $plan = $this->findPlanByName($data['plan_name']);
         if (! $plan) {
-            return $this->failedResult($data['subscription_code'] ?? null, 'Plan internal_name was not found.');
+            return $this->failedResult($data['subscription_code'] ?? null, 'Plan name was not found or is ambiguous.');
         }
 
         $router = null;
@@ -357,23 +358,22 @@ class SpreadsheetImportExportService
         }
 
         return DB::transaction(function () use ($run, $data, $plan, $router, $existingSubscription): array {
-            $customer = filled($data['customer_code'] ?? null)
-                ? Customer::query()->where('tenant_id', $run->tenant_id)->where('customer_code', $data['customer_code'])->first()
-                : null;
-            $customerAction = $customer ? 'updated' : 'created';
-            $customer ??= new Customer(['tenant_id' => $run->tenant_id]);
-            $customer->fill($this->customerAttributes($data));
+            $customer = $this->resolveCustomerForImport($run, $data);
+            $customerAction = $customer->exists ? 'updated' : 'created';
+            $customer->fill($this->customerAttributes($data, $customer->exists ? $customer : null));
             $customer->tenant_id = $run->tenant_id;
             $customer->save();
 
             $subscriptionAction = $existingSubscription ? 'updated' : 'created';
             $subscription = $existingSubscription ?? new Subscription(['tenant_id' => $run->tenant_id]);
-            $subscription->fill($this->subscriptionAttributes($data, $customer, $plan, $router));
+            $subscription->fill($this->subscriptionAttributes($data, $customer, $plan, $router, $existingSubscription));
             $subscription->tenant_id = $run->tenant_id;
             $subscription->customer_id = $customer->id;
             $subscription->plan_id = $plan->id;
             $subscription->router_id = $router?->id;
             $subscription->save();
+
+            app(RadiusProvisioningService::class)->syncSubscriptionsForCustomer($customer->fresh());
 
             return [
                 'status' => $subscriptionAction === 'created' || $customerAction === 'created' ? 'created' : 'updated',
@@ -508,6 +508,8 @@ class SpreadsheetImportExportService
         foreach (ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTIONS) as $heading) {
             $normalized[$heading] = $this->stringOrNull($row[$heading] ?? null);
         }
+
+        $normalized['plan_name'] = $this->stringOrNull($row['plan_name'] ?? $row['plan_internal_name'] ?? null);
 
         foreach (['customer_billing_enabled', 'tax_exempt', 'billing_enabled'] as $field) {
             $normalized[$field] = $this->boolValue($row[$field] ?? true);
