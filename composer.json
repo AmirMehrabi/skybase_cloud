@@ -11,6 +11,7 @@
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.1",
+        "maatwebsite/excel": "4.x-dev",
         "spatie/laravel-activitylog": "^5.0",
         "stancl/tenancy": "^3.9"
     },

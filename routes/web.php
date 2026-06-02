@@ -20,6 +20,7 @@ use App\Http\Controllers\CustomerPortal\SubscriptionController as CustomerPortal
 use App\Http\Controllers\CustomerPortal\TicketController as CustomerPortalTicketController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
+use App\Http\Controllers\ImportExportController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\NotificationController;
@@ -200,6 +201,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/', [SubscriptionController::class, 'index'])->name('index');
         Route::get('/data', [SubscriptionController::class, 'data'])->name('data');
         Route::get('/stats', [SubscriptionController::class, 'stats'])->name('stats');
+        Route::get('/import-export-runs', [ImportExportController::class, 'subscriptionRuns'])->name('import-export-runs');
+        Route::post('/export', [ImportExportController::class, 'exportSubscriptions'])->name('export');
+        Route::post('/import', [ImportExportController::class, 'importSubscriptions'])->name('import');
         Route::get('/check-pppoe-username', [SubscriptionController::class, 'checkPppoeUsername'])->name('check-pppoe-username');
         Route::get('/create', [SubscriptionController::class, 'create'])->name('create');
         Route::post('/', [SubscriptionController::class, 'store'])->name('store');
@@ -219,6 +223,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
     // Plan Management Routes
     Route::prefix('plans')->name('plans.')->group(function () {
         Route::get('/', [PlanController::class, 'index'])->name('index');
+        Route::get('/import-export-runs', [ImportExportController::class, 'planRuns'])->name('import-export-runs');
+        Route::post('/export', [ImportExportController::class, 'exportPlans'])->name('export');
+        Route::post('/import', [ImportExportController::class, 'importPlans'])->name('import');
         Route::get('/create', [PlanController::class, 'create'])->name('create');
         Route::post('/', [PlanController::class, 'store'])->name('store');
         Route::get('/{plan}', [PlanController::class, 'show'])->name('show');
@@ -226,6 +233,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::put('/{plan}', [PlanController::class, 'update'])->name('update');
         Route::delete('/{plan}', [PlanController::class, 'destroy'])->name('destroy');
     });
+
+    Route::get('/import-export/{module}/{run}', [ImportExportController::class, 'show'])->name('import-export.show');
+    Route::get('/import-export/{module}/{run}/download', [ImportExportController::class, 'download'])->name('import-export.download');
 
     // Router Management Routes
     Route::get('/vpn-users/data', [VpnUserController::class, 'data'])->name('vpn-users.data');

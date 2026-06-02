@@ -11,17 +11,87 @@
 @section('content')
 <div class="space-y-6" x-data="subscriptionsIndex()">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Subscriptions</h1>
             <p class="text-sm text-gray-500 mt-1">Manage customer subscriptions and services</p>
         </div>
-        <a href="{{ route('subscriptions.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Create Subscription
-        </a>
+        <div class="flex flex-wrap items-center gap-3">
+            <form method="POST" action="{{ route('subscriptions.export') }}">
+                @csrf
+                <input type="hidden" name="search" :value="filters.search">
+                <input type="hidden" name="status" :value="filters.status">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export
+                </button>
+            </form>
+            <button type="button" @click="importModal.show = true" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                </svg>
+                Import
+            </button>
+            <a href="{{ route('subscriptions.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Create Subscription
+            </a>
+        </div>
+    </div>
+
+    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900">Import / Export Activity</h2>
+                <p class="mt-1 text-xs text-gray-500">Customer and subscription imports run together from this page.</p>
+            </div>
+            <button type="button" @click="fetchImportExportRuns()" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Refresh</button>
+        </div>
+        <div class="mt-4 overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Run</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Rows</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Results</th>
+                        <th class="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    <template x-if="importExportRuns.length === 0">
+                        <tr>
+                            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">No import/export runs yet.</td>
+                        </tr>
+                    </template>
+                    <template x-for="run in importExportRuns" :key="run.id">
+                        <tr>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                <div class="font-medium text-gray-900" x-text="`${capitalize(run.direction)} #${run.id}`"></div>
+                                <div class="text-xs text-gray-500" x-text="run.original_filename || run.created_at"></div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold" :class="runStatusClass(run.status)" x-text="capitalize(run.status)"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700" x-text="`${run.processed_rows} / ${run.total_rows}`"></td>
+                            <td class="px-4 py-3 text-sm text-gray-700" x-text="`Created ${run.created_count}, updated ${run.updated_count}, failed ${run.failed_count}`"></td>
+                            <td class="px-4 py-3 text-right text-sm">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a :href="run.report_url" class="font-medium text-blue-600 hover:text-blue-800">Report</a>
+                                    <template x-if="run.download_url">
+                                        <a :href="run.download_url" class="font-medium text-green-700 hover:text-green-800">Download</a>
+                                    </template>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Stats Cards -->
@@ -264,6 +334,33 @@
         name="deleteModal.subscription?.subscription_code"
         confirm-action="deleteSubscription()"
     />
+
+    <div x-show="importModal.show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" @click.outside="importModal.show = false">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Import Customers and Subscriptions</h2>
+                    <p class="mt-1 text-sm text-gray-500">Upload the same XLSX template produced by Export. Matching customer and subscription codes are updated.</p>
+                </div>
+                <button type="button" @click="importModal.show = false" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('subscriptions.import') }}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                @csrf
+                <x-input.file name="file" label="XLSX file" accept=".xlsx,.xls" required />
+                <div class="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                    Each row imports customer fields and one subscription. Rows with validation errors are skipped and listed in the report.
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" @click="importModal.show = false" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Queue Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @push('scripts')
@@ -293,10 +390,17 @@ function subscriptionsIndex() {
             subscription: null,
             deleting: false
         },
+        importModal: {
+            show: false,
+        },
+        importExportRuns: [],
+        importExportTimer: null,
 
         init() {
             this.fetchStats();
             this.fetchData();
+            this.fetchImportExportRuns();
+            this.importExportTimer = window.setInterval(() => this.fetchImportExportRuns(), 10000);
         },
 
         async fetchStats() {
@@ -326,6 +430,15 @@ function subscriptionsIndex() {
                 console.error('Error fetching subscriptions:', error);
             } finally {
                 this.loading = false;
+            }
+        },
+        async fetchImportExportRuns() {
+            try {
+                const response = await fetch('{{ route('subscriptions.import-export-runs') }}');
+                const data = await response.json();
+                this.importExportRuns = data.runs;
+            } catch (error) {
+                console.error('Error fetching import/export runs:', error);
             }
         },
 
@@ -367,6 +480,22 @@ function subscriptionsIndex() {
                 this.pagination.current_page = 1;
                 this.fetchData();
             }, 300);
+        },
+        capitalize(str) {
+            if (!str) return '';
+
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        },
+
+        runStatusClass(status) {
+            const classes = {
+                queued: 'bg-slate-100 text-slate-700 border-slate-200',
+                processing: 'bg-blue-100 text-blue-700 border-blue-200',
+                completed: 'bg-green-100 text-green-700 border-green-200',
+                failed: 'bg-red-100 text-red-700 border-red-200',
+            };
+
+            return classes[status] || 'bg-gray-100 text-gray-700 border-gray-200';
         },
 
         prevPage() {
