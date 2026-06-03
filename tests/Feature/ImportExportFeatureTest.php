@@ -6,9 +6,12 @@ use App\Jobs\ImportExport\ProcessExportJob;
 use App\Jobs\ImportExport\ProcessImportJob;
 use App\Models\Customer;
 use App\Models\ImportExportRun;
+use App\Models\IpAddress;
+use App\Models\IpPool;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Models\SubscriptionIpRoute;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ImportExport\ImportExportSchema;
@@ -515,6 +518,165 @@ class ImportExportFeatureTest extends TestCase
             'tenant_id' => $tenant->id,
             'username' => 'jane.home.2',
             'attribute' => 'Cleartext-Password',
+        ]);
+    }
+
+    public function test_subscription_import_splits_multiple_ips_into_primary_and_ip_routes(): void
+    {
+        Storage::fake('imports');
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+        $planName = 'Fiber 300 Import '.substr((string) Str::uuid(), 0, 8);
+        $routerName = 'Core Router '.substr((string) Str::uuid(), 0, 8);
+        $subscriptionCode = 'SUB-IMP-'.substr((string) Str::uuid(), 0, 8);
+        $username = 'john.routed.'.substr((string) Str::uuid(), 0, 8);
+        $plan = Plan::factory()->create([
+            'name' => $planName,
+            'internal_name' => 'fiber_300_'.substr((string) Str::uuid(), 0, 8),
+            'status' => 'active',
+            'price' => 149.99,
+            'billing_cycle' => 'monthly',
+        ]);
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => $routerName,
+            'vendor' => 'Cisco',
+            'enable_provisioning' => false,
+        ]);
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Import Pool',
+            'network_address' => '10.40.0.0',
+            'cidr' => 24,
+            'gateway' => '10.40.0.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'site' => 'North POP',
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '10.40.0.10',
+            'status' => 'available',
+        ]);
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '10.40.0.11',
+            'status' => 'available',
+        ]);
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_SUBSCRIPTIONS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTIONS), [[
+            'customer_code' => 'CUS-IMP-0002',
+            'customer_type' => 'individual',
+            'customer_name' => 'John Smith',
+            'first_name' => 'John',
+            'last_name' => 'Smith',
+            'company_name' => null,
+            'national_id' => 'NAT-002',
+            'email' => 'john@example.com',
+            'phone' => '555-0200',
+            'mobile' => '555-0201',
+            'whatsapp' => null,
+            'address_line1' => '456 Main',
+            'address_line2' => null,
+            'city' => 'Tehran',
+            'state' => 'Tehran',
+            'postal_code' => '12345',
+            'country' => 'Iran',
+            'customer_status' => 'active',
+            'billing_type' => 'prepaid',
+            'customer_billing_enabled' => 'yes',
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => 'no',
+            'subscription_code' => $subscriptionCode,
+            'subscription_name' => 'John Routed Fiber',
+            'service_type' => 'pppoe',
+            'plan_name' => $plan->name,
+            'router_name' => $router->name,
+            'site' => 'North POP',
+            'connection_type' => 'pppoe',
+            'ip_address' => '10.40.0.10, 10.40.0.11',
+            'mac_address' => null,
+            'ip_management' => 'router',
+            'pppoe_username' => $username,
+            'pppoe_password' => 'secret',
+            'base_price' => 149.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 149.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => 'yes',
+            'grace_period_days' => 7,
+            'next_billing_date' => '2026-06-10',
+            'status' => 'active',
+            'start_date' => '2026-06-01 00:00:00',
+            'end_date' => null,
+            'activation_date' => '2026-06-01 00:00:00',
+            'suspended_at' => null,
+            'cancelled_at' => null,
+            'notes' => 'Imported service with routes',
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+        $this->assertSame(1, $run->created_count);
+
+        $subscription = Subscription::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subscription_code', $subscriptionCode)
+            ->firstOrFail();
+
+        $this->assertSame('system', $subscription->ip_management);
+        $this->assertSame($pool->id, $subscription->ip_pool_id);
+        $this->assertSame('10.40.0.10', $subscription->ip_address);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '10.40.0.10',
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'subscription_code' => $subscriptionCode,
+        ]);
+
+        $this->assertDatabaseHas('subscription_ip_routes', [
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '10.40.0.11',
+            'cidr' => 32,
+        ]);
+
+        $route = SubscriptionIpRoute::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subscription_id', $subscription->id)
+            ->where('ip_address', '10.40.0.11')
+            ->firstOrFail();
+
+        $this->assertNotNull($route->ip_address_id);
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '10.40.0.11',
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'subscription_code' => null,
         ]);
     }
 

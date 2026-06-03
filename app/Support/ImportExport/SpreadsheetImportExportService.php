@@ -5,10 +5,14 @@ namespace App\Support\ImportExport;
 use App\Models\Customer;
 use App\Models\ImportExportRun;
 use App\Models\ImportExportRunRow;
+use App\Models\IpAddress;
+use App\Models\IpPool;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Models\SubscriptionIpRoute;
 use App\Services\RadiusProvisioningService;
+use App\Services\SubscriptionIpRouteSyncService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -284,6 +288,26 @@ class SpreadsheetImportExportService
     protected function importSubscriptionRow(ImportExportRun $run, array $row): array
     {
         $data = $this->normalizeSubscriptionRow($row);
+        $ipAddresses = $this->parsedImportIpAddresses($data['ip_address'] ?? null);
+
+        if ($ipAddresses['error'] !== null) {
+            return $this->failedResult($data['subscription_code'] ?? $data['customer_code'] ?? null, $ipAddresses['error']);
+        }
+
+        $primaryIpAddress = array_shift($ipAddresses['addresses']);
+        $routeIpAddresses = $ipAddresses['addresses'];
+        $primaryIpPool = $primaryIpAddress ? $this->resolveIpPoolForAddress($run, $primaryIpAddress) : null;
+
+        if ($routeIpAddresses !== [] && ! $primaryIpPool) {
+            return $this->failedResult($data['subscription_code'] ?? $data['customer_code'] ?? null, 'A primary IPAM pool could not be resolved for the imported IP address list.');
+        }
+
+        if ($routeIpAddresses !== []) {
+            $data['ip_management'] = 'system';
+        }
+
+        $data['ip_address'] = $primaryIpAddress;
+        $data['ip_pool_id'] = $primaryIpPool?->id;
         $validator = Validator::make($data, [
             'customer_code' => ['nullable', 'string', 'max:255'],
             'customer_type' => ['nullable', Rule::in(['individual', 'business'])],
@@ -300,7 +324,7 @@ class SpreadsheetImportExportService
             'subscription_name' => ['nullable', 'string', 'max:255'],
             'service_type' => ['nullable', Rule::in(['hotspot', 'pppoe', 'vpn'])],
             'connection_type' => ['nullable', Rule::in(['pppoe', 'dhcp', 'static'])],
-            'ip_address' => ['nullable', 'ip'],
+            'ip_address' => ['nullable', 'string', 'max:255'],
             'mac_address' => ['nullable', 'string', 'max:17'],
             'ip_management' => ['nullable', Rule::in(['system', 'router'])],
             'pppoe_username' => ['nullable', 'string', 'max:255'],
@@ -357,7 +381,7 @@ class SpreadsheetImportExportService
             }
         }
 
-        return DB::transaction(function () use ($run, $data, $plan, $router, $existingSubscription): array {
+        $transactionResult = DB::transaction(function () use ($run, $data, $plan, $router, $existingSubscription, $routeIpAddresses, $primaryIpAddress): array {
             $customer = $this->resolveCustomerForImport($run, $data);
             $customerAction = $customer->exists ? 'updated' : 'created';
             $customer->fill($this->customerAttributes($data, $customer->exists ? $customer : null));
@@ -366,22 +390,39 @@ class SpreadsheetImportExportService
 
             $subscriptionAction = $existingSubscription ? 'updated' : 'created';
             $subscription = $existingSubscription ?? new Subscription(['tenant_id' => $run->tenant_id]);
-            $subscription->fill($this->subscriptionAttributes($data, $customer, $plan, $router, $existingSubscription));
+            $subscription->fill($this->subscriptionAttributes($data, $customer, $plan, $router, $existingSubscription, $primaryIpAddress));
             $subscription->tenant_id = $run->tenant_id;
             $subscription->customer_id = $customer->id;
             $subscription->plan_id = $plan->id;
             $subscription->router_id = $router?->id;
             $subscription->save();
 
+            if ($subscription->isSystemManagedIp() && filled($data['ip_address'] ?? null)) {
+                $assignedPrimaryIp = $subscription->updateIpAddress($data['ip_address']);
+
+                if (! $assignedPrimaryIp) {
+                    throw new \RuntimeException('The primary IP address could not be assigned from the resolved IPAM pool.');
+                }
+            }
+
+            $this->replaceImportedSubscriptionIpRoutes($subscription->fresh(['ipRoutes']), $customer, $routeIpAddresses);
+
             app(RadiusProvisioningService::class)->syncSubscriptionsForCustomer($customer->fresh());
 
             return [
+                'subscription' => $subscription->fresh(['router', 'ipRoutes']),
                 'status' => $subscriptionAction === 'created' || $customerAction === 'created' ? 'created' : 'updated',
                 'identifier' => $subscription->subscription_code,
                 'action' => "{$customerAction} customer, {$subscriptionAction} subscription",
                 'message' => "Customer {$customerAction}; subscription {$subscriptionAction}.",
             ];
         });
+
+        app(SubscriptionIpRouteSyncService::class)->syncRoutes($transactionResult['subscription']);
+
+        unset($transactionResult['subscription']);
+
+        return $transactionResult;
     }
 
     /**
@@ -571,11 +612,12 @@ class SpreadsheetImportExportService
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    protected function subscriptionAttributes(array $data, Customer $customer, Plan $plan, ?Router $router, ?Subscription $existingSubscription = null): array
+    protected function subscriptionAttributes(array $data, Customer $customer, Plan $plan, ?Router $router, ?Subscription $existingSubscription = null, ?string $primaryIpAddress = null): array
     {
         $basePrice = $data['base_price'] ?? $plan->price;
         $billingCycle = $data['billing_cycle'] ?: $plan->billing_cycle;
         $gracePeriodDays = $data['grace_period_days'] ?? $plan->grace_period_days;
+        $isSystemManagedIp = ($data['ip_management'] ?? $existingSubscription?->ip_management) === 'system';
 
         return [
             'subscription_code' => $data['subscription_code'] ?: $existingSubscription?->subscription_code ?: null,
@@ -583,7 +625,10 @@ class SpreadsheetImportExportService
             'service_type' => $data['service_type'] ?: $existingSubscription?->service_type ?: 'hotspot',
             'site' => $data['site'] ?: $existingSubscription?->site ?: $router?->site,
             'connection_type' => $data['connection_type'] ?: $existingSubscription?->connection_type ?: 'pppoe',
-            'ip_address' => $this->blankToExisting($data['ip_address'], $existingSubscription?->ip_address),
+            'ip_address' => $isSystemManagedIp && filled($primaryIpAddress)
+                ? null
+                : $this->blankToExisting($data['ip_address'], $existingSubscription?->ip_address),
+            'ip_pool_id' => $data['ip_pool_id'] ?? $existingSubscription?->ip_pool_id,
             'mac_address' => $this->blankToExisting($data['mac_address'], $existingSubscription?->mac_address),
             'ip_management' => $data['ip_management'] ?: $existingSubscription?->ip_management,
             'pppoe_username' => $data['pppoe_username'] ?: $existingSubscription?->pppoe_username,
@@ -773,5 +818,160 @@ class SpreadsheetImportExportService
         $timestamp = strtotime((string) $value);
 
         return $timestamp === false ? null : date($format, $timestamp);
+    }
+
+    /**
+     * @return array{addresses: list<string>, error: ?string}
+     */
+    protected function parsedImportIpAddresses(mixed $value): array
+    {
+        if (! filled($value)) {
+            return ['addresses' => [], 'error' => null];
+        }
+
+        $addresses = collect(explode(',', (string) $value))
+            ->map(fn (string $address): string => trim($address))
+            ->filter()
+            ->values()
+            ->all();
+
+        $uniqueAddresses = array_values(array_unique($addresses));
+        if ($uniqueAddresses !== $addresses) {
+            return ['addresses' => [], 'error' => 'Duplicate IP addresses are not allowed in the ip_address field.'];
+        }
+
+        foreach ($addresses as $address) {
+            if (! filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                return ['addresses' => [], 'error' => "The IP address {$address} is not a valid IPv4 address."];
+            }
+        }
+
+        return ['addresses' => $addresses, 'error' => null];
+    }
+
+    protected function resolveIpPoolForAddress(ImportExportRun $run, string $ipAddress): ?IpPool
+    {
+        return IpPool::query()
+            ->where('tenant_id', $run->tenant_id)
+            ->get()
+            ->sortByDesc(fn (IpPool $pool): int => (($pool->status === 'active' ? 1 : 0) * 1000) + (int) $pool->cidr)
+            ->first(fn (IpPool $pool): bool => $this->isIpInPoolRange($ipAddress, $pool));
+    }
+
+    protected function replaceImportedSubscriptionIpRoutes(Subscription $subscription, Customer $customer, array $routeIpAddresses): void
+    {
+        $subscription->loadMissing(['ipRoutes']);
+
+        foreach ($subscription->ipRoutes as $route) {
+            $this->releaseImportedRouteIpAddress($route);
+            $route->delete();
+        }
+
+        foreach (array_values($routeIpAddresses) as $routeIpAddress) {
+            $ipPool = $this->resolveIpPoolForAddressForSubscription($subscription, $routeIpAddress);
+            if (! $ipPool) {
+                throw new \RuntimeException("Unable to resolve an IPAM pool for imported route IP {$routeIpAddress}.");
+            }
+
+            $ipAddress = $this->resolveImportedRouteIpAddress($subscription, $ipPool, $routeIpAddress);
+            if (! $ipAddress) {
+                throw new \RuntimeException("Unable to resolve an IP address record for imported route IP {$routeIpAddress}.");
+            }
+
+            $route = SubscriptionIpRoute::create([
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'ip_pool_id' => $ipPool->id,
+                'ip_address_id' => $ipAddress->id,
+                'ip_address' => $routeIpAddress,
+                'cidr' => 32,
+            ]);
+
+            $route->forceFill([
+                'routeros_comment' => $route->routerOsComment(),
+            ])->save();
+
+            $this->assignImportedRouteIpAddress($ipAddress, $customer, $subscription, $route);
+        }
+    }
+
+    protected function resolveIpPoolForAddressForSubscription(Subscription $subscription, string $ipAddress): ?IpPool
+    {
+        return IpPool::query()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->get()
+            ->sortByDesc(fn (IpPool $pool): int => (($pool->status === 'active' ? 1 : 0) * 1000) + (int) $pool->cidr)
+            ->first(fn (IpPool $pool): bool => $this->isIpInPoolRange($ipAddress, $pool));
+    }
+
+    protected function resolveImportedRouteIpAddress(Subscription $subscription, IpPool $ipPool, string $ipAddress): ?IpAddress
+    {
+        $ipAddressRecord = IpAddress::query()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->where('ip_pool_id', $ipPool->id)
+            ->where('ip_address', $ipAddress)
+            ->first();
+
+        if (! $ipAddressRecord) {
+            return null;
+        }
+
+        if (! $ipAddressRecord->isAvailable()) {
+            return null;
+        }
+
+        return $ipAddressRecord;
+    }
+
+    protected function assignImportedRouteIpAddress(IpAddress $ipAddress, Customer $customer, Subscription $subscription, SubscriptionIpRoute $route): void
+    {
+        $ipAddress->forceFill([
+            'status' => 'assigned',
+            'customer_id' => $customer->id,
+            'mac_address' => null,
+            'subscription_code' => null,
+            'assigned_at' => now(),
+            'released_at' => null,
+            'notes' => 'Subscription IP route '.$subscription->subscription_code,
+            'metadata' => [
+                'purpose' => 'subscription_ip_route',
+                'subscription_id' => $subscription->id,
+                'subscription_ip_route_id' => $route->id,
+            ],
+        ])->save();
+    }
+
+    protected function releaseImportedRouteIpAddress(SubscriptionIpRoute $route): void
+    {
+        if (! $route->ip_address_id) {
+            return;
+        }
+
+        $ipAddress = IpAddress::query()->find($route->ip_address_id);
+
+        if (! $ipAddress) {
+            return;
+        }
+
+        $ipAddress->release();
+        $ipAddress->forceFill([
+            'notes' => null,
+            'metadata' => null,
+        ])->save();
+    }
+
+    protected function isIpInPoolRange(string $ipAddress, IpPool $ipPool): bool
+    {
+        $ipNum = ip2long($ipAddress);
+        $networkNum = ip2long($ipPool->network_address);
+
+        if ($ipNum === false || $networkNum === false) {
+            return false;
+        }
+
+        $cidr = (int) $ipPool->cidr;
+        $mask = $cidr === 0 ? 0 : ~0 << (32 - $cidr);
+
+        return ($ipNum & $mask) === ($networkNum & $mask);
     }
 }
