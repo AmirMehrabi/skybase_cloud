@@ -418,6 +418,41 @@ class SubscriptionControllerTest extends TestCase
         ]));
     }
 
+    public function test_store_returns_validation_errors_for_missing_pppoe_credentials(): void
+    {
+        [$tenant, $user, $customer, $plan, $router] = $this->createSubscriptionCreateDependencies();
+
+        $response = $this->actingAs($user)->postJson(route('subscriptions.store'), [
+            'customer_id' => $customer->id,
+            'name' => 'John Routed Service',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'connection_type' => 'pppoe',
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'items' => [
+                [
+                    'item_type' => 'plan',
+                    'description' => 'Fiber 200',
+                    'quantity' => 1,
+                    'unit_price' => 99.99,
+                    'discount_amount' => 0,
+                    'discount_type' => 'none',
+                    'tax_percentage' => 0,
+                    'recurring' => true,
+                    'billing_cycle' => 'monthly',
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['pppoe_username', 'pppoe_password']);
+        $response->assertJsonPath('errors.pppoe_username.0', 'PPP username is required for PPP connections.');
+        $response->assertJsonPath('errors.pppoe_password.0', 'PPP password is required for PPP connections.');
+    }
+
     public function test_update_primary_ip_resyncs_existing_ip_route_gateway(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();

@@ -18,8 +18,7 @@
         </div>
     </div>
 
-    @if($errors->any())
-    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+    <div x-cloak x-show="validationErrorsList.length" class="bg-red-50 border border-red-200 rounded-xl p-4">
         <div class="flex">
             <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -27,13 +26,30 @@
             <div class="ml-3">
                 <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
                 <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
+                    <template x-for="(error, index) in validationErrorsList" :key="index">
+                        <li x-text="error"></li>
+                    </template>
                 </ul>
             </div>
         </div>
     </div>
+
+    @if($errors->any())
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div class="flex">
+                <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
+                    <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
     @endif
 
     <form action="{{ route('subscriptions.store') }}" method="POST" class="space-y-6" @submit.prevent="submit">
@@ -50,7 +66,7 @@
                         <input type="text" :value="'{{ $customer->full_name }} ({{ $customer->customer_code }})'" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
                         <input type="hidden" name="customer_id" value="{{ $customer->id }}">
                     @else
-                        <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="handleCustomerChange($event)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                        <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="handleCustomerChange($event)" :class="hasValidationError('customer_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
                             <option value="">Select a customer</option>
                             @foreach($customers ?? [] as $cust)
                                 <option value="{{ $cust->id }}" data-name="{{ $cust->full_name }}">{{ $cust->full_name }} ({{ $cust->customer_code }})</option>
@@ -60,15 +76,21 @@
                     @error('customer_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('customer_id') && !{{ $errors->has('customer_id') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('customer_id')"></p>
+                    </template>
                 </div>
 
                 <!-- Subscription Name -->
                 <div class="lg:col-span-1">
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" id="name" x-model="form.name" @input="subscriptionNameTouched = true" placeholder="Subscription name" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" required>
+                    <input type="text" name="name" id="name" x-model="form.name" @input="subscriptionNameTouched = true" placeholder="Subscription name" :class="hasValidationError('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border" required>
                     @error('name')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('name') && !{{ $errors->has('name') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('name')"></p>
+                    </template>
                 </div>
 
                 <div x-show="selectedOrganizationBilling" class="lg:col-span-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900" style="display: none;">
@@ -84,21 +106,21 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <label class="relative cursor-pointer" @click="form.service_type = 'hotspot'">
                             <input type="radio" name="service_type" value="hotspot" x-model="form.service_type" class="peer sr-only">
-                            <div class="rounded-xl border-2 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div :class="hasValidationError('service_type') ? 'border-red-500' : 'border-2 border-gray-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300'" class="rounded-xl p-4 transition-all">
                                 <p class="text-sm font-semibold text-gray-900">Hotspot</p>
                                 <p class="mt-1 text-xs text-gray-500">Captive portal or voucher-based service</p>
                             </div>
                         </label>
                         <label class="relative cursor-pointer" @click="form.service_type = 'pppoe'">
                             <input type="radio" name="service_type" value="pppoe" x-model="form.service_type" class="peer sr-only">
-                            <div class="rounded-xl border-2 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div :class="hasValidationError('service_type') ? 'border-red-500' : 'border-2 border-gray-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300'" class="rounded-xl p-4 transition-all">
                                 <p class="text-sm font-semibold text-gray-900">PPPoE</p>
                                 <p class="mt-1 text-xs text-gray-500">Broadband access authenticated by PPPoE</p>
                             </div>
                         </label>
                         <label class="relative cursor-pointer" @click="form.service_type = 'vpn'">
                             <input type="radio" name="service_type" value="vpn" x-model="form.service_type" class="peer sr-only">
-                            <div class="rounded-xl border-2 p-4 transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div :class="hasValidationError('service_type') ? 'border-red-500' : 'border-2 border-gray-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300'" class="rounded-xl p-4 transition-all">
                                 <p class="text-sm font-semibold text-gray-900">VPN</p>
                                 <p class="mt-1 text-xs text-gray-500">Remote access or private tunnel service</p>
                             </div>
@@ -107,12 +129,15 @@
                     @error('service_type')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('service_type') && !{{ $errors->has('service_type') ? 'true' : 'false' }}">
+                        <p class="mt-2 text-sm text-red-600" x-text="validationError('service_type')"></p>
+                    </template>
                 </div>
 
                 <!-- Plan -->
                 <div>
                     <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-1">Service Plan <span class="text-red-500">*</span></label>
-                    <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
+                    <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('plan_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
                         <option value="">Select a plan</option>
                         @foreach($plans as $plan)
                             <option value="{{ $plan->id }}" data-price="{{ $plan->price }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
@@ -121,12 +146,15 @@
                     @error('plan_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('plan_id') && !{{ $errors->has('plan_id') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('plan_id')"></p>
+                    </template>
                 </div>
 
                 <!-- Router / NAS -->
                 <div>
                     <label for="router_id" class="block text-sm font-medium text-gray-700 mb-1">Router / NAS <span class="text-red-500">*</span></label>
-                    <select name="router_id" id="router_id" x-model="form.router_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                    <select name="router_id" id="router_id" x-model="form.router_id" :class="hasValidationError('router_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
                         <option value="">Select a router</option>
                         @foreach($routers as $router)
                             <option value="{{ $router->id }}" data-site="{{ $router->site }}">{{ $router->name }} ({{ $router->vendor }} {{ $router->model }})</option>
@@ -135,24 +163,33 @@
                     @error('router_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('router_id') && !{{ $errors->has('router_id') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('router_id')"></p>
+                    </template>
                 </div>
 
                 <!-- Site (auto-filled from router) -->
                 <div>
                     <label for="site" class="block text-sm font-medium text-gray-700 mb-1">Site</label>
-                    <input type="text" name="site" id="site" x-model="form.site" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <input type="text" name="site" id="site" x-model="form.site" :class="hasValidationError('site') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border">
                     @error('site')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('site') && !{{ $errors->has('site') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('site')"></p>
+                    </template>
                 </div>
 
                 <!-- Router-managed IP Address -->
                 <div x-show="form.ip_management !== 'system'">
                     <label for="manual_ip_address" class="block text-sm font-medium text-gray-700 mb-1">Manual IP Address</label>
-                    <input type="text" id="manual_ip_address" x-model="form.ip_address" placeholder="192.168.1.100" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <input type="text" id="manual_ip_address" x-model="form.ip_address" placeholder="192.168.1.100" :class="hasValidationError('ip_address') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border">
                     @error('ip_address')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('ip_address') && !{{ $errors->has('ip_address') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('ip_address')"></p>
+                    </template>
                 </div>
             </div>
         </div>
@@ -164,7 +201,7 @@
             <!-- Connection Type Selector -->
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-3">Connection Type <span class="text-red-500">*</span></label>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div :class="hasValidationError('connection_type') ? 'ring-2 ring-red-500 ring-offset-2 rounded-2xl' : ''" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <!-- PPP Option -->
                     <label class="relative cursor-pointer" @click="form.connection_type = 'pppoe'">
                         <input type="radio" name="connection_type" value="pppoe" x-model="form.connection_type" class="peer sr-only">
@@ -222,6 +259,9 @@
                 @error('connection_type')
                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                 @enderror
+                <template x-if="validationError('connection_type') && !{{ $errors->has('connection_type') ? 'true' : 'false' }}">
+                    <p class="mt-2 text-sm text-red-600" x-text="validationError('connection_type')"></p>
+                </template>
             </div>
 
             <!-- PPP Credentials (shown only for PPP) -->
@@ -231,7 +271,7 @@
                     <div>
                         <label for="pppoe_username" class="block text-sm font-medium text-gray-700 mb-1">PPP Username <span class="text-red-500">*</span></label>
                         <div class="relative">
-                            <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" @input="validatePppoeUsername" placeholder="e.g., customer001" :class="'block w-full rounded-lg sm:text-sm py-2 px-3 pr-10 border ' + (pppoeValidation.isValid ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-500' : pppoeValidation.isError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500')">
+                            <input type="text" name="pppoe_username" id="pppoe_username" x-model="form.pppoe_username" @input="validatePppoeUsername" placeholder="e.g., customer001" :class="'block w-full rounded-lg sm:text-sm py-2 px-3 pr-10 border ' + ((hasValidationError('pppoe_username') || pppoeValidation.isError) ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500')">
                             <!-- Validation status indicator -->
                             <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                 <template x-if="form.pppoe_username && pppoeValidation.isChecking">
@@ -258,13 +298,19 @@
                         @error('pppoe_username')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                        <template x-if="validationError('pppoe_username') && !{{ $errors->has('pppoe_username') ? 'true' : 'false' }}">
+                            <p class="mt-1 text-sm text-red-600" x-text="validationError('pppoe_username')"></p>
+                        </template>
                     </div>
                     <div>
                         <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPP Password <span class="text-red-500">*</span></label>
-                        <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoe_password" placeholder="••••••••" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                        <input type="password" name="pppoe_password" id="pppoe_password" x-model="form.pppoe_password" placeholder="••••••••" :class="hasValidationError('pppoe_password') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border">
                         @error('pppoe_password')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                        <template x-if="validationError('pppoe_password') && !{{ $errors->has('pppoe_password') ? 'true' : 'false' }}">
+                            <p class="mt-1 text-sm text-red-600" x-text="validationError('pppoe_password')"></p>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -275,10 +321,13 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="mac_address" class="block text-sm font-medium text-gray-700 mb-1">MAC Address <span class="text-red-500">*</span></label>
-                        <input type="text" name="mac_address" id="mac_address" x-model="form.mac_address" placeholder="00:1A:2B:3C:4D:5E" maxlength="17" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border uppercase">
+                        <input type="text" name="mac_address" id="mac_address" x-model="form.mac_address" placeholder="00:1A:2B:3C:4D:5E" maxlength="17" :class="hasValidationError('mac_address') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border uppercase">
                         @error('mac_address')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                        <template x-if="validationError('mac_address') && !{{ $errors->has('mac_address') ? 'true' : 'false' }}">
+                            <p class="mt-1 text-sm text-red-600" x-text="validationError('mac_address')"></p>
+                        </template>
                         <p class="mt-1 text-xs text-gray-500">Format: XX:XX:XX:XX:XX:XX</p>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-gray-600 pt-6">
@@ -346,7 +395,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="ip_pool_id" class="block text-sm font-medium text-gray-700 mb-1">IP Pool <span class="text-red-500">*</span></label>
-                        <select name="ip_pool_id" id="ip_pool_id" x-model="form.ip_pool_id" @change="form.ip_address = ''" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                        <select name="ip_pool_id" id="ip_pool_id" x-model="form.ip_pool_id" @change="form.ip_address = ''" :class="hasValidationError('ip_pool_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white">
                             <option value="">Select IP Pool</option>
                             @foreach($ipPools ?? [] as $pool)
                                 <option value="{{ $pool->id }}" data-available="{{ $pool->available_ips }}">
@@ -357,6 +406,9 @@
                         @error('ip_pool_id')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                        <template x-if="validationError('ip_pool_id') && !{{ $errors->has('ip_pool_id') ? 'true' : 'false' }}">
+                            <p class="mt-1 text-sm text-red-600" x-text="validationError('ip_pool_id')"></p>
+                        </template>
                     </div>
                     <div x-show="form.ip_pool_id" class="flex items-center gap-2 text-sm pt-6">
                         <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,7 +421,7 @@
                 <!-- Primary IP Address -->
                 <div class="mt-4">
                     <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">Primary IP Address</label>
-                    <select name="ip_address" id="ip_address" x-model="form.ip_address" class="block w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <select name="ip_address" id="ip_address" x-model="form.ip_address" :class="hasValidationError('ip_address') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full max-w-md rounded-lg border bg-white px-3 py-2 text-sm font-mono shadow-sm">
                         <option value="">Auto-assign next available IP</option>
                         <template x-for="address in availablePrimaryAddresses()" :key="address.id">
                             <option :value="address.ip_address" x-text="address.ip_address"></option>
@@ -379,6 +431,9 @@
                     @error('ip_address')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('ip_address') && !{{ $errors->has('ip_address') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('ip_address')"></p>
+                    </template>
                 </div>
 
                 <div class="mt-6 rounded-xl border border-blue-100 bg-white p-4">
@@ -636,7 +691,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                     <label for="billing_cycle" class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle <span class="text-red-500">*</span></label>
-                    <select name="billing_cycle" id="billing_cycle" x-model="form.billing_cycle" @change="updateBillingCycle()" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
+                    <select name="billing_cycle" id="billing_cycle" x-model="form.billing_cycle" @change="updateBillingCycle()" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('billing_cycle') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly (3 months)</option>
                         <option value="yearly">Yearly (12 months)</option>
@@ -644,16 +699,22 @@
                     @error('billing_cycle')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('billing_cycle') && !{{ $errors->has('billing_cycle') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('billing_cycle')"></p>
+                    </template>
                 </div>
                 <div>
                     <label for="grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Grace Period</label>
                     <div class="flex gap-2">
-                        <input type="number" min="0" max="365" step="1" name="grace_period_days" id="grace_period_days" x-model="form.grace_period_days" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border disabled:bg-gray-50" placeholder="Plan default">
+                        <input type="number" min="0" max="365" step="1" name="grace_period_days" id="grace_period_days" x-model="form.grace_period_days" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('grace_period_days') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border disabled:bg-gray-50" placeholder="Plan default">
                         <span class="inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">days</span>
                     </div>
                     @error('grace_period_days')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('grace_period_days') && !{{ $errors->has('grace_period_days') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('grace_period_days')"></p>
+                    </template>
                 </div>
                 <div class="md:col-span-2 lg:col-span-2 flex items-center justify-between rounded-xl border border-gray-200 p-4">
                     <div>
@@ -670,7 +731,7 @@
                 </div>
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Initial Status <span class="text-red-500">*</span></label>
-                    <select name="status" id="status" x-model="form.status" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white" required>
+                    <select name="status" id="status" x-model="form.status" :class="hasValidationError('status') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
                         <option value="active">Active</option>
                         <option value="pending">Pending Activation</option>
                         <option value="suspended">Suspended</option>
@@ -678,28 +739,40 @@
                     @error('status')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('status') && !{{ $errors->has('status') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('status')"></p>
+                    </template>
                 </div>
                 <div>
                     <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                    <input type="date" name="start_date" id="start_date" x-model="form.start_date" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <input type="date" name="start_date" id="start_date" x-model="form.start_date" :class="hasValidationError('start_date') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border">
                     @error('start_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('start_date') && !{{ $errors->has('start_date') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('start_date')"></p>
+                    </template>
                 </div>
                 <div>
                     <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                    <input type="date" name="end_date" id="end_date" x-model="form.end_date" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <input type="date" name="end_date" id="end_date" x-model="form.end_date" :class="hasValidationError('end_date') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border">
                     @error('end_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <template x-if="validationError('end_date') && !{{ $errors->has('end_date') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('end_date')"></p>
+                    </template>
                 </div>
             </div>
             <div class="mt-4">
                 <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                <textarea name="notes" id="notes" x-model="form.notes" rows="3" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border" placeholder="Any additional notes about this subscription..."></textarea>
+                <textarea name="notes" id="notes" x-model="form.notes" rows="3" :class="hasValidationError('notes') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border" placeholder="Any additional notes about this subscription..."></textarea>
                 @error('notes')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
+                <template x-if="validationError('notes') && !{{ $errors->has('notes') ? 'true' : 'false' }}">
+                    <p class="mt-1 text-sm text-red-600" x-text="validationError('notes')"></p>
+                </template>
             </div>
         </div>
 
@@ -824,6 +897,27 @@ function subscriptionCreateForm() {
             isChecking: false,
             message: '',
             errorType: null // 'taken'
+        },
+        validationErrors: {},
+
+        get validationErrorsList() {
+            return Object.values(this.validationErrors).flat();
+        },
+
+        hasValidationError(field) {
+            return Array.isArray(this.validationErrors[field]) && this.validationErrors[field].length > 0;
+        },
+
+        validationError(field) {
+            return this.hasValidationError(field) ? this.validationErrors[field][0] : null;
+        },
+
+        setValidationErrors(errors) {
+            this.validationErrors = errors || {};
+
+            if (this.validationErrorsList.length > 0) {
+                this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+            }
         },
 
         // Computed: Selected IP Pool
@@ -1295,13 +1389,7 @@ function subscriptionCreateForm() {
                     // Redirect to subscriptions index on success
                     window.location.href = '{{ route('subscriptions.index') }}';
                 } else if (response.status === 422 && data.errors) {
-                    // Display validation errors
-                    const errorContainer = document.querySelector('.bg-red-50');
-                    if (errorContainer) {
-                        errorContainer.classList.remove('hidden');
-                        const errorList = errorContainer.querySelector('ul');
-                        errorList.innerHTML = Object.values(data.errors).flat().map(error => `<li>${error}</li>`).join('');
-                    }
+                    this.setValidationErrors(data.errors);
                 } else {
                     alert(data.message || 'An error occurred while creating the subscription.');
                 }
