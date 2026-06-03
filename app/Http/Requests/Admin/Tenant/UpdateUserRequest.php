@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Tenant;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateUserRequest extends FormRequest
@@ -16,7 +17,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$this->route('user')->id],
-            'role' => ['required', 'in:admin,billing,support,noc'],
+            'role' => ['required', 'in:owner,admin,billing,support,noc'],
             'status' => ['required', 'in:active,inactive'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ];
@@ -35,5 +36,19 @@ class UpdateUserRequest extends FormRequest
             'role.in' => 'The selected role is invalid.',
             'status.required' => 'Please select a status for this user.',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $user = $this->route('user');
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $this->merge([
+            'role' => $this->has('role') ? $this->input('role') : $user->role,
+            'status' => $this->has('status') ? $this->input('status') : $user->status,
+        ]);
     }
 }

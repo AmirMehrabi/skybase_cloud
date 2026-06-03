@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Tenant\UpdateUserRequest;
 use App\Http\Requests\NotificationPreferenceRequest;
 use App\Models\ActivityLog;
 use App\Models\Role;
@@ -146,17 +147,11 @@ class UserController extends Controller
         return back()->with('success', "Notification preferences updated for {$user->name}.");
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         $this->authorizeUserAccess($user);
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'role' => ['required', 'in:admin,billing,support,noc'],
-            'status' => ['required', 'in:active,inactive'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validated = $request->validated();
 
         $oldValues = $user->only('name', 'email', 'role', 'status');
 
