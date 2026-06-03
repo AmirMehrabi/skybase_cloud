@@ -208,6 +208,123 @@ class CustomerControllerTest extends TestCase
         $response->assertSee('Add Customer Note');
     }
 
+    public function test_customers_data_uses_all_subscription_plans_routers_and_ips(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-LIST-0001',
+            'customer_type' => 'individual',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'name' => 'Jane Doe',
+            'email' => 'jane.list@example.com',
+            'mobile' => '555-0101',
+            'address_line1' => '123 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
+        ]);
+
+        $firstPlan = Plan::factory()->create([
+            'name' => 'Fiber 100',
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $secondPlan = Plan::factory()->create([
+            'name' => 'Fiber 300',
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $firstRouter = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Core Router',
+        ]);
+
+        $secondRouter = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Edge Router',
+        ]);
+
+        Subscription::withoutEvents(function () use ($customer, $tenant, $firstPlan, $secondPlan, $firstRouter, $secondRouter): void {
+            Subscription::create([
+                'tenant_id' => $tenant->id,
+                'customer_id' => $customer->id,
+                'subscription_code' => 'SUB-LIST-0001',
+                'name' => 'First Service',
+                'service_type' => 'pppoe',
+                'plan_id' => $firstPlan->id,
+                'router_id' => $firstRouter->id,
+                'site' => 'Downtown',
+                'ip_address' => '10.10.0.10',
+                'connection_type' => 'pppoe',
+                'pppoe_username' => 'jane.one',
+                'pppoe_password' => 'secret-one',
+                'base_price' => 50,
+                'discount_amount' => 0,
+                'discount_type' => 'none',
+                'tax_amount' => 0,
+                'total_price' => 50,
+                'billing_cycle' => 'monthly',
+                'billing_enabled' => true,
+                'status' => 'active',
+                'start_date' => now()->subMonth(),
+                'created_at' => now()->subDay(),
+                'updated_at' => now()->subDay(),
+            ]);
+
+            Subscription::create([
+                'tenant_id' => $tenant->id,
+                'customer_id' => $customer->id,
+                'subscription_code' => 'SUB-LIST-0002',
+                'name' => 'Second Service',
+                'service_type' => 'pppoe',
+                'plan_id' => $secondPlan->id,
+                'router_id' => $secondRouter->id,
+                'site' => 'Warehouse',
+                'ip_address' => '10.10.0.20',
+                'connection_type' => 'pppoe',
+                'pppoe_username' => 'jane.two',
+                'pppoe_password' => 'secret-two',
+                'base_price' => 75,
+                'discount_amount' => 0,
+                'discount_type' => 'none',
+                'tax_amount' => 0,
+                'total_price' => 75,
+                'billing_cycle' => 'monthly',
+                'billing_enabled' => true,
+                'status' => 'active',
+                'start_date' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        $response = $this->actingAs($user)->getJson(route('customers.data'));
+
+        $response->assertOk();
+        $this->assertEqualsCanonicalizing(['Fiber 100', 'Fiber 300'], $response->json('customers.0.plans'));
+        $this->assertEqualsCanonicalizing(['Warehouse / Edge Router', 'Downtown / Core Router'], $response->json('customers.0.site_router'));
+        $this->assertEqualsCanonicalizing(['10.10.0.20', '10.10.0.10'], $response->json('customers.0.ip_addresses'));
+        $this->assertContains($response->json('customers.0.plan'), ['Fiber 100', 'Fiber 300']);
+        $this->assertContains($response->json('customers.0.site'), ['Warehouse / Edge Router', 'Downtown / Core Router']);
+        $this->assertContains($response->json('customers.0.router'), ['Core Router', 'Edge Router']);
+        $this->assertContains($response->json('customers.0.ip_address'), ['10.10.0.10', '10.10.0.20']);
+    }
+
     public function test_customer_note_can_be_added_from_profile(): void
     {
         $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');

@@ -183,16 +183,13 @@
                                 <span class="text-sm text-gray-700" x-text="customer.organization"></span>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="text-sm text-gray-700" x-text="customer.plan"></span>
+                                <span class="block text-sm text-gray-700 whitespace-normal break-words" x-text="formatValues(customer.plans)"></span>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex flex-col text-sm text-gray-700">
-                                    <span x-text="customer.site"></span>
-                                    <span class="text-xs text-gray-500" x-text="customer.router"></span>
-                                </div>
+                                <span class="block text-sm text-gray-700 whitespace-normal break-words" x-text="formatValues(customer.site_router)"></span>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="text-sm text-gray-700 font-mono" x-text="customer.ip_address"></span>
+                                <span class="block text-sm text-gray-700 font-mono whitespace-normal break-words" x-text="formatValues(customer.ip_addresses)"></span>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="text-sm font-semibold"

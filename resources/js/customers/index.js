@@ -188,6 +188,14 @@ document.addEventListener('alpine:init', () => {
             return formatted;
         },
 
+        formatValues(values) {
+            if (!Array.isArray(values) || values.length === 0) {
+                return 'N/A';
+            }
+
+            return values.join(', ');
+        },
+
         getStatusBadgeClass(status) {
             const classes = {
                 active: 'bg-green-100 text-green-800 border-green-200',

@@ -34,24 +34,28 @@ class CustomerController extends Controller
         $filters = $request->only(['search', 'status', 'plan', 'site', 'router', 'organization']);
 
         $customers = Customer::filter($filters)
-            ->with('organization')
+            ->with([
+                'organization:id,name',
+                'subscriptions' => function ($query): void {
+                    $query->select([
+                        'id',
+                        'customer_id',
+                        'plan_id',
+                        'router_id',
+                        'site',
+                        'ip_address',
+                        'created_at',
+                    ])
+                        ->with([
+                            'plan:id,name',
+                            'router:id,name',
+                        ])
+                        ->orderByDesc('created_at');
+                },
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('per_page', 15))
-            ->through(fn ($customer) => [
-                'id' => $customer->id,
-                'name' => $customer->full_name,
-                'customer_code' => $customer->customer_code,
-                'email' => $customer->email,
-                'organization' => $customer->organization?->name ?? 'Unassigned',
-                'organization_id' => $customer->organization_id,
-                'plan' => $customer->plan,
-                'site' => $customer->site,
-                'router' => $customer->router,
-                'ip_address' => $customer->ip_address ?? 'N/A',
-                'balance' => (float) $customer->balance,
-                'status' => $customer->status,
-                'created_at' => $customer->created_at?->format('M d, Y'),
-            ]);
+            ->through(fn (Customer $customer) => $this->customerIndexPayload($customer));
 
         return response()->json([
             'customers' => $customers->items(),
@@ -64,6 +68,69 @@ class CustomerController extends Controller
                 'to' => $customers->lastItem(),
             ],
         ]);
+    }
+
+    /**
+     * Transform a customer into the customers index payload.
+     *
+     * @return array<string, mixed>
+     */
+    private function customerIndexPayload(Customer $customer): array
+    {
+        $subscriptions = $customer->subscriptions->sortByDesc(fn ($subscription): int => $subscription->created_at?->getTimestamp() ?? 0);
+
+        $planNames = $subscriptions
+            ->map(fn ($subscription): ?string => $subscription->plan?->name)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $routerNames = $subscriptions
+            ->map(fn ($subscription): ?string => $subscription->router?->name)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $siteRouterValues = $subscriptions
+            ->map(function ($subscription): ?string {
+                $site = filled($subscription->site) ? $subscription->site : null;
+                $router = $subscription->router?->name;
+
+                if (blank($site) && blank($router)) {
+                    return null;
+                }
+
+                return trim(implode(' / ', array_filter([$site, $router], fn ($value): bool => filled($value))));
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        $ipAddresses = $subscriptions
+            ->map(fn ($subscription): ?string => $subscription->ip_address)
+            ->filter()
+            ->unique()
+            ->values();
+
+        return [
+            'id' => $customer->id,
+            'name' => $customer->full_name,
+            'customer_code' => $customer->customer_code,
+            'email' => $customer->email,
+            'organization' => $customer->organization?->name ?? 'Unassigned',
+            'organization_id' => $customer->organization_id,
+            'plan' => $planNames->first() ?? 'N/A',
+            'plans' => $planNames->all(),
+            'site' => $siteRouterValues->first() ?? 'N/A',
+            'site_router' => $siteRouterValues->all(),
+            'router' => $routerNames->first() ?? 'N/A',
+            'routers' => $routerNames->all(),
+            'ip_address' => $ipAddresses->first() ?? 'N/A',
+            'ip_addresses' => $ipAddresses->all(),
+            'balance' => (float) $customer->balance,
+            'status' => $customer->status,
+            'created_at' => $customer->created_at?->format('M d, Y'),
+        ];
     }
 
     /**
