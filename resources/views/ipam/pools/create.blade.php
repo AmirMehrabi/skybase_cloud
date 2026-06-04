@@ -62,38 +62,28 @@
                     xModel="form.name"
                 />
 
-                <!-- Router -->
+                <!-- Site -->
                 <div>
-                    <label for="router_id" class="block text-sm font-medium text-gray-700">
-                        Router <span class="text-red-500">*</span>
+                    <label for="site_id" class="block text-sm font-medium text-gray-700">
+                        Site
                     </label>
                     <select
-                        id="router_id"
-                        name="router_id"
-                        x-model="form.routerId"
-                        required
+                        id="site_id"
+                        name="site_id"
+                        x-model="form.siteId"
                         class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm px-3 py-2 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     >
-                        <option value="">Select Router</option>
-                        @foreach($routers as $id => $name)
-                            <option value="{{ $id }}">{{ $name }}</option>
+                        <option value="">Select Site</option>
+                        @foreach($sites as $site)
+                            <option value="{{ $site->id }}">
+                                {{ $site->name }}@if($site->code) ({{ $site->code }})@endif
+                            </option>
                         @endforeach
                     </select>
-                    @error('router_id')
+                    @error('site_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
-
-                <!-- Site -->
-                <x-input.text
-                    id="site"
-                    name="site"
-                    label="Site"
-                    placeholder="e.g., Downtown Office"
-                    :options="collect($sites)->map(fn($s) => ['value' => $s, 'label' => $s])->toArray()"
-                    list="sites"
-                    xModel="form.site"
-                />
 
                 <!-- Pool Type -->
                 <div>
@@ -117,6 +107,63 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+            </div>
+
+            <!-- Device Assignment -->
+            <div class="mt-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">
+                        Device Assignment
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Choose one or more devices, or make the pool available to every current and future device.
+                    </p>
+                </div>
+
+                <label class="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                    <input
+                        type="checkbox"
+                        name="all_devices"
+                        value="1"
+                        x-model="form.allDevices"
+                        class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    >
+                    <span>
+                        <span class="block text-sm font-medium text-gray-900">All current and future devices</span>
+                        <span class="block text-xs text-gray-500">This pool will automatically be available to routers added later.</span>
+                    </span>
+                </label>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    @forelse($routers as $router)
+                        <label class="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 transition" :class="form.allDevices ? 'bg-gray-100 opacity-60' : 'bg-white hover:border-blue-300'">
+                            <input
+                                type="checkbox"
+                                name="router_ids[]"
+                                value="{{ $router->id }}"
+                                x-model="form.routerIds"
+                                :disabled="form.allDevices"
+                                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                            >
+                            <span class="min-w-0">
+                                <span class="block truncate text-sm font-medium text-gray-900">{{ $router->name }}</span>
+                                <span class="block text-xs text-gray-500">Device ID {{ $router->id }}</span>
+                            </span>
+                        </label>
+                    @empty
+                        <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                            No devices are available for this tenant yet.
+                        </div>
+                    @endforelse
+                </div>
+
+                <p class="text-sm text-gray-600" x-text="deviceSummary()"></p>
+                @error('router_ids')
+                    <p class="text-sm text-red-600">{{ $message }}</p>
+                @enderror
+                @error('router_id')
+                    <p class="text-sm text-red-600">{{ $message }}</p>
+                @enderror
             </div>
         </div>
 
@@ -281,8 +328,9 @@ function createPoolForm() {
     return {
         form: {
             name: '{{ old('name') }}',
-            routerId: '{{ old('router_id') }}',
-            site: '{{ old('site') }}',
+            siteId: '{{ old('site_id') }}',
+            routerIds: @json(collect(old('router_ids', []))->map(fn ($routerId) => (string) $routerId)->values()->all()),
+            allDevices: {{ old('all_devices', false) ? 'true' : 'false' }},
             type: '{{ old('type', 'mixed') }}',
             networkAddress: '{{ old('network_address') }}',
             cidr: {{ old('cidr', 24) }},
@@ -301,6 +349,23 @@ function createPoolForm() {
         },
         init() {
             this.calculatePreview();
+        },
+        deviceSummary() {
+            if (this.form.allDevices) {
+                return 'All current and future devices selected.';
+            }
+
+            const count = Array.isArray(this.form.routerIds) ? this.form.routerIds.length : 0;
+
+            if (count === 0) {
+                return 'Select at least one device, or choose the all devices option.';
+            }
+
+            if (count === 1) {
+                return '1 device selected.';
+            }
+
+            return `${count} devices selected.`;
         },
         calculatePreview() {
             if (this.form.networkAddress && this.form.cidr) {

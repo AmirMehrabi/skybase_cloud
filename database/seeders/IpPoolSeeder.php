@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\IpPool;
 use App\Models\Router;
+use App\Models\Site;
 use App\Models\Tenant;
 use Illuminate\Database\Seeder;
 
@@ -25,6 +26,7 @@ class IpPoolSeeder extends Seeder
 
         // Get or create a router for this tenant
         $router = Router::where('tenant_id', $tenant->id)->first();
+        $site = Site::where('tenant_id', $tenant->id)->first();
 
         if (! $router) {
             $this->command->warn('No routers found for tenant. Skipping IP pool seeding.');
@@ -43,7 +45,8 @@ class IpPoolSeeder extends Seeder
                 'dns_secondary' => '8.8.4.4',
                 'vlan_id' => 100,
                 'type' => 'mixed',
-                'site' => 'Downtown Office',
+                'site_id' => $site?->id,
+                'site' => $site?->name ?? 'Downtown Office',
             ],
             [
                 'name' => 'Branch Office Network',
@@ -54,6 +57,7 @@ class IpPoolSeeder extends Seeder
                 'dns_secondary' => '8.8.4.4',
                 'vlan_id' => 200,
                 'type' => 'dynamic',
+                'site_id' => $site?->id,
                 'site' => 'Branch Office',
             ],
             [
@@ -65,6 +69,7 @@ class IpPoolSeeder extends Seeder
                 'dns_secondary' => '1.0.0.1',
                 'vlan_id' => 300,
                 'type' => 'dynamic',
+                'site_id' => $site?->id,
                 'site' => 'Main Lobby',
             ],
         ];
@@ -73,10 +78,12 @@ class IpPoolSeeder extends Seeder
             $pool = IpPool::create([
                 'tenant_id' => $tenant->id,
                 'router_id' => $router->id,
+                'site_id' => $poolData['site_id'] ?? null,
                 'total_ips' => 254,
                 'available_ips' => 250,
                 'used_ips' => 0,
                 'reserved_ips' => 4,
+                'all_devices' => false,
                 ...$poolData,
             ]);
 

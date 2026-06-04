@@ -6,6 +6,7 @@ use Database\Factories\RouterFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -104,6 +105,13 @@ class Router extends Model
         return $this->hasMany(NetflowFlow::class);
     }
 
+    public function ipPools(): BelongsToMany
+    {
+        return $this->belongsToMany(IpPool::class, 'ip_pool_router')
+            ->withPivot('tenant_id')
+            ->withTimestamps();
+    }
+
     public function monitoringState(): HasOne
     {
         return $this->hasOne(RouterMonitoringState::class);
@@ -176,7 +184,7 @@ class Router extends Model
     {
         static::addGlobalScope('tenant', function ($query) {
             if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where('tenant_id', auth()->user()->tenant_id);
+                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
             }
         });
 

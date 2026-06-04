@@ -58,17 +58,14 @@ function getIpRowBg($status)
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
                         </svg>
-                        {{ $pool->router?->name ?? 'No Router' }}
+                        {{ $pool->device_summary }}
                     </span>
-                    @if($pool->site)
                     <span class="flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
-                        {{ $pool->site }}
-                    </span>
-                    @endif
+                        {{ $pool->site_label }}
                     </span>
                     <span class="flex items-center gap-1 font-mono">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,9 +80,23 @@ function getIpRowBg($status)
                         {{ $pool->gateway }}
                     </span>
                 </div>
+
+                @if($pool->all_devices)
+                    <div class="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white">
+                        All current and future devices
+                    </div>
+                @elseif($pool->routers->isNotEmpty())
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        @foreach($pool->routers as $router)
+                            <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white">
+                                {{ $router->name }}
+                            </span>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
-            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3">
                 <a href="{{ route('ipam.pools.edit', $pool->id) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-medium rounded-lg transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>

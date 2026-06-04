@@ -4,11 +4,12 @@ namespace Database\Factories;
 
 use App\Models\IpPool;
 use App\Models\Router;
+use App\Models\Site;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\IpPool>
+ * @extends Factory<IpPool>
  */
 class IpPoolFactory extends Factory
 {
@@ -33,14 +34,24 @@ class IpPoolFactory extends Factory
         ];
 
         $network = fake()->randomElement($networks);
+        $tenantId = Tenant::inRandomOrder()->first()?->id;
+        $routerId = Router::query()
+            ->when($tenantId, fn ($query) => $query->where('tenant_id', $tenantId))
+            ->inRandomOrder()
+            ->value('id');
+        $site = Site::query()
+            ->when($tenantId, fn ($query) => $query->where('tenant_id', $tenantId))
+            ->inRandomOrder()
+            ->first();
         $sites = ['Downtown Office', 'Main Street Location', 'Tech Park Building A', 'West Street', 'Industrial District Hub'];
         $types = ['dynamic', 'static', 'mixed'];
         $statuses = ['active', 'active', 'active', 'exhausted']; // Weighted towards active
 
         return [
             'name' => $network['name'].' '.fake()->randomNumber(2),
-            'tenant_id' => Tenant::inRandomOrder()->first()?->id,
-            'router_id' => Router::inRandomOrder()->first()?->id,
+            'tenant_id' => $tenantId,
+            'router_id' => $routerId,
+            'site_id' => $site?->id,
             'network_address' => $network['address'],
             'cidr' => $network['cidr'],
             'gateway' => preg_replace('/\.0$/', '.1', $network['address']),
@@ -52,7 +63,8 @@ class IpPoolFactory extends Factory
             'allow_static' => fake()->boolean(80),
             'auto_assign' => fake()->boolean(70),
             'block_reserved' => fake()->boolean(30),
-            'site' => fake()->randomElement($sites),
+            'all_devices' => false,
+            'site' => $site?->name ?? fake()->randomElement($sites),
             'total_ips' => 254,
             'used_ips' => fake()->numberBetween(0, 200),
             'reserved_ips' => fake()->numberBetween(0, 20),
@@ -120,6 +132,17 @@ class IpPoolFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'type' => 'mixed',
+        ]);
+    }
+
+    /**
+     * Indicate that the pool is attached to all devices.
+     */
+    public function allDevices(): IpPoolFactory
+    {
+        return $this->state(fn (array $attributes) => [
+            'router_id' => null,
+            'all_devices' => true,
         ]);
     }
 }

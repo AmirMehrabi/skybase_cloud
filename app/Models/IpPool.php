@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -21,6 +22,7 @@ class IpPool extends Model
         'name',
         'tenant_id',
         'router_id',
+        'site_id',
         'network_address',
         'cidr',
         'gateway',
@@ -32,6 +34,7 @@ class IpPool extends Model
         'allow_static',
         'auto_assign',
         'block_reserved',
+        'all_devices',
         'site',
         'total_ips',
         'used_ips',
@@ -52,6 +55,7 @@ class IpPool extends Model
             'allow_static' => 'boolean',
             'auto_assign' => 'boolean',
             'block_reserved' => 'boolean',
+            'all_devices' => 'boolean',
             'total_ips' => 'integer',
             'used_ips' => 'integer',
             'reserved_ips' => 'integer',
@@ -73,6 +77,24 @@ class IpPool extends Model
     public function router(): BelongsTo
     {
         return $this->belongsTo(Router::class);
+    }
+
+    /**
+     * Get the site that owns the IP pool.
+     */
+    public function siteRecord(): BelongsTo
+    {
+        return $this->belongsTo(Site::class, 'site_id');
+    }
+
+    /**
+     * Get the routers assigned to the pool.
+     */
+    public function routers(): BelongsToMany
+    {
+        return $this->belongsToMany(Router::class, 'ip_pool_router')
+            ->withPivot('tenant_id')
+            ->withTimestamps();
     }
 
     /**
@@ -121,6 +143,38 @@ class IpPool extends Model
     public function scopeForRouter($query, $routerId)
     {
         return $query->where('router_id', $routerId);
+    }
+
+    /**
+     * Get the pool site label.
+     */
+    public function getSiteLabelAttribute(): string
+    {
+        return $this->siteRecord?->name ?? $this->site ?? '-';
+    }
+
+    /**
+     * Get the pool device summary.
+     */
+    public function getDeviceSummaryAttribute(): string
+    {
+        if ($this->all_devices) {
+            return 'All current and future devices';
+        }
+
+        $routerNames = $this->relationLoaded('routers')
+            ? $this->routers->pluck('name')
+            : $this->routers()->pluck('name');
+
+        if ($routerNames->isNotEmpty()) {
+            if ($routerNames->count() === 1) {
+                return (string) $routerNames->first();
+            }
+
+            return $routerNames->first().' + '.($routerNames->count() - 1).' more';
+        }
+
+        return $this->router?->name ?? 'No device';
     }
 
     /**

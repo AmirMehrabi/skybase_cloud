@@ -154,7 +154,7 @@ function getUsageColor($percentage)
                 <thead class="bg-gray-50 sticky top-0">
                     <tr>
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Pool Name</th>
-                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Router</th>
+                        <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Devices</th>
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Site</th>
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Network / CIDR</th>
                         <th class="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Gateway</th>
@@ -185,10 +185,10 @@ function getUsageColor($percentage)
                                 </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $pool->router?->name ?? '-' }}</div>
+                                <div class="text-sm text-gray-900">{{ $pool->device_summary }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $pool->site ?? '-' }}</div>
+                                <div class="text-sm text-gray-900">{{ $pool->site_label }}</div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">

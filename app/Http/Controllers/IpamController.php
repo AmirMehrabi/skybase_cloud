@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateIpPoolRequest;
 use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Router;
+use App\Models\Site;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,17 +67,22 @@ class IpamController extends Controller
         $tenantId = auth()->user()->tenant_id;
 
         $ipPools = IpPool::where('tenant_id', $tenantId)
-            ->with('router')
+            ->with(['router', 'routers', 'siteRecord'])
             ->orderBy('created_at', 'desc')
             ->get();
 
         // Get filter options
         $routers = Router::where('tenant_id', $tenantId)->pluck('name', 'id');
-        $sites = IpPool::where('tenant_id', $tenantId)
+        $sites = Site::where('tenant_id', $tenantId)
+            ->orderBy('name')
+            ->pluck('name')
+            ->merge(
+                IpPool::where('tenant_id', $tenantId)
+                    ->whereNotNull('site')
+                    ->where('site', '!=', '')
+                    ->pluck('site')
+            )
             ->distinct()
-            ->pluck('site')
-            ->filter()
-            ->sort()
             ->values();
 
         return view('ipam.pools.index', compact('ipPools', 'routers', 'sites'));
@@ -91,15 +97,11 @@ class IpamController extends Controller
 
         $routers = Router::where('tenant_id', $tenantId)
             ->orderBy('name')
-            ->pluck('name', 'id');
+            ->get(['id', 'name']);
 
-        $sites = IpPool::where('tenant_id', $tenantId)
-            ->distinct()
-            ->pluck('site')
-            ->filter()
-            ->sort()
-            ->values()
-            ->toArray();
+        $sites = Site::where('tenant_id', $tenantId)
+            ->orderBy('name')
+            ->get(['id', 'code', 'name']);
 
         return view('ipam.pools.create', compact('routers', 'sites'));
     }
@@ -113,7 +115,12 @@ class IpamController extends Controller
             DB::beginTransaction();
 
             $poolData = $request->validated();
-            $poolData['tenant_id'] = auth()->user()->tenant_id;
+            $tenantId = auth()->user()->tenant_id;
+            $poolData['tenant_id'] = $tenantId;
+            $routerIds = $poolData['router_ids'] ?? [];
+
+            $this->applyPoolAssignments($poolData, $tenantId);
+            unset($poolData['router_ids']);
 
             // Calculate total IPs based on CIDR
             $cidr = $poolData['cidr'];
@@ -122,6 +129,7 @@ class IpamController extends Controller
             $poolData['available_ips'] = $poolData['total_ips'];
 
             $pool = IpPool::create($poolData);
+            $this->syncPoolRouters($pool, $routerIds, $poolData['all_devices'] ?? false);
 
             // Generate IP addresses for the pool
             $this->generateIpAddresses($pool);
@@ -150,7 +158,7 @@ class IpamController extends Controller
         // Verify tenant ownership
         $this->authorizeTenantAccess($pool);
 
-        $pool->load(['router', 'ipAddresses' => fn ($query) => $query->with('customer')]);
+        $pool->load(['router', 'routers', 'siteRecord', 'ipAddresses' => fn ($query) => $query->with('customer')]);
 
         $ipAddresses = $pool->ipAddresses()
             ->with('customer')
@@ -172,15 +180,11 @@ class IpamController extends Controller
 
         $routers = Router::where('tenant_id', $tenantId)
             ->orderBy('name')
-            ->pluck('name', 'id');
+            ->get(['id', 'name']);
 
-        $sites = IpPool::where('tenant_id', $tenantId)
-            ->distinct()
-            ->pluck('site')
-            ->filter()
-            ->sort()
-            ->values()
-            ->toArray();
+        $sites = Site::where('tenant_id', $tenantId)
+            ->orderBy('name')
+            ->get(['id', 'code', 'name']);
 
         return view('ipam.pools.edit', compact('pool', 'routers', 'sites'));
     }
@@ -196,7 +200,14 @@ class IpamController extends Controller
         try {
             DB::beginTransaction();
 
-            $pool->update($request->validated());
+            $poolData = $request->validated();
+            $tenantId = auth()->user()->tenant_id;
+            $routerIds = $poolData['router_ids'] ?? [];
+
+            $this->applyPoolAssignments($poolData, $tenantId, $pool);
+            unset($poolData['router_ids']);
+            $pool->update($poolData);
+            $this->syncPoolRouters($pool, $routerIds, $poolData['all_devices'] ?? false);
 
             DB::commit();
 
@@ -304,6 +315,84 @@ class IpamController extends Controller
                 'notes' => $notes,
             ]);
         }
+    }
+
+    /**
+     * Normalize pool assignment fields for storage.
+     *
+     * @param  array<string, mixed>  $poolData
+     */
+    protected function applyPoolAssignments(array &$poolData, string $tenantId, ?IpPool $pool = null): void
+    {
+        $siteId = $poolData['site_id'] ?? null;
+        $site = null;
+
+        if (filled($siteId)) {
+            $site = Site::where('tenant_id', $tenantId)->find($siteId);
+        }
+
+        if (! $site && blank($siteId) && filled($poolData['site'] ?? null) && $pool) {
+            $site = Site::where('tenant_id', $tenantId)
+                ->where(function ($query) use ($poolData): void {
+                    $query->where('name', $poolData['site'])
+                        ->orWhere('code', $poolData['site']);
+                })
+                ->first();
+        }
+
+        if ($site) {
+            $poolData['site_id'] = $site->id;
+            $poolData['site'] = $site->name;
+        } elseif (blank($poolData['site'] ?? null)) {
+            $poolData['site_id'] = null;
+            $poolData['site'] = null;
+        }
+
+        $routerIds = collect($poolData['router_ids'] ?? [])
+            ->filter(fn ($routerId): bool => filled($routerId))
+            ->map(fn ($routerId): int => (int) $routerId)
+            ->values();
+
+        if ($poolData['all_devices'] ?? false) {
+            $poolData['router_id'] = null;
+        } elseif ($routerIds->isNotEmpty()) {
+            $poolData['router_id'] = $routerIds->first();
+        } elseif (filled($poolData['router_id'] ?? null)) {
+            $poolData['router_id'] = (int) $poolData['router_id'];
+            $routerIds = collect([$poolData['router_id']]);
+        } elseif ($pool !== null) {
+            $routerIds = $pool->routers()->pluck('routers.id')->map(fn ($routerId): int => (int) $routerId);
+        }
+
+        $poolData['all_devices'] = (bool) ($poolData['all_devices'] ?? false);
+    }
+
+    /**
+     * Sync the pool router assignments.
+     *
+     * @param  array<int, int|string>  $routerIds
+     */
+    protected function syncPoolRouters(IpPool $pool, array $routerIds, bool $allDevices): void
+    {
+        if ($allDevices) {
+            $pool->routers()->detach();
+
+            return;
+        }
+
+        $normalizedRouterIds = collect($routerIds)
+            ->filter(fn ($routerId): bool => filled($routerId))
+            ->map(fn ($routerId): int => (int) $routerId)
+            ->values()
+            ->all();
+
+        $syncData = collect($normalizedRouterIds)
+            ->mapWithKeys(fn (int $routerId): array => [
+                $routerId => ['tenant_id' => $pool->tenant_id],
+            ])
+            ->all();
+
+        $pool->routers()->sync($syncData);
     }
 
     /**
