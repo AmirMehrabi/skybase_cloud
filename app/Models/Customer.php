@@ -146,7 +146,10 @@ class Customer extends Authenticatable implements LdapImportable
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
                     ->orWhere('mobile', 'like', "%{$search}%")
-                    ->orWhere('customer_code', 'like', "%{$search}%");
+                    ->orWhere('customer_code', 'like', "%{$search}%")
+                    ->orWhereHas('subscriptions', function ($query) use ($search): void {
+                        $query->where('pppoe_username', 'like', "%{$search}%");
+                    });
             });
         })->when($filters['status'] ?? null, function ($query, $status) {
             $query->where('status', $status);

@@ -221,6 +221,7 @@ class Subscription extends Model implements LdapImportable
                 $query->where(function ($query) use ($search) {
                     $query->where('subscription_code', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
+                        ->orWhere('pppoe_username', 'like', "%{$search}%")
                         ->orWhereHas('customer', function ($q) use ($search) {
                             $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
                         });

@@ -830,7 +830,7 @@ class SpreadsheetImportExportService
         }
 
         $addresses = collect(explode(',', (string) $value))
-            ->map(fn (string $address): string => trim($address))
+            ->map(fn (string $address): string => $this->normalizeImportedIpAddress($address))
             ->filter()
             ->values()
             ->all();
@@ -847,6 +847,17 @@ class SpreadsheetImportExportService
         }
 
         return ['addresses' => $addresses, 'error' => null];
+    }
+
+    protected function normalizeImportedIpAddress(string $address): string
+    {
+        $address = trim($address);
+
+        if ($address === '') {
+            return '';
+        }
+
+        return trim(Str::before($address, '/'));
     }
 
     protected function resolveIpPoolForAddress(ImportExportRun $run, string $ipAddress): ?IpPool

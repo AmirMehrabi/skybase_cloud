@@ -607,7 +607,7 @@ class ImportExportFeatureTest extends TestCase
             'router_name' => $router->name,
             'site' => 'North POP',
             'connection_type' => 'pppoe',
-            'ip_address' => '10.40.0.10, 10.40.0.11',
+            'ip_address' => '10.40.0.10/29, 10.40.0.11/32',
             'mac_address' => null,
             'ip_management' => 'router',
             'pppoe_username' => $username,

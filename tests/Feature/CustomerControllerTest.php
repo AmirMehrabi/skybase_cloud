@@ -325,6 +325,126 @@ class CustomerControllerTest extends TestCase
         $this->assertContains($response->json('customers.0.ip_address'), ['10.10.0.10', '10.10.0.20']);
     }
 
+    public function test_customers_data_search_matches_partial_pppoe_username_from_subscriptions(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $matchingCustomer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-LIST-0100',
+            'customer_type' => 'individual',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'name' => 'Jane Doe',
+            'email' => 'jane.search@example.com',
+            'mobile' => '555-0110',
+            'address_line1' => '123 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
+        ]);
+
+        $otherCustomer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-LIST-0101',
+            'customer_type' => 'individual',
+            'first_name' => 'John',
+            'last_name' => 'Smith',
+            'name' => 'John Smith',
+            'email' => 'john.search@example.com',
+            'mobile' => '555-0111',
+            'address_line1' => '456 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
+        ]);
+
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber 100',
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Core Router',
+        ]);
+
+        Subscription::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $matchingCustomer->id,
+            'subscription_code' => 'SUB-LIST-0100',
+            'name' => 'Matching Service',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'site' => 'Downtown',
+            'ip_address' => '10.10.0.30',
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'home.alpha.user',
+            'pppoe_password' => 'secret-one',
+            'base_price' => 50,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 50,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'start_date' => now()->subMonth(),
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
+        ]);
+
+        Subscription::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $otherCustomer->id,
+            'subscription_code' => 'SUB-LIST-0101',
+            'name' => 'Non Matching Service',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'site' => 'Warehouse',
+            'ip_address' => '10.10.0.40',
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'other.user',
+            'pppoe_password' => 'secret-two',
+            'base_price' => 75,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 75,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'start_date' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('customers.data', ['search' => 'alpha.us']));
+
+        $response->assertOk();
+        $this->assertSame(1, $response->json('pagination.total'));
+        $response->assertJsonPath('customers.0.id', $matchingCustomer->id);
+        $response->assertJsonPath('customers.0.ip_address', '10.10.0.30');
+    }
+
     public function test_customer_note_can_be_added_from_profile(): void
     {
         $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
