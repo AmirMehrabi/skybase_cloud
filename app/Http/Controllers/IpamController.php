@@ -82,7 +82,7 @@ class IpamController extends Controller
                     ->where('site', '!=', '')
                     ->pluck('site')
             )
-            ->distinct()
+            ->unique()
             ->values();
 
         return view('ipam.pools.index', compact('ipPools', 'routers', 'sites'));

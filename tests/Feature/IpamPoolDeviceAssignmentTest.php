@@ -157,6 +157,66 @@ class IpamPoolDeviceAssignmentTest extends TestCase
         $response->assertSee('Legacy Pool');
     }
 
+    public function test_index_page_loads_with_unique_site_filter_options(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = $this->createTenantUser($tenant);
+        $managedSite = $this->createSite($tenant, 'Downtown Office', 'DOWNTOWN');
+        $router = $this->createRouter($tenant, 'Core Router');
+
+        IpPool::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Managed Site Pool',
+            'router_id' => $router->id,
+            'site_id' => $managedSite->id,
+            'site' => $managedSite->name,
+            'network_address' => '10.40.0.0',
+            'cidr' => 24,
+            'gateway' => '10.40.0.1',
+            'dns_primary' => '8.8.8.8',
+            'dns_secondary' => '8.8.4.4',
+            'vlan_id' => 400,
+            'type' => 'mixed',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
+
+        IpPool::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Legacy Site Pool',
+            'router_id' => $router->id,
+            'site' => 'Legacy Office',
+            'network_address' => '10.41.0.0',
+            'cidr' => 24,
+            'gateway' => '10.41.0.1',
+            'dns_primary' => '8.8.8.8',
+            'dns_secondary' => '8.8.4.4',
+            'vlan_id' => 401,
+            'type' => 'mixed',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('ipam.pools.index'));
+
+        $response->assertOk();
+        $response->assertSee('Downtown Office');
+        $response->assertSee('Legacy Office');
+        $response->assertSee('IP Pools');
+    }
+
     private function createTenant(string $slug, string $companyName): Tenant
     {
         return Tenant::create([
