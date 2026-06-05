@@ -13,33 +13,33 @@
         [
             'version' => '0.9.4',
             'date' => 'June 6, 2026',
-            'title' => 'CoA, Redis/Horizon, and IP Selection Cleanup',
-            'summary' => 'This release finishes a stability pass across disconnect handling, queue infrastructure, and IP pool selection.',
+            'title' => 'CoA, Queue Infrastructure, and IP Selection Improvements',
+            'summary' => 'This release sharpens disconnect handling, strengthens background processing, and refines IP pool selection across the platform.',
             'sections' => [
                 'Added' => [
-                    'RouterOS CoA support for the subscription kill flow, including the client wiring needed to trigger remote disconnects.',
-                    'Redis and Horizon queue configuration to support the latest background subscription jobs and operational workers.',
-                    'Final IP selection refinements for router pools and subscription assignment screens.',
+                    'RouterOS CoA support for the subscription disconnect flow, enabling faster remote session termination.',
+                    'Redis and Horizon queue configuration to support background subscription jobs and worker processing.',
+                    'Refined IP selection behavior for router pools and subscription assignment screens.',
                 ],
                 'Changed' => [
-                    'Subscription reconciliation and router status handling were tightened after the latest operational fixes.',
-                    'Bulk delete, import/export, and monitoring paths were kept in sync with the newest workflow adjustments.',
+                    'Subscription reconciliation and router status handling were tightened for more reliable day-to-day operations.',
+                    'Bulk delete, import/export, and monitoring flows were aligned with the latest workflow updates.',
                 ],
                 'Fixed' => [
-                    'IP pool selection, CoA kill-button behavior, and related test coverage were cleaned up.',
-                    'Minor regressions in queue wiring and router/IPAM edge cases were resolved.',
+                    'IP pool selection, CoA disconnect actions, and related coverage were polished.',
+                    'Queue wiring and router/IPAM edge cases were corrected.',
                 ],
             ],
         ],
         [
             'version' => '0.9.3',
             'date' => 'June 5, 2026',
-            'title' => 'Router Status, Pagination, and IPAM Cleanup',
-            'summary' => 'This release improves the operator lists and IP management flows with better status checks, pagination, and bulk delete behavior.',
+            'title' => 'Router Status, Pagination, and IPAM Enhancements',
+            'summary' => 'This release improves operational visibility and streamlines list, IP management, and bulk maintenance workflows.',
             'sections' => [
                 'Added' => [
                     'Improved router status probing with ping fallback and failure tracking for unstable links.',
-                    'Visible pagination updates for customers, subscriptions, organizations, and routers.',
+                    'Updated pagination across customers, subscriptions, organizations, and routers.',
                     'Bulk delete workflows for customers and subscriptions with run tracking.',
                 ],
                 'Changed' => [
@@ -47,7 +47,7 @@
                     'Subscription search now matches PPPoE usernames across customer and subscription indexes.',
                 ],
                 'Fixed' => [
-                    'Router pagination and status handling no longer rely on stale list behavior.',
+                    'Router pagination and status handling were stabilized.',
                     'IP pool assignment and reserved-address handling were tightened with updated tests.',
                 ],
             ],
@@ -55,11 +55,11 @@
         [
             'version' => '0.9.0',
             'date' => 'June 2, 2026',
-            'title' => 'Imports, Monitoring, and Customer Intelligence',
-            'summary' => 'This release adds import/export tooling, customer detail expansion, and live monitoring around subscriptions.',
+            'title' => 'Imports, Monitoring, and Customer Insights',
+            'summary' => 'This release expands customer visibility, adds live monitoring, and strengthens import/export workflows.',
             'sections' => [
                 'Added' => [
-                    'Customer show page with notes, ticketing, and subscription overview sections.',
+                    'Customer detail pages with notes, ticketing, and subscription overview sections.',
                     'Monitoring surfaces for latency, delay, and live subscription graphs.',
                     'Import and export workflows for customers, plans, and subscriptions.',
                 ],
@@ -76,8 +76,8 @@
         [
             'version' => '0.8.9',
             'date' => 'June 1, 2026',
-            'title' => 'Notifications and White-Labeling',
-            'summary' => 'This release introduces tenant notifications and branding controls across the public and authenticated surfaces.',
+            'title' => 'Notifications and White-Label Controls',
+            'summary' => 'This release brings tenant notifications and branding controls to both public and authenticated areas.',
             'sections' => [
                 'Added' => [
                     'Tenant notification module with in-app notification feeds and preferences.',
@@ -100,8 +100,8 @@
             'summary' => 'This release adds the support desk workflow and automatically disconnects suspended subscribers.',
             'sections' => [
                 'Added' => [
-                    'Tenant ticketing and support-team module with ticket messages, attachments, and SLA-aware service classes.',
-                    'Rich ticket editor and message rendering for both staff and customers.',
+                    'Tenant ticketing and support workflows with message, attachment, and SLA support.',
+                    'A richer ticket editor and message rendering for both staff and customers.',
                     'Automatic subscription disconnect enforcement when a subscription is suspended.',
                 ],
                 'Changed' => [
@@ -109,7 +109,7 @@
                     'Subscription suspension now triggers a background disconnect flow and activity logging.',
                 ],
                 'Fixed' => [
-                    'Ticket form and support views were updated to match the new editor behavior.',
+                    'Ticket forms and support views were updated to match the new editor experience.',
                     'Suspension and provisioning tests were tightened around the new operational workflow.',
                 ],
             ],
@@ -117,8 +117,8 @@
         [
             'version' => '0.8.3',
             'date' => 'May 24, 2026',
-            'title' => 'Customer Portal and Tenant Login Polish',
-            'summary' => 'This release starts the customer portal and tightens login and validation behavior around it.',
+            'title' => 'Customer Portal Launch and Login Polish',
+            'summary' => 'This release introduces the customer portal and refines login and validation behavior around it.',
             'sections' => [
                 'Added' => [
                     'Customer portal login, dashboard, invoices, subscriptions, and support pages.',
