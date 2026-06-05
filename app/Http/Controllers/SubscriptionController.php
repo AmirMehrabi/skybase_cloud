@@ -406,6 +406,45 @@ class SubscriptionController extends Controller
         ]);
     }
 
+    public function syncIpRoutes(Subscription $subscription): RedirectResponse
+    {
+        $subscription->load(['router', 'ipRoutes']);
+
+        if (! $subscription->isSystemManagedIp()) {
+            return redirect()
+                ->route('subscriptions.show', $subscription)
+                ->with('warning', 'IP routes are only available for system-managed subscriptions.');
+        }
+
+        if ($subscription->ipRoutes->isEmpty()) {
+            return redirect()
+                ->route('subscriptions.show', $subscription)
+                ->with('info', 'This subscription does not have IP routes to sync.');
+        }
+
+        app(SubscriptionIpRouteSyncService::class)->syncRoutes($subscription);
+
+        $statuses = $subscription->ipRoutes()->pluck('routeros_sync_status');
+        $failedCount = $statuses->filter(fn (?string $status): bool => $status === 'failed')->count();
+        $skippedCount = $statuses->filter(fn (?string $status): bool => $status === 'skipped')->count();
+
+        if ($failedCount > 0) {
+            return redirect()
+                ->route('subscriptions.show', $subscription)
+                ->with('error', "RouterOS route sync failed for {$failedCount} route(s).");
+        }
+
+        if ($skippedCount > 0) {
+            return redirect()
+                ->route('subscriptions.show', $subscription)
+                ->with('warning', "RouterOS route sync skipped for {$skippedCount} route(s).");
+        }
+
+        return redirect()
+            ->route('subscriptions.show', $subscription)
+            ->with('success', 'RouterOS IP routes synced successfully.');
+    }
+
     /**
      * Remove the specified resource from storage.
      */
