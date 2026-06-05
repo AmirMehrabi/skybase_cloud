@@ -47,7 +47,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div class="flex items-center justify-between">
                 <div>
@@ -71,6 +71,20 @@
                 <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Online</p>
+                    <p class="text-2xl font-bold text-green-600" x-text="stats.online"></p>
+                </div>
+                <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                     </svg>
                 </div>
             </div>
@@ -460,7 +474,7 @@
 function subscriptionsIndex() {
     return {
         subscriptions: [],
-        stats: { total: 0, active: 0, pending: 0, suspended: 0, cancelled: 0 },
+        stats: { total: 0, active: 0, online: 0, pending: 0, suspended: 0, cancelled: 0 },
         visiblePasswords: {},
         copiedCredential: null,
         bulkDeleting: false,

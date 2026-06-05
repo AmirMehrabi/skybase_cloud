@@ -53,7 +53,7 @@ class DashboardController extends Controller
             ->where('tenant_id', $tenantId)
             ->where(function ($query): void {
                 $query->where('status', 'exhausted')
-                    ->orWhereRaw('(used_ips / NULLIF(total_ips, 0)) * 100 >= ?', [80]);
+                    ->orWhereRaw('(used_ips * 100.0 / NULLIF(total_ips, 0)) >= ?', [80]);
             })
             ->count();
 

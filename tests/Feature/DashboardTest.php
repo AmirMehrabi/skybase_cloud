@@ -165,18 +165,19 @@ class DashboardTest extends TestCase
         $response->assertSee('$149.99');
         $response->assertDontSee('Should Stay Hidden');
         $response->assertDontSee('Private Metro 1G');
-        $response->assertViewHas('dashboard', function (array $dashboard): bool {
-            return $dashboard['stats']['customers']['value'] === 2
-                && $dashboard['stats']['subscriptions']['value'] === 1
-                && $dashboard['stats']['online_users']['value'] === 1
-                && $dashboard['attention'][0]['value'] === 1
-                && $dashboard['attention'][1]['value'] === 1
-                && $dashboard['attention'][2]['value'] === 1
-                && $dashboard['attention'][3]['value'] === 1
-                && $dashboard['attention'][4]['value'] === 1
-                && $dashboard['popular_plans']->first()['name'] === 'Business Fiber 200'
-                && $dashboard['recent_activity']->first()['title'] === 'User Created';
-        });
+
+        $dashboard = $response->viewData('dashboard');
+
+        $this->assertSame(2, $dashboard['stats']['customers']['value']);
+        $this->assertSame(1, $dashboard['stats']['subscriptions']['value']);
+        $this->assertSame(1, $dashboard['stats']['online_users']['value']);
+        $this->assertSame(1, $dashboard['attention'][0]['value']);
+        $this->assertSame(1, $dashboard['attention'][1]['value']);
+        $this->assertSame(1, $dashboard['attention'][2]['value']);
+        $this->assertSame(1, $dashboard['attention'][3]['value']);
+        $this->assertSame(1, $dashboard['attention'][4]['value']);
+        $this->assertSame('Business Fiber 200', $dashboard['popular_plans']->first()['name']);
+        $this->assertSame('User Created', $dashboard['recent_activity']->first()['title']);
     }
 
     public function test_dashboard_shows_setup_empty_state_for_new_tenant(): void
