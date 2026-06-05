@@ -279,7 +279,7 @@ if (! function_exists('getStatusBadgeClass')) {
                     </form>
                 @endif
 
-                @if($subscriptionModel->isPppoe() && $subscriptionModel->router)
+                @if($subscriptionModel->isPppoe() && filled($subscriptionModel->pppoe_username) && $subscriptionModel->router)
                     <form method="POST" action="{{ route('subscriptions.kill-session', $subscription['id']) }}">
                         @csrf
                         <button

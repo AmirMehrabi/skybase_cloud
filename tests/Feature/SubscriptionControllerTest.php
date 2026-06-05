@@ -240,6 +240,11 @@ class SubscriptionControllerTest extends TestCase
     public function test_show_and_edit_pages_expose_ip_change_actions(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.doe',
+            'pppoe_password' => 'secret-pass',
+        ])->saveQuietly();
 
         $showResponse = $this->actingAs($user)->get(route('subscriptions.show', $subscription));
         $showResponse->assertOk();
@@ -259,13 +264,18 @@ class SubscriptionControllerTest extends TestCase
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
         $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.doe',
+            'pppoe_password' => 'secret-pass',
+        ])->saveQuietly();
+        $subscription->forceFill([
             'connection_status' => 'online',
             'connection_status_checked_at' => now()->subMinutes(5),
         ])->saveQuietly();
 
         $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
         {
-            public function execute(\App\Models\Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
+            public function execute(Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
             {
                 return 1;
             }
@@ -292,6 +302,11 @@ class SubscriptionControllerTest extends TestCase
     public function test_kill_session_route_falls_back_to_coa_when_api_disconnect_fails(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.doe',
+            'pppoe_password' => 'secret-pass',
+        ])->saveQuietly();
         $subscription->router->forceFill([
             'coa_port' => 1700,
             'coa_secret' => 'coa-secret',
@@ -303,7 +318,7 @@ class SubscriptionControllerTest extends TestCase
 
         $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
         {
-            public function execute(\App\Models\Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
+            public function execute(Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
             {
                 throw new \RuntimeException('API is unavailable.');
             }
@@ -311,7 +326,7 @@ class SubscriptionControllerTest extends TestCase
 
         $this->app->instance(RouterOsCoaClient::class, new class extends RouterOsCoaClient
         {
-            public function disconnect(\App\Models\Router $router, string $username, ?string $ipAddress = null, ?int $timeoutSeconds = null): int
+            public function disconnect(Router $router, string $username, ?string $ipAddress = null, ?int $timeoutSeconds = null): int
             {
                 return 1;
             }
