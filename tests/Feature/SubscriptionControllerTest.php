@@ -653,6 +653,88 @@ class SubscriptionControllerTest extends TestCase
         ]));
     }
 
+    public function test_sync_ip_routes_action_retries_failed_routeros_routes(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $routerOs = new class extends RouterOsClient
+        {
+            public array $sentences = [];
+
+            public int $executeCount = 0;
+
+            private array $lastSentence = [];
+
+            public function execute(Router $router, callable $callback): mixed
+            {
+                $this->executeCount++;
+
+                return $callback(null, $this);
+            }
+
+            public function writeSentence($connection, array $words): void
+            {
+                $this->sentences[] = $words;
+                $this->lastSentence = $words;
+            }
+
+            public function readResponse($connection): array
+            {
+                if (($this->lastSentence[0] ?? null) !== '/ip/route/print') {
+                    return [];
+                }
+
+                $comment = collect($this->lastSentence)
+                    ->first(fn (string $word): bool => str_starts_with($word, '?comment='));
+
+                return [[
+                    '.id' => '*1',
+                    'comment' => $comment ? substr($comment, strlen('?comment=')) : null,
+                ]];
+            }
+        };
+        $this->app->instance(RouterOsClient::class, $routerOs);
+
+        $routeIp = IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.10.0.13',
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'metadata' => ['purpose' => 'subscription_ip_route'],
+        ]);
+        $ipRoute = SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address_id' => $routeIp->id,
+            'ip_address' => '10.10.0.13',
+            'cidr' => 32,
+            'routeros_comment' => 'skybase:subscription-ip-route:retry',
+            'routeros_sync_status' => 'failed',
+            'routeros_sync_error' => 'RouterOS route sync failed: Unable to connect to RouterOS API: Connection timed out',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('subscriptions.ip-routes.sync', $subscription));
+
+        $response
+            ->assertRedirect(route('subscriptions.show', $subscription))
+            ->assertSessionHas('success', 'RouterOS IP routes synced successfully.');
+
+        $ipRoute->refresh();
+
+        $this->assertSame(1, $routerOs->executeCount);
+        $this->assertSame('synced', $ipRoute->routeros_sync_status);
+        $this->assertNull($ipRoute->routeros_sync_error);
+        $this->assertSame('*1', $ipRoute->routeros_route_id);
+        $this->assertTrue(collect($routerOs->sentences)->contains(fn (array $sentence): bool => $sentence === [
+            '/ip/route/set',
+            '=.id=*1',
+            '=dst-address=10.10.0.13/32',
+            '=gateway=10.10.0.11',
+            '=comment='.$ipRoute->routeros_comment,
+        ]));
+    }
+
     private function createTenant(string $slug, string $companyName): Tenant
     {
         return Tenant::create([
