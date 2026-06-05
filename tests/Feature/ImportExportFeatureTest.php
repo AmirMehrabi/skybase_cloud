@@ -838,13 +838,16 @@ class ImportExportFeatureTest extends TestCase
             'available_ips' => 254,
         ]);
 
-        $targetCustomer = Customer::factory()->active()->create([
+        $targetCustomer = Customer::query()->create([
             'tenant_id' => $tenant->id,
             'customer_code' => 'CUS-TARGET',
             'customer_type' => 'business',
             'company_name' => 'Target ISP',
             'name' => 'Target ISP',
             'email' => 'target@example.com',
+            'status' => 'active',
+            'billing_type' => 'prepaid',
+            'billing_enabled' => true,
         ]);
         $targetSubscription = $this->createManagedSubscription(
             $tenant,
@@ -862,7 +865,7 @@ class ImportExportFeatureTest extends TestCase
             $targetSubscription,
         );
 
-        $primaryOwnerCustomer = Customer::factory()->active()->create([
+        $primaryOwnerCustomer = Customer::query()->create([
             'tenant_id' => $tenant->id,
             'customer_code' => 'CUS-OLD-PRIMARY',
             'customer_type' => 'individual',
@@ -870,6 +873,9 @@ class ImportExportFeatureTest extends TestCase
             'last_name' => 'Primary',
             'name' => 'Old Primary',
             'email' => 'old-primary@example.com',
+            'status' => 'active',
+            'billing_type' => 'prepaid',
+            'billing_enabled' => true,
         ]);
         $primaryOwnerSubscription = $this->createManagedSubscription(
             $tenant,
@@ -887,7 +893,7 @@ class ImportExportFeatureTest extends TestCase
             $primaryOwnerSubscription,
         );
 
-        $routeOwnerCustomer = Customer::factory()->active()->create([
+        $routeOwnerCustomer = Customer::query()->create([
             'tenant_id' => $tenant->id,
             'customer_code' => 'CUS-OLD-ROUTE',
             'customer_type' => 'individual',
@@ -895,6 +901,9 @@ class ImportExportFeatureTest extends TestCase
             'last_name' => 'Route',
             'name' => 'Old Route',
             'email' => 'old-route@example.com',
+            'status' => 'active',
+            'billing_type' => 'prepaid',
+            'billing_enabled' => true,
         ]);
         $routeOwnerSubscription = $this->createManagedSubscription(
             $tenant,
