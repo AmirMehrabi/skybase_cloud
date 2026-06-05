@@ -779,6 +779,233 @@ class ImportExportFeatureTest extends TestCase
         ]);
     }
 
+    public function test_subscription_ip_adjustment_import_reassigns_taken_primary_and_route_addresses(): void
+    {
+        Storage::fake('imports');
+
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber 300',
+            'internal_name' => 'fiber_300',
+            'status' => 'active',
+            'price' => 149.99,
+            'billing_cycle' => 'monthly',
+        ]);
+        $router = Router::factory()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Edge Router',
+            'vendor' => 'Cisco',
+            'enable_provisioning' => false,
+        ]);
+
+        $poolPrimary = IpPool::query()->create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Primary Pool',
+            'network_address' => '10.60.0.0',
+            'cidr' => 24,
+            'gateway' => '10.60.0.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'all_devices' => false,
+            'site' => 'North POP',
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
+        $poolRoute = IpPool::query()->create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Route Pool',
+            'network_address' => '10.60.1.0',
+            'cidr' => 24,
+            'gateway' => '10.60.1.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'all_devices' => false,
+            'site' => 'North POP',
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
+
+        $targetCustomer = Customer::factory()->active()->create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-TARGET',
+            'customer_type' => 'business',
+            'company_name' => 'Target ISP',
+            'name' => 'Target ISP',
+            'email' => 'target@example.com',
+        ]);
+        $targetSubscription = $this->createManagedSubscription(
+            $tenant,
+            $targetCustomer,
+            $plan,
+            $router,
+            'target.user',
+            'SUB-TARGET',
+            $poolPrimary,
+            '10.60.0.30',
+        );
+        $this->assignPrimaryIpAddressRecord(
+            $this->createAvailableIpAddress($tenant, $poolPrimary, '10.60.0.30'),
+            $targetCustomer,
+            $targetSubscription,
+        );
+
+        $primaryOwnerCustomer = Customer::factory()->active()->create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-OLD-PRIMARY',
+            'customer_type' => 'individual',
+            'first_name' => 'Old',
+            'last_name' => 'Primary',
+            'name' => 'Old Primary',
+            'email' => 'old-primary@example.com',
+        ]);
+        $primaryOwnerSubscription = $this->createManagedSubscription(
+            $tenant,
+            $primaryOwnerCustomer,
+            $plan,
+            $router,
+            'old.primary',
+            'SUB-OLD-PRIMARY',
+            $poolPrimary,
+            '10.60.0.10',
+        );
+        $this->assignPrimaryIpAddressRecord(
+            $this->createAvailableIpAddress($tenant, $poolPrimary, '10.60.0.10'),
+            $primaryOwnerCustomer,
+            $primaryOwnerSubscription,
+        );
+
+        $routeOwnerCustomer = Customer::factory()->active()->create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-OLD-ROUTE',
+            'customer_type' => 'individual',
+            'first_name' => 'Old',
+            'last_name' => 'Route',
+            'name' => 'Old Route',
+            'email' => 'old-route@example.com',
+        ]);
+        $routeOwnerSubscription = $this->createManagedSubscription(
+            $tenant,
+            $routeOwnerCustomer,
+            $plan,
+            $router,
+            'old.route',
+            'SUB-OLD-ROUTE',
+            $poolRoute,
+            '10.60.1.21',
+        );
+        $this->assignPrimaryIpAddressRecord(
+            $this->createAvailableIpAddress($tenant, $poolRoute, '10.60.1.21'),
+            $routeOwnerCustomer,
+            $routeOwnerSubscription,
+        );
+
+        $oldRouteIp = $this->createAvailableIpAddress($tenant, $poolPrimary, '10.60.0.20');
+        $oldRouteIp->forceFill([
+            'status' => 'assigned',
+            'customer_id' => $primaryOwnerCustomer->id,
+            'mac_address' => null,
+            'subscription_code' => null,
+            'assigned_at' => now(),
+            'released_at' => null,
+            'notes' => 'Subscription IP route '.$primaryOwnerSubscription->subscription_code,
+            'metadata' => [
+                'purpose' => 'subscription_ip_route',
+                'subscription_id' => $primaryOwnerSubscription->id,
+            ],
+        ])->save();
+
+        $oldRoute = SubscriptionIpRoute::query()->create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $primaryOwnerSubscription->id,
+            'ip_pool_id' => $poolPrimary->id,
+            'ip_address_id' => $oldRouteIp->id,
+            'ip_address' => '10.60.0.20',
+            'cidr' => 29,
+            'routeros_comment' => 'old-route',
+        ]);
+        $oldRoute->forceFill([
+            'routeros_comment' => $oldRoute->routerOsComment(),
+        ])->save();
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_SUBSCRIPTION_IP_ADJUSTMENTS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTION_IP_ADJUSTMENTS), [[
+            'username' => 'target.user',
+            'ip_address' => '10.60.0.10, 10.60.0.20/29, 10.60.1.21/32',
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+        $this->assertSame(1, $run->updated_count);
+
+        $targetSubscription->refresh();
+        $this->assertSame('system', $targetSubscription->ip_management);
+        $this->assertSame('10.60.0.10', $targetSubscription->ip_address);
+        $this->assertSame($poolPrimary->id, $targetSubscription->ip_pool_id);
+        $this->assertSame(2, $targetSubscription->ipRoutes()->count());
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $poolPrimary->id,
+            'ip_address' => '10.60.0.10',
+            'status' => 'assigned',
+            'customer_id' => $targetCustomer->id,
+            'subscription_code' => $targetSubscription->subscription_code,
+        ]);
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $poolPrimary->id,
+            'ip_address' => '10.60.0.20',
+            'status' => 'assigned',
+            'customer_id' => $targetCustomer->id,
+        ]);
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $poolRoute->id,
+            'ip_address' => '10.60.1.21',
+            'status' => 'assigned',
+            'customer_id' => $targetCustomer->id,
+        ]);
+
+        $this->assertDatabaseHas('subscription_ip_routes', [
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $targetSubscription->id,
+            'ip_address' => '10.60.0.20',
+            'cidr' => 29,
+        ]);
+        $this->assertDatabaseHas('subscription_ip_routes', [
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $targetSubscription->id,
+            'ip_address' => '10.60.1.21',
+            'cidr' => 32,
+        ]);
+
+        $this->assertNull($primaryOwnerSubscription->fresh()->ip_address);
+        $this->assertNull($routeOwnerSubscription->fresh()->ip_address);
+        $this->assertDatabaseMissing('subscription_ip_routes', [
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $primaryOwnerSubscription->id,
+            'ip_address' => '10.60.0.20',
+            'cidr' => 29,
+        ]);
+    }
+
     public function test_subscription_import_creates_routed_subnet_without_exact_ip_address_record(): void
     {
         Storage::fake('imports');
