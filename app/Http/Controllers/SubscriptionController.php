@@ -31,6 +31,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -277,12 +278,19 @@ class SubscriptionController extends Controller
      */
     public function update(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
+        $effectiveRouterId = $request->input('router_id', $subscription->router_id);
+
         $validated = $request->validate([
             'plan_id' => 'nullable|exists:plans,id',
             'name' => 'nullable|string|max:255',
             'service_type' => 'nullable|in:hotspot,pppoe,vpn',
             'router_id' => 'nullable|exists:routers,id',
             'site' => 'nullable|string|max:255',
+            'ip_pool_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('ip_pools', 'id')->where(fn ($query) => $query->where('router_id', $effectiveRouterId)),
+            ],
             'ip_address' => 'nullable|ip|max:255',
             'pppoe_username' => 'nullable|string|max:255',
             'pppoe_password' => 'nullable|string|max:255',
@@ -325,19 +333,27 @@ class SubscriptionController extends Controller
                 $validated['name'] = Subscription::defaultNameForCustomer((int) $subscription->customer_id);
             }
 
+            $poolChanged = array_key_exists('ip_pool_id', $validated) && (string) $validated['ip_pool_id'] !== (string) $subscription->ip_pool_id;
+            $routerChanged = array_key_exists('router_id', $validated) && (string) $validated['router_id'] !== (string) $subscription->router_id;
+
+            if (($poolChanged || $routerChanged) && $subscription->isSystemManagedIp() && filled($subscription->ip_address)) {
+                $subscription->releaseIpAddress();
+            }
+
             $validated = $this->organizationBilling->applyDefaultsToSubscriptionAttributes([
                 ...$subscription->only(['customer_id', 'plan_id', 'billing_cycle', 'billing_enabled']),
                 ...$validated,
             ]);
 
             $subscription->update($validated);
+            $subscription->refresh();
 
             if ($ipAddressProvided) {
                 $updatedIp = $subscription->updateIpAddress($ipAddress);
 
-                if ($ipAddress !== null && blank($ipAddress) === false && ! $updatedIp && $subscription->ip_address !== $ipAddress) {
+                if ($ipAddress !== null && blank($ipAddress) === false && ! $updatedIp) {
                     throw ValidationException::withMessages([
-                        'ip_address' => 'The selected IP address is not available in the current pool.',
+                        'ip_address' => 'The selected IP address is not available in the selected pool.',
                     ]);
                 }
             }

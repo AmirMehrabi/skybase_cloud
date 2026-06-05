@@ -5,6 +5,8 @@
 @php
     $organization = $subscription->customer?->organization;
     $organizationBilling = $organization?->billing_enabled;
+    $currentRouterId = old('router_id', $subscription->router_id);
+    $currentIpPoolId = old('ip_pool_id', $subscription->ip_pool_id);
     $currentIpAddress = old('ip_address', $subscription->ip_address);
     $initialIpRoutes = collect(old('ip_routes', $subscription->ipRoutes->map(fn ($route) => [
         'ip_pool_id' => (string) $route->ip_pool_id,
@@ -33,7 +35,13 @@
 @endpush
 
 @section('content')
-<div class="space-y-6 pb-24" x-data="subscriptionEditForm(@js(route('subscriptions.suggest-ip', $subscription)), @js($subscription->isSystemManagedIp() && $subscription->ipPool !== null), @js((string) $currentIpAddress), @js($ipPools), @js($initialIpRoutes), @js((string) $subscription->ip_pool_id))" x-cloak>
+<div class="space-y-6 pb-24" x-data="subscriptionEditForm({
+    routerId: @js((string) $currentRouterId),
+    ipPoolId: @js((string) $currentIpPoolId),
+    ipAddress: @js((string) $currentIpAddress),
+    ipPools: @js($ipPools),
+    ipRoutes: @js($initialIpRoutes),
+})" x-cloak>
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
             <a href="{{ route('subscriptions.show', $subscription) }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
@@ -95,7 +103,7 @@
                 </div>
                 <div>
                     <label for="router_id" class="block text-sm font-medium text-gray-700 mb-1">Router / NAS</label>
-                    <select name="router_id" id="router_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                    <select name="router_id" id="router_id" x-model="form.router_id" @change="handleRouterChange()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                         <option value="">Select a router</option>
                         @foreach($routers as $router)
                             <option value="{{ $router->id }}" @selected((string) old('router_id', $subscription->router_id) === (string) $router->id)>{{ $router->name }} ({{ $router->vendor }} {{ $router->model }})</option>
@@ -112,14 +120,39 @@
                     <div class="lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                         <input type="hidden" name="sync_ip_routes" value="1">
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div class="space-y-2">
+                            <div class="space-y-2 flex-1">
                                 <div class="flex items-center gap-2">
                                     <label for="ip_address" class="block text-sm font-medium text-gray-700">IP Pool Assignment</label>
-                                    <span class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                                        {{ $subscription->ipPool->name }}
+                                    <span class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700" x-show="selectedIpPool">
+                                        <span x-text="selectedIpPool?.name"></span>
                                     </span>
                                 </div>
                                 <p class="text-xs text-gray-500">Primary IP is selected from the subscription pool. Routes below use their own IPAM row and can include a subnet.</p>
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label for="ip_pool_id" class="block text-sm font-medium text-gray-700 mb-1">IP Pool</label>
+                                        <select name="ip_pool_id" id="ip_pool_id" x-model="form.ip_pool_id" @change="handleIpPoolChange()" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                            <option value="">Select IP Pool</option>
+                                            <template x-for="pool in availableIpPools()" :key="pool.id">
+                                                <option :value="String(pool.id)" x-text="`${pool.name} (${pool.cidr_notation}) - ${pool.available_ips} available`"></option>
+                                            </template>
+                                        </select>
+                                        @error('ip_pool_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div class="rounded-xl border border-blue-100 bg-white p-4 text-sm text-gray-600">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span>Current IP</span>
+                                            <span class="font-mono text-gray-900" x-text="form.ip_address || 'Not set'"></span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4 mt-2">
+                                            <span>Available</span>
+                                            <span class="font-medium text-gray-900" x-text="selectedIpPool ? selectedIpPool.available_ips : '0'"></span>
+                                        </div>
+                                        <div class="mt-3 min-h-5 text-xs" :class="ipMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'">
+                                            <span x-text="ipMessage.text"></span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                                     <div class="sm:max-w-md flex-1">
                                         <select name="ip_address" id="ip_address" x-model="form.ip_address" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
@@ -146,19 +179,6 @@
                                     </button>
                                 </div>
                                 @error('ip_address')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                            </div>
-                            <div class="grid gap-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 lg:min-w-72">
-                                <div class="flex items-center justify-between gap-4">
-                                    <span>Current IP</span>
-                                    <span class="font-mono text-gray-900">{{ $subscription->ip_address ?: 'Not set' }}</span>
-                                </div>
-                                <div class="flex items-center justify-between gap-4">
-                                    <span>Available</span>
-                                    <span class="font-medium text-gray-900">{{ $subscription->ipPool->available_ips }}</span>
-                                </div>
-                                <div class="min-h-5 text-xs" :class="ipMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'">
-                                    <span x-text="ipMessage.text"></span>
-                                </div>
                             </div>
                         </div>
 
@@ -324,28 +344,42 @@
 
 @push('scripts')
 <script>
-function subscriptionEditForm(suggestIpUrl, canSuggestIp, currentIpAddress, ipPools, initialIpRoutes, primaryPoolId) {
+function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes }) {
     return {
         form: {
-            ip_address: currentIpAddress || '',
+            router_id: routerId || '',
+            ip_pool_id: ipPoolId || '',
+            ip_address: ipAddress || '',
         },
-        ipPools,
-        ipRoutes: initialIpRoutes || [],
-        nextIpRouteKey: (initialIpRoutes || []).length + 1,
-        primaryPoolId,
-        canSuggestIp,
+        ipPools: Array.isArray(ipPools) ? ipPools : [],
+        ipRoutes: Array.isArray(ipRoutes) ? ipRoutes : [],
+        nextIpRouteKey: (Array.isArray(ipRoutes) ? ipRoutes : []).length + 1,
         suggestingIp: false,
         ipMessage: {
             type: 'info',
-            text: canSuggestIp ? 'Click suggest to fetch the next free IP from the current pool.' : 'IP suggestions are only available for system-managed pools.',
+            text: 'Choose a router and pool to suggest a free IP address.',
         },
-        primaryPool() {
-            if (! this.primaryPoolId) return null;
+        get selectedIpPool() {
+            if (! this.form.ip_pool_id) {
+                return null;
+            }
 
-            return this.ipPools.find(pool => String(pool.id) === String(this.primaryPoolId));
+            return this.ipPools.find(pool => String(pool.id) === String(this.form.ip_pool_id)) || null;
+        },
+        get canSuggestIp() {
+            return this.availablePoolAddresses().length > 0;
+        },
+        availableIpPools() {
+            if (! this.form.router_id) {
+                return [];
+            }
+
+            return this.ipPools.filter(pool => String(pool.router_id ?? '') === String(this.form.router_id));
         },
         routeIpPool(route) {
-            if (! route.ip_pool_id) return null;
+            if (! route.ip_pool_id) {
+                return null;
+            }
 
             return this.ipPools.find(pool => String(pool.id) === String(route.ip_pool_id));
         },
@@ -362,11 +396,22 @@ function subscriptionEditForm(suggestIpUrl, canSuggestIp, currentIpAddress, ipPo
                 return true;
             });
         },
-        availablePrimaryAddresses() {
-            const pool = this.primaryPool();
-            if (! pool) return [];
+        availablePoolAddresses() {
+            const pool = this.selectedIpPool;
+
+            if (! pool) {
+                return [];
+            }
 
             const addresses = Array.isArray(pool.available_addresses) ? [...pool.available_addresses] : [];
+            const selectedRouteAddresses = this.ipRoutes
+                .map(route => route.ip_address)
+                .filter(Boolean);
+
+            return this.uniqueAddresses(addresses).filter(address => ! selectedRouteAddresses.includes(address.ip_address));
+        },
+        availablePrimaryAddresses() {
+            const addresses = this.availablePoolAddresses();
 
             if (this.form.ip_address && ! addresses.some(address => address.ip_address === this.form.ip_address)) {
                 addresses.unshift({
@@ -376,6 +421,45 @@ function subscriptionEditForm(suggestIpUrl, canSuggestIp, currentIpAddress, ipPo
             }
 
             return this.uniqueAddresses(addresses);
+        },
+        syncPrimaryIpSelection() {
+            const addresses = this.availablePoolAddresses();
+
+            if (! this.selectedIpPool) {
+                this.form.ip_address = '';
+                return;
+            }
+
+            this.form.ip_address = addresses[0]?.ip_address || '';
+            this.ipMessage = addresses.length > 0
+                ? {
+                    type: 'info',
+                    text: `Using ${this.selectedIpPool.name}. The first free IP has been selected.`,
+                }
+                : {
+                    type: 'error',
+                    text: 'No free IP addresses are available in the selected pool.',
+                };
+        },
+        handleRouterChange() {
+            const pools = this.availableIpPools();
+
+            if (! pools.length) {
+                this.form.ip_pool_id = '';
+                this.form.ip_address = '';
+                this.ipMessage = {
+                    type: 'error',
+                    text: 'This router does not have any active IP pools.',
+                };
+
+                return;
+            }
+
+            this.form.ip_pool_id = String(pools[0].id);
+            this.syncPrimaryIpSelection();
+        },
+        handleIpPoolChange() {
+            this.syncPrimaryIpSelection();
         },
         availableRouteAddresses(route, index) {
             const pool = this.routeIpPool(route);
@@ -413,48 +497,47 @@ function subscriptionEditForm(suggestIpUrl, canSuggestIp, currentIpAddress, ipPo
         removeIpRoute(index) {
             this.ipRoutes.splice(index, 1);
         },
-        async suggestIpAddress() {
+        suggestIpAddress() {
             if (! this.canSuggestIp || this.suggestingIp) {
                 return;
             }
 
             this.suggestingIp = true;
+            const pool = this.selectedIpPool;
+            const addresses = this.availablePoolAddresses();
+
+            if (! pool) {
+                this.ipMessage = {
+                    type: 'error',
+                    text: 'Select an IP pool first.',
+                };
+                this.suggestingIp = false;
+
+                return;
+            }
+
+            if (! addresses.length) {
+                this.form.ip_address = '';
+                this.ipMessage = {
+                    type: 'error',
+                    text: 'No free IP address is available in the selected pool.',
+                };
+                this.suggestingIp = false;
+
+                return;
+            }
+
             this.ipMessage = {
                 type: 'info',
                 text: 'Looking up a free IP address...',
             };
 
-            try {
-                const response = await fetch(suggestIpUrl, {
-                    headers: {
-                        'Accept': 'application/json',
-                    },
-                });
-
-                const payload = await response.json();
-
-                if (! response.ok) {
-                    this.ipMessage = {
-                        type: 'error',
-                        text: payload.message || 'No free IP address is available right now.',
-                    };
-
-                    return;
-                }
-
-                this.form.ip_address = payload.ip_address;
-                this.ipMessage = {
-                    type: 'success',
-                    text: `Suggested ${payload.ip_address} from ${payload.pool_name}.`,
-                };
-            } catch (error) {
-                this.ipMessage = {
-                    type: 'error',
-                    text: 'Unable to fetch a suggested IP address.',
-                };
-            } finally {
-                this.suggestingIp = false;
-            }
+            this.form.ip_address = addresses[0].ip_address;
+            this.ipMessage = {
+                type: 'success',
+                text: `Suggested ${addresses[0].ip_address} from ${pool.name}.`,
+            };
+            this.suggestingIp = false;
         },
     };
 }

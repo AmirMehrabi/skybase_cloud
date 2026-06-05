@@ -282,6 +282,97 @@ class SubscriptionControllerTest extends TestCase
         ]);
     }
 
+    public function test_update_moves_a_system_managed_subscription_to_a_new_router_pool_and_ip(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        $newRouter = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Aggregation Router',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+            'api_username' => 'admin',
+            'api_password' => 'secret',
+        ]);
+
+        $newPool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $newRouter->id,
+            'name' => 'Aggregation Pool',
+            'network_address' => '10.20.0.0',
+            'cidr' => 24,
+            'gateway' => '10.20.0.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'site' => 'Core Site',
+        ]);
+
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $newPool->id,
+            'ip_address' => '10.20.0.11',
+            'status' => 'available',
+        ]);
+        $newPool->updateStatistics();
+
+        $response = $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'router_id' => $newRouter->id,
+            'ip_pool_id' => $newPool->id,
+            'ip_address' => '10.20.0.11',
+        ]);
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+        $response->assertSessionHas('success', 'Subscription updated successfully.');
+
+        $this->assertDatabaseHas('subscriptions', [
+            'id' => $subscription->id,
+            'tenant_id' => $tenant->id,
+            'router_id' => $newRouter->id,
+            'ip_pool_id' => $newPool->id,
+            'ip_address' => '10.20.0.11',
+        ]);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.10.0.11',
+            'status' => 'available',
+            'subscription_code' => null,
+        ]);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.20.0.11',
+            'status' => 'assigned',
+            'subscription_code' => $subscription->subscription_code,
+        ]);
+    }
+
+    public function test_update_rejects_an_ip_pool_that_does_not_belong_to_the_selected_router(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        $newRouter = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Aggregation Router',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+            'api_username' => 'admin',
+            'api_password' => 'secret',
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('subscriptions.update', $subscription), [
+            'router_id' => $newRouter->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.10.0.11',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['ip_pool_id']);
+    }
+
     public function test_bulk_delete_selected_subscriptions_queues_and_cleans_up_subscription_billing_and_ipam(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
