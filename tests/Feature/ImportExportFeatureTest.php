@@ -760,6 +760,21 @@ class ImportExportFeatureTest extends TestCase
             'ip_pool_id' => $pool->id,
             'ip_address' => '172.16.111.77',
             'cidr' => 30,
+            'routeros_sync_status' => 'synced',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => $username,
+            'attribute' => 'Framed-IP-Address',
+            'op' => ':=',
+            'value' => '172.16.111.76',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => $username,
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '172.16.111.77/30 172.16.111.76 1',
         ]);
 
         $route = SubscriptionIpRoute::query()
@@ -1110,7 +1125,21 @@ class ImportExportFeatureTest extends TestCase
             'ip_address_id' => null,
             'ip_address' => '197.157.235.116',
             'cidr' => 30,
-            'routeros_sync_status' => 'skipped',
+            'routeros_sync_status' => 'synced',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'route.customer',
+            'attribute' => 'Framed-IP-Address',
+            'op' => ':=',
+            'value' => '197.157.235.10',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'route.customer',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '197.157.235.116/30 197.157.235.10 1',
         ]);
     }
 

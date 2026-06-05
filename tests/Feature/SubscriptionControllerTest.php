@@ -10,13 +10,13 @@ use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Payment;
 use App\Models\Plan;
+use App\Models\RadiusReply;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\BulkDeletionService;
-use App\Services\RouterOs\RouterOsClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -229,7 +229,6 @@ class SubscriptionControllerTest extends TestCase
     public function test_bulk_delete_selected_subscriptions_queues_and_cleans_up_subscription_billing_and_ipam(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
-        $this->bindFakeRouterOsClient();
 
         $invoice = Invoice::create([
             'tenant_id' => $tenant->id,
@@ -329,7 +328,6 @@ class SubscriptionControllerTest extends TestCase
     public function test_destroy_deletes_a_subscription_without_failing_on_activity_logging(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
-        $this->bindFakeRouterOsClient();
 
         $response = $this->actingAs($user)->deleteJson(route('subscriptions.destroy', $subscription));
 
@@ -354,25 +352,6 @@ class SubscriptionControllerTest extends TestCase
     public function test_update_can_remove_all_subscription_ip_routes_from_edit_form(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
-        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
-        {
-            private array $lastSentence = [];
-
-            public function execute(Router $router, callable $callback): mixed
-            {
-                return $callback(null, $this);
-            }
-
-            public function writeSentence($connection, array $words): void
-            {
-                $this->lastSentence = $words;
-            }
-
-            public function readResponse($connection): array
-            {
-                return [];
-            }
-        });
 
         $routeIp = IpAddress::create([
             'tenant_id' => $tenant->id,
@@ -410,68 +389,9 @@ class SubscriptionControllerTest extends TestCase
         ]);
     }
 
-    public function test_store_creates_system_managed_ip_routes_and_syncs_routeros_routes(): void
+    public function test_store_creates_system_managed_ip_routes_and_syncs_radius_replies(): void
     {
         [$tenant, $user, $customer, $plan, $router, $pool] = $this->createSubscriptionCreateDependencies();
-        $routerOs = new class extends RouterOsClient
-        {
-            public array $sentences = [];
-
-            private array $routes = [];
-
-            private array $lastSentence = [];
-
-            public function execute(Router $router, callable $callback): mixed
-            {
-                return $callback(null, $this);
-            }
-
-            public function writeSentence($connection, array $words): void
-            {
-                $this->sentences[] = $words;
-                $this->lastSentence = $words;
-
-                if (($words[0] ?? null) !== '/ip/route/add') {
-                    return;
-                }
-
-                $this->routes[] = [
-                    '.id' => '*'.count($this->routes),
-                    'dst-address' => $this->sentenceValue($words, 'dst-address'),
-                    'gateway' => $this->sentenceValue($words, 'gateway'),
-                    'comment' => $this->sentenceValue($words, 'comment'),
-                ];
-            }
-
-            public function readResponse($connection): array
-            {
-                if (($this->lastSentence[0] ?? null) !== '/ip/route/print') {
-                    return [];
-                }
-
-                $comment = collect($this->lastSentence)
-                    ->first(fn (string $word): bool => str_starts_with($word, '?comment='));
-
-                if (! $comment) {
-                    return $this->routes;
-                }
-
-                $comment = substr($comment, strlen('?comment='));
-
-                return collect($this->routes)
-                    ->filter(fn (array $route): bool => $route['comment'] === $comment)
-                    ->values()
-                    ->all();
-            }
-
-            private function sentenceValue(array $words, string $key): ?string
-            {
-                $word = collect($words)->first(fn (string $word): bool => str_starts_with($word, "={$key}="));
-
-                return $word ? substr($word, strlen("={$key}=")) : null;
-            }
-        };
-        $this->app->instance(RouterOsClient::class, $routerOs);
 
         IpAddress::create([
             'tenant_id' => $tenant->id,
@@ -539,12 +459,20 @@ class SubscriptionControllerTest extends TestCase
             'customer_id' => $customer->id,
             'subscription_code' => null,
         ]);
-        $this->assertTrue(collect($routerOs->sentences)->contains(fn (array $sentence): bool => $sentence === [
-            '/ip/route/add',
-            '=dst-address=10.10.0.12/32',
-            '=gateway=10.10.0.11',
-            '=comment=skybase:subscription-ip-route:'.$subscription->ipRoutes()->firstOrFail()->id,
-        ]));
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-IP-Address',
+            'op' => ':=',
+            'value' => '10.10.0.11',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '10.10.0.12/32 10.10.0.11 1',
+        ]);
     }
 
     public function test_store_returns_validation_errors_for_missing_pppoe_credentials(): void
@@ -582,42 +510,14 @@ class SubscriptionControllerTest extends TestCase
         $response->assertJsonPath('errors.pppoe_password.0', 'PPP password is required for PPP connections.');
     }
 
-    public function test_update_primary_ip_resyncs_existing_ip_route_gateway(): void
+    public function test_update_primary_ip_resyncs_existing_framed_route_gateway(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
-        $routerOs = new class extends RouterOsClient
-        {
-            public array $sentences = [];
-
-            private array $lastSentence = [];
-
-            public function execute(Router $router, callable $callback): mixed
-            {
-                return $callback(null, $this);
-            }
-
-            public function writeSentence($connection, array $words): void
-            {
-                $this->sentences[] = $words;
-                $this->lastSentence = $words;
-            }
-
-            public function readResponse($connection): array
-            {
-                if (($this->lastSentence[0] ?? null) === '/ip/route/print') {
-                    $comment = collect($this->lastSentence)
-                        ->first(fn (string $word): bool => str_starts_with($word, '?comment='));
-
-                    return [[
-                        '.id' => '*1',
-                        'comment' => $comment ? substr($comment, strlen('?comment=')) : null,
-                    ]];
-                }
-
-                return [];
-            }
-        };
-        $this->app->instance(RouterOsClient::class, $routerOs);
+        $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.routed',
+            'pppoe_password' => 'secret-pass',
+        ])->save();
 
         $routeIp = IpAddress::create([
             'tenant_id' => $tenant->id,
@@ -644,55 +544,35 @@ class SubscriptionControllerTest extends TestCase
 
         $response->assertRedirect(route('subscriptions.show', $subscription));
 
-        $this->assertTrue(collect($routerOs->sentences)->contains(fn (array $sentence): bool => $sentence === [
-            '/ip/route/set',
-            '=.id=*1',
-            '=dst-address=10.10.0.13/32',
-            '=gateway=10.10.0.12',
-            '=comment='.$ipRoute->routeros_comment,
-        ]));
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-IP-Address',
+            'op' => ':=',
+            'value' => '10.10.0.12',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '10.10.0.13/32 10.10.0.12 1',
+        ]);
+        $this->assertSame(1, RadiusReply::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', 'john.routed')
+            ->where('attribute', 'Framed-Route')
+            ->count());
     }
 
-    public function test_sync_ip_routes_action_retries_failed_routeros_routes(): void
+    public function test_sync_ip_routes_action_rebuilds_radius_framed_routes(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
-        $routerOs = new class extends RouterOsClient
-        {
-            public array $sentences = [];
-
-            public int $executeCount = 0;
-
-            private array $lastSentence = [];
-
-            public function execute(Router $router, callable $callback): mixed
-            {
-                $this->executeCount++;
-
-                return $callback(null, $this);
-            }
-
-            public function writeSentence($connection, array $words): void
-            {
-                $this->sentences[] = $words;
-                $this->lastSentence = $words;
-            }
-
-            public function readResponse($connection): array
-            {
-                if (($this->lastSentence[0] ?? null) !== '/ip/route/print') {
-                    return [];
-                }
-
-                $comment = collect($this->lastSentence)
-                    ->first(fn (string $word): bool => str_starts_with($word, '?comment='));
-
-                return [[
-                    '.id' => '*1',
-                    'comment' => $comment ? substr($comment, strlen('?comment=')) : null,
-                ]];
-            }
-        };
-        $this->app->instance(RouterOsClient::class, $routerOs);
+        $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.routed',
+            'pppoe_password' => 'secret-pass',
+        ])->save();
 
         $routeIp = IpAddress::create([
             'tenant_id' => $tenant->id,
@@ -711,28 +591,71 @@ class SubscriptionControllerTest extends TestCase
             'cidr' => 32,
             'routeros_comment' => 'skybase:subscription-ip-route:retry',
             'routeros_sync_status' => 'failed',
-            'routeros_sync_error' => 'RouterOS route sync failed: Unable to connect to RouterOS API: Connection timed out',
+            'routeros_sync_error' => 'RADIUS route sync failed.',
+        ]);
+        $secondIpRoute = SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.10.0.14',
+            'cidr' => 32,
+            'routeros_comment' => 'skybase:subscription-ip-route:retry-second',
+            'routeros_sync_status' => 'failed',
+            'routeros_sync_error' => 'RADIUS route sync failed.',
+        ]);
+        RadiusReply::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '192.0.2.0/24 10.10.0.11 1',
         ]);
 
         $response = $this->actingAs($user)->post(route('subscriptions.ip-routes.sync', $subscription));
 
         $response
             ->assertRedirect(route('subscriptions.show', $subscription))
-            ->assertSessionHas('success', 'RouterOS IP routes synced successfully.');
+            ->assertSessionHas('success', 'RADIUS IP route attributes synced successfully.');
 
         $ipRoute->refresh();
+        $secondIpRoute->refresh();
 
-        $this->assertSame(1, $routerOs->executeCount);
         $this->assertSame('synced', $ipRoute->routeros_sync_status);
         $this->assertNull($ipRoute->routeros_sync_error);
-        $this->assertSame('*1', $ipRoute->routeros_route_id);
-        $this->assertTrue(collect($routerOs->sentences)->contains(fn (array $sentence): bool => $sentence === [
-            '/ip/route/set',
-            '=.id=*1',
-            '=dst-address=10.10.0.13/32',
-            '=gateway=10.10.0.11',
-            '=comment='.$ipRoute->routeros_comment,
-        ]));
+        $this->assertSame('synced', $secondIpRoute->routeros_sync_status);
+        $this->assertNull($secondIpRoute->routeros_sync_error);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-IP-Address',
+            'op' => ':=',
+            'value' => '10.10.0.11',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '10.10.0.13/32 10.10.0.11 1',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '10.10.0.14/32 10.10.0.11 1',
+        ]);
+        $this->assertDatabaseMissing('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'value' => '192.0.2.0/24 10.10.0.11 1',
+        ]);
+        $this->assertSame(2, RadiusReply::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', 'john.routed')
+            ->where('attribute', 'Framed-Route')
+            ->count());
     }
 
     private function createTenant(string $slug, string $companyName): Tenant
@@ -932,23 +855,5 @@ class SubscriptionControllerTest extends TestCase
         ]);
 
         return [$tenant, $user, $subscription];
-    }
-
-    private function bindFakeRouterOsClient(): void
-    {
-        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
-        {
-            public function execute(Router $router, callable $callback): mixed
-            {
-                return $callback(null, $this);
-            }
-
-            public function writeSentence($connection, array $words): void {}
-
-            public function readResponse($connection): array
-            {
-                return [];
-            }
-        });
     }
 }

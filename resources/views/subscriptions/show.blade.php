@@ -345,7 +345,7 @@ if (! function_exists('getStatusBadgeClass')) {
                     </a>
                 </div>
             </div>
-            @if($subscriptionModel->isSystemManagedIp() && $subscriptionModel->ipRoutes->isNotEmpty())
+            @if($subscriptionModel->ipRoutes->isNotEmpty())
                 <div class="mt-4 border-t border-gray-200 pt-4">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">IP Routes</h3>
@@ -355,7 +355,7 @@ if (! function_exists('getStatusBadgeClass')) {
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 0 0-14.32-3.91L4 10m16 4-1.68 4.91A8 8 0 0 1 4 15"></path>
                                 </svg>
-                                Sync routes
+                                Sync RADIUS
                             </button>
                         </form>
                     </div>

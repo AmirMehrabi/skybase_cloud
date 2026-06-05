@@ -32,7 +32,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-            $table->unique(['tenant_id', 'username', 'attribute']);
+            $table->index(['tenant_id', 'username', 'attribute']);
             $table->index(['username', 'attribute']);
         });
 
