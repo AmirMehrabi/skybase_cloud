@@ -67,24 +67,24 @@ class DashboardController extends Controller
                 'trial_ends_at' => $tenant->trial_ends_at?->toFormattedDateString(),
             ],
             'stats' => [
-                'customers' => [
-                    'value' => $customerCount,
-                    'label' => 'Customers',
-                    'meta' => $this->growthMeta(
-                        Customer::query()->where('tenant_id', $tenantId),
-                        'customer',
-                    ),
-                    'href' => route('customers.index'),
-                ],
-                'subscriptions' => [
-                    'value' => $activeSubscriptionsCount,
-                    'label' => 'Active subscriptions',
-                    'meta' => $this->growthMeta(
-                        Subscription::query()->where('tenant_id', $tenantId),
-                        'subscription',
-                    ),
-                    'href' => route('subscriptions.index'),
-                ],
+                // 'customers' => [
+                //     'value' => $customerCount,
+                //     'label' => 'Customers',
+                //     'meta' => $this->growthMeta(
+                //         Customer::query()->where('tenant_id', $tenantId),
+                //         'customer',
+                //     ),
+                //     'href' => route('customers.index'),
+                // ],
+                // 'subscriptions' => [
+                //     'value' => $activeSubscriptionsCount,
+                //     'label' => 'Active subscriptions',
+                //     'meta' => $this->growthMeta(
+                //         Subscription::query()->where('tenant_id', $tenantId),
+                //         'subscription',
+                //     ),
+                //     'href' => route('subscriptions.index'),
+                // ],
                 // 'recurring_value' => [
                 //     'value' => $this->formatMoney($activeRecurringValue, $tenant->currency ?? 'USD'),
                 //     'label' => 'Recurring subscription value',
