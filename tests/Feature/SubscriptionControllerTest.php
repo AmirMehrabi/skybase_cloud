@@ -260,6 +260,25 @@ class SubscriptionControllerTest extends TestCase
         $editResponse->assertSee('IP Route');
     }
 
+    public function test_edit_page_allows_selecting_a_pool_when_no_pool_is_assigned(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->releaseIpAddress();
+        $subscription->forceFill([
+            'ip_pool_id' => null,
+        ])->saveQuietly();
+
+        $subscription->refresh();
+
+        $response = $this->actingAs($user)->get(route('subscriptions.edit', $subscription));
+
+        $response->assertOk();
+        $response->assertSee('IP Pool Assignment');
+        $response->assertSee('Select IP Pool');
+        $response->assertDontSee('Manual IP Address');
+        $response->assertSee('Select a pool for this router, then choose the primary IP from that pool.');
+    }
+
     public function test_kill_session_route_disconnects_via_routeros_api(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();

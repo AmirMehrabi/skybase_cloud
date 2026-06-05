@@ -57,6 +57,9 @@ class UpdateIpPoolRequest extends FormRequest
             'dns_primary' => ['nullable', 'ip', 'max:45'],
             'dns_secondary' => ['nullable', 'ip', 'max:45'],
             'vlan_id' => ['nullable', 'integer', 'between:1,4094'],
+            'reserved_addresses' => ['nullable', 'string', 'max:2000'],
+            'reserved_addresses_list' => ['nullable', 'array'],
+            'reserved_addresses_list.*' => ['distinct', 'ip', 'max:45'],
 
             // Advanced Settings
             'allow_static' => ['boolean'],
@@ -88,6 +91,8 @@ class UpdateIpPoolRequest extends FormRequest
             'router_ids.array' => 'The selected devices must be provided as a list.',
             'router_ids.*.exists' => 'One or more selected devices are invalid.',
             'site_id.exists' => 'The selected site is invalid.',
+            'reserved_addresses_list.*.ip' => 'Please enter valid IP addresses to reserve.',
+            'reserved_addresses_list.*.distinct' => 'Duplicate reserved IP addresses are not allowed.',
         ];
     }
 
@@ -108,6 +113,7 @@ class UpdateIpPoolRequest extends FormRequest
             'block_reserved' => $this->boolean('block_reserved', false),
             'all_devices' => $this->boolean('all_devices', false),
             'router_ids' => $routerIds,
+            'reserved_addresses_list' => $this->normalizeReservedAddresses($this->input('reserved_addresses')),
             'router_id' => $this->boolean('all_devices') ? null : ($this->input('router_id') ?: ($routerIds[0] ?? null)),
         ]);
     }
@@ -130,5 +136,23 @@ class UpdateIpPoolRequest extends FormRequest
                 $validator->errors()->add('router_ids', 'Please select at least one device or choose all devices.');
             }
         });
+    }
+
+    /**
+     * Normalize the reserved IP addresses input into a list.
+     *
+     * @return array<int, string>
+     */
+    protected function normalizeReservedAddresses(mixed $reservedAddresses): array
+    {
+        if (! is_string($reservedAddresses) || blank($reservedAddresses)) {
+            return [];
+        }
+
+        return collect(preg_split('/[\s,]+/', $reservedAddresses, -1, PREG_SPLIT_NO_EMPTY) ?: [])
+            ->map(fn (string $address): string => trim($address))
+            ->filter()
+            ->values()
+            ->all();
     }
 }

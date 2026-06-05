@@ -260,6 +260,15 @@
                     </div>
                 </div>
             </div>
+
+            <x-input.textarea
+                id="reserved_addresses"
+                name="reserved_addresses"
+                label="Additional Reserved IPs"
+                rows="4"
+                placeholder="10.10.0.10, 10.10.0.11"
+                help="Enter unused IP addresses separated by commas or new lines. Reserved addresses stay unavailable for customer selection."
+            />
         </div>
 
         <!-- Section 3: Advanced Settings -->

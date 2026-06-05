@@ -116,7 +116,7 @@
                     <input type="text" name="site" id="site" value="{{ old('site', $subscription->site) }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                     @error('site')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
-                @if($subscription->isSystemManagedIp() && $subscription->ipPool)
+                @if($subscription->isSystemManagedIp())
                     <div class="lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                         <input type="hidden" name="sync_ip_routes" value="1">
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -127,7 +127,7 @@
                                         <span x-text="selectedIpPool?.name"></span>
                                     </span>
                                 </div>
-                                <p class="text-xs text-gray-500">Primary IP is selected from the subscription pool. Routes below use their own IPAM row and can include a subnet.</p>
+                                <p class="text-xs text-gray-500">Select a pool for this router, then choose the primary IP from that pool. Routes below use their own IPAM row and can include a subnet.</p>
                                 <div class="grid gap-4 sm:grid-cols-2">
                                     <div>
                                         <label for="ip_pool_id" class="block text-sm font-medium text-gray-700 mb-1">IP Pool</label>

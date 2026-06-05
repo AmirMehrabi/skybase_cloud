@@ -12,8 +12,10 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class IpamController extends Controller
@@ -125,6 +127,7 @@ class IpamController extends Controller
             $tenantId = auth()->user()->tenant_id;
             $poolData['tenant_id'] = $tenantId;
             $routerIds = $poolData['router_ids'] ?? [];
+            $reservedAddresses = $request->input('reserved_addresses_list', []);
 
             $this->applyPoolAssignments($poolData, $tenantId);
             unset($poolData['router_ids']);
@@ -140,12 +143,18 @@ class IpamController extends Controller
 
             // Generate IP addresses for the pool
             $this->generateIpAddresses($pool);
+            $this->syncReservedAddresses($pool, $reservedAddresses);
+            $pool->updateStatistics();
 
             DB::commit();
 
             return redirect()
                 ->route('ipam.pools.show', $pool)
                 ->with('success', 'IP pool created successfully.');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+
+            throw $e;
         } catch (QueryException $e) {
             DB::rollBack();
 
@@ -211,7 +220,9 @@ class IpamController extends Controller
             ->orderBy('name')
             ->get(['id', 'code', 'name']);
 
-        return view('ipam.pools.edit', compact('pool', 'routers', 'sites'));
+        $reservedAddresses = $this->customReservedAddresses($pool);
+
+        return view('ipam.pools.edit', compact('pool', 'routers', 'sites', 'reservedAddresses'));
     }
 
     /**
@@ -228,17 +239,24 @@ class IpamController extends Controller
             $poolData = $request->validated();
             $tenantId = auth()->user()->tenant_id;
             $routerIds = $poolData['router_ids'] ?? [];
+            $reservedAddresses = $request->input('reserved_addresses_list', []);
 
             $this->applyPoolAssignments($poolData, $tenantId, $pool);
             unset($poolData['router_ids']);
             $pool->update($poolData);
             $this->syncPoolRouters($pool, $routerIds, $poolData['all_devices'] ?? false);
+            $this->syncReservedAddresses($pool, $reservedAddresses);
+            $pool->updateStatistics();
 
             DB::commit();
 
             return redirect()
                 ->route('ipam.pools.show', $pool)
                 ->with('success', 'IP pool updated successfully.');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+
+            throw $e;
         } catch (QueryException $e) {
             DB::rollBack();
 
@@ -358,6 +376,137 @@ class IpamController extends Controller
                 'notes' => $notes,
             ]);
         }
+    }
+
+    /**
+     * Sync custom reserved IP addresses for a pool.
+     *
+     * @param  array<int, string>  $reservedAddresses
+     */
+    protected function syncReservedAddresses(IpPool $pool, array $reservedAddresses): void
+    {
+        $ipAddresses = $pool->ipAddresses()
+            ->get()
+            ->sortBy(fn (IpAddress $ipAddress): int => (int) sprintf('%u', ip2long($ipAddress->ip_address)))
+            ->values();
+
+        $requestedReservedAddresses = collect($reservedAddresses)
+            ->map(fn (string $address): string => trim($address))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $ipAddressesByAddress = $ipAddresses->keyBy('ip_address');
+
+        $invalidReservedAddresses = $requestedReservedAddresses
+            ->filter(function (string $address) use ($ipAddressesByAddress): bool {
+                $ipAddress = $ipAddressesByAddress->get($address);
+
+                if (! $ipAddress) {
+                    return true;
+                }
+
+                return $ipAddress->isAssigned() || $ipAddress->isBlocked();
+            })
+            ->values();
+
+        if ($invalidReservedAddresses->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'reserved_addresses' => 'One or more reserved IP addresses are not available.',
+            ]);
+        }
+
+        $implicitReservedNotes = $this->implicitReservedAddressNotes($pool, $ipAddresses);
+
+        foreach ($ipAddresses as $ipAddress) {
+            if ($ipAddress->isAssigned() || $ipAddress->isBlocked()) {
+                continue;
+            }
+
+            $implicitNote = $implicitReservedNotes[$ipAddress->ip_address] ?? null;
+
+            if ($implicitNote !== null) {
+                if ($ipAddress->status !== 'reserved' || $ipAddress->notes !== $implicitNote) {
+                    $ipAddress->update([
+                        'status' => 'reserved',
+                        'notes' => $implicitNote,
+                    ]);
+                }
+
+                continue;
+            }
+
+            if ($requestedReservedAddresses->contains($ipAddress->ip_address)) {
+                if ($ipAddress->status !== 'reserved' || $ipAddress->notes !== 'Custom reservation') {
+                    $ipAddress->update([
+                        'status' => 'reserved',
+                        'notes' => 'Custom reservation',
+                    ]);
+                }
+
+                continue;
+            }
+
+            if ($ipAddress->isReserved()) {
+                $ipAddress->release();
+            }
+        }
+    }
+
+    /**
+     * Get the implicit reserved IP addresses for a pool.
+     *
+     * @param  Collection<int, IpAddress>  $ipAddresses
+     * @return array<string, string>
+     */
+    protected function implicitReservedAddressNotes(IpPool $pool, $ipAddresses): array
+    {
+        $reservedNotes = [];
+        $count = $ipAddresses->count();
+
+        if ($count === 0) {
+            return $reservedNotes;
+        }
+
+        $firstIpAddress = $ipAddresses->first();
+
+        if ($firstIpAddress) {
+            $reservedNotes[$firstIpAddress->ip_address] = 'Gateway';
+        }
+
+        $lastIpAddress = $ipAddresses->last();
+
+        if ($lastIpAddress) {
+            $reservedNotes[$lastIpAddress->ip_address] = 'Broadcast';
+        }
+
+        if ($pool->block_reserved) {
+            foreach ($ipAddresses->take(min(10, $count)) as $index => $ipAddress) {
+                if ($index === 0) {
+                    continue;
+                }
+
+                $reservedNotes[$ipAddress->ip_address] = 'Infrastructure';
+            }
+        }
+
+        return $reservedNotes;
+    }
+
+    /**
+     * Get the custom reserved IP addresses for edit form display.
+     */
+    protected function customReservedAddresses(IpPool $pool): string
+    {
+        return $pool->ipAddresses()
+            ->reserved()
+            ->get()
+            ->filter(function (IpAddress $ipAddress): bool {
+                return ! in_array($ipAddress->notes, ['Gateway', 'Broadcast', 'Infrastructure'], true);
+            })
+            ->sortBy(fn (IpAddress $ipAddress): int => (int) sprintf('%u', ip2long($ipAddress->ip_address)))
+            ->pluck('ip_address')
+            ->implode("\n");
     }
 
     /**
@@ -485,12 +634,11 @@ class IpamController extends Controller
             ]);
         }
 
-        // IP is available (available, reserved, or blocked)
         return response()->json([
-            'available' => \in_array($ipAddress->status, ['available', 'reserved', 'blocked']),
+            'available' => $ipAddress->isAvailable(),
             'ip' => $ip,
             'status' => $ipAddress->status,
-            'message' => "IP is {$ipAddress->status}",
+            'message' => $ipAddress->isAvailable() ? 'IP is available' : "IP is {$ipAddress->status}",
         ]);
     }
 

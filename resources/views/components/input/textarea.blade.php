@@ -7,6 +7,7 @@
     'rows' => 3,
     'placeholder' => null,
     'xModel' => null,
+    'help' => null,
 ])
 
 <div class="mb-4">
@@ -30,6 +31,10 @@
             class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         @enderror
     >{{ old($name, $value) }}</textarea>
+
+    @if($help)
+        <p class="mt-1 text-sm text-gray-500">{{ $help }}</p>
+    @endif
 
     @error($name)
         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
