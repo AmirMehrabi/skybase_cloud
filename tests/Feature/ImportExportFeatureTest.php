@@ -1565,6 +1565,74 @@ class ImportExportFeatureTest extends TestCase
         ]);
     }
 
+    private function createManagedSubscription(
+        Tenant $tenant,
+        Customer $customer,
+        Plan $plan,
+        Router $router,
+        string $username,
+        string $subscriptionCode,
+        ?IpPool $pool,
+        ?string $ipAddress,
+    ): Subscription {
+        return Subscription::query()->create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => $subscriptionCode,
+            'name' => $customer->name,
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'site' => 'North POP',
+            'connection_type' => 'pppoe',
+            'ip_address' => $ipAddress,
+            'ip_management' => 'system',
+            'ip_pool_id' => $pool?->id,
+            'pppoe_username' => $username,
+            'pppoe_password' => 'secret',
+            'connection_status' => 'offline',
+            'base_price' => $plan->price,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => $plan->price,
+            'billing_cycle' => $plan->billing_cycle,
+            'billing_enabled' => true,
+            'grace_period_days' => 7,
+            'next_billing_date' => now()->addMonth()->toDateString(),
+            'status' => 'active',
+            'start_date' => now()->toDateString(),
+            'activation_date' => now()->toDateString(),
+        ]);
+    }
+
+    private function createAvailableIpAddress(Tenant $tenant, IpPool $pool, string $ipAddress): IpAddress
+    {
+        return IpAddress::query()->create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => $ipAddress,
+            'status' => 'available',
+        ]);
+    }
+
+    private function assignPrimaryIpAddressRecord(IpAddress $ipAddress, Customer $customer, Subscription $subscription): void
+    {
+        $ipAddress->forceFill([
+            'status' => 'assigned',
+            'customer_id' => $customer->id,
+            'mac_address' => null,
+            'subscription_code' => $subscription->subscription_code,
+            'assigned_at' => now(),
+            'released_at' => null,
+            'notes' => 'Subscription primary IP '.$subscription->subscription_code,
+            'metadata' => [
+                'purpose' => 'subscription_primary_ip',
+                'subscription_id' => $subscription->id,
+            ],
+        ])->save();
+    }
+
     private function createImportRun(Tenant $tenant, User $user, string $module): ImportExportRun
     {
         return ImportExportRun::query()->create([
