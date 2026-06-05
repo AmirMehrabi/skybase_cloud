@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Jobs\BulkDeleteModelsJob;
+use App\Jobs\Subscriptions\ActivateSubscriptionJob;
+use App\Jobs\Subscriptions\SuspendSubscriptionJob;
 use App\Models\BulkDeletionRun;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -179,6 +181,60 @@ class SubscriptionControllerTest extends TestCase
         $editResponse->assertSee('Suggest free IP');
         $editResponse->assertSee('IP Pool Assignment');
         $editResponse->assertSee('IP Route');
+    }
+
+    public function test_suspend_route_queues_background_processing_and_saves_status_quietly(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        Queue::fake();
+
+        $response = $this->actingAs($user)->post(route('subscriptions.suspend', $subscription));
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+        $response->assertSessionHas('success', 'Subscription suspension queued. Background processing will finish disconnecting the session and syncing RADIUS.');
+
+        Queue::assertPushedOn('subscriptions', SuspendSubscriptionJob::class);
+
+        Queue::assertPushed(SuspendSubscriptionJob::class, function (SuspendSubscriptionJob $job) use ($subscription, $tenant, $user): bool {
+            return $job->subscriptionId === $subscription->id
+                && $job->tenantId === $tenant->id
+                && $job->causedByUserId === $user->id;
+        });
+
+        $subscription->refresh();
+
+        $this->assertSame('suspended', $subscription->status);
+        $this->assertNotNull($subscription->suspended_at);
+    }
+
+    public function test_activate_route_queues_background_processing_and_saves_status_quietly(): void
+    {
+        [$tenant, $user, $subscription] = $this->createPendingSystemManagedSubscriptionWithPool();
+
+        Queue::fake();
+
+        $response = $this->actingAs($user)->post(route('subscriptions.activate', $subscription));
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+        $response->assertSessionHas('success', 'Subscription activation queued. Background processing will finish provisioning RADIUS and notifications.');
+
+        Queue::assertPushedOn('subscriptions', ActivateSubscriptionJob::class);
+
+        Queue::assertPushed(ActivateSubscriptionJob::class, function (ActivateSubscriptionJob $job) use ($subscription, $tenant): bool {
+            return $job->subscriptionId === $subscription->id
+                && $job->tenantId === $tenant->id;
+        });
+
+        $subscription->refresh();
+
+        $this->assertSame('active', $subscription->status);
+        $this->assertNotNull($subscription->activation_date);
+        $this->assertDatabaseMissing('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Cleartext-Password',
+        ]);
     }
 
     public function test_suggest_ip_returns_the_next_free_ip_in_the_current_pool(): void
@@ -851,6 +907,115 @@ class SubscriptionControllerTest extends TestCase
             'status' => 'active',
             'start_date' => now(),
             'activation_date' => now(),
+            'next_billing_date' => now()->addMonth()->toDateString(),
+        ]);
+
+        return [$tenant, $user, $subscription];
+    }
+
+    /**
+     * @return array{0: Tenant, 1: User, 2: Subscription}
+     */
+    private function createPendingSystemManagedSubscriptionWithPool(): array
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-TEST-0004',
+            'customer_type' => 'individual',
+            'first_name' => 'Jane',
+            'last_name' => 'Routed',
+            'name' => 'Jane Routed',
+            'email' => 'jane.routed@example.com',
+            'mobile' => '555-0104',
+            'address_line1' => '987 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
+        ]);
+
+        $plan = Plan::factory()->create([
+            'status' => 'active',
+            'name' => 'Fiber 200',
+            'price' => 99.99,
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Edge Router',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+            'api_username' => 'admin',
+            'api_password' => 'secret',
+        ]);
+
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Core Pool',
+            'network_address' => '10.10.0.0',
+            'cidr' => 24,
+            'gateway' => '10.10.0.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'site' => 'Head Office',
+            'total_ips' => 3,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 0,
+        ]);
+
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '10.10.0.11',
+            'status' => 'available',
+        ]);
+
+        $pool->updateStatistics();
+
+        $subscription = Subscription::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-TEST-0004',
+            'name' => 'Jane Routed Service',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'site' => 'Head Office',
+            'connection_type' => 'pppoe',
+            'ip_address' => '10.10.0.11',
+            'ip_pool_id' => $pool->id,
+            'ip_management' => 'system',
+            'pppoe_username' => 'jane.doe',
+            'pppoe_password' => 'secret-pass',
+            'base_price' => 99.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 99.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'grace_period_days' => 7,
+            'status' => 'pending',
+            'start_date' => now(),
+            'activation_date' => null,
             'next_billing_date' => now()->addMonth()->toDateString(),
         ]);
 

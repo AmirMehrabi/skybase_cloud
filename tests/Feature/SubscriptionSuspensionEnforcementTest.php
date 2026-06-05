@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\Subscriptions\SuspendSubscriptionJob;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Plan;
@@ -12,8 +13,12 @@ use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\RadiusProvisioningService;
 use App\Services\RouterOs\RouterOsClient;
+use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\TenantNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -75,9 +80,25 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
             'status' => 'active',
         ]);
 
+        Queue::fake();
+
         $response = $this->actingAs($user)->post(route('subscriptions.suspend', $subscription));
 
         $response->assertRedirect(route('subscriptions.show', $subscription));
+
+        Queue::assertPushedOn('subscriptions', SuspendSubscriptionJob::class);
+
+        Queue::assertPushed(SuspendSubscriptionJob::class, function (SuspendSubscriptionJob $job) use ($subscription, $tenant, $user): bool {
+            return $job->subscriptionId === $subscription->id
+                && $job->tenantId === $tenant->id
+                && $job->causedByUserId === $user->id;
+        });
+
+        (new SuspendSubscriptionJob($subscription->id, $tenant->id, $user->id))->handle(
+            app(RadiusProvisioningService::class),
+            app(SubscriptionSessionDisconnectService::class),
+            app(TenantNotificationService::class),
+        );
 
         $this->assertDatabaseHas('activity_log', [
             'tenant_id' => $tenant->id,

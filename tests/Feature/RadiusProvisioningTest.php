@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\Subscriptions\ActivateSubscriptionJob;
 use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\RadiusCheck;
@@ -10,7 +11,10 @@ use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\RadiusProvisioningService;
+use App\Services\TenantNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -86,7 +90,21 @@ class RadiusProvisioningTest extends TestCase
 
         $this->assertSame(0, RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'jane.doe')->count());
 
+        Queue::fake();
+
         $this->actingAs($user)->post(route('subscriptions.activate', $subscription))->assertRedirect(route('subscriptions.show', $subscription));
+
+        Queue::assertPushedOn('subscriptions', ActivateSubscriptionJob::class);
+
+        Queue::assertPushed(ActivateSubscriptionJob::class, function (ActivateSubscriptionJob $job) use ($subscription, $tenant): bool {
+            return $job->subscriptionId === $subscription->id
+                && $job->tenantId === $tenant->id;
+        });
+
+        (new ActivateSubscriptionJob($subscription->id, $tenant->id))->handle(
+            app(RadiusProvisioningService::class),
+            app(TenantNotificationService::class),
+        );
 
         $this->assertDatabaseHas('radcheck', [
             'tenant_id' => $tenant->id,

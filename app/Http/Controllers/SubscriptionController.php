@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreSubscriptionRequest;
 use App\Http\Requests\Subscription\BulkDeleteSubscriptionsRequest;
 use App\Jobs\BulkDeleteModelsJob;
+use App\Jobs\Subscriptions\ActivateSubscriptionJob;
+use App\Jobs\Subscriptions\SuspendSubscriptionJob;
 use App\Models\ActivityLog;
 use App\Models\BulkDeletionRun;
 use App\Models\Customer;
@@ -22,12 +24,8 @@ use App\Services\Monitoring\RrdToolService;
 use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
-use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
-use App\Services\SubscriptionSessionDisconnectService;
-use App\Services\TenantNotificationService;
-use App\Support\Notifications\NotificationEventRegistry;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -511,92 +509,59 @@ class SubscriptionController extends Controller
     /**
      * Suspend a subscription.
      */
-    public function suspend(Request $request, Subscription $subscription, SubscriptionSessionDisconnectService $disconnectService, TenantNotificationService $notifications): JsonResponse|RedirectResponse
+    public function suspend(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
-        $subscription->suspend();
-        $subscription = $subscription->fresh(['customer', 'plan', 'router']);
-        $disconnectResult = $disconnectService->disconnect($subscription);
-        $disconnectService->recordActivity($subscription, $disconnectResult);
-        $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
-            'title' => 'Subscription suspended',
-            'body' => "{$subscription->subscription_code} was suspended.",
-            'action_url' => route('subscriptions.show', $subscription),
-        ], $subscription);
+        $subscription->forceFill([
+            'status' => 'suspended',
+            'suspended_at' => now(),
+        ])->saveQuietly();
 
-        if ($subscription->customer) {
-            $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
-                'title' => 'Your subscription was suspended',
-                'body' => "{$subscription->subscription_code} is currently suspended.",
-                'category' => 'service',
-                'action_url' => route('customer.subscriptions.index'),
-            ], $subscription);
-        }
+        SuspendSubscriptionJob::dispatch(
+            $subscription->id,
+            (string) $subscription->tenant_id,
+            auth()->id(),
+        )->onQueue('subscriptions');
 
-        if ($disconnectResult->shouldAlert()) {
-            $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::OPERATIONAL_FAILURE, [
-                'title' => 'Router disconnect failed',
-                'body' => $disconnectResult->message,
-                'action_url' => route('subscriptions.show', $subscription),
-            ], $subscription);
-        }
-
-        $message = 'Subscription suspended successfully.';
-
-        if ($disconnectResult->shouldAlert()) {
-            $message .= ' Router session disconnect warning: '.$disconnectResult->message;
-        }
+        $message = 'Subscription suspension queued. Background processing will finish disconnecting the session and syncing RADIUS.';
 
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => $message,
-                'disconnect' => $disconnectResult->context(),
-            ]);
+            ], 202);
         }
 
         return redirect()
             ->route('subscriptions.show', $subscription)
-            ->with($disconnectResult->shouldAlert() ? 'warning' : 'success', $message);
+            ->with('success', $message);
     }
 
     /**
      * Activate a subscription.
      */
-    public function activate(Request $request, Subscription $subscription, RadiusProvisioningService $radiusProvisioning, TenantNotificationService $notifications): JsonResponse|RedirectResponse
+    public function activate(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
-        $subscription->activate();
-        $subscription = $subscription->fresh(['customer.organization', 'plan']);
-        $radiusProvisioning->syncSubscription($subscription);
-        $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
-            'title' => 'Subscription activated',
-            'body' => "{$subscription->subscription_code} was activated.",
-            'action_url' => route('subscriptions.show', $subscription),
-        ], $subscription);
+        $subscription->forceFill([
+            'status' => 'active',
+            'activation_date' => $subscription->activation_date ?? now(),
+            'suspended_at' => null,
+        ])->saveQuietly();
 
-        if ($subscription->customer) {
-            $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
-                'title' => 'Your subscription is active',
-                'body' => "{$subscription->subscription_code} is now active.",
-                'category' => 'service',
-                'action_url' => route('customer.subscriptions.index'),
-            ], $subscription);
-        }
-        $radiusSkipReason = $radiusProvisioning->provisioningSkipReason($subscription);
-        $radiusWarning = $radiusSkipReason !== null
-            ? ' Radius entries were not created: '.$radiusSkipReason.'.'
-            : '';
-        $radiusWarning = $radiusWarning === '' && $radiusProvisioning->rateLimitForPlan($subscription->plan) === null
-            ? ' Radius credentials were created, but no Mikrotik-Rate-Limit was written because the plan has no upload/download speed.'
-            : $radiusWarning;
+        ActivateSubscriptionJob::dispatch(
+            $subscription->id,
+            (string) $subscription->tenant_id,
+        )->onQueue('subscriptions');
+
+        $message = 'Subscription activation queued. Background processing will finish provisioning RADIUS and notifications.';
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Subscription activated successfully.'.$radiusWarning,
-            ]);
+                'message' => $message,
+            ], 202);
         }
 
         return redirect()
             ->route('subscriptions.show', $subscription)
-            ->with('success', 'Subscription activated successfully.'.$radiusWarning);
+            ->with('success', $message);
     }
 
     /**

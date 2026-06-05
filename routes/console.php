@@ -36,6 +36,10 @@ Schedule::command('subscriptions:kick-suspended-online')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
+Schedule::command('horizon:snapshot')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
 Schedule::command('monitoring:prune-orphans')
     ->daily()
     ->withoutOverlapping();
