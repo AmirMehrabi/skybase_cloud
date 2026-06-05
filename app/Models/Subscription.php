@@ -411,19 +411,23 @@ class Subscription extends Model implements LdapImportable
             return null;
         }
 
-        if ($this->ip_address === $ipAddress) {
-            return $this->ipAddress;
-        }
-
         $assignedIp = $this->ipPool?->ipAddresses()
             ->where('ip_address', $ipAddress)
             ->first();
 
-        if (! $assignedIp || ! $assignedIp->isAvailable()) {
+        if (! $assignedIp) {
             return null;
         }
 
-        if ($this->ipAddress) {
+        if ($this->ip_address === $ipAddress && (int) $assignedIp->customer_id === (int) $this->customer_id && $assignedIp->subscription_code === $this->subscription_code) {
+            return $assignedIp;
+        }
+
+        if (! $assignedIp->isAvailable()) {
+            return null;
+        }
+
+        if ($this->ipAddress && (int) $this->ipAddress->id !== (int) $assignedIp->id) {
             $this->ipAddress->release();
         }
 

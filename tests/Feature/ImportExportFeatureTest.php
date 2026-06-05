@@ -869,6 +869,125 @@ class ImportExportFeatureTest extends TestCase
         ]);
     }
 
+    public function test_subscription_import_reconciles_existing_primary_ip_without_failing(): void
+    {
+        Storage::fake('imports');
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber Reconcile',
+            'internal_name' => 'fiber_reconcile',
+            'status' => 'active',
+            'price' => 59.99,
+            'billing_cycle' => 'monthly',
+        ]);
+        $customer = Customer::query()->create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-RECON-0001',
+            'customer_type' => 'individual',
+            'first_name' => 'Sara',
+            'last_name' => 'Ahmadi',
+            'name' => 'Sara Ahmadi',
+            'email' => 'sara@example.com',
+            'status' => 'active',
+            'billing_type' => 'prepaid',
+            'billing_enabled' => true,
+        ]);
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Reconcile Pool',
+            'network_address' => '172.16.120.0',
+            'cidr' => 24,
+            'gateway' => '172.16.120.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '172.16.120.76',
+            'status' => 'available',
+        ]);
+        Subscription::query()->create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-RECON-0001',
+            'name' => 'Sara Fiber',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'connection_type' => 'pppoe',
+            'ip_management' => 'system',
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '172.16.120.76',
+            'pppoe_username' => 'sara.reconcile',
+            'pppoe_password' => 'secret',
+            'base_price' => 59.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 59.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'grace_period_days' => 7,
+            'status' => 'active',
+        ]);
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_SUBSCRIPTIONS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTIONS), [[
+            'customer_code' => 'CUS-RECON-0001',
+            'customer_type' => 'individual',
+            'customer_name' => 'Sara Ahmadi',
+            'first_name' => 'Sara',
+            'last_name' => 'Ahmadi',
+            'email' => 'sara@example.com',
+            'customer_status' => 'active',
+            'billing_type' => 'prepaid',
+            'customer_billing_enabled' => 'yes',
+            'subscription_code' => 'SUB-RECON-0001',
+            'subscription_name' => 'Sara Fiber',
+            'service_type' => 'pppoe',
+            'plan_name' => $plan->name,
+            'connection_type' => 'pppoe',
+            'ip_address' => '172.16.120.76',
+            'ip_management' => 'system',
+            'pppoe_username' => 'sara.reconcile',
+            'pppoe_password' => 'secret',
+            'base_price' => 59.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 59.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => 'yes',
+            'grace_period_days' => 7,
+            'status' => 'active',
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+        $this->assertSame(0, $run->failed_count);
+        $this->assertSame(1, $run->updated_count);
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '172.16.120.76',
+            'status' => 'assigned',
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-RECON-0001',
+        ]);
+    }
+
     private function createTenant(string $slug): Tenant
     {
         return Tenant::create([
