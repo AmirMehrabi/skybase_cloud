@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
+use App\Models\IpPool;
 use App\Models\Plan;
 use App\Models\RadiusCheck;
 use App\Models\RadiusReply;
 use App\Models\RadiusUserGroup;
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Models\SubscriptionIpRoute;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -134,6 +136,117 @@ class SubscriptionRadiusReconciliationTest extends TestCase
         ]);
     }
 
+    public function test_command_restores_active_subscription_ip_route_radius_rows(): void
+    {
+        [$tenant, $subscription] = $this->createPppoeSubscription();
+
+        SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '192.168.50.0',
+            'cidr' => 24,
+            'routeros_sync_status' => 'failed',
+            'routeros_sync_error' => 'Missing Framed-Route row.',
+        ]);
+        SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.20.30.0',
+            'cidr' => 24,
+            'routeros_sync_status' => 'failed',
+            'routeros_sync_error' => 'Missing Framed-Route row.',
+        ]);
+
+        $this->wipeRadiusRows($tenant->id, $subscription->pppoe_username);
+
+        RadiusReply::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '203.0.113.0/24 172.16.120.33 1',
+        ]);
+
+        $this->artisan('subscriptions:reconcile-radius-state')
+            ->expectsOutputToContain('Processed: 1, active: 1, suspended: 0, skipped: 0, failed: 0')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Framed-IP-Address',
+            'op' => ':=',
+            'value' => '172.16.120.33',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '192.168.50.0/24 172.16.120.33 1',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '10.20.30.0/24 172.16.120.33 1',
+        ]);
+        $this->assertDatabaseMissing('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Framed-Route',
+            'value' => '203.0.113.0/24 172.16.120.33 1',
+        ]);
+        $this->assertSame(2, RadiusReply::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', $subscription->pppoe_username)
+            ->where('attribute', 'Framed-Route')
+            ->count());
+        $this->assertSame(2, SubscriptionIpRoute::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('subscription_id', $subscription->id)
+            ->where('routeros_sync_status', 'synced')
+            ->whereNull('routeros_sync_error')
+            ->count());
+    }
+
+    public function test_command_removes_suspended_subscription_ip_route_radius_rows(): void
+    {
+        [$tenant, $subscription] = $this->createPppoeSubscription();
+
+        SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '192.168.50.0',
+            'cidr' => 24,
+            'routeros_sync_status' => 'synced',
+        ]);
+
+        $subscription->suspend();
+
+        RadiusReply::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '192.168.50.0/24 172.16.120.33 1',
+        ]);
+
+        $this->artisan('subscriptions:reconcile-radius-state')
+            ->expectsOutputToContain('Processed: 1, active: 0, suspended: 1, skipped: 1, failed: 0')
+            ->assertExitCode(0);
+
+        $this->assertSame(0, RadiusReply::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', $subscription->pppoe_username)
+            ->where('attribute', 'Framed-Route')
+            ->count());
+    }
+
     /**
      * @return array{0: Tenant, 1: Subscription}
      */
@@ -189,6 +302,23 @@ class SubscriptionRadiusReconciliationTest extends TestCase
             'api_username' => 'admin',
             'api_password' => 'secret',
         ]);
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Alpha Pool',
+            'network_address' => '172.16.120.0',
+            'cidr' => 24,
+            'gateway' => '172.16.120.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
 
         $subscription = Subscription::create([
             'tenant_id' => $tenant->id,
@@ -197,6 +327,9 @@ class SubscriptionRadiusReconciliationTest extends TestCase
             'plan_id' => $plan->id,
             'router_id' => $router->id,
             'connection_type' => 'pppoe',
+            'ip_address' => '172.16.120.33',
+            'ip_pool_id' => $pool->id,
+            'ip_management' => 'system',
             'pppoe_username' => 'alpha.user',
             'pppoe_password' => 'secret-pass',
             'base_price' => 79.99,

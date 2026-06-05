@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Subscription;
 use App\Services\RadiusProvisioningService;
+use App\Services\SubscriptionIpRouteSyncService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -14,7 +15,7 @@ use Throwable;
 #[Description('Reconcile RADIUS rows for active and suspended subscriptions')]
 class ReconcileSubscriptionRadiusState extends Command
 {
-    public function handle(RadiusProvisioningService $radiusProvisioning): int
+    public function handle(RadiusProvisioningService $radiusProvisioning, SubscriptionIpRouteSyncService $ipRouteSync): int
     {
         $processed = 0;
         $active = 0;
@@ -27,9 +28,9 @@ class ReconcileSubscriptionRadiusState extends Command
         Subscription::withoutGlobalScopes()
             ->whereNull('deleted_at')
             ->whereIn('status', ['active', 'suspended'])
-            ->with(['customer.organization', 'plan'])
+            ->with(['customer.organization', 'plan', 'ipRoutes'])
             ->orderBy('id')
-            ->chunkById(100, function ($subscriptions) use ($radiusProvisioning, &$processed, &$active, &$suspended, &$skipped, &$failed): void {
+            ->chunkById(100, function ($subscriptions) use ($radiusProvisioning, $ipRouteSync, &$processed, &$active, &$suspended, &$skipped, &$failed): void {
                 foreach ($subscriptions as $subscription) {
                     $processed++;
 
@@ -42,6 +43,7 @@ class ReconcileSubscriptionRadiusState extends Command
                     try {
                         $skipReason = $radiusProvisioning->provisioningSkipReason($subscription);
                         $radiusProvisioning->syncSubscription($subscription);
+                        $ipRouteSync->syncRoutes($subscription);
 
                         if ($skipReason !== null) {
                             $skipped++;
