@@ -159,29 +159,67 @@
         <div class="p-6 border-b border-gray-200">
             <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
-                    <input type="text" x-model="filters.search" @input="debounceFetch()" placeholder="Search by customer, email, or subscription code..." class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <input type="text" x-model="filters.search" @input="clearSelection(); debounceFetch()" placeholder="Search by customer, email, or subscription code..." class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                 </div>
                 <div class="sm:w-48">
-                    <select x-model="filters.status" @change="fetchData()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                    <select x-model="filters.status" @change="clearSelection(); fetchData()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                         <option value="">All Statuses</option>
                         <option value="pending">Pending</option>
                         <option value="active">Active</option>
                         <option value="suspended">Suspended</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
-                </div>
             </div>
         </div>
+    </div>
 
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Router</th>
+    <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm" x-show="pagination.total > 0" style="display: none;">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="space-y-1">
+                <p class="text-sm font-semibold text-gray-900">
+                    <span x-text="selectedSubscriptionCount"></span> subscription<span x-show="selectedSubscriptionCount !== 1" style="display: none;">s</span> selected
+                </p>
+                <p class="text-xs text-gray-500">
+                    <span x-show="selectionMode === 'all'" style="display: none;">All filtered subscriptions are selected except the ones you excluded on the current pages.</span>
+                    <span x-show="selectionMode !== 'all'" style="display: none;">Selection stays limited to the rows you checked.</span>
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" @click="selectAllMatching()" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    Select all matching
+                </button>
+                <button type="button" @click="clearSelection()" :disabled="!hasSelectedSubscriptions" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Clear selection
+                </button>
+                <button type="button" @click="bulkDeleteSelected()" :disabled="!hasSelectedSubscriptions || bulkDeleting" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    <span x-show="!bulkDeleting">Delete selected</span>
+                    <span x-show="bulkDeleting" style="display: none;">Queueing...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                        <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" :checked="allVisibleSubscriptionsSelected" @change="toggleVisibleSelection($event.target.checked)">
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Router</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
@@ -194,14 +232,14 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     <template x-if="loading">
                         <tr>
-                            <td colspan="11" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="12" class="px-6 py-12 text-center text-gray-500">
                                 Loading...
                             </td>
                         </tr>
                     </template>
                     <template x-if="!loading && subscriptions.length === 0">
                         <tr>
-                            <td colspan="11" class="px-6 py-12 text-center">
+                            <td colspan="12" class="px-6 py-12 text-center">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
@@ -220,6 +258,9 @@
                     </template>
                     <template x-for="subscription in subscriptions" :key="subscription.id">
                         <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 align-top">
+                                <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" :checked="isSubscriptionSelected(subscription.id)" @change="toggleSubscriptionSelection(subscription.id, $event.target.checked)">
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900" x-text="subscription.subscription_code"></div>
                             </td>
@@ -367,6 +408,10 @@ function subscriptionsIndex() {
         stats: { total: 0, active: 0, pending: 0, suspended: 0, cancelled: 0 },
         visiblePasswords: {},
         copiedCredential: null,
+        bulkDeleting: false,
+        selectedIds: [],
+        excludedIds: [],
+        selectionMode: 'selected',
         filters: {
             search: '',
             status: ''
@@ -426,6 +471,65 @@ function subscriptionsIndex() {
                 console.error('Error fetching subscriptions:', error);
             } finally {
                 this.loading = false;
+            }
+        },
+        clearSelection() {
+            this.selectionMode = 'selected';
+            this.selectedIds = [];
+            this.excludedIds = [];
+        },
+        selectAllMatching() {
+            this.selectionMode = 'all';
+            this.selectedIds = [];
+            this.excludedIds = [];
+        },
+        isSubscriptionSelected(subscriptionId) {
+            if (this.selectionMode === 'all') {
+                return !this.excludedIds.includes(subscriptionId);
+            }
+
+            return this.selectedIds.includes(subscriptionId);
+        },
+        toggleVisibleSelection(checked) {
+            const visibleIds = this.subscriptions.map((subscription) => subscription.id);
+
+            if (this.selectionMode === 'all') {
+                if (checked) {
+                    this.excludedIds = this.excludedIds.filter((id) => !visibleIds.includes(id));
+                } else {
+                    visibleIds.forEach((id) => {
+                        if (!this.excludedIds.includes(id)) {
+                            this.excludedIds.push(id);
+                        }
+                    });
+                }
+
+                return;
+            }
+
+            if (checked) {
+                this.selectedIds = Array.from(new Set([...this.selectedIds, ...visibleIds]));
+            } else {
+                this.selectedIds = this.selectedIds.filter((id) => !visibleIds.includes(id));
+            }
+        },
+        toggleSubscriptionSelection(subscriptionId, checked) {
+            if (this.selectionMode === 'all') {
+                if (checked) {
+                    this.excludedIds = this.excludedIds.filter((id) => id !== subscriptionId);
+                } else if (!this.excludedIds.includes(subscriptionId)) {
+                    this.excludedIds.push(subscriptionId);
+                }
+
+                return;
+            }
+
+            if (checked) {
+                if (!this.selectedIds.includes(subscriptionId)) {
+                    this.selectedIds.push(subscriptionId);
+                }
+            } else {
+                this.selectedIds = this.selectedIds.filter((id) => id !== subscriptionId);
             }
         },
         goToPage(page) {
@@ -514,6 +618,19 @@ function subscriptionsIndex() {
                 this.fetchData();
             }, 300);
         },
+        get selectedSubscriptionCount() {
+            if (this.selectionMode === 'all') {
+                return Math.max(this.pagination.total - this.excludedIds.length, 0);
+            }
+
+            return this.selectedIds.length;
+        },
+        get hasSelectedSubscriptions() {
+            return this.selectedSubscriptionCount > 0;
+        },
+        get allVisibleSubscriptionsSelected() {
+            return this.subscriptions.length > 0 && this.subscriptions.every((subscription) => this.isSubscriptionSelected(subscription.id));
+        },
         capitalize(str) {
             if (!str) return '';
 
@@ -537,6 +654,62 @@ function subscriptionsIndex() {
 
         nextPage() {
             this.goToPage(this.pagination.current_page + 1);
+        },
+        bulkDeleteConfirmationMessage() {
+            if (this.selectionMode === 'all') {
+                const selectedCount = Math.max(this.pagination.total - this.excludedIds.length, 0);
+
+                return `Delete ${selectedCount} filtered subscription${selectedCount === 1 ? '' : 's'}? This will queue the cleanup and cannot be undone.`;
+            }
+
+            const count = this.selectedIds.length;
+            return `Delete ${count} selected subscription${count === 1 ? '' : 's'}? This will queue the cleanup and cannot be undone.`;
+        },
+        async bulkDeleteSelected() {
+            if (!this.hasSelectedSubscriptions) {
+                return;
+            }
+
+            if (!window.confirm(this.bulkDeleteConfirmationMessage())) {
+                return;
+            }
+
+            this.bulkDeleting = true;
+
+            try {
+                const payload = {
+                    selection_mode: this.selectionMode,
+                    ids: this.selectionMode === 'all' ? [] : this.selectedIds,
+                    excluded_ids: this.selectionMode === 'all' ? this.excludedIds : [],
+                    search: this.filters.search,
+                    status: this.filters.status,
+                };
+
+                const response = await fetch('/subscriptions/bulk-delete', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Bulk delete request failed');
+                }
+
+                this.clearSelection();
+                await Promise.all([this.fetchData(), this.fetchStats()]);
+                alert(data.message || 'Subscription bulk delete queued.');
+            } catch (error) {
+                console.error('Error queueing subscription bulk delete:', error);
+                alert('Unable to queue subscription bulk delete. Please try again.');
+            } finally {
+                this.bulkDeleting = false;
+            }
         },
 
         confirmDelete(subscription) {

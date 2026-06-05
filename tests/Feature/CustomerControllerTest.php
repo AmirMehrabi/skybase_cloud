@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\BulkDeleteModelsJob;
+use App\Models\BulkDeletionRun;
 use App\Models\Customer;
 use App\Models\CustomerNote;
 use App\Models\Invoice;
+use App\Models\IpAddress;
+use App\Models\IpPool;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Router;
@@ -13,7 +17,10 @@ use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\TicketTeam;
 use App\Models\User;
+use App\Services\BulkDeletionService;
+use App\Services\RouterOs\RouterOsClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -507,6 +514,157 @@ class CustomerControllerTest extends TestCase
         ]);
     }
 
+    public function test_bulk_delete_all_filtered_customers_queues_and_deletes_customers_and_their_subscriptions(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $this->bindFakeRouterOsClient();
+
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber 500',
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+            'price' => 149.99,
+        ]);
+
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Core Router',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+            'api_username' => 'admin',
+            'api_password' => 'secret',
+        ]);
+
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Core Pool',
+            'network_address' => '10.20.0.0',
+            'cidr' => 24,
+            'gateway' => '10.20.0.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'site' => 'Head Office',
+            'total_ips' => 4,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 0,
+        ]);
+
+        $firstPayload = $this->createCustomerWithSubscription(
+            tenant: $tenant,
+            plan: $plan,
+            router: $router,
+            pool: $pool,
+            customerCode: 'CUS-BULK-0001',
+            customerName: 'Bulk One',
+            customerEmail: 'bulk.one@example.com',
+            subscriptionCode: 'SUB-BULK-0001',
+            invoiceNumber: 'INV-BULK-1001',
+            ipAddress: '10.20.0.11',
+        );
+
+        $secondPayload = $this->createCustomerWithSubscription(
+            tenant: $tenant,
+            plan: $plan,
+            router: $router,
+            pool: $pool,
+            customerCode: 'CUS-BULK-0002',
+            customerName: 'Bulk Two',
+            customerEmail: 'bulk.two@example.com',
+            subscriptionCode: 'SUB-BULK-0002',
+            invoiceNumber: 'INV-BULK-1002',
+            ipAddress: '10.20.0.12',
+        );
+
+        Queue::fake();
+
+        $response = $this->actingAs($user)->postJson(route('customers.bulk-destroy'), [
+            'selection_mode' => 'all',
+            'status' => 'active',
+        ]);
+
+        $response->assertAccepted();
+        $response->assertJson([
+            'message' => 'Customer bulk delete queued. The cleanup will run in the background.',
+        ]);
+
+        Queue::assertPushed(BulkDeleteModelsJob::class);
+
+        $run = BulkDeletionRun::withoutGlobalScopes()->firstOrFail();
+        (new BulkDeleteModelsJob($run->id))->handle(app(BulkDeletionService::class));
+
+        foreach ([$firstPayload, $secondPayload] as $payload) {
+            $this->assertSoftDeleted('customers', [
+                'id' => $payload['customer']->id,
+                'tenant_id' => $tenant->id,
+            ]);
+
+            $this->assertSoftDeleted('subscriptions', [
+                'id' => $payload['subscription']->id,
+                'tenant_id' => $tenant->id,
+            ]);
+
+            $this->assertSoftDeleted('invoices', [
+                'id' => $payload['invoice']->id,
+                'tenant_id' => $tenant->id,
+            ]);
+
+            $this->assertSoftDeleted('payments', [
+                'id' => $payload['payment']->id,
+                'tenant_id' => $tenant->id,
+            ]);
+        }
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.20.0.11',
+            'status' => 'available',
+            'subscription_code' => null,
+        ]);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.20.0.12',
+            'status' => 'available',
+            'subscription_code' => null,
+        ]);
+
+        $this->assertDatabaseHas('bulk_deletion_runs', [
+            'id' => $run->id,
+            'tenant_id' => $tenant->id,
+            'module' => BulkDeletionRun::MODULE_CUSTOMERS,
+            'selection_mode' => BulkDeletionRun::SELECTION_ALL,
+            'status' => BulkDeletionRun::STATUS_COMPLETED,
+            'processed_count' => 2,
+            'deleted_count' => 2,
+            'failed_count' => 0,
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'tenant_id' => $tenant->id,
+            'action' => 'customer.bulk_delete_queued',
+            'model_type' => BulkDeletionRun::class,
+            'model_id' => $run->id,
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'tenant_id' => $tenant->id,
+            'action' => 'bulk_delete.completed',
+            'model_type' => BulkDeletionRun::class,
+            'model_id' => $run->id,
+        ]);
+    }
+
     private function createTenant(string $slug, string $companyName): Tenant
     {
         return Tenant::create([
@@ -537,5 +695,141 @@ class CustomerControllerTest extends TestCase
             'billing_type' => 'postpaid',
             'tax_exempt' => false,
         ];
+    }
+
+    /**
+     * @return array{customer: Customer, subscription: Subscription, invoice: Invoice, payment: Payment}
+     */
+    private function createCustomerWithSubscription(
+        Tenant $tenant,
+        Plan $plan,
+        Router $router,
+        IpPool $pool,
+        string $customerCode,
+        string $customerName,
+        string $customerEmail,
+        string $subscriptionCode,
+        string $invoiceNumber,
+        string $ipAddress,
+    ): array {
+        $customerParts = explode(' ', $customerName, 2);
+        $firstName = $customerParts[0] ?? $customerName;
+        $lastName = $customerParts[1] ?? $customerParts[0] ?? $customerName;
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => $customerCode,
+            'customer_type' => 'individual',
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'name' => $customerName,
+            'email' => $customerEmail,
+            'mobile' => '555-0101',
+            'address_line1' => '123 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
+        ]);
+
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => $ipAddress,
+            'status' => 'assigned',
+            'customer_id' => $customer->id,
+            'mac_address' => 'AA:BB:CC:DD:EE:'.substr($subscriptionCode, -2),
+            'subscription_code' => $subscriptionCode,
+            'assigned_at' => now(),
+        ]);
+
+        $pool->updateStatistics();
+
+        $subscription = Subscription::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => $subscriptionCode,
+            'name' => $customerName.' Service',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'site' => 'Head Office',
+            'connection_type' => 'static',
+            'ip_address' => $ipAddress,
+            'ip_pool_id' => $pool->id,
+            'ip_management' => 'system',
+            'pppoe_username' => strtolower(str_replace(' ', '.', $customerName)),
+            'pppoe_password' => 'secret',
+            'base_price' => $plan->price,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => $plan->price,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'grace_period_days' => 7,
+            'status' => 'active',
+            'start_date' => now(),
+            'activation_date' => now(),
+            'next_billing_date' => now()->addMonth()->toDateString(),
+        ]);
+
+        $invoice = Invoice::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_id' => $subscription->id,
+            'invoice_number' => $invoiceNumber,
+            'billing_period_start' => now()->startOfMonth()->toDateString(),
+            'billing_period_end' => now()->endOfMonth()->toDateString(),
+            'issue_date' => now()->subDays(5)->toDateString(),
+            'due_date' => now()->addDays(25)->toDateString(),
+            'subtotal' => $plan->price,
+            'discount_total' => 0,
+            'tax_total' => 0,
+            'total' => $plan->price,
+            'paid_amount' => 25,
+            'balance_due' => $plan->price - 25,
+            'status' => 'partially_paid',
+        ]);
+
+        $payment = Payment::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'invoice_id' => $invoice->id,
+            'payment_reference' => 'PAY-'.substr($subscriptionCode, -4),
+            'amount' => 25,
+            'payment_method' => 'cash',
+            'status' => 'completed',
+            'paid_at' => now(),
+        ]);
+
+        return [
+            'customer' => $customer,
+            'subscription' => $subscription,
+            'invoice' => $invoice,
+            'payment' => $payment,
+        ];
+    }
+
+    private function bindFakeRouterOsClient(): void
+    {
+        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
+        {
+            public function execute(Router $router, callable $callback): mixed
+            {
+                return $callback(null, $this);
+            }
+
+            public function writeSentence($connection, array $words): void {}
+
+            public function readResponse($connection): array
+            {
+                return [];
+            }
+        });
     }
 }

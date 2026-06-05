@@ -183,6 +183,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/data', [CustomerController::class, 'data'])->name('data');
         Route::get('/filter-options', [CustomerController::class, 'filterOptions'])->name('filter-options');
         Route::get('/stats', [CustomerController::class, 'stats'])->name('stats');
+        Route::post('/bulk-delete', [CustomerController::class, 'bulkDestroy'])->name('bulk-destroy');
         Route::get('/create', [CustomerController::class, 'create'])->name('create');
         Route::post('/', [CustomerController::class, 'store'])->name('store');
         Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
@@ -205,6 +206,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::post('/export', [ImportExportController::class, 'exportSubscriptions'])->name('export');
         Route::post('/import', [ImportExportController::class, 'importSubscriptions'])->name('import');
         Route::get('/check-pppoe-username', [SubscriptionController::class, 'checkPppoeUsername'])->name('check-pppoe-username');
+        Route::post('/bulk-delete', [SubscriptionController::class, 'bulkDestroy'])->name('bulk-destroy');
         Route::get('/create', [SubscriptionController::class, 'create'])->name('create');
         Route::post('/', [SubscriptionController::class, 'store'])->name('store');
         Route::get('/{subscription}', [SubscriptionController::class, 'show'])->name('show');

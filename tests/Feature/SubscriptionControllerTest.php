@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\BulkDeleteModelsJob;
+use App\Models\BulkDeletionRun;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\IpAddress;
@@ -13,9 +15,11 @@ use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\BulkDeletionService;
 use App\Services\RouterOs\RouterOsClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -219,6 +223,106 @@ class SubscriptionControllerTest extends TestCase
             'ip_address' => '10.10.0.12',
             'status' => 'assigned',
             'subscription_code' => $subscription->subscription_code,
+        ]);
+    }
+
+    public function test_bulk_delete_selected_subscriptions_queues_and_cleans_up_subscription_billing_and_ipam(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $this->bindFakeRouterOsClient();
+
+        $invoice = Invoice::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $subscription->customer_id,
+            'subscription_id' => $subscription->id,
+            'invoice_number' => 'INV-BULK-0001',
+            'billing_period_start' => now()->startOfMonth()->toDateString(),
+            'billing_period_end' => now()->endOfMonth()->toDateString(),
+            'issue_date' => now()->subDays(5)->toDateString(),
+            'due_date' => now()->addDays(25)->toDateString(),
+            'subtotal' => 99.99,
+            'discount_total' => 0,
+            'tax_total' => 0,
+            'total' => 99.99,
+            'paid_amount' => 25,
+            'balance_due' => 74.99,
+            'status' => 'partially_paid',
+        ]);
+
+        $payment = Payment::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $subscription->customer_id,
+            'invoice_id' => $invoice->id,
+            'payment_reference' => 'PAY-BULK-0001',
+            'amount' => 25,
+            'payment_method' => 'cash',
+            'status' => 'completed',
+            'paid_at' => now(),
+        ]);
+
+        Queue::fake();
+
+        $response = $this->actingAs($user)->postJson(route('subscriptions.bulk-destroy'), [
+            'selection_mode' => 'selected',
+            'ids' => [$subscription->id],
+        ]);
+
+        $response->assertAccepted();
+        $response->assertJson([
+            'message' => 'Subscription bulk delete queued. The cleanup will run in the background.',
+        ]);
+
+        Queue::assertPushed(BulkDeleteModelsJob::class);
+
+        $run = BulkDeletionRun::withoutGlobalScopes()->firstOrFail();
+        (new BulkDeleteModelsJob($run->id))->handle(app(BulkDeletionService::class));
+
+        $this->assertSoftDeleted('subscriptions', [
+            'id' => $subscription->id,
+            'tenant_id' => $tenant->id,
+            'status' => 'suspended',
+        ]);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.10.0.11',
+            'status' => 'available',
+            'subscription_code' => null,
+        ]);
+
+        $this->assertSoftDeleted('invoices', [
+            'id' => $invoice->id,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->assertSoftDeleted('payments', [
+            'id' => $payment->id,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->assertDatabaseHas('bulk_deletion_runs', [
+            'id' => $run->id,
+            'tenant_id' => $tenant->id,
+            'module' => BulkDeletionRun::MODULE_SUBSCRIPTIONS,
+            'action' => BulkDeletionRun::ACTION_DELETE,
+            'status' => BulkDeletionRun::STATUS_COMPLETED,
+            'processed_count' => 1,
+            'deleted_count' => 1,
+            'failed_count' => 0,
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'tenant_id' => $tenant->id,
+            'action' => 'subscription.bulk_delete_queued',
+            'model_type' => BulkDeletionRun::class,
+            'model_id' => $run->id,
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'tenant_id' => $tenant->id,
+            'action' => 'bulk_delete.completed',
+            'model_type' => BulkDeletionRun::class,
+            'model_id' => $run->id,
         ]);
     }
 
@@ -721,5 +825,23 @@ class SubscriptionControllerTest extends TestCase
         ]);
 
         return [$tenant, $user, $subscription];
+    }
+
+    private function bindFakeRouterOsClient(): void
+    {
+        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
+        {
+            public function execute(Router $router, callable $callback): mixed
+            {
+                return $callback(null, $this);
+            }
+
+            public function writeSentence($connection, array $words): void {}
+
+            public function readResponse($connection): array
+            {
+                return [];
+            }
+        });
     }
 }

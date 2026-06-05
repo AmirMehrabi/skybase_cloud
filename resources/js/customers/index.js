@@ -18,6 +18,10 @@ document.addEventListener('alpine:init', () => {
 
         // Loading state
         loading: false,
+        bulkDeleting: false,
+        selectedIds: [],
+        excludedIds: [],
+        selectionMode: 'selected',
         pagination: {
             current_page: 1,
             last_page: 1,
@@ -36,12 +40,15 @@ document.addEventListener('alpine:init', () => {
             ]);
 
             // Watch for filter changes
-            this.$watch('search', () => this.debounceFetch());
-            this.$watch('status', () => this.fetchCustomers());
-            this.$watch('plan', () => this.fetchCustomers());
-            this.$watch('site', () => this.fetchCustomers());
-            this.$watch('router', () => this.fetchCustomers());
-            this.$watch('organization', () => this.fetchCustomers());
+            this.$watch('search', () => {
+                this.clearSelection();
+                this.debounceFetch();
+            });
+            this.$watch('status', () => this.refreshFromFilters());
+            this.$watch('plan', () => this.refreshFromFilters());
+            this.$watch('site', () => this.refreshFromFilters());
+            this.$watch('router', () => this.refreshFromFilters());
+            this.$watch('organization', () => this.refreshFromFilters());
         },
 
         // API calls
@@ -100,6 +107,12 @@ document.addEventListener('alpine:init', () => {
             }, 300);
         },
 
+        refreshFromFilters() {
+            this.clearSelection();
+            this.currentPage = 1;
+            this.fetchCustomers();
+        },
+
         // Computed
         get paginatedCustomers() {
             return this.customers;
@@ -146,6 +159,26 @@ document.addEventListener('alpine:init', () => {
             return this.search || this.status || this.plan || this.site || this.router || this.organization;
         },
 
+        get selectedCustomerCount() {
+            if (this.selectionMode === 'all') {
+                return Math.max(this.pagination.total - this.excludedIds.length, 0);
+            }
+
+            return this.selectedIds.length;
+        },
+
+        get hasSelectedCustomers() {
+            return this.selectedCustomerCount > 0;
+        },
+
+        get allVisibleCustomersSelected() {
+            return this.customers.length > 0 && this.customers.every((customer) => this.isCustomerSelected(customer.id));
+        },
+
+        get someVisibleCustomersSelected() {
+            return this.customers.some((customer) => this.isCustomerSelected(customer.id));
+        },
+
         // Actions
         clearFilters() {
             this.search = '';
@@ -155,7 +188,72 @@ document.addEventListener('alpine:init', () => {
             this.router = '';
             this.organization = '';
             this.currentPage = 1;
+            this.clearSelection();
             this.fetchCustomers();
+        },
+
+        clearSelection() {
+            this.selectionMode = 'selected';
+            this.selectedIds = [];
+            this.excludedIds = [];
+        },
+
+        selectAllMatching() {
+            this.selectionMode = 'all';
+            this.selectedIds = [];
+            this.excludedIds = [];
+        },
+
+        isCustomerSelected(customerId) {
+            if (this.selectionMode === 'all') {
+                return !this.excludedIds.includes(customerId);
+            }
+
+            return this.selectedIds.includes(customerId);
+        },
+
+        toggleVisibleSelection(checked) {
+            const visibleIds = this.customers.map((customer) => customer.id);
+
+            if (this.selectionMode === 'all') {
+                if (checked) {
+                    this.excludedIds = this.excludedIds.filter((id) => !visibleIds.includes(id));
+                } else {
+                    visibleIds.forEach((id) => {
+                        if (!this.excludedIds.includes(id)) {
+                            this.excludedIds.push(id);
+                        }
+                    });
+                }
+
+                return;
+            }
+
+            if (checked) {
+                this.selectedIds = Array.from(new Set([...this.selectedIds, ...visibleIds]));
+            } else {
+                this.selectedIds = this.selectedIds.filter((id) => !visibleIds.includes(id));
+            }
+        },
+
+        toggleCustomerSelection(customerId, checked) {
+            if (this.selectionMode === 'all') {
+                if (checked) {
+                    this.excludedIds = this.excludedIds.filter((id) => id !== customerId);
+                } else if (!this.excludedIds.includes(customerId)) {
+                    this.excludedIds.push(customerId);
+                }
+
+                return;
+            }
+
+            if (checked) {
+                if (!this.selectedIds.includes(customerId)) {
+                    this.selectedIds.push(customerId);
+                }
+            } else {
+                this.selectedIds = this.selectedIds.filter((id) => id !== customerId);
+            }
         },
 
         goToPage(page) {
@@ -175,6 +273,71 @@ document.addEventListener('alpine:init', () => {
             if (this.currentPage > 1) {
                 this.currentPage--;
                 this.fetchCustomers();
+            }
+        },
+
+        bulkDeleteConfirmationMessage() {
+            if (this.selectionMode === 'all') {
+                const excludedCount = this.excludedIds.length;
+                const totalCount = this.pagination.total;
+                const selectedCount = Math.max(totalCount - excludedCount, 0);
+
+                return `Delete ${selectedCount} filtered customer${selectedCount === 1 ? '' : 's'}? This will queue the cleanup and cannot be undone.`;
+            }
+
+            const count = this.selectedIds.length;
+            return `Delete ${count} selected customer${count === 1 ? '' : 's'}? This will queue the cleanup and cannot be undone.`;
+        },
+
+        async bulkDeleteSelected() {
+            if (!this.hasSelectedCustomers) {
+                return;
+            }
+
+            if (!window.confirm(this.bulkDeleteConfirmationMessage())) {
+                return;
+            }
+
+            this.bulkDeleting = true;
+
+            try {
+                const payload = {
+                    selection_mode: this.selectionMode,
+                    ids: this.selectionMode === 'all' ? [] : this.selectedIds,
+                    excluded_ids: this.selectionMode === 'all' ? this.excludedIds : [],
+                    search: this.search,
+                    status: this.status,
+                    plan: this.plan,
+                    site: this.site,
+                    router: this.router,
+                    organization: this.organization,
+                };
+
+                const response = await fetch('/customers/bulk-delete', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Bulk delete request failed');
+                }
+
+                this.clearSelection();
+                await Promise.all([this.fetchCustomers(), this.fetchStats()]);
+
+                window.alert(data.message || 'Customer bulk delete queued.');
+            } catch (error) {
+                console.error('Error queueing customer bulk delete:', error);
+                window.alert('Unable to queue customer bulk delete. Please try again.');
+            } finally {
+                this.bulkDeleting = false;
             }
         },
 

@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Customer\BulkDeleteCustomersRequest;
 use App\Http\Requests\Customer\StoreCustomerNoteRequest;
 use App\Http\Requests\Customer\StoreCustomerRequest;
 use App\Http\Requests\Customer\UpdateCustomerRequest;
 use App\Http\Requests\NotificationPreferenceRequest;
+use App\Jobs\BulkDeleteModelsJob;
 use App\Models\Activity;
+use App\Models\ActivityLog;
+use App\Models\BulkDeletionRun;
 use App\Models\Customer;
 use App\Models\Organization;
 use App\Services\ActivityLogFormatter;
@@ -343,6 +347,57 @@ class CustomerController extends Controller
         return response()->json([
             'message' => 'Customer deleted successfully.',
         ]);
+    }
+
+    public function bulkDestroy(BulkDeleteCustomersRequest $request): JsonResponse|RedirectResponse
+    {
+        $tenantId = (string) $request->user()->tenant_id;
+        $validated = $request->validated();
+        $filters = array_filter(
+            $request->only(['search', 'status', 'plan', 'site', 'router', 'organization']),
+            fn (mixed $value): bool => filled($value),
+        );
+
+        $run = BulkDeletionRun::query()->create([
+            'tenant_id' => $tenantId,
+            'user_id' => $request->user()->id,
+            'module' => BulkDeletionRun::MODULE_CUSTOMERS,
+            'action' => BulkDeletionRun::ACTION_DELETE,
+            'selection_mode' => $validated['selection_mode'],
+            'filters' => $filters,
+            'selected_ids' => $validated['ids'] ?? [],
+            'excluded_ids' => $validated['excluded_ids'] ?? [],
+            'status' => BulkDeletionRun::STATUS_QUEUED,
+        ]);
+
+        ActivityLog::create([
+            'tenant_id' => $tenantId,
+            'user_id' => $request->user()->id,
+            'action' => 'customer.bulk_delete_queued',
+            'model_type' => BulkDeletionRun::class,
+            'model_id' => $run->id,
+            'new_values' => [
+                'selection_mode' => $validated['selection_mode'],
+                'filters' => $filters,
+                'selected_ids_count' => count($validated['ids'] ?? []),
+                'excluded_ids_count' => count($validated['excluded_ids'] ?? []),
+            ],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        BulkDeleteModelsJob::dispatch($run->id);
+
+        $message = 'Customer bulk delete queued. The cleanup will run in the background.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'run_id' => $run->id,
+            ], 202);
+        }
+
+        return back()->with('success', $message);
     }
 
     /**

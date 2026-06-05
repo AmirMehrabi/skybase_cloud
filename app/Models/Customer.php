@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
+use App\Services\SubscriptionDeletionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -212,7 +213,11 @@ class Customer extends Authenticatable implements LdapImportable
                 }
 
                 foreach ($subscriptions as $subscription) {
-                    $customer->isForceDeleting() ? $subscription->forceDelete() : $subscription->delete();
+                    app(SubscriptionDeletionService::class)->delete(
+                        $subscription,
+                        suppressActivityLogs: true,
+                        forceDelete: $customer->isForceDeleting(),
+                    );
                 }
 
                 if ($customer->isForceDeleting()) {

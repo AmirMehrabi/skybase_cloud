@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubscriptionRequest;
+use App\Http\Requests\Subscription\BulkDeleteSubscriptionsRequest;
+use App\Jobs\BulkDeleteModelsJob;
+use App\Models\ActivityLog;
+use App\Models\BulkDeletionRun;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\IpAddress;
@@ -19,6 +23,7 @@ use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\RadiusProvisioningService;
+use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionSessionDisconnectService;
 use App\Services\TenantNotificationService;
@@ -406,8 +411,7 @@ class SubscriptionController extends Controller
      */
     public function destroy(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
-        $this->releaseSubscriptionIpRoutes($subscription->loadMissing('ipRoutes'));
-        $subscription->delete();
+        app(SubscriptionDeletionService::class)->delete($subscription);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -418,6 +422,57 @@ class SubscriptionController extends Controller
         return redirect()
             ->route('subscriptions.index')
             ->with('success', 'Subscription deleted successfully.');
+    }
+
+    public function bulkDestroy(BulkDeleteSubscriptionsRequest $request): JsonResponse|RedirectResponse
+    {
+        $tenantId = (string) $request->user()->tenant_id;
+        $validated = $request->validated();
+        $filters = array_filter(
+            $request->only(['search', 'status', 'plan', 'customer']),
+            fn (mixed $value): bool => filled($value),
+        );
+
+        $run = BulkDeletionRun::query()->create([
+            'tenant_id' => $tenantId,
+            'user_id' => $request->user()->id,
+            'module' => BulkDeletionRun::MODULE_SUBSCRIPTIONS,
+            'action' => BulkDeletionRun::ACTION_DELETE,
+            'selection_mode' => $validated['selection_mode'],
+            'filters' => $filters,
+            'selected_ids' => $validated['ids'] ?? [],
+            'excluded_ids' => $validated['excluded_ids'] ?? [],
+            'status' => BulkDeletionRun::STATUS_QUEUED,
+        ]);
+
+        ActivityLog::create([
+            'tenant_id' => $tenantId,
+            'user_id' => $request->user()->id,
+            'action' => 'subscription.bulk_delete_queued',
+            'model_type' => BulkDeletionRun::class,
+            'model_id' => $run->id,
+            'new_values' => [
+                'selection_mode' => $validated['selection_mode'],
+                'filters' => $filters,
+                'selected_ids_count' => count($validated['ids'] ?? []),
+                'excluded_ids_count' => count($validated['excluded_ids'] ?? []),
+            ],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        BulkDeleteModelsJob::dispatch($run->id);
+
+        $message = 'Subscription bulk delete queued. The cleanup will run in the background.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'run_id' => $run->id,
+            ], 202);
+        }
+
+        return back()->with('success', $message);
     }
 
     /**
