@@ -53,6 +53,8 @@ class UpdateRouterRequest extends FormRequest
             'api_port' => ['required', 'integer', 'min:1', 'max:65535'],
             'api_username' => ['nullable', 'string', 'max:255'],
             'api_password' => ['nullable', 'string', 'max:255', 'sometimes'],
+            'coa_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'coa_secret' => ['nullable', 'string', 'max:255'],
             'ssh_port' => ['required', 'integer', 'min:1', 'max:65535'],
             'location' => ['nullable', 'string', 'max:255'],
             'site' => ['nullable', 'string', 'max:255'],

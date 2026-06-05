@@ -126,6 +126,23 @@
                     placeholder="Leave blank to keep current"
                     :error="$errors->first('api_password')"
                 />
+
+                <x-ui.input.text
+                    type="number"
+                    label="CoA Port"
+                    name="coa_port"
+                    :value="old('coa_port', $router->coa_port ?? 1700)"
+                    :error="$errors->first('coa_port')"
+                    hint="Default: 1700"
+                />
+
+                <x-ui.input.text
+                    type="password"
+                    label="CoA Secret"
+                    name="coa_secret"
+                    placeholder="Leave blank to keep current"
+                    :error="$errors->first('coa_secret')"
+                />
             </div>
         </div>
 

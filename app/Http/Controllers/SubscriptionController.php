@@ -14,6 +14,7 @@ use App\Models\Invoice;
 use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Plan;
+use App\Models\RadiusPostAuthRecord;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
@@ -26,11 +27,14 @@ use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
+use App\Services\SubscriptionSessionDisconnectService;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -41,6 +45,7 @@ class SubscriptionController extends Controller
         protected BillingService $billing,
         protected OrganizationBillingService $organizationBilling,
         protected RadiusAccountingUsageService $radiusAccountingUsage,
+        protected SubscriptionSessionDisconnectService $disconnectService,
     ) {}
 
     /**
@@ -240,13 +245,14 @@ class SubscriptionController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Subscription $subscription): View
+    public function show(Request $request, Subscription $subscription): View
     {
         $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments']);
         $activityLog = app(ActivityLogFormatter::class)->forSubject($subscription, $subscription->tenant_id);
         $billingInvoices = $this->billingInvoicesForSubscription($subscription);
         $usageSummary = $this->usageSummaryForSubscription($subscription);
         $usageSessions = $this->usageSessionsForSubscription($subscription);
+        $authAttempts = $this->recentRadiusPostAuthAttemptsForSubscription($subscription, $request);
 
         return view('subscriptions.show', compact(
             'subscription',
@@ -254,6 +260,7 @@ class SubscriptionController extends Controller
             'billingInvoices',
             'usageSummary',
             'usageSessions',
+            'authAttempts',
         ));
     }
 
@@ -289,7 +296,10 @@ class SubscriptionController extends Controller
             'ip_pool_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('ip_pools', 'id')->where(fn ($query) => $query->where('router_id', $effectiveRouterId)),
+                Rule::exists('ip_pools', 'id')->where(fn ($query) => $query->where(function ($query) use ($effectiveRouterId): void {
+                    $query->where('router_id', $effectiveRouterId)
+                        ->orWhere('all_devices', true);
+                })),
             ],
             'ip_address' => 'nullable|ip|max:255',
             'pppoe_username' => 'nullable|string|max:255',
@@ -552,6 +562,35 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Kill the active session for a subscription.
+     */
+    public function killSession(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
+    {
+        $this->authorizeTenantAccess($subscription);
+
+        $result = $this->disconnectService->disconnect($subscription->fresh(['router']));
+        $this->disconnectService->recordActivity($subscription, $result, $request->user());
+
+        if ($result->wasSuccessful()) {
+            $subscription->forceFill([
+                'connection_status' => 'offline',
+                'connection_status_checked_at' => now(),
+            ])->saveQuietly();
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $result->message,
+                'result' => $result->context(),
+            ], $result->wasSuccessful() ? 200 : 422);
+        }
+
+        return redirect()
+            ->route('subscriptions.show', $subscription)
+            ->with($result->wasSuccessful() ? 'success' : 'error', $result->message);
+    }
+
+    /**
      * Activate a subscription.
      */
     public function activate(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
@@ -721,6 +760,92 @@ class SubscriptionController extends Controller
         return response()->json([
             'chartData' => $chartData,
         ]);
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function recentRadiusPostAuthAttemptsForSubscription(Subscription $subscription, Request $request): LengthAwarePaginator
+    {
+        $pageName = 'radpostauth_page';
+        $perPage = 10;
+
+        $query = RadiusPostAuthRecord::withoutGlobalScopes()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->where('authdate', '>=', now()->subMinutes(20))
+            ->when(filled($subscription->pppoe_username), function ($query) use ($subscription): void {
+                $query->where('username', $subscription->pppoe_username);
+            }, function ($query): void {
+                $query->whereRaw('1 = 0');
+            })
+            ->orderByDesc('authdate');
+
+        $paginator = $query->paginate($perPage, ['*'], $pageName);
+        $paginator->setCollection(
+            $paginator->getCollection()->map(
+                fn (RadiusPostAuthRecord $attempt): array => $this->formatRadiusPostAuthAttempt($attempt),
+            ),
+        );
+
+        return $paginator->appends([
+            ...$request->except($pageName),
+            'tab' => 'auth',
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatRadiusPostAuthAttempt(RadiusPostAuthRecord $attempt): array
+    {
+        $reply = trim((string) ($attempt->reply ?? ''));
+        $replyLines = collect(preg_split('/\r\n|\r|\n/', $reply) ?: [])
+            ->map(fn (string $line): string => trim($line))
+            ->filter()
+            ->values();
+        $outcome = $this->radiusPostAuthOutcome($reply);
+
+        return [
+            'id' => $attempt->id,
+            'username' => $attempt->username ?: 'Unknown username',
+            'authdate' => $attempt->authdate?->format('M d, Y H:i:s'),
+            'authdate_human' => $attempt->authdate?->diffForHumans() ?? 'Unknown time',
+            'outcome' => $outcome,
+            'outcome_label' => Str::headline(str_replace('_', ' ', $outcome)),
+            'outcome_class' => $this->radiusPostAuthOutcomeClass($outcome),
+            'reply_summary' => $replyLines->first() ?? 'No reply text stored',
+            'reply_details' => $replyLines->skip(1)->implode(' • ') ?: ($reply !== '' ? Str::limit($reply, 160) : 'No reply text stored'),
+            'password_state' => filled($attempt->pass) ? 'Provided' : 'Not provided',
+        ];
+    }
+
+    private function radiusPostAuthOutcome(?string $reply): string
+    {
+        $normalized = strtolower((string) $reply);
+
+        if (str_contains($normalized, 'access-accept')) {
+            return 'accepted';
+        }
+
+        if (str_contains($normalized, 'access-reject')) {
+            return 'rejected';
+        }
+
+        if ($normalized === '') {
+            return 'unknown';
+        }
+
+        return 'informational';
+    }
+
+    private function radiusPostAuthOutcomeClass(string $outcome): string
+    {
+        return match ($outcome) {
+            'accepted' => 'bg-green-100 text-green-800 border-green-200',
+            'rejected' => 'bg-red-100 text-red-800 border-red-200',
+            'informational' => 'bg-blue-100 text-blue-800 border-blue-200',
+            default => 'bg-gray-100 text-gray-800 border-gray-200',
+        };
     }
 
     /**

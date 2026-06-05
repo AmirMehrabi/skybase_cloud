@@ -78,7 +78,7 @@ if (! function_exists('getStatusBadgeClass')) {
 @section('content')
 <div
     x-data="{
-        tab: 'overview',
+        tab: @js(request('tab', 'overview')),
         copiedField: null,
         ipChange: {
             open: {{ $errors->has('ip_address') ? 'true' : 'false' }},
@@ -279,6 +279,22 @@ if (! function_exists('getStatusBadgeClass')) {
                     </form>
                 @endif
 
+                @if($subscriptionModel->isPppoe() && $subscriptionModel->router)
+                    <form method="POST" action="{{ route('subscriptions.kill-session', $subscription['id']) }}">
+                        @csrf
+                        <button
+                            type="submit"
+                            onclick="return confirm('Disconnect the active PPP session for this subscription?')"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636L5.636 18.364M5.636 5.636l12.728 12.728"></path>
+                            </svg>
+                            Kill
+                        </button>
+                    </form>
+                @endif
+
                 <form method="POST" action="{{ route('subscriptions.generate-invoice', $subscription['id']) }}">
                     @csrf
                     <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors">
@@ -423,6 +439,9 @@ if (! function_exists('getStatusBadgeClass')) {
                 </button>
                 <button @click="tab = 'usage'" :class="tab === 'usage' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
                     Usage
+                </button>
+                <button @click="tab = 'auth'" :class="tab === 'auth' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
+                    Auth Attempts
                 </button>
                 <button @click="tab = 'contract'" :class="tab === 'contract' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
                     Contract
@@ -842,6 +861,79 @@ if (! function_exists('getStatusBadgeClass')) {
                                 @endforelse
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Auth Attempts -->
+            <div x-show="tab === 'auth'" x-transition class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Recent RADIUS Auth Attempts</h3>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Latest radpostauth rows for {{ $subscription['pppoe_username'] }}.
+                                Entries older than 20 minutes are pruned automatically.
+                            </p>
+                        </div>
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                            <p class="font-medium text-gray-900">Retention window</p>
+                            <p class="mt-1">20 minutes maximum</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Attempted</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Result</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reply</th>
+                                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Password</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @forelse($authAttempts as $attempt)
+                                    <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900">{{ $attempt['authdate'] }}</div>
+                                            <div class="text-xs text-gray-500">{{ $attempt['authdate_human'] }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $attempt['outcome_class'] }}">
+                                                {{ $attempt['outcome_label'] }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-mono text-gray-900">{{ $attempt['username'] }}</div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm font-medium text-gray-900 break-words">{{ $attempt['reply_summary'] }}</div>
+                                            <div class="mt-1 text-xs text-gray-500 break-words">{{ $attempt['reply_details'] }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-gray-600">{{ $attempt['password_state'] }}</span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
+                                            No authentication attempts have been recorded in the last 20 minutes for this subscription.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm text-gray-500">
+                            Showing {{ $authAttempts->firstItem() ?? 0 }} to {{ $authAttempts->lastItem() ?? 0 }} of {{ $authAttempts->total() }} attempts
+                        </p>
+                        @if($authAttempts->hasPages())
+                            {{ $authAttempts->links() }}
+                        @endif
                     </div>
                 </div>
             </div>

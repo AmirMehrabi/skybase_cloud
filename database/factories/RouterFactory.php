@@ -27,6 +27,8 @@ class RouterFactory extends Factory
             'api_port' => 8728,
             'api_username' => 'admin',
             'api_password' => fake()->password(),
+            'coa_port' => 1700,
+            'coa_secret' => null,
             'ssh_port' => 22,
             'location' => fake()->randomElement(['Data Center', 'Tower A', 'Tower B', 'HQ Building', 'Branch Office']),
             'site' => fake()->randomElement(['Main Site', 'North Tower', 'South Tower', 'East Wing', 'West Wing']),

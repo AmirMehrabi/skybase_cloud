@@ -374,7 +374,7 @@ function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes
                 return [];
             }
 
-            return this.ipPools.filter(pool => String(pool.router_id ?? '') === String(this.form.router_id));
+            return this.ipPools.filter(pool => pool.all_devices || String(pool.router_id ?? '') === String(this.form.router_id));
         },
         routeIpPool(route) {
             if (! route.ip_pool_id) {
@@ -455,7 +455,12 @@ function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes
                 return;
             }
 
-            this.form.ip_pool_id = String(pools[0].id);
+            const currentPoolStillAvailable = pools.some(pool => String(pool.id) === String(this.form.ip_pool_id));
+
+            if (! currentPoolStillAvailable) {
+                this.form.ip_pool_id = String(pools[0].id);
+            }
+
             this.syncPrimaryIpSelection();
         },
         handleIpPoolChange() {

@@ -220,6 +220,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::delete('/{subscription}', [SubscriptionController::class, 'destroy'])->name('destroy');
         Route::patch('/{subscription}/billing', [SubscriptionController::class, 'updateBilling'])->name('billing.update');
         Route::post('/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->name('suspend');
+        Route::post('/{subscription}/kill-session', [SubscriptionController::class, 'killSession'])->name('kill-session');
         Route::post('/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('activate');
         Route::post('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
         Route::post('/{subscription}/generate-invoice', [SubscriptionController::class, 'generateInvoice'])->name('generate-invoice');

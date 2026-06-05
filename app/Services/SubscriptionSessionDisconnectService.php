@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\RouterOs\RouterOsClient;
+use App\Services\RouterOs\RouterOsCoaClient;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -12,6 +13,7 @@ class SubscriptionSessionDisconnectService
 {
     public function __construct(
         private RouterOsClient $routerOs,
+        private RouterOsCoaClient $coaClient,
     ) {}
 
     public function disconnect(Subscription $subscription): SubscriptionSessionDisconnectResult
@@ -32,87 +34,46 @@ class SubscriptionSessionDisconnectService
             return SubscriptionSessionDisconnectResult::skipped('Subscription has no assigned router.');
         }
 
-        if (! $router->isMikrotik()) {
-            return SubscriptionSessionDisconnectResult::skipped(
-                'Assigned router does not support RouterOS API disconnects.',
-                'routeros-api',
-                $router->id,
-                $router->name,
-            );
+        $apiResult = $this->disconnectViaRouterOsApi($subscription, $username);
+
+        if ($apiResult->wasSuccessful()) {
+            return $apiResult;
         }
 
-        if (! $router->enable_provisioning) {
-            return SubscriptionSessionDisconnectResult::skipped(
-                'Router provisioning is disabled.',
-                'routeros-api',
-                $router->id,
-                $router->name,
-            );
-        }
+        $coaResult = $this->disconnectViaCoa($subscription, $username);
 
-        if (! $router->api_username || ! $router->api_password) {
-            return SubscriptionSessionDisconnectResult::skipped(
-                'RouterOS API credentials are missing.',
-                'routeros-api',
-                $router->id,
-                $router->name,
-            );
-        }
-
-        try {
-            $removed = $this->routerOs->execute($router, function ($connection, RouterOsClient $client) use ($username): int {
-                $client->writeSentence($connection, [
-                    '/ppp/active/print',
-                    '?name='.$username,
-                ]);
-
-                $sessions = collect($client->readResponse($connection))
-                    ->filter(fn (array $session): bool => ($session['name'] ?? null) === $username)
-                    ->values();
-
-                foreach ($sessions as $session) {
-                    if (! isset($session['.id'])) {
-                        continue;
-                    }
-
-                    $client->writeSentence($connection, [
-                        '/ppp/active/remove',
-                        '=.id='.$session['.id'],
-                    ]);
-                    $client->readResponse($connection);
-                }
-
-                return $sessions->filter(fn (array $session): bool => isset($session['.id']))->count();
-            });
+        if ($coaResult->wasSuccessful()) {
+            $message = 'Disconnected 1 active PPP session(s) via CoA after RouterOS API: '.$apiResult->message;
 
             return SubscriptionSessionDisconnectResult::success(
-                $removed > 0
-                    ? "Disconnected {$removed} active PPP session(s)."
-                    : 'No active PPP session was found on the router.',
-                'routeros-api',
+                $message,
+                'routeros-coa',
                 $router->id,
                 $router->name,
-                $removed,
-            );
-        } catch (Throwable $exception) {
-            Log::warning('Suspended subscription router disconnect failed.', [
-                'tenant_id' => $subscription->tenant_id,
-                'subscription_id' => $subscription->id,
-                'subscription_code' => $subscription->subscription_code,
-                'router_id' => $router->id,
-                'router_name' => $router->name,
-                'pppoe_username' => $username,
-                'exception' => $exception::class,
-                'message' => $exception->getMessage(),
-            ]);
-
-            return SubscriptionSessionDisconnectResult::failed(
-                'RouterOS API disconnect failed: '.$exception->getMessage(),
-                'routeros-api',
-                $router->id,
-                $router->name,
+                $coaResult->sessionsRemoved,
             );
         }
+
+        $message = $this->composeFailureMessage($apiResult, $coaResult);
+
+        Log::warning('Subscription router disconnect failed.', [
+            'tenant_id' => $subscription->tenant_id,
+            'subscription_id' => $subscription->id,
+            'subscription_code' => $subscription->subscription_code,
+            'router_id' => $router->id,
+            'router_name' => $router->name,
+            'pppoe_username' => $username,
+            'api_result' => $apiResult->context(),
+            'coa_result' => $coaResult->context(),
+            'message' => $message,
+        ]);
+
+        return SubscriptionSessionDisconnectResult::failed(
+            $message,
+            $coaResult->method ?? $apiResult->method,
+            $router->id,
+            $router->name,
+        );
     }
 
     public function recordActivity(Subscription $subscription, SubscriptionSessionDisconnectResult $result, ?User $causer = null): void
@@ -138,5 +99,148 @@ class SubscriptionSessionDisconnectService
             'skipped' => 'Suspended subscription session disconnect skipped',
             default => 'Suspended subscription session disconnect failed',
         });
+    }
+
+    private function disconnectViaRouterOsApi(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
+    {
+        $router = $subscription->router;
+
+        if (! $router) {
+            return SubscriptionSessionDisconnectResult::skipped('Subscription has no assigned router.');
+        }
+
+        if (! $router->isMikrotik()) {
+            return SubscriptionSessionDisconnectResult::skipped(
+                'Assigned router does not support RouterOS API disconnects.',
+                'routeros-api',
+                $router->id,
+                $router->name,
+            );
+        }
+
+        if (! $router->enable_provisioning) {
+            return SubscriptionSessionDisconnectResult::skipped(
+                'Router provisioning is disabled.',
+                'routeros-api',
+                $router->id,
+                $router->name,
+            );
+        }
+
+        if (! $router->api_username || ! $router->api_password) {
+            return SubscriptionSessionDisconnectResult::failed(
+                'RouterOS API credentials are missing.',
+                'routeros-api',
+                $router->id,
+                $router->name,
+            );
+        }
+
+        try {
+            $removed = $this->routerOs->execute(
+                $router,
+                function ($connection, RouterOsClient $client) use ($username): int {
+                    $client->writeSentence($connection, [
+                        '/ppp/active/print',
+                        '?name='.$username,
+                    ]);
+
+                    $sessions = collect($client->readResponse($connection))
+                        ->filter(fn (array $session): bool => ($session['name'] ?? null) === $username)
+                        ->values();
+
+                    foreach ($sessions as $session) {
+                        if (! isset($session['.id'])) {
+                            continue;
+                        }
+
+                        $client->writeSentence($connection, [
+                            '/ppp/active/remove',
+                            '=.id='.$session['.id'],
+                        ]);
+                        $client->readResponse($connection);
+                    }
+
+                    return $sessions->filter(fn (array $session): bool => isset($session['.id']))->count();
+                },
+                5,
+            );
+
+            if ($removed === 0) {
+                return SubscriptionSessionDisconnectResult::skipped(
+                    'No active PPP session was found on the router.',
+                    'routeros-api',
+                    $router->id,
+                    $router->name,
+                );
+            }
+
+            return SubscriptionSessionDisconnectResult::success(
+                "Disconnected {$removed} active PPP session(s).",
+                'routeros-api',
+                $router->id,
+                $router->name,
+                $removed,
+            );
+        } catch (Throwable $exception) {
+            return SubscriptionSessionDisconnectResult::failed(
+                'RouterOS API disconnect failed: '.$exception->getMessage(),
+                'routeros-api',
+                $router->id,
+                $router->name,
+            );
+        }
+    }
+
+    private function disconnectViaCoa(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
+    {
+        $router = $subscription->router;
+
+        if (! $router) {
+            return SubscriptionSessionDisconnectResult::skipped('Subscription has no assigned router.');
+        }
+
+        if (blank($router->coa_secret)) {
+            return SubscriptionSessionDisconnectResult::failed(
+                'RouterOS CoA secret is missing.',
+                'routeros-coa',
+                $router->id,
+                $router->name,
+            );
+        }
+
+        try {
+            $removed = $this->coaClient->disconnect(
+                $router,
+                $username,
+                filled($subscription->ip_address) ? (string) $subscription->ip_address : null,
+                5,
+            );
+
+            return SubscriptionSessionDisconnectResult::success(
+                'Disconnected 1 active PPP session(s) via CoA.',
+                'routeros-coa',
+                $router->id,
+                $router->name,
+                $removed,
+            );
+        } catch (Throwable $exception) {
+            return SubscriptionSessionDisconnectResult::failed(
+                'RouterOS CoA disconnect failed: '.$exception->getMessage(),
+                'routeros-coa',
+                $router->id,
+                $router->name,
+            );
+        }
+    }
+
+    private function composeFailureMessage(
+        SubscriptionSessionDisconnectResult $apiResult,
+        SubscriptionSessionDisconnectResult $coaResult,
+    ): string {
+        return collect([$apiResult, $coaResult])
+            ->filter(fn (SubscriptionSessionDisconnectResult $result): bool => $result->status !== 'success')
+            ->map(fn (SubscriptionSessionDisconnectResult $result): string => $result->message)
+            ->implode(' ');
     }
 }

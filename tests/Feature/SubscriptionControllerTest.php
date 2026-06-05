@@ -12,6 +12,7 @@ use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Payment;
 use App\Models\Plan;
+use App\Models\RadiusPostAuthRecord;
 use App\Models\RadiusReply;
 use App\Models\Router;
 use App\Models\Subscription;
@@ -161,9 +162,77 @@ class SubscriptionControllerTest extends TestCase
         $response->assertViewHas('usageSessions', function (mixed $usageSessions): bool {
             return is_array($usageSessions)
                 && count($usageSessions) === 1
-                && $usageSessions[0]['download'] === '2.00 GB'
-                && $usageSessions[0]['upload'] === '1.00 GB';
+            && $usageSessions[0]['download'] === '2.00 GB'
+            && $usageSessions[0]['upload'] === '1.00 GB';
         });
+    }
+
+    public function test_show_page_renders_recent_radius_auth_attempts_with_pagination(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+
+        foreach (range(1, 11) as $index) {
+            RadiusPostAuthRecord::withoutGlobalScopes()->create([
+                'tenant_id' => $tenant->id,
+                'username' => $subscription->pppoe_username,
+                'pass' => 'secret-'.$index,
+                'reply' => $index % 2 === 0 ? "Access-Accept\nReply-Message = Welcome back" : "Access-Reject\nReply-Message = Invalid password",
+                'authdate' => now()->subMinutes($index),
+            ]);
+        }
+
+        $response = $this->actingAs($user)->get(route('subscriptions.show', [
+            'subscription' => $subscription,
+            'tab' => 'auth',
+            'radpostauth_page' => 2,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Recent RADIUS Auth Attempts');
+        $response->assertSee('Entries older than 20 minutes are pruned automatically.');
+        $response->assertViewHas('authAttempts', function (mixed $authAttempts): bool {
+            return $authAttempts->total() === 11
+                && $authAttempts->perPage() === 10
+                && $authAttempts->currentPage() === 2
+                && $authAttempts->count() === 1;
+        });
+    }
+
+    public function test_model_prune_removes_radius_post_auth_attempts_older_than_twenty_minutes(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+
+        RadiusPostAuthRecord::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'pass' => 'old-secret',
+            'reply' => 'Access-Reject',
+            'authdate' => now()->subMinutes(21),
+        ]);
+
+        RadiusPostAuthRecord::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'pass' => 'recent-secret',
+            'reply' => 'Access-Accept',
+            'authdate' => now()->subMinutes(5),
+        ]);
+
+        $this->artisan('model:prune', [
+            '--model' => [RadiusPostAuthRecord::class],
+        ])->assertExitCode(0);
+
+        $this->assertDatabaseMissing('radpostauth', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'pass' => 'old-secret',
+        ]);
+
+        $this->assertDatabaseHas('radpostauth', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'pass' => 'recent-secret',
+        ]);
     }
 
     public function test_show_and_edit_pages_expose_ip_change_actions(): void
@@ -371,6 +440,68 @@ class SubscriptionControllerTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['ip_pool_id']);
+    }
+
+    public function test_update_allows_an_all_devices_ip_pool_for_any_router(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        $newRouter = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Aggregation Router',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+            'api_username' => 'admin',
+            'api_password' => 'secret',
+        ]);
+
+        $globalPool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => null,
+            'name' => 'Global Pool',
+            'network_address' => '10.30.0.0',
+            'cidr' => 24,
+            'gateway' => '10.30.0.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'site' => 'Core Site',
+            'all_devices' => true,
+        ]);
+
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $globalPool->id,
+            'ip_address' => '10.30.0.11',
+            'status' => 'available',
+        ]);
+        $globalPool->updateStatistics();
+
+        $response = $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'router_id' => $newRouter->id,
+            'ip_pool_id' => $globalPool->id,
+            'ip_address' => '10.30.0.11',
+        ]);
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+        $response->assertSessionHas('success', 'Subscription updated successfully.');
+
+        $this->assertDatabaseHas('subscriptions', [
+            'id' => $subscription->id,
+            'tenant_id' => $tenant->id,
+            'router_id' => $newRouter->id,
+            'ip_pool_id' => $globalPool->id,
+            'ip_address' => '10.30.0.11',
+        ]);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.30.0.11',
+            'status' => 'assigned',
+            'subscription_code' => $subscription->subscription_code,
+        ]);
     }
 
     public function test_bulk_delete_selected_subscriptions_queues_and_cleans_up_subscription_billing_and_ipam(): void
@@ -816,6 +947,81 @@ class SubscriptionControllerTest extends TestCase
             'timezone' => 'UTC',
             'status' => 'active',
         ]);
+    }
+
+    /**
+     * @return array{0: Tenant, 1: User, 2: Subscription}
+     */
+    private function createRadiusAuthSubscription(): array
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-TEST-0005',
+            'customer_type' => 'individual',
+            'first_name' => 'Auth',
+            'last_name' => 'Viewer',
+            'name' => 'Auth Viewer',
+            'email' => 'auth.viewer@example.com',
+            'mobile' => '555-0105',
+            'address_line1' => '321 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
+        ]);
+
+        $plan = Plan::factory()->create([
+            'status' => 'active',
+            'name' => 'Fiber 50',
+            'price' => 49.99,
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Auth Router',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+        ]);
+
+        $subscription = Subscription::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-AUTH-0001',
+            'name' => 'Auth Viewer Service',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'connection_type' => 'pppoe',
+            'ip_address' => '10.20.30.40',
+            'pppoe_username' => 'auth.viewer',
+            'pppoe_password' => 'secret-pass',
+            'base_price' => 49.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 49.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'start_date' => now(),
+            'activation_date' => now(),
+            'next_billing_date' => now()->addMonth()->toDateString(),
+        ]);
+
+        return [$tenant, $user, $subscription];
     }
 
     /**

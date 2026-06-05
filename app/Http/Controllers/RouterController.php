@@ -175,6 +175,10 @@ class RouterController extends Controller
             unset($validated['api_password']);
         }
 
+        if (empty($validated['coa_secret'])) {
+            unset($validated['coa_secret']);
+        }
+
         $router->update($validated);
 
         if ($request->expectsJson()) {

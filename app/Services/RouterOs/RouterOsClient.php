@@ -13,9 +13,9 @@ class RouterOsClient
      * @param  callable(resource, self): TReturn  $callback
      * @return TReturn
      */
-    public function execute(Router $router, callable $callback): mixed
+    public function execute(Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
     {
-        $connection = $this->connect($router);
+        $connection = $this->connect($router, $timeoutSeconds);
 
         try {
             $this->login($connection, (string) $router->api_username, (string) $router->api_password);
@@ -29,11 +29,11 @@ class RouterOsClient
     /**
      * @return resource
      */
-    public function connect(Router $router)
+    public function connect(Router $router, ?int $timeoutSeconds = null)
     {
         $host = $router->ip_address;
         $port = (int) ($router->api_port ?: 8728);
-        $timeout = (int) ($router->timeout ?: 30);
+        $timeout = max(1, (int) ($timeoutSeconds ?? $router->timeout ?? 30));
         $connection = @stream_socket_client("tcp://{$host}:{$port}", $errno, $error, $timeout);
 
         if (! $connection) {
