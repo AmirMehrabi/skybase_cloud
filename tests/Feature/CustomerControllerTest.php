@@ -665,6 +665,85 @@ class CustomerControllerTest extends TestCase
         ]);
     }
 
+    public function test_destroy_deletes_a_customer_and_their_subscription_without_activity_log_failures(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber 100',
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Core Router',
+        ]);
+
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Core Pool',
+            'network_address' => '10.20.0.0',
+            'cidr' => 24,
+            'gateway' => '10.20.0.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'site' => 'Head Office',
+            'available_ips' => 0,
+        ]);
+
+        $this->bindFakeRouterOsClient();
+
+        $payload = $this->createCustomerWithSubscription(
+            tenant: $tenant,
+            plan: $plan,
+            router: $router,
+            pool: $pool,
+            customerCode: 'CUS-DELETE-0001',
+            customerName: 'Delete Me',
+            customerEmail: 'delete.me@example.com',
+            subscriptionCode: 'SUB-DELETE-0001',
+            invoiceNumber: 'INV-DELETE-0001',
+            ipAddress: '10.20.0.11',
+        );
+
+        $response = $this->actingAs($user)->deleteJson(route('customers.destroy', $payload['customer']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'message' => 'Customer deleted successfully.',
+        ]);
+
+        $this->assertSoftDeleted('customers', [
+            'id' => $payload['customer']->id,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->assertSoftDeleted('subscriptions', [
+            'id' => $payload['subscription']->id,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->assertSoftDeleted('invoices', [
+            'id' => $payload['invoice']->id,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->assertSoftDeleted('payments', [
+            'id' => $payload['payment']->id,
+            'tenant_id' => $tenant->id,
+        ]);
+    }
+
     private function createTenant(string $slug, string $companyName): Tenant
     {
         return Tenant::create([

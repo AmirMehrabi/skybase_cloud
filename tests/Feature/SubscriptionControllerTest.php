@@ -326,6 +326,31 @@ class SubscriptionControllerTest extends TestCase
         ]);
     }
 
+    public function test_destroy_deletes_a_subscription_without_failing_on_activity_logging(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $this->bindFakeRouterOsClient();
+
+        $response = $this->actingAs($user)->deleteJson(route('subscriptions.destroy', $subscription));
+
+        $response->assertOk();
+        $response->assertJson([
+            'message' => 'Subscription deleted successfully.',
+        ]);
+
+        $this->assertSoftDeleted('subscriptions', [
+            'id' => $subscription->id,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.10.0.11',
+            'status' => 'available',
+            'subscription_code' => null,
+        ]);
+    }
+
     public function test_update_can_remove_all_subscription_ip_routes_from_edit_form(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();

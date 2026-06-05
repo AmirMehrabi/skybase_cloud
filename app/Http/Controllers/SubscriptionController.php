@@ -411,7 +411,7 @@ class SubscriptionController extends Controller
      */
     public function destroy(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
-        app(SubscriptionDeletionService::class)->delete($subscription);
+        app(SubscriptionDeletionService::class)->delete($subscription, suppressActivityLogs: true);
 
         if ($request->expectsJson()) {
             return response()->json([

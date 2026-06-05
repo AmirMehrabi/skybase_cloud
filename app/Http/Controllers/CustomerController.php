@@ -342,7 +342,9 @@ class CustomerController extends Controller
     {
         $this->authorizeTenantAccess($customer);
 
-        $customer->delete();
+        activity()->withoutLogging(function () use ($customer): void {
+            $customer->delete();
+        });
 
         return response()->json([
             'message' => 'Customer deleted successfully.',
