@@ -30,23 +30,29 @@ class IpamController extends Controller
             abort(403, 'No tenant context found.');
         }
 
+        $poolsQuery = IpPool::where('tenant_id', $tenantId);
+
         // Get statistics
-        $totalPools = IpPool::where('tenant_id', $tenantId)->count();
-        $pools = IpPool::where('tenant_id', $tenantId)->get();
+        $totalPools = (clone $poolsQuery)->count();
+        $allPools = (clone $poolsQuery)->get();
 
-        $totalIPs = $pools->sum('total_ips');
-        $usedIPs = $pools->sum('used_ips');
-        $availableIPs = $pools->sum('available_ips');
-        $reservedIPs = $pools->sum('reserved_ips');
+        $totalIPs = $allPools->sum('total_ips');
+        $usedIPs = $allPools->sum('used_ips');
+        $availableIPs = $allPools->sum('available_ips');
+        $reservedIPs = $allPools->sum('reserved_ips');
 
-        $exhaustedPools = IpPool::where('tenant_id', $tenantId)
+        $exhaustedPools = (clone $poolsQuery)
             ->where('status', 'exhausted')
             ->count();
 
         // Get warning pools (usage > 80%)
-        $warningPools = IpPool::where('tenant_id', $tenantId)
-            ->get()
+        $warningPools = $allPools
             ->filter(fn ($pool) => $pool->usage_percentage > 80);
+
+        $pools = (clone $poolsQuery)
+            ->with(['router', 'routers', 'siteRecord'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(100);
 
         return view('ipam.dashboard', compact(
             'pools',
@@ -70,7 +76,7 @@ class IpamController extends Controller
         $ipPools = IpPool::where('tenant_id', $tenantId)
             ->with(['router', 'routers', 'siteRecord'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(100);
 
         // Get filter options
         $routers = Router::where('tenant_id', $tenantId)->pluck('name', 'id');

@@ -265,6 +265,9 @@ function getUsageColor($percentage)
                 </tbody>
             </table>
         </div>
+        <div class="mt-4">
+            {{ $ipPools->withQueryString()->links() }}
+        </div>
         @else
         <div class="text-center py-12">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -19,9 +19,23 @@ class SubscriptionIpRouteSyncService
     {
         $subscription->loadMissing(['router', 'ipRoutes']);
 
+        Log::info('Subscription IP route sync batch started.', [
+            'tenant_id' => $subscription->tenant_id,
+            'subscription_id' => $subscription->id,
+            'router_id' => $subscription->router?->id,
+            'route_count' => $subscription->ipRoutes->count(),
+        ]);
+
         foreach ($subscription->ipRoutes as $route) {
             $this->syncRoute($route, $subscription);
         }
+
+        Log::info('Subscription IP route sync batch completed.', [
+            'tenant_id' => $subscription->tenant_id,
+            'subscription_id' => $subscription->id,
+            'router_id' => $subscription->router?->id,
+            'route_count' => $subscription->ipRoutes->count(),
+        ]);
     }
 
     public function removeRoutes(Subscription $subscription): void
@@ -51,7 +65,17 @@ class SubscriptionIpRouteSyncService
             $destination = $route->destinationAddress();
             $gateway = (string) $subscription->ip_address;
 
-            $routeId = $this->routerOs->execute($router, function ($connection, RouterOsClient $client) use ($comment, $destination, $gateway): ?string {
+            Log::info('Subscription IP route sync started.', [
+                'tenant_id' => $route->tenant_id,
+                'subscription_id' => $route->subscription_id,
+                'subscription_ip_route_id' => $route->id,
+                'router_id' => $router->id,
+                'destination' => $destination,
+                'gateway' => $gateway,
+                'comment' => $comment,
+            ]);
+
+            $syncResult = $this->routerOs->execute($router, function ($connection, RouterOsClient $client) use ($comment, $destination, $gateway): array {
                 $client->writeSentence($connection, [
                     '/ip/route/print',
                     '?comment='.$comment,
@@ -70,7 +94,10 @@ class SubscriptionIpRouteSyncService
                     ]);
                     $client->readResponse($connection);
 
-                    return $existingRoute['.id'];
+                    return [
+                        'routeros_route_id' => $existingRoute['.id'],
+                        'operation' => 'updated',
+                    ];
                 }
 
                 $client->writeSentence($connection, [
@@ -89,16 +116,30 @@ class SubscriptionIpRouteSyncService
                 $createdRoute = collect($client->readResponse($connection))
                     ->first(fn (array $routerRoute): bool => ($routerRoute['comment'] ?? null) === $comment);
 
-                return $createdRoute['.id'] ?? null;
+                return [
+                    'routeros_route_id' => $createdRoute['.id'] ?? null,
+                    'operation' => 'created',
+                ];
             });
 
             $route->forceFill([
-                'routeros_route_id' => $routeId,
+                'routeros_route_id' => $syncResult['routeros_route_id'],
                 'routeros_comment' => $comment,
                 'routeros_sync_status' => 'synced',
                 'routeros_sync_error' => null,
                 'routeros_synced_at' => now(),
             ])->save();
+
+            Log::info('Subscription IP route sync completed.', [
+                'tenant_id' => $route->tenant_id,
+                'subscription_id' => $route->subscription_id,
+                'subscription_ip_route_id' => $route->id,
+                'router_id' => $router->id,
+                'destination' => $destination,
+                'gateway' => $gateway,
+                'routeros_route_id' => $syncResult['routeros_route_id'],
+                'operation' => $syncResult['operation'],
+            ]);
         } catch (Throwable $exception) {
             Log::warning('Subscription IP route sync failed.', [
                 'tenant_id' => $route->tenant_id,
@@ -133,7 +174,17 @@ class SubscriptionIpRouteSyncService
         try {
             $comment = $route->routerOsComment();
 
-            $this->routerOs->execute($router, function ($connection, RouterOsClient $client) use ($comment, $route): void {
+            Log::info('Subscription IP route removal started.', [
+                'tenant_id' => $route->tenant_id,
+                'subscription_id' => $route->subscription_id,
+                'subscription_ip_route_id' => $route->id,
+                'router_id' => $router->id,
+                'destination' => $route->destinationAddress(),
+                'routeros_route_id' => $route->routeros_route_id,
+                'comment' => $comment,
+            ]);
+
+            $removedCount = $this->routerOs->execute($router, function ($connection, RouterOsClient $client) use ($comment, $route): int {
                 $client->writeSentence($connection, [
                     '/ip/route/print',
                     $route->routeros_route_id ? '?.id='.$route->routeros_route_id : '?comment='.$comment,
@@ -154,7 +205,19 @@ class SubscriptionIpRouteSyncService
                     ]);
                     $client->readResponse($connection);
                 }
+
+                return $routes->count();
             });
+
+            Log::info('Subscription IP route removal completed.', [
+                'tenant_id' => $route->tenant_id,
+                'subscription_id' => $route->subscription_id,
+                'subscription_ip_route_id' => $route->id,
+                'router_id' => $router->id,
+                'destination' => $route->destinationAddress(),
+                'routeros_route_id' => $route->routeros_route_id,
+                'removed_count' => $removedCount,
+            ]);
         } catch (Throwable $exception) {
             Log::warning('Subscription IP route removal failed.', [
                 'tenant_id' => $route->tenant_id,
@@ -210,6 +273,14 @@ class SubscriptionIpRouteSyncService
 
     private function markSkipped(SubscriptionIpRoute $route, string $reason): void
     {
+        Log::info('Subscription IP route sync skipped.', [
+            'tenant_id' => $route->tenant_id,
+            'subscription_id' => $route->subscription_id,
+            'subscription_ip_route_id' => $route->id,
+            'destination' => $route->destinationAddress(),
+            'reason' => $reason,
+        ]);
+
         $route->forceFill([
             'routeros_sync_status' => 'skipped',
             'routeros_sync_error' => $reason,

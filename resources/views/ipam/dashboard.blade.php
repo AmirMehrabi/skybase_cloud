@@ -187,7 +187,7 @@ function getUsageColor($percentage)
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($pools->take(10) as $pool)
+                    @foreach($pools as $pool)
                         @php
                             $usagePercent = round($pool->usage_percentage);
                             $usageColor = getUsageColor($usagePercent);
@@ -231,6 +231,9 @@ function getUsageColor($percentage)
                     @endforeach
                 </tbody>
             </table>
+        </div>
+        <div class="mt-4">
+            {{ $pools->links() }}
         </div>
         @else
         <div class="text-center py-12">

@@ -646,9 +646,9 @@ class ImportExportFeatureTest extends TestCase
             'tenant_id' => $tenant->id,
             'router_id' => $router->id,
             'name' => 'Import Pool',
-            'network_address' => '10.40.0.0',
+            'network_address' => '172.16.111.0',
             'cidr' => 24,
-            'gateway' => '10.40.0.1',
+            'gateway' => '172.16.111.1',
             'type' => 'static',
             'status' => 'active',
             'allow_static' => true,
@@ -663,13 +663,13 @@ class ImportExportFeatureTest extends TestCase
         IpAddress::create([
             'tenant_id' => $tenant->id,
             'ip_pool_id' => $pool->id,
-            'ip_address' => '10.40.0.10',
+            'ip_address' => '172.16.111.76',
             'status' => 'available',
         ]);
         IpAddress::create([
             'tenant_id' => $tenant->id,
             'ip_pool_id' => $pool->id,
-            'ip_address' => '10.40.0.11',
+            'ip_address' => '172.16.111.77',
             'status' => 'available',
         ]);
 
@@ -706,7 +706,7 @@ class ImportExportFeatureTest extends TestCase
             'router_name' => $router->name,
             'site' => 'North POP',
             'connection_type' => 'pppoe',
-            'ip_address' => '10.40.0.10/29, 10.40.0.11/32',
+            'ip_address' => '172.16.111.76/30, 172.16.111.77/30',
             'mac_address' => null,
             'ip_management' => 'router',
             'pppoe_username' => $username,
@@ -743,12 +743,12 @@ class ImportExportFeatureTest extends TestCase
 
         $this->assertSame('system', $subscription->ip_management);
         $this->assertSame($pool->id, $subscription->ip_pool_id);
-        $this->assertSame('10.40.0.10', $subscription->ip_address);
+        $this->assertSame('172.16.111.76', $subscription->ip_address);
 
         $this->assertDatabaseHas('ip_addresses', [
             'tenant_id' => $tenant->id,
             'ip_pool_id' => $pool->id,
-            'ip_address' => '10.40.0.10',
+            'ip_address' => '172.16.111.76',
             'status' => 'assigned',
             'customer_id' => $subscription->customer_id,
             'subscription_code' => $subscriptionCode,
@@ -758,21 +758,21 @@ class ImportExportFeatureTest extends TestCase
             'tenant_id' => $tenant->id,
             'subscription_id' => $subscription->id,
             'ip_pool_id' => $pool->id,
-            'ip_address' => '10.40.0.11',
-            'cidr' => 32,
+            'ip_address' => '172.16.111.77',
+            'cidr' => 30,
         ]);
 
         $route = SubscriptionIpRoute::query()
             ->where('tenant_id', $tenant->id)
             ->where('subscription_id', $subscription->id)
-            ->where('ip_address', '10.40.0.11')
+            ->where('ip_address', '172.16.111.77')
             ->firstOrFail();
 
         $this->assertNotNull($route->ip_address_id);
         $this->assertDatabaseHas('ip_addresses', [
             'tenant_id' => $tenant->id,
             'ip_pool_id' => $pool->id,
-            'ip_address' => '10.40.0.11',
+            'ip_address' => '172.16.111.77',
             'status' => 'assigned',
             'customer_id' => $subscription->customer_id,
             'subscription_code' => null,

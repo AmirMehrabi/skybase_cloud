@@ -16,6 +16,7 @@ use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionIpRouteSyncService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -295,7 +296,8 @@ class SpreadsheetImportExportService
             return $this->failedResult($data['subscription_code'] ?? $data['customer_code'] ?? null, $ipAddresses['error']);
         }
 
-        $primaryIpAddress = array_shift($ipAddresses['addresses']);
+        $primaryIpRoute = array_shift($ipAddresses['addresses']);
+        $primaryIpAddress = $primaryIpRoute['ip_address'] ?? null;
         $routeIpAddresses = $ipAddresses['addresses'];
         $primaryIpPool = $primaryIpAddress ? $this->resolveIpPoolForAddress($run, $primaryIpAddress) : null;
 
@@ -309,6 +311,21 @@ class SpreadsheetImportExportService
 
         $data['ip_address'] = $primaryIpAddress;
         $data['ip_pool_id'] = $primaryIpPool?->id;
+
+        if ($primaryIpAddress || $routeIpAddresses !== []) {
+            Log::info('Subscription import IP address list parsed.', [
+                'tenant_id' => $run->tenant_id,
+                'import_export_run_id' => $run->id,
+                'subscription_code' => $data['subscription_code'] ?? null,
+                'primary_ip_address' => $primaryIpAddress,
+                'primary_cidr_stripped' => $primaryIpRoute['cidr'] ?? null,
+                'route_destinations' => collect($routeIpAddresses)
+                    ->map(fn (array $route): string => $route['ip_address'].'/'.($route['cidr'] ?? 32))
+                    ->values()
+                    ->all(),
+            ]);
+        }
+
         $validator = Validator::make($data, [
             'customer_code' => ['nullable', 'string', 'max:255'],
             'customer_type' => ['nullable', Rule::in(['individual', 'business'])],
@@ -846,7 +863,7 @@ class SpreadsheetImportExportService
     }
 
     /**
-     * @return array{addresses: list<string>, error: ?string}
+     * @return array{addresses: list<array{ip_address: string, cidr: ?int}>, error: ?string}
      */
     protected function parsedImportIpAddresses(mixed $value): array
     {
@@ -855,34 +872,51 @@ class SpreadsheetImportExportService
         }
 
         $addresses = collect(explode(',', (string) $value))
-            ->map(fn (string $address): string => $this->normalizeImportedIpAddress($address))
-            ->filter()
+            ->map(fn (string $address): ?array => $this->parseImportedIpAddress($address))
+            ->filter(fn (?array $address): bool => $address !== null)
             ->values()
             ->all();
 
-        $uniqueAddresses = array_values(array_unique($addresses));
-        if ($uniqueAddresses !== $addresses) {
-            return ['addresses' => [], 'error' => 'Duplicate IP addresses are not allowed in the ip_address field.'];
+        $destinations = collect($addresses)
+            ->map(fn (array $address): string => $address['ip_address'].'/'.($address['cidr'] ?? 32))
+            ->all();
+
+        $uniqueDestinations = array_values(array_unique($destinations));
+        if ($uniqueDestinations !== $destinations) {
+            return ['addresses' => [], 'error' => 'Duplicate IP route destinations are not allowed in the ip_address field.'];
         }
 
         foreach ($addresses as $address) {
-            if (! filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                return ['addresses' => [], 'error' => "The IP address {$address} is not a valid IPv4 address."];
+            if (! filter_var($address['ip_address'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                return ['addresses' => [], 'error' => "The IP address {$address['ip_address']} is not a valid IPv4 address."];
+            }
+
+            if ($address['cidr'] !== null && ($address['cidr'] < 1 || $address['cidr'] > 32)) {
+                return ['addresses' => [], 'error' => "The IP route subnet for {$address['ip_address']} must be between 1 and 32."];
             }
         }
 
         return ['addresses' => $addresses, 'error' => null];
     }
 
-    protected function normalizeImportedIpAddress(string $address): string
+    /**
+     * @return array{ip_address: string, cidr: ?int}|null
+     */
+    protected function parseImportedIpAddress(string $address): ?array
     {
         $address = trim($address);
 
         if ($address === '') {
-            return '';
+            return null;
         }
 
-        return trim(Str::before($address, '/'));
+        $ipAddress = trim(Str::before($address, '/'));
+        $cidr = str_contains($address, '/') ? trim(Str::after($address, '/')) : null;
+
+        return [
+            'ip_address' => $ipAddress,
+            'cidr' => $cidr === null ? null : (ctype_digit($cidr) ? (int) $cidr : 0),
+        ];
     }
 
     protected function resolveIpPoolForAddress(ImportExportRun $run, string $ipAddress): ?IpPool
@@ -894,6 +928,9 @@ class SpreadsheetImportExportService
             ->first(fn (IpPool $pool): bool => $this->isIpInPoolRange($ipAddress, $pool));
     }
 
+    /**
+     * @param  list<array{ip_address: string, cidr: ?int}>  $routeIpAddresses
+     */
     protected function replaceImportedSubscriptionIpRoutes(Subscription $subscription, Customer $customer, array $routeIpAddresses): void
     {
         $subscription->loadMissing(['ipRoutes']);
@@ -903,7 +940,9 @@ class SpreadsheetImportExportService
             $route->delete();
         }
 
-        foreach (array_values($routeIpAddresses) as $routeIpAddress) {
+        foreach (array_values($routeIpAddresses) as $routeIpAddressRow) {
+            $routeIpAddress = $routeIpAddressRow['ip_address'];
+            $routeCidr = $routeIpAddressRow['cidr'] ?? 32;
             $ipPool = $this->resolveIpPoolForAddressForSubscription($subscription, $routeIpAddress);
             if (! $ipPool) {
                 throw new \RuntimeException("Unable to resolve an IPAM pool for imported route IP {$routeIpAddress}.");
@@ -920,7 +959,7 @@ class SpreadsheetImportExportService
                 'ip_pool_id' => $ipPool->id,
                 'ip_address_id' => $ipAddress->id,
                 'ip_address' => $routeIpAddress,
-                'cidr' => 32,
+                'cidr' => $routeCidr,
             ]);
 
             $route->forceFill([
@@ -928,6 +967,15 @@ class SpreadsheetImportExportService
             ])->save();
 
             $this->assignImportedRouteIpAddress($ipAddress, $customer, $subscription, $route);
+
+            Log::info('Subscription import IP route persisted.', [
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'subscription_ip_route_id' => $route->id,
+                'ip_pool_id' => $ipPool->id,
+                'ip_address_id' => $ipAddress->id,
+                'destination' => $route->destinationAddress(),
+            ]);
         }
     }
 
