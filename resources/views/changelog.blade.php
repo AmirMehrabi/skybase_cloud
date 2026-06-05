@@ -11,6 +11,131 @@
 @php
     $releases = [
         [
+            'version' => '0.9.4',
+            'date' => 'June 6, 2026',
+            'title' => 'CoA, Redis/Horizon, and IP Selection Cleanup',
+            'summary' => 'This release finishes a stability pass across disconnect handling, queue infrastructure, and IP pool selection.',
+            'sections' => [
+                'Added' => [
+                    'RouterOS CoA support for the subscription kill flow, including the client wiring needed to trigger remote disconnects.',
+                    'Redis and Horizon queue configuration to support the latest background subscription jobs and operational workers.',
+                    'Final IP selection refinements for router pools and subscription assignment screens.',
+                ],
+                'Changed' => [
+                    'Subscription reconciliation and router status handling were tightened after the latest operational fixes.',
+                    'Bulk delete, import/export, and monitoring paths were kept in sync with the newest workflow adjustments.',
+                ],
+                'Fixed' => [
+                    'IP pool selection, CoA kill-button behavior, and related test coverage were cleaned up.',
+                    'Minor regressions in queue wiring and router/IPAM edge cases were resolved.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.9.3',
+            'date' => 'June 5, 2026',
+            'title' => 'Router Status, Pagination, and IPAM Cleanup',
+            'summary' => 'This release improves the operator lists and IP management flows with better status checks, pagination, and bulk delete behavior.',
+            'sections' => [
+                'Added' => [
+                    'Improved router status probing with ping fallback and failure tracking for unstable links.',
+                    'Visible pagination updates for customers, subscriptions, organizations, and routers.',
+                    'Bulk delete workflows for customers and subscriptions with run tracking.',
+                ],
+                'Changed' => [
+                    'IP address and pool workflows were adjusted to handle larger import and correction scenarios.',
+                    'Subscription search now matches PPPoE usernames across customer and subscription indexes.',
+                ],
+                'Fixed' => [
+                    'Router pagination and status handling no longer rely on stale list behavior.',
+                    'IP pool assignment and reserved-address handling were tightened with updated tests.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.9.0',
+            'date' => 'June 2, 2026',
+            'title' => 'Imports, Monitoring, and Customer Intelligence',
+            'summary' => 'This release adds import/export tooling, customer detail expansion, and live monitoring around subscriptions.',
+            'sections' => [
+                'Added' => [
+                    'Customer show page with notes, ticketing, and subscription overview sections.',
+                    'Monitoring surfaces for latency, delay, and live subscription graphs.',
+                    'Import and export workflows for customers, plans, and subscriptions.',
+                ],
+                'Changed' => [
+                    'Subscription records gained IP route support and reactivation handling.',
+                    'FreeRADIUS tenant fields were adjusted so imported records stay compatible with tenant-scoped data.',
+                ],
+                'Fixed' => [
+                    'Subscription import paths now handle malformed rows and multi-record imports more reliably.',
+                    'Provisioning and reconciliation flows were updated to keep RADIUS state aligned.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.8.9',
+            'date' => 'June 1, 2026',
+            'title' => 'Notifications and White-Labeling',
+            'summary' => 'This release introduces tenant notifications and branding controls across the public and authenticated surfaces.',
+            'sections' => [
+                'Added' => [
+                    'Tenant notification module with in-app notification feeds and preferences.',
+                    'Branding asset management for white-label logos and customer-facing presentation.',
+                    'Cloud version toggle support for guest-facing access control.',
+                ],
+                'Changed' => [
+                    'Admin and customer layouts now surface notification controls and branding updates consistently.',
+                    'Settings pages were expanded to manage notification preferences and branding assets.',
+                ],
+                'Fixed' => [
+                    'Layout rendering and settings forms were cleaned up to keep the new public and portal experiences consistent.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.8.7',
+            'date' => 'May 29, 2026',
+            'title' => 'Ticketing, Support, and Suspension Enforcement',
+            'summary' => 'This release adds the support desk workflow and automatically disconnects suspended subscribers.',
+            'sections' => [
+                'Added' => [
+                    'Tenant ticketing and support-team module with ticket messages, attachments, and SLA-aware service classes.',
+                    'Rich ticket editor and message rendering for both staff and customers.',
+                    'Automatic subscription disconnect enforcement when a subscription is suspended.',
+                ],
+                'Changed' => [
+                    'Provisioning continues even when billing is disabled, keeping service activation independent from billing flags.',
+                    'Subscription suspension now triggers a background disconnect flow and activity logging.',
+                ],
+                'Fixed' => [
+                    'Ticket form and support views were updated to match the new editor behavior.',
+                    'Suspension and provisioning tests were tightened around the new operational workflow.',
+                ],
+            ],
+        ],
+        [
+            'version' => '0.8.3',
+            'date' => 'May 24, 2026',
+            'title' => 'Customer Portal and Tenant Login Polish',
+            'summary' => 'This release starts the customer portal and tightens login and validation behavior around it.',
+            'sections' => [
+                'Added' => [
+                    'Customer portal login, dashboard, invoices, subscriptions, and support pages.',
+                    'Portal authentication middleware and tenant-aware access checks.',
+                    'Customer portal authentication tests and supporting layout updates.',
+                ],
+                'Changed' => [
+                    'Customer creation and edit flows now expose the portal auth fields needed for login access.',
+                    'Validation and layout components were aligned for the portal sign-in experience.',
+                ],
+                'Fixed' => [
+                    'Portal login validation and related tenant auth behavior were corrected.',
+                    'Shared form validation now renders cleaner client-side feedback.',
+                ],
+            ],
+        ],
+        [
             'version' => '0.8.0',
             'date' => 'May 23, 2026',
             'title' => 'Router NetFlow, Operational Alerts, and CRUD Polish',
@@ -209,8 +334,8 @@
                     Product updates for ISP operators using SkyBase to manage MikroTik routers, subscribers, billing, IPAM, VPN users, and tenant operations.
                 </p>
                 <div class="mt-8 flex flex-wrap gap-3">
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.8.0</span>
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated May 23, 2026</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.9.4</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated June 6, 2026</span>
                 </div>
             </div>
         </div>
