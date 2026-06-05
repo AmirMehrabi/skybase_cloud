@@ -11,6 +11,16 @@
     'help' => null,
 ])
 
+@php
+$xModelDirective = null;
+
+if ($xModel && filled($xModelDebounce)) {
+    $xModelDirective = 'x-model.debounce.'.$xModelDebounce.'ms';
+} elseif ($xModel) {
+    $xModelDirective = 'x-model';
+}
+@endphp
+
 <div class="mb-4">
     @if($label)
     <label for="{{ $id }}" class="block text-sm font-medium text-gray-700">
@@ -28,8 +38,7 @@
             @if($placeholder) placeholder="{{ $placeholder }}" @endif
             @if($required) required @endif
             @if($autofocus) autofocus @endif
-            @if($xModel) x-model="{{ $xModel }}" @endif
-            @if($xModelDebounce) x-model.debounce="{{ $xModelDebounce }}" @endif
+            @if($xModelDirective) {{ $xModelDirective }}="{{ $xModel }}" @endif
             pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
             @error($name)
                 class="px-4 py-3 w-full bg-white border border-red-500 rounded-lg text-gray-900 placeholder-gray-500 font-mono focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"

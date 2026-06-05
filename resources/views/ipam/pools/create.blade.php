@@ -3,7 +3,7 @@
 @section('title', 'Create IP Pool')
 
 @section('content')
-<div class="space-y-6" x-data="createPoolForm()">
+<div class="space-y-6" x-data="createPoolForm()" x-effect="calculatePreview(form.networkAddress, form.cidr)">
     <!-- Header -->
     <div class="flex items-center gap-4">
         <a href="{{ route('ipam.pools.index') }}" class="inline-flex items-center text-gray-500 hover:text-gray-700">
@@ -185,7 +185,6 @@
                     placeholder="e.g., 10.10.0.0"
                     required
                     xModel="form.networkAddress"
-                    xModelDebounce="300"
                 />
 
                 <!-- CIDR -->
@@ -195,7 +194,6 @@
                     label="CIDR Prefix"
                     required
                     xModel="form.cidr"
-                    xChange="calculatePreview"
                 />
 
                 <!-- Gateway IP -->
@@ -343,12 +341,9 @@ function createPoolForm() {
             blockReserved: {{ old('block_reserved', 'false') }},
         },
         preview: {
-            network: '-',
-            usableIps: '-',
-            range: '-'
-        },
-        init() {
-            this.calculatePreview();
+            network: '',
+            usableIps: '',
+            range: ''
         },
         deviceSummary() {
             if (this.form.allDevices) {
@@ -367,29 +362,70 @@ function createPoolForm() {
 
             return `${count} devices selected.`;
         },
-        calculatePreview() {
-            if (this.form.networkAddress && this.form.cidr) {
-                const cidr = parseInt(this.form.cidr);
-                const totalIps = Math.pow(2, 32 - cidr);
-                const usableIps = totalIps <= 2 ? totalIps : totalIps - 2;
+        isValidIpv4(address) {
+            const octets = String(address ?? '').trim().split('.');
 
-                this.preview.network = `${this.form.networkAddress}/${this.form.cidr}`;
-                this.preview.usableIps = Math.min(usableIps, 254).toLocaleString();
-
-                const parts = this.form.networkAddress.split('.').map(Number);
-                if (usableIps === totalIps) {
-                    this.preview.range = `${this.form.networkAddress}`;
-                } else {
-                    const lastIp = [...parts];
-                    const displayUsableIps = Math.min(usableIps, 254);
-                    lastIp[3] = parts[3] + displayUsableIps;
-                    this.preview.range = `${this.form.networkAddress.replace(/\.0$/, '.1')} - ${lastIp.join('.')}`;
-                }
-            } else {
-                this.preview.network = '-';
-                this.preview.usableIps = '-';
-                this.preview.range = '-';
+            if (octets.length !== 4) {
+                return false;
             }
+
+            return octets.every((octet) => {
+                if (!/^\d+$/.test(octet)) {
+                    return false;
+                }
+
+                const value = Number(octet);
+
+                return value >= 0 && value <= 255;
+            });
+        },
+        ipv4ToInteger(address) {
+            return String(address)
+                .split('.')
+                .map(Number)
+                .reduce((result, octet) => (result * 256) + octet, 0);
+        },
+        integerToIpv4(value) {
+            return [
+                (value >>> 24) & 255,
+                (value >>> 16) & 255,
+                (value >>> 8) & 255,
+                value & 255,
+            ].join('.');
+        },
+        calculatePreview(networkAddress = this.form.networkAddress, cidr = this.form.cidr) {
+            if (!this.isValidIpv4(networkAddress) || !cidr) {
+                this.preview.network = '';
+                this.preview.usableIps = '';
+                this.preview.range = '';
+                return;
+            }
+
+            const cidrValue = Number(cidr);
+
+            if (!Number.isInteger(cidrValue) || cidrValue < 8 || cidrValue > 32) {
+                this.preview.network = '';
+                this.preview.usableIps = '';
+                this.preview.range = '';
+                return;
+            }
+
+            const totalIps = Math.pow(2, 32 - cidrValue);
+            const usableIps = totalIps <= 2 ? totalIps : totalIps - 2;
+            const networkInteger = this.ipv4ToInteger(networkAddress);
+
+            this.preview.network = `${networkAddress}/${cidrValue}`;
+            this.preview.usableIps = Math.min(usableIps, 254).toLocaleString();
+
+            if (totalIps <= 2) {
+                this.preview.range = networkAddress;
+                return;
+            }
+
+            const firstUsableIp = this.integerToIpv4(networkInteger + 1);
+            const lastUsableIp = this.integerToIpv4(networkInteger + usableIps);
+
+            this.preview.range = `${firstUsableIp} - ${lastUsableIp}`;
         }
     }
 }
