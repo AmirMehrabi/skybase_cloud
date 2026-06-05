@@ -504,7 +504,7 @@ class SpreadsheetImportExportService
 
         $routeRows = $ipAddresses['addresses'];
 
-        $transactionResult = DB::transaction(function () use ($run, $subscription, $primaryIpAddressRow, $primaryIpPool, $routeRows): array {
+        $transactionResult = DB::transaction(function () use ($subscription, $primaryIpAddressRow, $primaryIpPool, $routeRows): array {
             $subscription->loadMissing(['customer', 'ipAddress', 'ipRoutes', 'router']);
 
             if ($subscription->ip_address) {
@@ -546,7 +546,11 @@ class SpreadsheetImportExportService
                 ])->save();
             }
 
-            $this->replaceImportedSubscriptionIpRoutes($subscription->fresh(['customer']), $routeRows);
+            $freshSubscription = $subscription->fresh(['customer', 'ipRoutes']);
+
+            if ($freshSubscription) {
+                $this->replaceImportedSubscriptionIpRoutes($freshSubscription, $freshSubscription->customer, $routeRows);
+            }
 
             return [
                 'subscription' => $subscription->fresh(['router', 'ipRoutes', 'customer']),
