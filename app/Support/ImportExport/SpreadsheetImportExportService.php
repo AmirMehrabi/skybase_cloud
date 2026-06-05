@@ -384,7 +384,7 @@ class SpreadsheetImportExportService
         }
 
         $existingSubscription = filled($data['subscription_code'] ?? null)
-            ? Subscription::query()->where('tenant_id', $run->tenant_id)->where('subscription_code', $data['subscription_code'])->first()
+            ? Subscription::withTrashed()->where('tenant_id', $run->tenant_id)->where('subscription_code', $data['subscription_code'])->first()
             : null;
 
         if (filled($data['pppoe_username'] ?? null)) {
@@ -402,6 +402,12 @@ class SpreadsheetImportExportService
         $transactionResult = DB::transaction(function () use ($run, $data, $plan, $router, $existingSubscription, $routeIpAddresses, $primaryIpAddress): array {
             $customer = $this->resolveCustomerForImport($run, $data);
             $customerAction = $customer->exists ? 'updated' : 'created';
+
+            if ($customer->trashed()) {
+                $customer->restore();
+                $customerAction = 'restored';
+            }
+
             $customer->fill($this->customerAttributes($data, $customer->exists ? $customer : null));
             $customer->tenant_id = $run->tenant_id;
             $customer->organization_id = $this->resolveOrganizationForImport($run, $customer->company_name)?->id;
@@ -409,6 +415,12 @@ class SpreadsheetImportExportService
 
             $subscriptionAction = $existingSubscription ? 'updated' : 'created';
             $subscription = $existingSubscription ?? new Subscription(['tenant_id' => $run->tenant_id]);
+
+            if ($subscription->trashed()) {
+                $subscription->restore();
+                $subscriptionAction = 'restored';
+            }
+
             $subscription->fill($this->subscriptionAttributes($data, $customer, $plan, $router, $existingSubscription, $primaryIpAddress));
             $subscription->tenant_id = $run->tenant_id;
             $subscription->customer_id = $customer->id;
@@ -677,7 +689,7 @@ class SpreadsheetImportExportService
     protected function resolveCustomerForImport(ImportExportRun $run, array $data): Customer
     {
         if (filled($data['customer_code'] ?? null)) {
-            $customer = Customer::query()
+            $customer = Customer::withTrashed()
                 ->where('tenant_id', $run->tenant_id)
                 ->where('customer_code', $data['customer_code'])
                 ->first();
