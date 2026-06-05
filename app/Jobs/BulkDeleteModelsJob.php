@@ -14,16 +14,17 @@ class BulkDeleteModelsJob implements ShouldQueue
 
     public int $timeout = 3600;
 
+    public int $tries = 1;
+
     public function __construct(public int $runId) {}
 
     public function handle(BulkDeletionService $service): void
     {
-        $run = BulkDeletionRun::withoutGlobalScopes()->findOrFail($this->runId);
-        $run->markProcessing();
-
-        $summary = [];
-
         try {
+            $run = BulkDeletionRun::withoutGlobalScopes()->findOrFail($this->runId);
+            $run->markProcessing();
+
+            $summary = [];
             $summary = $service->process($run);
             $run->markCompleted(
                 $summary,
@@ -33,16 +34,20 @@ class BulkDeleteModelsJob implements ShouldQueue
             );
             $service->logRun($run, 'completed', $summary);
         } catch (Throwable $exception) {
-            $run->markFailed(
-                $exception->getMessage(),
-                $summary,
-                $summary['processed_count'] ?? 0,
-                $summary['deleted_count'] ?? 0,
-                $summary['failed_count'] ?? 0,
-            );
-            $service->logRun($run, 'failed', $summary, $exception->getMessage());
+            if (isset($run)) {
+                $summary ??= [];
 
-            throw $exception;
+                $run->markFailed(
+                    $exception->getMessage(),
+                    $summary,
+                    $summary['processed_count'] ?? 0,
+                    $summary['deleted_count'] ?? 0,
+                    $summary['failed_count'] ?? 0,
+                );
+                $service->logRun($run, 'failed', $summary, $exception->getMessage());
+            }
+
+            report($exception);
         }
     }
 }
