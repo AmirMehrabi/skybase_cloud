@@ -898,7 +898,7 @@ class CustomerControllerTest extends TestCase
     {
         $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
         {
-            public function execute(Router $router, callable $callback): mixed
+            public function execute(Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
             {
                 return $callback(null, $this);
             }

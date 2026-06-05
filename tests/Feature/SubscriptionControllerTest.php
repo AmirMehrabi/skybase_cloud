@@ -20,6 +20,8 @@ use App\Models\SubscriptionIpRoute;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\BulkDeletionService;
+use App\Services\RouterOs\RouterOsClient;
+use App\Services\RouterOs\RouterOsCoaClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -242,6 +244,7 @@ class SubscriptionControllerTest extends TestCase
         $showResponse = $this->actingAs($user)->get(route('subscriptions.show', $subscription));
         $showResponse->assertOk();
         $showResponse->assertSee('Change IP');
+        $showResponse->assertSee('Kill');
         $showResponse->assertSee('System managed');
         $showResponse->assertSee('IP Pool Assignment');
 
@@ -250,6 +253,85 @@ class SubscriptionControllerTest extends TestCase
         $editResponse->assertSee('Suggest free IP');
         $editResponse->assertSee('IP Pool Assignment');
         $editResponse->assertSee('IP Route');
+    }
+
+    public function test_kill_session_route_disconnects_via_routeros_api(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->forceFill([
+            'connection_status' => 'online',
+            'connection_status_checked_at' => now()->subMinutes(5),
+        ])->saveQuietly();
+
+        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
+        {
+            public function execute(\App\Models\Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
+            {
+                return 1;
+            }
+        });
+
+        $response = $this->actingAs($user)->post(route('subscriptions.kill-session', $subscription));
+
+        $response
+            ->assertRedirect(route('subscriptions.show', $subscription))
+            ->assertSessionHas('success', 'Disconnected 1 active PPP session(s).');
+
+        $subscription->refresh();
+
+        $this->assertSame('offline', $subscription->connection_status);
+        $this->assertNotNull($subscription->connection_status_checked_at);
+        $this->assertDatabaseHas('activity_log', [
+            'tenant_id' => $tenant->id,
+            'subject_type' => Subscription::class,
+            'subject_id' => $subscription->id,
+            'event' => 'session_disconnect_succeeded',
+        ]);
+    }
+
+    public function test_kill_session_route_falls_back_to_coa_when_api_disconnect_fails(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->router->forceFill([
+            'coa_port' => 1700,
+            'coa_secret' => 'coa-secret',
+        ])->saveQuietly();
+        $subscription->forceFill([
+            'connection_status' => 'online',
+            'connection_status_checked_at' => now()->subMinutes(5),
+        ])->saveQuietly();
+
+        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
+        {
+            public function execute(\App\Models\Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
+            {
+                throw new \RuntimeException('API is unavailable.');
+            }
+        });
+
+        $this->app->instance(RouterOsCoaClient::class, new class extends RouterOsCoaClient
+        {
+            public function disconnect(\App\Models\Router $router, string $username, ?string $ipAddress = null, ?int $timeoutSeconds = null): int
+            {
+                return 1;
+            }
+        });
+
+        $response = $this->actingAs($user)->post(route('subscriptions.kill-session', $subscription));
+
+        $response
+            ->assertRedirect(route('subscriptions.show', $subscription))
+            ->assertSessionHas('success', 'Disconnected 1 active PPP session(s) via CoA after RouterOS API: RouterOS API disconnect failed: API is unavailable.');
+
+        $subscription->refresh();
+
+        $this->assertSame('offline', $subscription->connection_status);
+        $this->assertDatabaseHas('activity_log', [
+            'tenant_id' => $tenant->id,
+            'subject_type' => Subscription::class,
+            'subject_id' => $subscription->id,
+            'event' => 'session_disconnect_succeeded',
+        ]);
     }
 
     public function test_suspend_route_queues_background_processing_and_saves_status_quietly(): void

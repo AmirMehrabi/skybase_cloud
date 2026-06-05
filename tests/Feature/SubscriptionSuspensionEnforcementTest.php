@@ -68,7 +68,7 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
         ]);
     }
 
-    public function test_suspend_logs_activity_when_router_disconnect_is_skipped(): void
+    public function test_suspend_logs_activity_when_router_disconnect_fails(): void
     {
         [$tenant, $subscription] = $this->createPppoeSubscription([
             'api_username' => null,
@@ -104,12 +104,12 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
             'tenant_id' => $tenant->id,
             'subject_type' => Subscription::class,
             'subject_id' => $subscription->id,
-            'event' => 'session_disconnect_skipped',
+            'event' => 'session_disconnect_failed',
         ]);
 
-        $activity = Activity::query()->where('event', 'session_disconnect_skipped')->latest()->firstOrFail();
+        $activity = Activity::query()->where('event', 'session_disconnect_failed')->latest()->firstOrFail();
 
-        $this->assertSame('RouterOS API credentials are missing.', $activity->properties->get('message'));
+        $this->assertSame('RouterOS API credentials are missing. RouterOS CoA secret is missing.', $activity->properties->get('message'));
     }
 
     public function test_command_kicks_suspended_online_subscription_with_routeros_api(): void
@@ -123,7 +123,7 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
 
         $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
         {
-            public function execute(Router $router, callable $callback): mixed
+            public function execute(Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
             {
                 return 1;
             }
@@ -157,14 +157,14 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
         ])->saveQuietly();
 
         $this->artisan('subscriptions:kick-suspended-online')
-            ->expectsOutputToContain('Checked: 1, kicked: 0, skipped: 1, failed: 0')
+            ->expectsOutputToContain('Checked: 1, kicked: 0, skipped: 0, failed: 1')
             ->assertExitCode(1);
 
         $this->assertDatabaseHas('activity_log', [
             'tenant_id' => $tenant->id,
             'subject_type' => Subscription::class,
             'subject_id' => $subscription->id,
-            'event' => 'session_disconnect_skipped',
+            'event' => 'session_disconnect_failed',
         ]);
     }
 
