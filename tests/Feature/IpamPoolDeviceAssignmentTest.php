@@ -121,6 +121,174 @@ class IpamPoolDeviceAssignmentTest extends TestCase
         ]);
     }
 
+    public function test_store_rejects_duplicate_network_and_cidr_for_same_tenant(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = $this->createTenantUser($tenant);
+        $router = $this->createRouter($tenant, 'Core Router');
+
+        IpPool::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Existing Pool',
+            'router_id' => $router->id,
+            'network_address' => '172.16.255.0',
+            'cidr' => 24,
+            'gateway' => '172.16.255.1',
+            'dns_primary' => '8.8.8.8',
+            'dns_secondary' => '8.8.4.4',
+            'type' => 'mixed',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'available_ips' => 254,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->from(route('ipam.pools.create'))
+            ->post(route('ipam.pools.store'), [
+                'name' => 'Duplicate Pool',
+                'router_ids' => [$router->id],
+                'type' => 'mixed',
+                'network_address' => '172.16.255.0',
+                'cidr' => 24,
+                'gateway' => '172.16.255.1',
+                'dns_primary' => '8.8.8.8',
+                'dns_secondary' => '8.8.4.4',
+                'allow_static' => '1',
+                'auto_assign' => '1',
+                'block_reserved' => '0',
+            ]);
+
+        $response->assertRedirect(route('ipam.pools.create'));
+        $response->assertSessionHasErrors([
+            'network_address' => 'An IP pool with this network address and CIDR already exists.',
+        ]);
+
+        $this->assertSame(1, IpPool::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('network_address', '172.16.255.0')
+            ->where('cidr', 24)
+            ->count());
+    }
+
+    public function test_store_allows_same_network_and_cidr_for_different_tenants(): void
+    {
+        $alphaTenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $betaTenant = $this->createTenant('beta-net', 'BetaNet Communications');
+        $alphaRouter = $this->createRouter($alphaTenant, 'Alpha Router');
+        $betaRouter = $this->createRouter($betaTenant, 'Beta Router');
+        $betaUser = $this->createTenantUser($betaTenant);
+
+        IpPool::create([
+            'tenant_id' => $alphaTenant->id,
+            'name' => 'Alpha Pool',
+            'router_id' => $alphaRouter->id,
+            'network_address' => '172.16.255.0',
+            'cidr' => 24,
+            'gateway' => '172.16.255.1',
+            'dns_primary' => '8.8.8.8',
+            'dns_secondary' => '8.8.4.4',
+            'type' => 'mixed',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'available_ips' => 254,
+        ]);
+
+        $response = $this->actingAs($betaUser)->post(route('ipam.pools.store'), [
+            'name' => 'Beta Pool',
+            'router_ids' => [$betaRouter->id],
+            'type' => 'mixed',
+            'network_address' => '172.16.255.0',
+            'cidr' => 24,
+            'gateway' => '172.16.255.1',
+            'dns_primary' => '8.8.8.8',
+            'dns_secondary' => '8.8.4.4',
+            'allow_static' => '1',
+            'auto_assign' => '1',
+            'block_reserved' => '0',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success', 'IP pool created successfully.');
+
+        $this->assertDatabaseHas('ip_pools', [
+            'tenant_id' => $betaTenant->id,
+            'network_address' => '172.16.255.0',
+            'cidr' => 24,
+        ]);
+    }
+
+    public function test_update_rejects_duplicate_network_and_cidr_for_same_tenant(): void
+    {
+        $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');
+        $user = $this->createTenantUser($tenant);
+        $router = $this->createRouter($tenant, 'Core Router');
+
+        $existingPool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Existing Pool',
+            'router_id' => $router->id,
+            'network_address' => '172.16.255.0',
+            'cidr' => 24,
+            'gateway' => '172.16.255.1',
+            'dns_primary' => '8.8.8.8',
+            'dns_secondary' => '8.8.4.4',
+            'type' => 'mixed',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'available_ips' => 254,
+        ]);
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Editable Pool',
+            'router_id' => $router->id,
+            'network_address' => '172.16.254.0',
+            'cidr' => 24,
+            'gateway' => '172.16.254.1',
+            'dns_primary' => '8.8.8.8',
+            'dns_secondary' => '8.8.4.4',
+            'type' => 'mixed',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'available_ips' => 254,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->from(route('ipam.pools.edit', $pool))
+            ->put(route('ipam.pools.update', $pool), [
+                'name' => 'Editable Pool',
+                'router_ids' => [$router->id],
+                'type' => 'mixed',
+                'status' => 'active',
+                'network_address' => $existingPool->network_address,
+                'cidr' => $existingPool->cidr,
+                'gateway' => '172.16.255.1',
+                'dns_primary' => '8.8.8.8',
+                'dns_secondary' => '8.8.4.4',
+                'allow_static' => '1',
+                'auto_assign' => '1',
+                'block_reserved' => '0',
+            ]);
+
+        $response->assertRedirect(route('ipam.pools.edit', $pool));
+        $response->assertSessionHasErrors([
+            'network_address' => 'An IP pool with this network address and CIDR already exists.',
+        ]);
+
+        $this->assertSame('172.16.254.0', $pool->fresh()->network_address);
+    }
+
     public function test_show_page_still_supports_legacy_site_text_and_primary_router_data(): void
     {
         $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');

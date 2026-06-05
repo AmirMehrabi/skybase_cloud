@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\ImportExportRun;
 use App\Models\IpAddress;
 use App\Models\IpPool;
+use App\Models\Organization;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
@@ -519,6 +520,104 @@ class ImportExportFeatureTest extends TestCase
             'username' => 'jane.home.2',
             'attribute' => 'Cleartext-Password',
         ]);
+    }
+
+    public function test_subscription_import_links_company_name_to_an_organization(): void
+    {
+        Storage::fake('imports');
+
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber 100',
+            'internal_name' => 'fiber_100',
+            'status' => 'active',
+            'price' => 99.99,
+            'billing_cycle' => 'monthly',
+        ]);
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_SUBSCRIPTIONS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTIONS), [[
+            'customer_code' => 'CUS-ORG-0001',
+            'customer_type' => 'business',
+            'customer_name' => 'Acme ISP',
+            'first_name' => null,
+            'last_name' => null,
+            'company_name' => 'Acme ISP',
+            'national_id' => null,
+            'email' => 'billing@acme.test',
+            'phone' => null,
+            'mobile' => null,
+            'whatsapp' => null,
+            'address_line1' => null,
+            'address_line2' => null,
+            'city' => null,
+            'state' => null,
+            'postal_code' => null,
+            'country' => null,
+            'customer_status' => 'active',
+            'billing_type' => 'prepaid',
+            'customer_billing_enabled' => 'yes',
+            'balance' => 0,
+            'credit_limit' => 0,
+            'tax_exempt' => 'no',
+            'subscription_code' => 'SUB-ORG-0001',
+            'subscription_name' => 'Acme Business Fiber',
+            'service_type' => 'pppoe',
+            'plan_name' => $plan->name,
+            'router_name' => null,
+            'site' => null,
+            'connection_type' => 'pppoe',
+            'ip_address' => '10.50.0.10',
+            'mac_address' => null,
+            'ip_management' => 'router',
+            'pppoe_username' => 'acme.pppoe',
+            'pppoe_password' => 'secret',
+            'base_price' => 99.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 99.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => 'yes',
+            'grace_period_days' => 7,
+            'next_billing_date' => '2026-06-10',
+            'status' => 'active',
+            'start_date' => '2026-06-01 00:00:00',
+            'end_date' => null,
+            'activation_date' => '2026-06-01 00:00:00',
+            'suspended_at' => null,
+            'cancelled_at' => null,
+            'notes' => 'Imported business service',
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+
+        $organization = Organization::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('name', 'Acme ISP')
+            ->firstOrFail();
+
+        $customer = Customer::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('customer_code', 'CUS-ORG-0001')
+            ->firstOrFail();
+
+        $subscription = Subscription::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subscription_code', 'SUB-ORG-0001')
+            ->firstOrFail();
+
+        $this->assertSame($organization->id, $customer->organization_id);
+        $this->assertSame($customer->id, $subscription->customer_id);
+        $this->assertSame('business', $customer->customer_type);
+        $this->assertSame('Acme ISP', $customer->company_name);
     }
 
     public function test_subscription_import_splits_multiple_ips_into_primary_and_ip_routes(): void

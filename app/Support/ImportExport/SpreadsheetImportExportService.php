@@ -7,6 +7,7 @@ use App\Models\ImportExportRun;
 use App\Models\ImportExportRunRow;
 use App\Models\IpAddress;
 use App\Models\IpPool;
+use App\Models\Organization;
 use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
@@ -386,6 +387,7 @@ class SpreadsheetImportExportService
             $customerAction = $customer->exists ? 'updated' : 'created';
             $customer->fill($this->customerAttributes($data, $customer->exists ? $customer : null));
             $customer->tenant_id = $run->tenant_id;
+            $customer->organization_id = $this->resolveOrganizationForImport($run, $customer->company_name)?->id;
             $customer->save();
 
             $subscriptionAction = $existingSubscription ? 'updated' : 'created';
@@ -682,6 +684,29 @@ class SpreadsheetImportExportService
         }
 
         return new Customer(['tenant_id' => $run->tenant_id]);
+    }
+
+    protected function resolveOrganizationForImport(ImportExportRun $run, ?string $companyName): ?Organization
+    {
+        if (blank($companyName)) {
+            return null;
+        }
+
+        $normalizedName = mb_strtolower(trim($companyName));
+
+        $organization = Organization::query()
+            ->where('tenant_id', $run->tenant_id)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedName])
+            ->first();
+
+        if ($organization) {
+            return $organization;
+        }
+
+        return Organization::query()->create([
+            'tenant_id' => $run->tenant_id,
+            'name' => trim($companyName),
+        ]);
     }
 
     protected function findPlanByName(string $planName): ?Plan

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\IpPool;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,6 +26,8 @@ class UpdateIpPoolRequest extends FormRequest
     public function rules(): array
     {
         $tenantId = $this->user()?->tenant_id;
+        $pool = $this->route('pool');
+        $poolId = $pool instanceof IpPool ? $pool->getKey() : $pool;
 
         return [
             // Basic Information
@@ -39,7 +42,16 @@ class UpdateIpPoolRequest extends FormRequest
             'all_devices' => ['boolean'],
 
             // Network Configuration
-            'network_address' => ['required', 'ip', 'max:45'],
+            'network_address' => [
+                'required',
+                'ip',
+                'max:45',
+                Rule::unique('ip_pools', 'network_address')
+                    ->ignore($poolId)
+                    ->where(fn ($query) => $query
+                        ->where('tenant_id', $tenantId)
+                        ->where('cidr', (int) $this->input('cidr'))),
+            ],
             'cidr' => ['required', 'integer', 'between:8,32'],
             'gateway' => ['nullable', 'ip', 'max:45'],
             'dns_primary' => ['nullable', 'ip', 'max:45'],
@@ -64,6 +76,7 @@ class UpdateIpPoolRequest extends FormRequest
             'name.required' => 'The pool name is required.',
             'network_address.required' => 'The network address is required.',
             'network_address.ip' => 'Please enter a valid IP address.',
+            'network_address.unique' => 'An IP pool with this network address and CIDR already exists.',
             'cidr.required' => 'The CIDR prefix is required.',
             'cidr.between' => 'The CIDR prefix must be between 8 and 32.',
             'gateway.ip' => 'Please enter a valid gateway IP address.',

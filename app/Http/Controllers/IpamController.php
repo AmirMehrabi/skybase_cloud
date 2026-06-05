@@ -8,6 +8,7 @@ use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Router;
 use App\Models\Site;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -139,6 +140,24 @@ class IpamController extends Controller
             return redirect()
                 ->route('ipam.pools.show', $pool)
                 ->with('success', 'IP pool created successfully.');
+        } catch (QueryException $e) {
+            DB::rollBack();
+
+            if ($this->isDuplicatePoolException($e)) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->withErrors([
+                        'network_address' => 'An IP pool with this network address and CIDR already exists.',
+                    ]);
+            }
+
+            Log::error('Failed to create IP pool: '.$e->getMessage());
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Failed to create IP pool. Please try again.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to create IP pool: '.$e->getMessage());
@@ -214,6 +233,24 @@ class IpamController extends Controller
             return redirect()
                 ->route('ipam.pools.show', $pool)
                 ->with('success', 'IP pool updated successfully.');
+        } catch (QueryException $e) {
+            DB::rollBack();
+
+            if ($this->isDuplicatePoolException($e)) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->withErrors([
+                        'network_address' => 'An IP pool with this network address and CIDR already exists.',
+                    ]);
+            }
+
+            Log::error('Failed to update IP pool: '.$e->getMessage());
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Failed to update IP pool. Please try again.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to update IP pool: '.$e->getMessage());
@@ -393,6 +430,12 @@ class IpamController extends Controller
             ->all();
 
         $pool->routers()->sync($syncData);
+    }
+
+    private function isDuplicatePoolException(QueryException $exception): bool
+    {
+        return $exception->getCode() === '23000'
+            && str_contains($exception->getMessage(), 'unique_pool_per_tenant');
     }
 
     /**
