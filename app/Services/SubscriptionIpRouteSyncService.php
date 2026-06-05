@@ -26,6 +26,17 @@ class SubscriptionIpRouteSyncService
             'route_count' => $subscription->ipRoutes->count(),
         ]);
 
+        if ($subscription->ipRoutes->isEmpty()) {
+            Log::info('Subscription IP route sync batch completed.', [
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'router_id' => $subscription->router?->id,
+                'route_count' => 0,
+            ]);
+
+            return;
+        }
+
         $router = $subscription->router;
         $skipReason = $this->skipReason($subscription, $router);
         if ($skipReason !== null) {
