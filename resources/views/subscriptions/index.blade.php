@@ -299,32 +299,28 @@
 
         <!-- Pagination -->
         <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-            <div class="flex items-center justify-between">
-                <div class="flex-1 flex justify-between sm:hidden">
-                    <button @click="prevPage()" :disabled="pagination.current_page === 1" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-gray-700">
+                    Showing <span class="font-medium" x-text="pagination.from"></span> to <span class="font-medium" x-text="pagination.to"></span> of <span class="font-medium" x-text="pagination.total"></span> results
+                </p>
+                <nav class="relative z-0 inline-flex flex-wrap rounded-md shadow-sm -space-x-px">
+                    <button @click="prevPage()" :disabled="pagination.current_page === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                         Previous
                     </button>
-                    <button @click="nextPage()" :disabled="pagination.current_page === pagination.last_page" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <template x-for="(page, index) in paginationPages" :key="index">
+                        <span x-show="page === '...'" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500">...</span>
+                        <button
+                            x-show="page !== '...'"
+                            @click="goToPage(page)"
+                            :class="pagination.current_page === page ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'"
+                            class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                            x-text="page"
+                        ></button>
+                    </template>
+                    <button @click="nextPage()" :disabled="pagination.current_page === pagination.last_page" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                         Next
                     </button>
-                </div>
-                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-sm text-gray-700">
-                            Showing <span class="font-medium" x-text="pagination.from"></span> to <span class="font-medium" x-text="pagination.to"></span> of <span class="font-medium" x-text="pagination.total"></span> results
-                        </p>
-                    </div>
-                    <div>
-                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                            <button @click="prevPage()" :disabled="pagination.current_page === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                Previous
-                            </button>
-                            <button @click="nextPage()" :disabled="pagination.current_page === pagination.last_page" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                Next
-                            </button>
-                        </nav>
-                    </div>
-                </div>
+                </nav>
             </div>
         </div>
     </div>
@@ -378,7 +374,7 @@ function subscriptionsIndex() {
         pagination: {
             current_page: 1,
             last_page: 1,
-            per_page: 15,
+            per_page: 100,
             total: 0,
             from: 0,
             to: 0
@@ -431,6 +427,43 @@ function subscriptionsIndex() {
             } finally {
                 this.loading = false;
             }
+        },
+        goToPage(page) {
+            if (page < 1 || page > this.pagination.last_page || page === this.pagination.current_page) {
+                return;
+            }
+
+            this.pagination.current_page = page;
+            this.fetchData();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        get paginationPages() {
+            const totalPages = this.pagination.last_page;
+            const currentPage = this.pagination.current_page;
+
+            if (totalPages <= 7) {
+                return Array.from({ length: totalPages }, (_, index) => index + 1);
+            }
+
+            const pages = [1];
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            if (start > 2) {
+                pages.push('...');
+            }
+
+            for (let page = start; page <= end; page++) {
+                pages.push(page);
+            }
+
+            if (end < totalPages - 1) {
+                pages.push('...');
+            }
+
+            pages.push(totalPages);
+
+            return pages;
         },
         async fetchImportExportRuns() {
             try {
@@ -499,17 +532,11 @@ function subscriptionsIndex() {
         },
 
         prevPage() {
-            if (this.pagination.current_page > 1) {
-                this.pagination.current_page--;
-                this.fetchData();
-            }
+            this.goToPage(this.pagination.current_page - 1);
         },
 
         nextPage() {
-            if (this.pagination.current_page < this.pagination.last_page) {
-                this.pagination.current_page++;
-                this.fetchData();
-            }
+            this.goToPage(this.pagination.current_page + 1);
         },
 
         confirmDelete(subscription) {

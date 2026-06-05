@@ -13,7 +13,7 @@ document.addEventListener('alpine:init', () => {
         organization: '',
 
         // Pagination
-        perPage: 15,
+        perPage: 100,
         currentPage: 1,
 
         // Loading state
@@ -21,7 +21,7 @@ document.addEventListener('alpine:init', () => {
         pagination: {
             current_page: 1,
             last_page: 1,
-            per_page: 15,
+            per_page: 100,
             total: 0,
             from: 0,
             to: 0,
@@ -107,6 +107,35 @@ document.addEventListener('alpine:init', () => {
 
         get totalPages() {
             return this.pagination.last_page;
+        },
+
+        get paginationPages() {
+            const totalPages = this.totalPages;
+            const currentPage = this.currentPage;
+
+            if (totalPages <= 7) {
+                return Array.from({ length: totalPages }, (_, index) => index + 1);
+            }
+
+            const pages = [1];
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            if (start > 2) {
+                pages.push('...');
+            }
+
+            for (let page = start; page <= end; page++) {
+                pages.push(page);
+            }
+
+            if (end < totalPages - 1) {
+                pages.push('...');
+            }
+
+            pages.push(totalPages);
+
+            return pages;
         },
 
         get totalCustomers() {

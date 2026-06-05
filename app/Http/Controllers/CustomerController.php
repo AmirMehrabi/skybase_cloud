@@ -54,7 +54,7 @@ class CustomerController extends Controller
                 },
             ])
             ->orderBy('created_at', 'desc')
-            ->paginate($request->input('per_page', 15))
+            ->paginate($request->integer('per_page', 100))
             ->through(fn (Customer $customer) => $this->customerIndexPayload($customer));
 
         return response()->json([

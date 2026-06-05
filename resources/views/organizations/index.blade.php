@@ -83,11 +83,37 @@
                             </td>
                         </tr>
                     </template>
-                    <tr x-show="organizations.length === 0">
+                    <tr x-show="organizations.length === 0" style="display: none;">
                         <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">No organizations found.</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div x-show="pagination.total > pagination.per_page" class="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-4">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-gray-700">
+                Showing <span class="font-medium" x-text="pagination.from"></span> to <span class="font-medium" x-text="pagination.to"></span> of <span class="font-medium" x-text="pagination.total"></span> results
+            </p>
+            <nav class="relative z-0 inline-flex flex-wrap rounded-md shadow-sm -space-x-px">
+                <button @click="prevPage()" :disabled="pagination.current_page === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Previous
+                </button>
+                <template x-for="(page, index) in paginationPages" :key="index">
+                    <span x-show="page === '...'" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500">...</span>
+                    <button
+                        x-show="page !== '...'"
+                        @click="goToPage(page)"
+                        :class="pagination.current_page === page ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'"
+                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                        x-text="page"
+                    ></button>
+                </template>
+                <button @click="nextPage()" :disabled="pagination.current_page === pagination.last_page" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Next
+                </button>
+            </nav>
         </div>
     </div>
 </div>
@@ -101,6 +127,16 @@ function organizationsIndex() {
         search: '',
         status: '',
         billing: '',
+        perPage: 100,
+        currentPage: 1,
+        pagination: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 100,
+            total: 0,
+            from: 0,
+            to: 0,
+        },
         debounceTimer: null,
         get statCards() {
             return [
@@ -114,22 +150,82 @@ function organizationsIndex() {
             this.fetchStats();
             this.fetchOrganizations();
             this.$watch('search', () => this.debounceFetch());
-            this.$watch('status', () => this.fetchOrganizations());
-            this.$watch('billing', () => this.fetchOrganizations());
+            this.$watch('status', () => {
+                this.currentPage = 1;
+                this.fetchOrganizations();
+            });
+            this.$watch('billing', () => {
+                this.currentPage = 1;
+                this.fetchOrganizations();
+            });
         },
         debounceFetch() {
             clearTimeout(this.debounceTimer);
-            this.debounceTimer = setTimeout(() => this.fetchOrganizations(), 300);
+            this.debounceTimer = setTimeout(() => {
+                this.currentPage = 1;
+                this.fetchOrganizations();
+            }, 300);
         },
         async fetchStats() {
             const response = await fetch('/organizations/stats');
             this.stats = await response.json();
         },
         async fetchOrganizations() {
-            const params = new URLSearchParams({ search: this.search, status: this.status, billing: this.billing });
+            const params = new URLSearchParams({
+                search: this.search,
+                status: this.status,
+                billing: this.billing,
+                page: this.currentPage,
+                per_page: this.perPage,
+            });
             const response = await fetch(`/organizations/data?${params}`);
             const data = await response.json();
             this.organizations = data.organizations;
+            this.pagination = data.pagination;
+            this.currentPage = data.pagination.current_page;
+        },
+        get paginationPages() {
+            const totalPages = this.pagination.last_page;
+            const currentPage = this.pagination.current_page;
+
+            if (totalPages <= 7) {
+                return Array.from({ length: totalPages }, (_, index) => index + 1);
+            }
+
+            const pages = [1];
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            if (start > 2) {
+                pages.push('...');
+            }
+
+            for (let page = start; page <= end; page++) {
+                pages.push(page);
+            }
+
+            if (end < totalPages - 1) {
+                pages.push('...');
+            }
+
+            pages.push(totalPages);
+
+            return pages;
+        },
+        goToPage(page) {
+            if (page < 1 || page > this.pagination.last_page || page === this.pagination.current_page) {
+                return;
+            }
+
+            this.currentPage = page;
+            this.fetchOrganizations();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        prevPage() {
+            this.goToPage(this.pagination.current_page - 1);
+        },
+        nextPage() {
+            this.goToPage(this.pagination.current_page + 1);
         },
     };
 }

@@ -57,7 +57,7 @@ class SubscriptionController extends Controller
         $subscriptions = Subscription::filter($filters)
             ->with(['customer', 'plan', 'router'])
             ->orderBy('created_at', 'desc')
-            ->paginate($request->input('per_page', 15))
+            ->paginate($request->integer('per_page', 100))
             ->through(
                 fn ($subscription) => [
                     'id' => $subscription->id,

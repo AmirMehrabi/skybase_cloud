@@ -264,8 +264,15 @@
                 <button @click="prevPage()" :disabled="currentPage === 1" class="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
                     Previous
                 </button>
-                <template x-for="page in totalPages" :key="page">
-                    <button @click="goToPage(page)" :class="currentPage === page ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'" class="px-3 py-1 rounded border text-sm min-w-[36px]" x-text="page"></button>
+                <template x-for="(page, index) in paginationPages" :key="index">
+                    <span x-show="page === '...'" class="px-3 py-1 text-sm text-gray-500">...</span>
+                    <button
+                        x-show="page !== '...'"
+                        @click="goToPage(page)"
+                        :class="currentPage === page ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'"
+                        class="px-3 py-1 rounded border text-sm min-w-[36px]"
+                        x-text="page"
+                    ></button>
                 </template>
                 <button @click="nextPage()" :disabled="currentPage === totalPages" class="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
                     Next
