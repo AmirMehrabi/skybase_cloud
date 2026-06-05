@@ -41,6 +41,11 @@ class ImportExportController extends Controller
         return $this->queueImport($request, ImportExportSchema::MODULE_SUBSCRIPTIONS, 'subscriptions.index');
     }
 
+    public function importSubscriptionIpAdjustments(StoreImportRequest $request): RedirectResponse
+    {
+        return $this->queueImport($request, ImportExportSchema::MODULE_SUBSCRIPTION_IP_ADJUSTMENTS, 'subscriptions.index');
+    }
+
     public function subscriptionRuns(Request $request): JsonResponse
     {
         return $this->runs($request, ImportExportSchema::MODULE_SUBSCRIPTIONS);

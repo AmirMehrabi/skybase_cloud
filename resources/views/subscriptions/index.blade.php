@@ -34,6 +34,9 @@
                 </svg>
                 Import
             </button>
+            <button type="button" @click="ipAdjustmentModal.show = true" class="hidden" aria-hidden="true" tabindex="-1">
+                Import IP Adjustments
+            </button>
             <a href="{{ route('subscriptions.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -398,6 +401,33 @@
             </form>
         </div>
     </div>
+
+    <div x-show="ipAdjustmentModal.show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" @click.outside="ipAdjustmentModal.show = false">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Import IP Adjustments</h2>
+                    <p class="mt-1 text-sm text-gray-500">Upload an XLSX file with `username` and `ip_address`. The first IP becomes the primary address and the rest are routes.</p>
+                </div>
+                <button type="button" @click="ipAdjustmentModal.show = false" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('subscriptions.import-ip-addresses') }}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                @csrf
+                <x-input.file name="file" label="XLSX file" accept=".xlsx,.xls" required />
+                <div class="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                    Existing IPs will be released and reassigned to the imported subscription. Route rows can include CIDR values such as <span class="font-mono">10.0.0.2/29</span>.
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" @click="ipAdjustmentModal.show = false" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Queue Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @push('scripts')
@@ -432,6 +462,9 @@ function subscriptionsIndex() {
             deleting: false
         },
         importModal: {
+            show: false,
+        },
+        ipAdjustmentModal: {
             show: false,
         },
         importExportRuns: [],

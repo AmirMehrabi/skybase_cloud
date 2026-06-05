@@ -8,6 +8,8 @@ final class ImportExportSchema
 
     public const MODULE_SUBSCRIPTIONS = 'subscriptions';
 
+    public const MODULE_SUBSCRIPTION_IP_ADJUSTMENTS = 'subscription_ip_adjustments';
+
     /**
      * @return list<string>
      */
@@ -97,6 +99,10 @@ final class ImportExportSchema
                 'suspended_at',
                 'cancelled_at',
                 'notes',
+            ],
+            self::MODULE_SUBSCRIPTION_IP_ADJUSTMENTS => [
+                'username',
+                'ip_address',
             ],
             default => [],
         };

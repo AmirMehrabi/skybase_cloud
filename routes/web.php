@@ -205,6 +205,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/import-export-runs', [ImportExportController::class, 'subscriptionRuns'])->name('import-export-runs');
         Route::post('/export', [ImportExportController::class, 'exportSubscriptions'])->name('export');
         Route::post('/import', [ImportExportController::class, 'importSubscriptions'])->name('import');
+        Route::post('/import-ip-addresses', [ImportExportController::class, 'importSubscriptionIpAdjustments'])->name('import-ip-addresses');
         Route::get('/check-pppoe-username', [SubscriptionController::class, 'checkPppoeUsername'])->name('check-pppoe-username');
         Route::post('/bulk-delete', [SubscriptionController::class, 'bulkDestroy'])->name('bulk-destroy');
         Route::get('/create', [SubscriptionController::class, 'create'])->name('create');
