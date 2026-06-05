@@ -6,8 +6,6 @@
     $organization = $subscription->customer?->organization;
     $organizationBilling = $organization?->billing_enabled;
     $currentRouterId = old('router_id', $subscription->router_id);
-    $currentIpPoolId = old('ip_pool_id', $subscription->ip_pool_id);
-    $currentIpAddress = old('ip_address', $subscription->ip_address);
     $initialIpRoutes = collect(old('ip_routes', $subscription->ipRoutes->map(fn ($route) => [
         'ip_pool_id' => (string) $route->ip_pool_id,
         'ip_address' => $route->ip_address,

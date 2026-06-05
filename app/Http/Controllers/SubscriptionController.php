@@ -269,15 +269,16 @@ class SubscriptionController extends Controller
      */
     public function edit(Subscription $subscription): View
     {
-        $subscription->load(['items', 'customer.organization.defaultPlan', 'ipPool.router', 'ipRoutes.ipPool']);
+        $subscription->load(['items', 'customer.organization.defaultPlan', 'ipPool.router', 'ipAddress.ipPool.router', 'ipRoutes.ipPool']);
         $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
-
         $ipPools = IpPool::active()->with(['router', 'availableAddresses'])->get();
+        $currentIpPoolId = old('ip_pool_id', $subscription->ip_pool_id ?? $subscription->ipAddress?->ip_pool_id);
+        $currentIpAddress = old('ip_address', $subscription->ip_address ?? $subscription->ipAddress?->ip_address);
 
-        return view('subscriptions.edit', compact('subscription', 'plans', 'routers', 'ipPools'));
+        return view('subscriptions.edit', compact('subscription', 'plans', 'routers', 'ipPools', 'currentIpPoolId', 'currentIpAddress'));
     }
 
     /**
