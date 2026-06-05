@@ -960,16 +960,16 @@ class SpreadsheetImportExportService
                 throw new \RuntimeException("Unable to resolve an IPAM pool for imported route IP {$routeIpAddress}.");
             }
 
-            $ipAddress = $this->resolveImportedRouteIpAddress($subscription, $ipPool, $routeIpAddress);
-            if (! $ipAddress) {
-                throw new \RuntimeException("Unable to resolve an IP address record for imported route IP {$routeIpAddress}.");
+            $ipAddress = $this->findImportedRouteIpAddress($subscription, $ipPool, $routeIpAddress);
+            if ($ipAddress && ! $ipAddress->isAvailable()) {
+                throw new \RuntimeException("The IP address record for imported route IP {$routeIpAddress} is not available.");
             }
 
             $route = SubscriptionIpRoute::create([
                 'tenant_id' => $subscription->tenant_id,
                 'subscription_id' => $subscription->id,
                 'ip_pool_id' => $ipPool->id,
-                'ip_address_id' => $ipAddress->id,
+                'ip_address_id' => $ipAddress?->id,
                 'ip_address' => $routeIpAddress,
                 'cidr' => $routeCidr,
             ]);
@@ -978,14 +978,16 @@ class SpreadsheetImportExportService
                 'routeros_comment' => $route->routerOsComment(),
             ])->save();
 
-            $this->assignImportedRouteIpAddress($ipAddress, $customer, $subscription, $route);
+            if ($ipAddress) {
+                $this->assignImportedRouteIpAddress($ipAddress, $customer, $subscription, $route);
+            }
 
             Log::info('Subscription import IP route persisted.', [
                 'tenant_id' => $subscription->tenant_id,
                 'subscription_id' => $subscription->id,
                 'subscription_ip_route_id' => $route->id,
                 'ip_pool_id' => $ipPool->id,
-                'ip_address_id' => $ipAddress->id,
+                'ip_address_id' => $ipAddress?->id,
                 'destination' => $route->destinationAddress(),
             ]);
         }
@@ -1000,23 +1002,13 @@ class SpreadsheetImportExportService
             ->first(fn (IpPool $pool): bool => $this->isIpInPoolRange($ipAddress, $pool));
     }
 
-    protected function resolveImportedRouteIpAddress(Subscription $subscription, IpPool $ipPool, string $ipAddress): ?IpAddress
+    protected function findImportedRouteIpAddress(Subscription $subscription, IpPool $ipPool, string $ipAddress): ?IpAddress
     {
-        $ipAddressRecord = IpAddress::query()
+        return IpAddress::query()
             ->where('tenant_id', $subscription->tenant_id)
             ->where('ip_pool_id', $ipPool->id)
             ->where('ip_address', $ipAddress)
             ->first();
-
-        if (! $ipAddressRecord) {
-            return null;
-        }
-
-        if (! $ipAddressRecord->isAvailable()) {
-            return null;
-        }
-
-        return $ipAddressRecord;
     }
 
     protected function assignImportedRouteIpAddress(IpAddress $ipAddress, Customer $customer, Subscription $subscription, SubscriptionIpRoute $route): void

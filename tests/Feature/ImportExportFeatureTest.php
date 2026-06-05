@@ -779,6 +779,105 @@ class ImportExportFeatureTest extends TestCase
         ]);
     }
 
+    public function test_subscription_import_creates_routed_subnet_without_exact_ip_address_record(): void
+    {
+        Storage::fake('imports');
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber Routed Import',
+            'internal_name' => 'fiber_routed_import',
+            'status' => 'active',
+            'price' => 149.99,
+            'billing_cycle' => 'monthly',
+        ]);
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Routed Import Router',
+            'vendor' => 'Cisco',
+            'enable_provisioning' => false,
+        ]);
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Routed Import Pool',
+            'network_address' => '197.157.235.0',
+            'cidr' => 24,
+            'gateway' => '197.157.235.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'used_ips' => 0,
+            'reserved_ips' => 0,
+            'available_ips' => 254,
+        ]);
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '197.157.235.10',
+            'status' => 'available',
+        ]);
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_SUBSCRIPTIONS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTIONS), [[
+            'customer_code' => 'CUS-ROUTE-0001',
+            'customer_type' => 'individual',
+            'customer_name' => 'Route Customer',
+            'first_name' => 'Route',
+            'last_name' => 'Customer',
+            'email' => 'route@example.com',
+            'customer_status' => 'active',
+            'billing_type' => 'prepaid',
+            'customer_billing_enabled' => 'yes',
+            'subscription_code' => 'SUB-ROUTE-0001',
+            'subscription_name' => 'Route Fiber',
+            'service_type' => 'pppoe',
+            'plan_name' => $plan->name,
+            'router_name' => $router->name,
+            'connection_type' => 'pppoe',
+            'ip_address' => '197.157.235.10, 197.157.235.116/30',
+            'ip_management' => 'router',
+            'pppoe_username' => 'route.customer',
+            'pppoe_password' => 'secret',
+            'base_price' => 149.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 149.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => 'yes',
+            'grace_period_days' => 7,
+            'status' => 'active',
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+        $this->assertSame(0, $run->failed_count);
+
+        $subscription = Subscription::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subscription_code', 'SUB-ROUTE-0001')
+            ->firstOrFail();
+
+        $this->assertSame('197.157.235.10', $subscription->ip_address);
+        $this->assertDatabaseHas('subscription_ip_routes', [
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address_id' => null,
+            'ip_address' => '197.157.235.116',
+            'cidr' => 30,
+            'routeros_sync_status' => 'skipped',
+        ]);
+    }
+
     public function test_subscription_import_with_suspended_customer_rejects_radius_access(): void
     {
         Storage::fake('imports');
@@ -985,6 +1084,107 @@ class ImportExportFeatureTest extends TestCase
             'status' => 'assigned',
             'customer_id' => $customer->id,
             'subscription_code' => 'SUB-RECON-0001',
+        ]);
+    }
+
+    public function test_subscription_import_restores_soft_deleted_customer_and_subscription_codes(): void
+    {
+        Storage::fake('imports');
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber Restore',
+            'internal_name' => 'fiber_restore',
+            'status' => 'active',
+            'price' => 49.99,
+            'billing_cycle' => 'monthly',
+        ]);
+        $customer = Customer::query()->create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-SOFT-0001',
+            'customer_type' => 'individual',
+            'first_name' => 'Alberta',
+            'last_name' => 'Bindi',
+            'name' => 'Alberta Bindi',
+            'email' => 'albertabindi@example.com',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+        ]);
+        Subscription::query()->create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-SOFT-0001',
+            'name' => 'Alberta Fiber',
+            'service_type' => 'pppoe',
+            'plan_id' => $plan->id,
+            'connection_type' => 'pppoe',
+            'ip_management' => 'router',
+            'pppoe_username' => 'alberta.soft',
+            'pppoe_password' => 'secret',
+            'base_price' => 49.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 49.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'grace_period_days' => 7,
+            'status' => 'active',
+        ]);
+        $customer->delete();
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_SUBSCRIPTIONS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTIONS), [[
+            'customer_code' => 'CUS-SOFT-0001',
+            'customer_type' => 'individual',
+            'customer_name' => 'Alberta Bindi',
+            'first_name' => 'Alberta',
+            'last_name' => 'Bindi',
+            'email' => 'albertabindi@yahoo.com',
+            'phone' => '99608387',
+            'customer_status' => 'suspended',
+            'billing_type' => 'postpaid',
+            'customer_billing_enabled' => 'yes',
+            'subscription_code' => 'SUB-SOFT-0001',
+            'subscription_name' => 'Alberta Fiber',
+            'service_type' => 'pppoe',
+            'plan_name' => $plan->name,
+            'connection_type' => 'pppoe',
+            'ip_management' => 'router',
+            'pppoe_username' => 'alberta.soft',
+            'pppoe_password' => 'secret',
+            'base_price' => 49.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 49.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => 'yes',
+            'grace_period_days' => 7,
+            'status' => 'active',
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+        $this->assertSame(0, $run->failed_count);
+        $this->assertSame(1, $run->updated_count);
+        $this->assertDatabaseHas('customers', [
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-SOFT-0001',
+            'deleted_at' => null,
+            'email' => 'albertabindi@yahoo.com',
+            'status' => 'suspended',
+        ]);
+        $this->assertDatabaseHas('subscriptions', [
+            'tenant_id' => $tenant->id,
+            'subscription_code' => 'SUB-SOFT-0001',
+            'deleted_at' => null,
+            'customer_id' => $customer->id,
         ]);
     }
 
