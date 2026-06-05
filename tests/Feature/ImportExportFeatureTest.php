@@ -878,6 +878,134 @@ class ImportExportFeatureTest extends TestCase
         ]);
     }
 
+    public function test_subscription_import_reassigns_unavailable_route_ip_address_record(): void
+    {
+        Storage::fake('imports');
+        $tenant = $this->createTenant('alpha-net');
+        $user = $this->createUser($tenant);
+        $plan = Plan::factory()->create([
+            'name' => 'Fiber Route Reassign',
+            'internal_name' => 'fiber_route_reassign',
+            'status' => 'active',
+            'price' => 149.99,
+            'billing_cycle' => 'monthly',
+        ]);
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Route Reassign Router',
+            'vendor' => 'Cisco',
+            'enable_provisioning' => false,
+        ]);
+        $pool = IpPool::create([
+            'tenant_id' => $tenant->id,
+            'router_id' => $router->id,
+            'name' => 'Route Reassign Pool',
+            'network_address' => '165.73.238.0',
+            'cidr' => 24,
+            'gateway' => '165.73.238.1',
+            'type' => 'static',
+            'status' => 'active',
+            'allow_static' => true,
+            'auto_assign' => true,
+            'block_reserved' => false,
+            'total_ips' => 254,
+            'used_ips' => 1,
+            'reserved_ips' => 0,
+            'available_ips' => 253,
+        ]);
+        $previousCustomer = Customer::query()->create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-OLD-ROUTE',
+            'customer_type' => 'individual',
+            'first_name' => 'Old',
+            'last_name' => 'Route',
+            'name' => 'Old Route',
+            'email' => 'old-route@example.com',
+            'status' => 'active',
+            'billing_type' => 'prepaid',
+            'billing_enabled' => true,
+        ]);
+        IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '165.73.238.10',
+            'status' => 'available',
+        ]);
+        $routeIpAddress = IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '165.73.238.36',
+            'status' => 'assigned',
+            'customer_id' => $previousCustomer->id,
+            'subscription_code' => 'SUB-OLD-ROUTE',
+            'assigned_at' => now()->subDay(),
+            'notes' => 'Old assignment',
+            'metadata' => ['purpose' => 'old_route'],
+        ]);
+
+        $run = $this->createImportRun($tenant, $user, ImportExportSchema::MODULE_SUBSCRIPTIONS);
+        $path = ImportExportSchema::basePath($tenant->id, $run->id).'/import-'.$run->id.'.xlsx';
+        $this->writeWorkbook($path, ImportExportSchema::headings(ImportExportSchema::MODULE_SUBSCRIPTIONS), [[
+            'customer_code' => 'CUS-NEW-ROUTE',
+            'customer_type' => 'individual',
+            'customer_name' => 'New Route Customer',
+            'first_name' => 'New',
+            'last_name' => 'Route',
+            'email' => 'new-route@example.com',
+            'customer_status' => 'active',
+            'billing_type' => 'prepaid',
+            'customer_billing_enabled' => 'yes',
+            'subscription_code' => 'SUB-NEW-ROUTE',
+            'subscription_name' => 'New Route Fiber',
+            'service_type' => 'pppoe',
+            'plan_name' => $plan->name,
+            'router_name' => $router->name,
+            'connection_type' => 'pppoe',
+            'ip_address' => '165.73.238.10, 165.73.238.36/30',
+            'ip_management' => 'router',
+            'pppoe_username' => 'new.route.customer',
+            'pppoe_password' => 'secret',
+            'base_price' => 149.99,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 149.99,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => 'yes',
+            'grace_period_days' => 7,
+            'status' => 'active',
+        ]]);
+        $run->update(['file_path' => $path]);
+
+        (new ProcessImportJob($run->id))->handle(app(SpreadsheetImportExportService::class));
+        $run->refresh();
+
+        $this->assertSame(ImportExportRun::STATUS_COMPLETED, $run->status);
+        $this->assertSame(0, $run->failed_count);
+
+        $subscription = Subscription::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subscription_code', 'SUB-NEW-ROUTE')
+            ->firstOrFail();
+        $route = SubscriptionIpRoute::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subscription_id', $subscription->id)
+            ->where('ip_address', '165.73.238.36')
+            ->firstOrFail();
+
+        $this->assertSame($routeIpAddress->id, $route->ip_address_id);
+        $this->assertDatabaseHas('ip_addresses', [
+            'id' => $routeIpAddress->id,
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $pool->id,
+            'ip_address' => '165.73.238.36',
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'subscription_code' => null,
+            'notes' => 'Subscription IP route SUB-NEW-ROUTE',
+        ]);
+    }
+
     public function test_subscription_import_with_suspended_customer_rejects_radius_access(): void
     {
         Storage::fake('imports');

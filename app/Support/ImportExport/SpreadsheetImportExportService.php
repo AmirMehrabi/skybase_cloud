@@ -962,7 +962,7 @@ class SpreadsheetImportExportService
 
             $ipAddress = $this->findImportedRouteIpAddress($subscription, $ipPool, $routeIpAddress);
             if ($ipAddress && ! $ipAddress->isAvailable()) {
-                throw new \RuntimeException("The IP address record for imported route IP {$routeIpAddress} is not available.");
+                $this->releaseImportedRouteIpAddressRecord($ipAddress, $subscription, $routeIpAddress);
             }
 
             $route = SubscriptionIpRoute::create([
@@ -1009,6 +1009,29 @@ class SpreadsheetImportExportService
             ->where('ip_pool_id', $ipPool->id)
             ->where('ip_address', $ipAddress)
             ->first();
+    }
+
+    protected function releaseImportedRouteIpAddressRecord(IpAddress $ipAddress, Subscription $subscription, string $routeIpAddress): void
+    {
+        $previousStatus = $ipAddress->status;
+        $previousCustomerId = $ipAddress->customer_id;
+        $previousSubscriptionCode = $ipAddress->subscription_code;
+
+        $ipAddress->release();
+        $ipAddress->forceFill([
+            'notes' => null,
+            'metadata' => null,
+        ])->save();
+
+        Log::info('Subscription import IP route address released for reassignment.', [
+            'tenant_id' => $subscription->tenant_id,
+            'subscription_id' => $subscription->id,
+            'ip_address_id' => $ipAddress->id,
+            'ip_address' => $routeIpAddress,
+            'previous_status' => $previousStatus,
+            'previous_customer_id' => $previousCustomerId,
+            'previous_subscription_code' => $previousSubscriptionCode,
+        ]);
     }
 
     protected function assignImportedRouteIpAddress(IpAddress $ipAddress, Customer $customer, Subscription $subscription, SubscriptionIpRoute $route): void
