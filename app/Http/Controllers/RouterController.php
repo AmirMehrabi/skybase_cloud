@@ -39,7 +39,7 @@ class RouterController extends Controller
             ->with('siteRecord')
             ->filter($filters)
             ->orderBy('created_at', 'desc')
-            ->paginate($request->input('per_page', 15))
+            ->paginate($request->integer('per_page', 50))
             ->through(fn ($router) => [
                 'id' => $router->id,
                 'name' => $router->name,

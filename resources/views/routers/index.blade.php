@@ -109,13 +109,13 @@
                 <input type="text" x-model="filters.search" @input="debouncedLoadRouters" placeholder="Search by name, IP, site..." class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border">
             </div>
 
-            <select x-model="filters.status" @change="loadRouters" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+            <select x-model="filters.status" @change="loadRouters(1)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                 <option value="">All Statuses</option>
                 <option value="online">Online</option>
                 <option value="offline">Offline</option>
             </select>
 
-            <select x-model="filters.vendor" @change="loadRouters" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+            <select x-model="filters.vendor" @change="loadRouters(1)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                 <option value="">All Vendors</option>
                 <option value="Mikrotik">Mikrotik</option>
                 <option value="Cisco">Cisco</option>
@@ -123,7 +123,7 @@
                 <option value="Huawei">Huawei</option>
             </select>
 
-            <select x-model="filters.site" @change="loadRouters" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
+            <select x-model="filters.site" @change="loadRouters(1)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 border bg-white">
                 <option value="">All Sites</option>
                 <template x-for="option in filterOptions.sites" :key="option.value">
                     <option :value="option.value" x-text="option.label"></option>
@@ -239,6 +239,52 @@
             </svg>
             <p class="text-sm text-gray-500 mt-2">Loading routers...</p>
         </div>
+
+        <!-- Pagination -->
+        <div x-show="pagination.total > 0" class="border-t border-gray-200 bg-white px-4 py-3 sm:px-6" style="display: none;">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-gray-700">
+                    Showing <span class="font-medium" x-text="pagination.from"></span> to <span class="font-medium" x-text="pagination.to"></span> of <span class="font-medium" x-text="pagination.total"></span> routers
+                </p>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        @click="loadRouters(pagination.current_page - 1)"
+                        :disabled="pagination.current_page === 1 || loading"
+                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Previous
+                    </button>
+
+                    <template x-for="(page, index) in paginationPages()" :key="`${page}-${index}`">
+                        <button
+                            type="button"
+                            x-show="page !== '...'"
+                            @click="loadRouters(page)"
+                            :disabled="loading"
+                            :class="page === pagination.current_page ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
+                            class="inline-flex min-w-10 items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                            x-text="page"
+                        ></button>
+                        <span
+                            x-show="page === '...'"
+                            class="inline-flex min-w-10 items-center justify-center px-1 text-sm font-medium text-gray-500"
+                            x-text="page"
+                        ></span>
+                    </template>
+
+                    <button
+                        type="button"
+                        @click="loadRouters(pagination.current_page + 1)"
+                        :disabled="pagination.current_page === pagination.last_page || loading"
+                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <x-ui.delete-modal
@@ -258,6 +304,14 @@ function routersIndex() {
             online: 0,
             offline: 0,
             activeSessions: 0
+        },
+        pagination: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 50,
+            total: 0,
+            from: 0,
+            to: 0
         },
         filterOptions: {
             sites: []
@@ -287,18 +341,27 @@ function routersIndex() {
             this.loadRouters();
         },
 
-        async loadRouters() {
+        async loadRouters(page = this.pagination.current_page || 1) {
             this.loading = true;
             try {
+                this.pagination.current_page = page;
+
                 const params = new URLSearchParams();
                 if (this.filters.search) params.append('search', this.filters.search);
                 if (this.filters.status) params.append('status', this.filters.status);
                 if (this.filters.vendor) params.append('vendor', this.filters.vendor);
                 if (this.filters.site) params.append('site', this.filters.site);
+                params.append('page', page);
+                params.append('per_page', this.pagination.per_page);
 
                 const response = await fetch('{{ route('routers.data') }}?' + params.toString());
                 const data = await response.json();
                 this.routers = data.routers;
+                this.pagination = data.pagination;
+
+                if (this.routers.length === 0 && this.pagination.current_page > 1 && this.pagination.total > 0) {
+                    await this.loadRouters(this.pagination.current_page - 1);
+                }
             } catch (error) {
                 console.error('Error loading routers:', error);
                 alert('Error loading routers. Please try again.');
@@ -330,7 +393,7 @@ function routersIndex() {
         debouncedLoadRouters() {
             clearTimeout(this.debounceTimer);
             this.debounceTimer = setTimeout(() => {
-                this.loadRouters();
+                this.loadRouters(1);
             }, 300);
         },
 
@@ -345,7 +408,43 @@ function routersIndex() {
                 vendor: '',
                 site: ''
             };
-            this.loadRouters();
+            this.loadRouters(1);
+        },
+
+        paginationPages() {
+            if (this.pagination.last_page <= 7) {
+                return Array.from({ length: this.pagination.last_page }, (_, index) => index + 1);
+            }
+
+            const pages = [1];
+            const currentPage = this.pagination.current_page;
+            const lastPage = this.pagination.last_page;
+            let start = Math.max(2, currentPage - 1);
+            let end = Math.min(lastPage - 1, currentPage + 1);
+
+            if (currentPage <= 3) {
+                start = 2;
+                end = 4;
+            } else if (currentPage >= lastPage - 2) {
+                start = lastPage - 3;
+                end = lastPage - 1;
+            }
+
+            if (start > 2) {
+                pages.push('...');
+            }
+
+            for (let page = start; page <= end; page++) {
+                pages.push(page);
+            }
+
+            if (end < lastPage - 1) {
+                pages.push('...');
+            }
+
+            pages.push(lastPage);
+
+            return pages;
         },
 
         confirmDelete(router) {
@@ -368,7 +467,7 @@ function routersIndex() {
 
                 if (response.ok) {
                     this.deleteModal.show = false;
-                    this.loadRouters();
+                    await this.loadRouters(this.pagination.current_page);
                     this.loadStats();
                     alert('Router deleted successfully.');
                 } else {
