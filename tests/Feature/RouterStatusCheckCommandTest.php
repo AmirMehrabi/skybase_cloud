@@ -27,6 +27,7 @@ class RouterStatusCheckCommandTest extends TestCase
             'tenant_id' => $tenant->id,
             'ip_address' => '192.0.2.11',
             'last_status_checked_at' => now()->subMinutes(10),
+            'status_check_failure_count' => 2,
         ]);
         $recentRouter = Router::factory()->offline()->create([
             'tenant_id' => $tenant->id,
@@ -70,6 +71,7 @@ class RouterStatusCheckCommandTest extends TestCase
 
         $this->assertSame('offline', $dueOfflineRouter->fresh()->status);
         $this->assertSame('Connection timed out (110)', $dueOfflineRouter->fresh()->status_check_error);
+        $this->assertSame(3, $dueOfflineRouter->fresh()->status_check_failure_count);
         $this->assertNotNull($dueOfflineRouter->fresh()->last_status_changed_at);
 
         $this->assertSame('offline', $recentRouter->fresh()->status);
@@ -85,6 +87,7 @@ class RouterStatusCheckCommandTest extends TestCase
             'tenant_id' => $tenant->id,
             'ip_address' => '192.0.2.20',
             'last_status_checked_at' => now()->subMinutes(6),
+            'status_check_failure_count' => 2,
         ]);
 
         $this->mock(RouterStatusProbe::class)
@@ -102,8 +105,81 @@ class RouterStatusCheckCommandTest extends TestCase
 
         $this->assertSame('offline', $router->status);
         $this->assertSame('Probe crashed', $router->status_check_error);
+        $this->assertSame(3, $router->status_check_failure_count);
         $this->assertNotNull($router->last_status_checked_at);
         $this->assertNotNull($router->last_status_changed_at);
+    }
+
+    public function test_it_keeps_online_router_online_until_failure_threshold_is_reached(): void
+    {
+        config(['monitoring.router_status_offline_failure_threshold' => 3]);
+
+        $tenant = $this->createTenant('alpha-net');
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'ip_address' => '192.0.2.30',
+            'last_status_checked_at' => now()->subMinutes(6),
+            'status_check_failure_count' => 0,
+        ]);
+
+        $this->mock(RouterStatusProbe::class)
+            ->shouldReceive('check')
+            ->once()
+            ->andReturn([
+                'online' => false,
+                'endpoint' => '192.0.2.30:8728',
+                'latency_ms' => null,
+                'error' => 'Connection timed out (110)',
+                'method' => 'tcp+ping',
+            ]);
+
+        $this->artisan('routers:check-status')
+            ->expectsOutputToContain('Checked: 1')
+            ->assertExitCode(0);
+
+        $router->refresh();
+
+        $this->assertSame('online', $router->status);
+        $this->assertSame(1, $router->status_check_failure_count);
+        $this->assertStringContainsString('Consecutive failure 1/3', (string) $router->status_check_error);
+        $this->assertNull($router->last_status_changed_at);
+    }
+
+    public function test_it_only_checks_routers_for_the_active_tenant_scan(): void
+    {
+        $alphaTenant = $this->createTenant('alpha-net');
+        $betaTenant = $this->createTenant('beta-net');
+
+        $alphaRouter = Router::factory()->offline()->create([
+            'tenant_id' => $alphaTenant->id,
+            'ip_address' => '192.0.2.40',
+            'last_status_checked_at' => now()->subMinutes(6),
+        ]);
+        $betaRouter = Router::factory()->offline()->create([
+            'tenant_id' => $betaTenant->id,
+            'ip_address' => '192.0.2.41',
+            'last_status_checked_at' => now()->subMinutes(6),
+        ]);
+
+        $this->mock(RouterStatusProbe::class)
+            ->shouldReceive('check')
+            ->once()
+            ->withArgs(fn (Router $router): bool => $router->is($alphaRouter))
+            ->andReturn([
+                'online' => true,
+                'endpoint' => '192.0.2.40:8728',
+                'latency_ms' => 8.51,
+                'error' => null,
+                'method' => 'tcp',
+            ]);
+
+        $this->artisan("routers:check-status --tenant={$alphaTenant->id}")
+            ->expectsOutputToContain('Checked: 1')
+            ->assertExitCode(0);
+
+        $this->assertSame('online', $alphaRouter->fresh()->status);
+        $this->assertSame('offline', $betaRouter->fresh()->status);
+        $this->assertNull($betaRouter->fresh()->last_status_changed_at);
     }
 
     private function createTenant(string $slug): Tenant

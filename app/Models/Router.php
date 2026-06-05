@@ -37,6 +37,7 @@ class Router extends Model
         'last_status_checked_at',
         'last_status_changed_at',
         'status_check_error',
+        'status_check_failure_count',
         'version',
         'uptime',
         'cpu_usage',
@@ -79,6 +80,7 @@ class Router extends Model
             'netflow_last_packet_at' => 'datetime',
             'last_status_checked_at' => 'datetime',
             'last_status_changed_at' => 'datetime',
+            'status_check_failure_count' => 'integer',
         ];
     }
 

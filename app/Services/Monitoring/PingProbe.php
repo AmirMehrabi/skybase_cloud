@@ -10,10 +10,10 @@ class PingProbe
     /**
      * @return array{online: bool, latency_ms: float|null, packet_loss_percent: float, error: string|null}
      */
-    public function check(string $host): array
+    public function check(string $host, ?int $count = null, ?int $timeout = null): array
     {
-        $count = max(1, (int) config('monitoring.ping_count'));
-        $timeout = max(1, (int) config('monitoring.ping_timeout_seconds'));
+        $count = max(1, $count ?? (int) config('monitoring.ping_count'));
+        $timeout = max(1, $timeout ?? (int) config('monitoring.ping_timeout_seconds'));
         $process = new Process(['ping', '-c', (string) $count, '-W', (string) $timeout, $host], base_path(), null, null, ($count * $timeout) + 2);
 
         try {

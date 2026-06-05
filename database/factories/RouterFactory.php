@@ -31,6 +31,7 @@ class RouterFactory extends Factory
             'location' => fake()->randomElement(['Data Center', 'Tower A', 'Tower B', 'HQ Building', 'Branch Office']),
             'site' => fake()->randomElement(['Main Site', 'North Tower', 'South Tower', 'East Wing', 'West Wing']),
             'status' => $isOnline ? 'online' : 'offline',
+            'status_check_failure_count' => 0,
             'version' => fake()->randomElement(['v7.10', 'v7.11', 'v7.12', 'v7.13']),
             'uptime' => $isOnline ? fake()->randomElement(['1d 12h', '5d 8h', '12d 4h', '25d 18h', '45d 6h']) : null,
             'cpu_usage' => $isOnline ? fake()->numberBetween(5, 85) : 0,
