@@ -154,6 +154,84 @@ class SubscriptionIndexDataTest extends TestCase
         $response->assertJsonPath('subscriptions.0.pppoe_username', 'alpha.user');
     }
 
+    public function test_subscription_stats_include_online_user_count(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $admin = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-STATS-0001',
+            'customer_type' => 'individual',
+            'first_name' => 'Gamma',
+            'last_name' => 'User',
+            'name' => 'Gamma User',
+            'email' => 'gamma.stats@example.com',
+            'mobile' => '555-0003',
+            'address_line1' => '789 Network Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
+        ]);
+
+        $plan = Plan::factory()->create(['status' => 'active']);
+
+        $router = Router::factory()->create([
+            'tenant_id' => $tenant->id,
+            'status' => 'online',
+        ]);
+
+        Subscription::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-0003',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'gamma.user',
+            'pppoe_password' => 'secret-pass-3',
+            'base_price' => 60,
+            'total_price' => 60,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'connection_status' => 'online',
+        ]);
+
+        Subscription::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-0004',
+            'plan_id' => $plan->id,
+            'router_id' => $router->id,
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'delta.user',
+            'pppoe_password' => 'secret-pass-4',
+            'base_price' => 60,
+            'total_price' => 60,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'connection_status' => 'offline',
+        ]);
+
+        $response = $this->actingAs($admin)->getJson(route('subscriptions.stats'));
+
+        $response->assertOk();
+        $response->assertJsonPath('online', 1);
+        $response->assertJsonPath('active', 2);
+        $response->assertJsonPath('total', 2);
+    }
+
     private function createTenant(string $slug): Tenant
     {
         return Tenant::create([

@@ -57,57 +57,6 @@ function getStatusBadgeClass($status)
         </div>
     </div>
 
-    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center justify-between gap-4">
-            <div>
-                <h2 class="text-sm font-semibold text-gray-900">Import / Export Activity</h2>
-                <p class="mt-1 text-xs text-gray-500">Queued imports, exports, downloads, and row-level reports.</p>
-            </div>
-            <button type="button" @click="fetchImportExportRuns()" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Refresh</button>
-        </div>
-        <div class="mt-4 overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Run</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Rows</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Results</th>
-                        <th class="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
-                    <template x-if="importExportRuns.length === 0">
-                        <tr>
-                            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">No import/export runs yet.</td>
-                        </tr>
-                    </template>
-                    <template x-for="run in importExportRuns" :key="run.id">
-                        <tr>
-                            <td class="px-4 py-3 text-sm text-gray-700">
-                                <div class="font-medium text-gray-900" x-text="`${capitalize(run.direction)} #${run.id}`"></div>
-                                <div class="text-xs text-gray-500" x-text="run.created_at"></div>
-                            </td>
-                            <td class="px-4 py-3">
-                                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold" :class="runStatusClass(run.status)" x-text="capitalize(run.status)"></span>
-                            </td>
-                            <td class="px-4 py-3 text-sm text-gray-700" x-text="`${run.processed_rows} / ${run.total_rows}`"></td>
-                            <td class="px-4 py-3 text-sm text-gray-700" x-text="`Created ${run.created_count}, updated ${run.updated_count}, failed ${run.failed_count}`"></td>
-                            <td class="px-4 py-3 text-right text-sm">
-                                <div class="flex items-center justify-end gap-2">
-                                    <a :href="run.report_url" class="font-medium text-blue-600 hover:text-blue-800">Report</a>
-                                    <template x-if="run.download_url">
-                                        <a :href="run.download_url" class="font-medium text-green-700 hover:text-green-800">Download</a>
-                                    </template>
-                                </div>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     <!-- Summary Stats Row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Total Plans -->
@@ -354,6 +303,82 @@ function getStatusBadgeClass($status)
         </div>
     </div>
 
+    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900">Import / Export Activity</h2>
+                <p class="mt-1 text-xs text-gray-500">Queued imports, exports, downloads, and row-level reports.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="fetchImportExportRuns()" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Refresh</button>
+            </div>
+        </div>
+        <div class="mt-4 overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Run</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Rows</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold uppercase text-gray-500">Results</th>
+                        <th class="px-4 py-2 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    <template x-if="importExportRuns.length === 0">
+                        <tr>
+                            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">No import/export runs yet.</td>
+                        </tr>
+                    </template>
+                    <template x-for="run in importExportRuns" :key="run.id">
+                        <tr>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                <div class="font-medium text-gray-900" x-text="`${capitalize(run.direction)} #${run.id}`"></div>
+                                <div class="text-xs text-gray-500" x-text="run.created_at"></div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold" :class="runStatusClass(run.status)" x-text="capitalize(run.status)"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700" x-text="`${run.processed_rows} / ${run.total_rows}`"></td>
+                            <td class="px-4 py-3 text-sm text-gray-700" x-text="`Created ${run.created_count}, updated ${run.updated_count}, failed ${run.failed_count}`"></td>
+                            <td class="px-4 py-3 text-right text-sm">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a :href="run.report_url" class="font-medium text-blue-600 hover:text-blue-800">Report</a>
+                                    <template x-if="run.download_url">
+                                        <a :href="run.download_url" class="font-medium text-green-700 hover:text-green-800">Download</a>
+                                    </template>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" x-show="importExportPagination.total > 0" style="display: none;">
+            <p class="text-sm text-gray-700">
+                Showing <span class="font-medium" x-text="importExportPagination.from"></span> to <span class="font-medium" x-text="importExportPagination.to"></span> of <span class="font-medium" x-text="importExportPagination.total"></span> results
+            </p>
+            <nav class="relative z-0 inline-flex flex-wrap rounded-md shadow-sm -space-x-px">
+                <button @click="prevImportExportPage()" :disabled="importExportPagination.current_page === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Previous
+                </button>
+                <template x-for="(page, index) in importExportPaginationPages" :key="index">
+                    <span x-show="page === '...'" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500">...</span>
+                    <button
+                        x-show="page !== '...'"
+                        @click="goToImportExportPage(page)"
+                        :class="importExportPagination.current_page === page ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'"
+                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                        x-text="page"
+                    ></button>
+                </template>
+                <button @click="nextImportExportPage()" :disabled="importExportPagination.current_page === importExportPagination.last_page" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Next
+                </button>
+            </nav>
+        </div>
+    </div>
+
     <x-ui.delete-modal
         title="Delete Plan"
         name="deleteModal.plan?.name"
@@ -406,6 +431,14 @@ function plansModule() {
             show: false,
         },
         importExportRuns: [],
+        importExportPagination: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 5,
+            total: 0,
+            from: 0,
+            to: 0
+        },
         importExportTimer: null,
 
         init() {
@@ -459,12 +492,55 @@ function plansModule() {
         },
         async fetchImportExportRuns() {
             try {
-                const response = await fetch('{{ route('plans.import-export-runs') }}');
+                const response = await fetch(`{{ route('plans.import-export-runs') }}?page=${this.importExportPagination.current_page}`);
                 const data = await response.json();
                 this.importExportRuns = data.runs;
+                this.importExportPagination = data.pagination;
             } catch (error) {
                 console.error('Error fetching import/export runs:', error);
             }
+        },
+        goToImportExportPage(page) {
+            if (page < 1 || page > this.importExportPagination.last_page || page === this.importExportPagination.current_page) {
+                return;
+            }
+
+            this.importExportPagination.current_page = page;
+            this.fetchImportExportRuns();
+        },
+        prevImportExportPage() {
+            this.goToImportExportPage(this.importExportPagination.current_page - 1);
+        },
+        nextImportExportPage() {
+            this.goToImportExportPage(this.importExportPagination.current_page + 1);
+        },
+        get importExportPaginationPages() {
+            const totalPages = this.importExportPagination.last_page;
+            const currentPage = this.importExportPagination.current_page;
+
+            if (totalPages <= 7) {
+                return Array.from({ length: totalPages }, (_, index) => index + 1);
+            }
+
+            const pages = [1];
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+
+            if (start > 2) {
+                pages.push('...');
+            }
+
+            for (let page = start; page <= end; page++) {
+                pages.push(page);
+            }
+
+            if (end < totalPages - 1) {
+                pages.push('...');
+            }
+
+            pages.push(totalPages);
+
+            return pages;
         },
         confirmDelete(plan) {
             this.deleteModal.plan = plan;

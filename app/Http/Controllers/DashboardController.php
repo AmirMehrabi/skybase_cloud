@@ -34,6 +34,11 @@ class DashboardController extends Controller
             ->where('status', 'active')
             ->sum('total_price');
 
+        $onlineSubscriptionsCount = Subscription::query()
+            ->where('tenant_id', $tenantId)
+            ->where('connection_status', 'online')
+            ->count();
+
         $routerTotals = [
             'online' => Router::query()
                 ->where('tenant_id', $tenantId)
@@ -62,30 +67,36 @@ class DashboardController extends Controller
                 'trial_ends_at' => $tenant->trial_ends_at?->toFormattedDateString(),
             ],
             'stats' => [
-                // 'customers' => [
-                //     'value' => $customerCount,
-                //     'label' => 'Customers',
-                //     'meta' => $this->growthMeta(
-                //         Customer::query()->where('tenant_id', $tenantId),
-                //         'customer',
-                //     ),
-                //     'href' => route('customers.index'),
-                // ],
-                // 'subscriptions' => [
-                //     'value' => $activeSubscriptionsCount,
-                //     'label' => 'Active subscriptions',
-                //     'meta' => $this->growthMeta(
-                //         Subscription::query()->where('tenant_id', $tenantId),
-                //         'subscription',
-                //     ),
-                //     'href' => route('subscriptions.index'),
-                // ],
+                'customers' => [
+                    'value' => $customerCount,
+                    'label' => 'Customers',
+                    'meta' => $this->growthMeta(
+                        Customer::query()->where('tenant_id', $tenantId),
+                        'customer',
+                    ),
+                    'href' => route('customers.index'),
+                ],
+                'subscriptions' => [
+                    'value' => $activeSubscriptionsCount,
+                    'label' => 'Active subscriptions',
+                    'meta' => $this->growthMeta(
+                        Subscription::query()->where('tenant_id', $tenantId),
+                        'subscription',
+                    ),
+                    'href' => route('subscriptions.index'),
+                ],
                 'recurring_value' => [
                     'value' => $this->formatMoney($activeRecurringValue, $tenant->currency ?? 'USD'),
                     'label' => 'Recurring subscription value',
                     'meta' => $activeSubscriptionsCount > 0
                         ? $this->formatMoney($activeRecurringValue / $activeSubscriptionsCount, $tenant->currency ?? 'USD').' average per active service'
                         : 'No active subscriptions yet',
+                    'href' => route('subscriptions.index'),
+                ],
+                'online_users' => [
+                    'value' => $onlineSubscriptionsCount,
+                    'label' => 'Online users',
+                    'meta' => 'Currently connected subscriptions',
                     'href' => route('subscriptions.index'),
                 ],
                 'routers' => [

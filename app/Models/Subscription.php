@@ -517,6 +517,7 @@ class Subscription extends Model implements LdapImportable
         return [
             'total' => (clone $query)->count(),
             'active' => (clone $query)->active()->count(),
+            'online' => (clone $query)->where('connection_status', 'online')->count(),
             'suspended' => (clone $query)->suspended()->count(),
             'pending' => (clone $query)->pending()->count(),
             'cancelled' => (clone $query)->cancelled()->count(),

@@ -76,7 +76,7 @@
                 </div>
             </div>
 
-            <div class="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-3 backdrop-blur-sm sm:grid-cols-2 sm:rounded-[24px] sm:p-4">
+            <div class="grid gap-3 rounded-[20px] border border-white/10 bg-white/5 p-3 backdrop-blur-sm sm:grid-cols-2 lg:grid-cols-3 sm:rounded-[24px] sm:p-4">
                 @foreach ($dashboard['stats'] as $stat)
                     <a href="{{ $stat['href'] }}" class="rounded-2xl border border-white/10 bg-black/10 p-3 transition hover:bg-black/20 sm:p-4">
                         <p class="text-xs font-medium uppercase tracking-[0.22em] text-slate-300">{{ $stat['label'] }}</p>

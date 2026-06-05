@@ -93,6 +93,7 @@ class DashboardTest extends TestCase
             'subscription_code' => 'SUB-ALPHA-001',
             'status' => 'active',
             'connection_type' => 'pppoe',
+            'connection_status' => 'online',
             'total_price' => 149.99,
         ]);
 
@@ -167,6 +168,7 @@ class DashboardTest extends TestCase
         $response->assertViewHas('dashboard', function (array $dashboard): bool {
             return $dashboard['stats']['customers']['value'] === 2
                 && $dashboard['stats']['subscriptions']['value'] === 1
+                && $dashboard['stats']['online_users']['value'] === 1
                 && $dashboard['attention'][0]['value'] === 1
                 && $dashboard['attention'][1]['value'] === 1
                 && $dashboard['attention'][2]['value'] === 1

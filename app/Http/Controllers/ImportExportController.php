@@ -132,8 +132,9 @@ class ImportExportController extends Controller
             ->where('tenant_id', $request->user()->tenant_id)
             ->where('module', $module)
             ->latest()
-            ->limit(10)
-            ->get()
+            ->paginate(5);
+
+        $runsData = $runs->getCollection()
             ->map(fn (ImportExportRun $run): array => [
                 'id' => $run->id,
                 'module' => $run->module,
@@ -155,7 +156,17 @@ class ImportExportController extends Controller
                     : null,
             ]);
 
-        return response()->json(['runs' => $runs]);
+        return response()->json([
+            'runs' => $runsData,
+            'pagination' => [
+                'current_page' => $runs->currentPage(),
+                'last_page' => $runs->lastPage(),
+                'per_page' => $runs->perPage(),
+                'total' => $runs->total(),
+                'from' => $runs->firstItem() ?? 0,
+                'to' => $runs->lastItem() ?? 0,
+            ],
+        ]);
     }
 
     /**
