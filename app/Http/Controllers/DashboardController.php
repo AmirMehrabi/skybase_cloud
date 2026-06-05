@@ -85,14 +85,14 @@ class DashboardController extends Controller
                     ),
                     'href' => route('subscriptions.index'),
                 ],
-                'recurring_value' => [
-                    'value' => $this->formatMoney($activeRecurringValue, $tenant->currency ?? 'USD'),
-                    'label' => 'Recurring subscription value',
-                    'meta' => $activeSubscriptionsCount > 0
-                        ? $this->formatMoney($activeRecurringValue / $activeSubscriptionsCount, $tenant->currency ?? 'USD').' average per active service'
-                        : 'No active subscriptions yet',
-                    'href' => route('subscriptions.index'),
-                ],
+                // 'recurring_value' => [
+                //     'value' => $this->formatMoney($activeRecurringValue, $tenant->currency ?? 'USD'),
+                //     'label' => 'Recurring subscription value',
+                //     'meta' => $activeSubscriptionsCount > 0
+                //         ? $this->formatMoney($activeRecurringValue / $activeSubscriptionsCount, $tenant->currency ?? 'USD').' average per active service'
+                //         : 'No active subscriptions yet',
+                //     'href' => route('subscriptions.index'),
+                // ],
                 'online_users' => [
                     'value' => $onlineSubscriptionsCount,
                     'label' => 'Online users',
