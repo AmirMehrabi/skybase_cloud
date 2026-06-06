@@ -8,10 +8,16 @@ use RuntimeException;
 class RouterOsCoaClient
 {
     /**
-     * Send a RouterOS CoA Disconnect-Request for the given PPP username.
+     * Send a RouterOS CoA Disconnect-Request for the given PPP session.
      */
-    public function disconnect(Router $router, string $username, ?string $ipAddress = null, ?int $timeoutSeconds = null): int
-    {
+    public function disconnect(
+        Router $router,
+        string $username,
+        ?string $acctSessionId = null,
+        ?string $nasIpAddress = null,
+        ?string $framedIpAddress = null,
+        ?int $timeoutSeconds = null,
+    ): int {
         $secret = trim((string) $router->coa_secret);
 
         if ($secret === '') {
@@ -35,7 +41,14 @@ class RouterOsCoaClient
         stream_set_timeout($connection, $timeout);
 
         try {
-            [$packet, $requestAuthenticator] = $this->buildDisconnectRequest($router, $username, $ipAddress, $secret);
+            [$packet, $requestAuthenticator] = $this->buildDisconnectRequest(
+                $router,
+                $username,
+                $acctSessionId,
+                $nasIpAddress,
+                $framedIpAddress,
+                $secret,
+            );
 
             $written = fwrite($connection, $packet);
 
@@ -64,11 +77,17 @@ class RouterOsCoaClient
     /**
      * @return array{0: string, 1: string}
      */
-    private function buildDisconnectRequest(Router $router, string $username, ?string $ipAddress, string $secret): array
-    {
+    private function buildDisconnectRequest(
+        Router $router,
+        string $username,
+        ?string $acctSessionId,
+        ?string $nasIpAddress,
+        ?string $framedIpAddress,
+        string $secret,
+    ): array {
         $identifier = random_int(0, 255);
         $requestAuthenticator = random_bytes(16);
-        $attributes = $this->disconnectAttributes($router, $username, $ipAddress);
+        $attributes = $this->disconnectAttributes($router, $username, $acctSessionId, $nasIpAddress, $framedIpAddress);
 
         $attributesWithPlaceholder = $attributes.$this->encodeAttribute(80, str_repeat("\0", 16));
         $packet = pack('CCn', 40, $identifier, 20 + strlen($attributesWithPlaceholder)).$requestAuthenticator.$attributesWithPlaceholder;
@@ -80,14 +99,28 @@ class RouterOsCoaClient
         return [$finalPacket, $requestAuthenticator];
     }
 
-    private function disconnectAttributes(Router $router, string $username, ?string $ipAddress): string
-    {
+    private function disconnectAttributes(
+        Router $router,
+        string $username,
+        ?string $acctSessionId,
+        ?string $nasIpAddress,
+        ?string $framedIpAddress,
+    ): string {
         $attributes = $this->encodeAttribute(1, $username);
-        $attributes .= $this->encodeIpAttribute(4, $router->ip_address);
-        $attributes .= $this->encodeAttribute(32, $router->name);
+        if (filled($acctSessionId)) {
+            $attributes .= $this->encodeAttribute(44, $acctSessionId);
+        }
 
-        if (filled($ipAddress)) {
-            $attributes .= $this->encodeIpAttribute(8, $ipAddress);
+        $nasIpAddress = filled($nasIpAddress) ? $nasIpAddress : $router->ip_address;
+
+        if (blank($nasIpAddress)) {
+            throw new RuntimeException('RouterOS CoA NAS-IP-Address is not configured.');
+        }
+
+        $attributes .= $this->encodeIpAttribute(4, $nasIpAddress);
+
+        if (filled($framedIpAddress)) {
+            $attributes .= $this->encodeIpAttribute(8, $framedIpAddress);
         }
 
         return $attributes;

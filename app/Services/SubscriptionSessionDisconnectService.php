@@ -6,7 +6,9 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\RouterOs\RouterOsClient;
 use App\Services\RouterOs\RouterOsCoaClient;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class SubscriptionSessionDisconnectService
@@ -21,6 +23,7 @@ class SubscriptionSessionDisconnectService
         $subscription->loadMissing('router');
         $router = $subscription->router;
         $username = (string) $subscription->pppoe_username;
+        $radiusSession = $this->activeRadiusSession($subscription);
 
         if (! $subscription->isPppoe()) {
             return SubscriptionSessionDisconnectResult::skipped('Subscription is not a PPPoE service.');
@@ -40,7 +43,7 @@ class SubscriptionSessionDisconnectService
             return $apiResult;
         }
 
-        $coaResult = $this->disconnectViaCoa($subscription, $username);
+        $coaResult = $this->disconnectViaCoa($subscription, $username, $radiusSession);
 
         if ($coaResult->wasSuccessful()) {
             $message = 'Disconnected 1 active PPP session(s) via CoA after RouterOS API: '.$apiResult->message;
@@ -63,6 +66,11 @@ class SubscriptionSessionDisconnectService
             'router_id' => $router->id,
             'router_name' => $router->name,
             'pppoe_username' => $username,
+            'radius_session' => $radiusSession ? [
+                'acct_session_id' => $radiusSession->acctsessionid,
+                'nas_ip_address' => $radiusSession->nasipaddress,
+                'framed_ip_address' => $radiusSession->framedipaddress,
+            ] : null,
             'api_result' => $apiResult->context(),
             'coa_result' => $coaResult->context(),
             'message' => $message,
@@ -192,8 +200,11 @@ class SubscriptionSessionDisconnectService
         }
     }
 
-    private function disconnectViaCoa(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
-    {
+    private function disconnectViaCoa(
+        Subscription $subscription,
+        string $username,
+        ?object $radiusSession,
+    ): SubscriptionSessionDisconnectResult {
         $router = $subscription->router;
 
         if (! $router) {
@@ -213,7 +224,9 @@ class SubscriptionSessionDisconnectService
             $removed = $this->coaClient->disconnect(
                 $router,
                 $username,
-                filled($subscription->ip_address) ? (string) $subscription->ip_address : null,
+                $radiusSession?->acctsessionid,
+                $radiusSession?->nasipaddress,
+                $radiusSession?->framedipaddress ?? (filled($subscription->ip_address) ? (string) $subscription->ip_address : null),
                 5,
             );
 
@@ -232,6 +245,30 @@ class SubscriptionSessionDisconnectService
                 $router->name,
             );
         }
+    }
+
+    private function activeRadiusSession(Subscription $subscription): ?object
+    {
+        if (! Schema::hasTable('radacct')) {
+            return null;
+        }
+
+        $username = (string) $subscription->pppoe_username;
+
+        if ($username === '') {
+            return null;
+        }
+
+        return DB::table('radacct')
+            ->where('username', $username)
+            ->whereNull('acctstoptime')
+            ->orderByDesc('acctstarttime')
+            ->first([
+                'acctsessionid',
+                'username',
+                'nasipaddress',
+                'framedipaddress',
+            ]);
     }
 
     private function composeFailureMessage(
