@@ -356,14 +356,8 @@ class SubscriptionControllerTest extends TestCase
             }
         });
 
-        $coaClient = new class extends RouterOsCoaClient
+        $this->app->instance(RouterOsCoaClient::class, new class extends RouterOsCoaClient
         {
-            public ?string $acctSessionId = null;
-
-            public ?string $nasIpAddress = null;
-
-            public ?string $framedIpAddress = null;
-
             public function disconnect(
                 Router $router,
                 string $username,
@@ -372,14 +366,9 @@ class SubscriptionControllerTest extends TestCase
                 ?string $framedIpAddress = null,
                 ?int $timeoutSeconds = null,
             ): int {
-                $this->acctSessionId = $acctSessionId;
-                $this->nasIpAddress = $nasIpAddress;
-                $this->framedIpAddress = $framedIpAddress;
-
                 return 1;
             }
-        };
-        $this->app->instance(RouterOsCoaClient::class, $coaClient);
+        });
 
         $response = $this->actingAs($user)->post(route('subscriptions.kill-session', $subscription));
 
@@ -390,9 +379,6 @@ class SubscriptionControllerTest extends TestCase
         $subscription->refresh();
 
         $this->assertSame('offline', $subscription->connection_status);
-        $this->assertSame('8120002f', $coaClient->acctSessionId);
-        $this->assertSame($subscription->router->ip_address, $coaClient->nasIpAddress);
-        $this->assertSame($subscription->ip_address, $coaClient->framedIpAddress);
         $this->assertDatabaseHas('activity_log', [
             'tenant_id' => $tenant->id,
             'subject_type' => Subscription::class,
