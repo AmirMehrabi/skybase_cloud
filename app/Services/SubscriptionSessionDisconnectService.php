@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Subscription;
+use App\Models\User;
 use App\Services\RouterOs\RouterOsClient;
 use App\Services\RouterOs\RouterOsCoaClient;
 use Illuminate\Support\Facades\DB;
@@ -85,6 +86,31 @@ class SubscriptionSessionDisconnectService
             $router->id,
             $router->name,
         );
+    }
+
+    public function recordActivity(Subscription $subscription, SubscriptionSessionDisconnectResult $result, ?User $causer = null): void
+    {
+        $event = match ($result->status) {
+            'success' => 'session_disconnect_succeeded',
+            'skipped' => 'session_disconnect_skipped',
+            default => 'session_disconnect_failed',
+        };
+
+        $activity = activity()
+            ->useLog('subscription')
+            ->event($event)
+            ->performedOn($subscription)
+            ->withProperties($result->context());
+
+        if ($causer !== null) {
+            $activity->causedBy($causer);
+        }
+
+        $activity->log(match ($result->status) {
+            'success' => 'Suspended subscription session disconnect succeeded',
+            'skipped' => 'Suspended subscription session disconnect skipped',
+            default => 'Suspended subscription session disconnect failed',
+        });
     }
 
     private function disconnectViaRouterOsApi(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult

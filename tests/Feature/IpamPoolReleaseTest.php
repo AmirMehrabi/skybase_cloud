@@ -70,7 +70,7 @@ class IpamPoolReleaseTest extends TestCase
         $this->assertSame(0, $pool->used_ips);
         $this->assertSame(1, $pool->available_ips);
 
-        $this->assertDatabaseMissing('subscriptions', [
+        $this->assertSoftDeleted('subscriptions', [
             'id' => $subscription->id,
         ]);
     }
