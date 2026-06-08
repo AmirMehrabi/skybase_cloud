@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\RadiusReply;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class SubscriptionIpRouteSyncService
 {
@@ -37,6 +39,8 @@ class SubscriptionIpRouteSyncService
 
             return;
         }
+
+        $this->ensureFramedRouteRepliesAllowMultipleRows();
 
         DB::transaction(function () use ($subscription): void {
             $tenantId = (string) $subscription->tenant_id;
@@ -134,6 +138,26 @@ class SubscriptionIpRouteSyncService
     private function framedRouteValue(SubscriptionIpRoute $route, Subscription $subscription): string
     {
         return $route->destinationAddress().' '.$subscription->ip_address.' 1';
+    }
+
+    private function ensureFramedRouteRepliesAllowMultipleRows(): void
+    {
+        if (! Schema::hasTable('radreply')) {
+            return;
+        }
+
+        Schema::whenTableHasIndex(
+            'radreply',
+            ['tenant_id', 'username', 'attribute'],
+            function (): void {
+                Log::warning('Legacy radreply unique index detected. Dropping it so multiple Framed-Route rows can be synced.');
+
+                Schema::table('radreply', function (Blueprint $table): void {
+                    $table->dropUnique('radreply_tenant_id_username_attribute_unique');
+                });
+            },
+            'unique'
+        );
     }
 
     private function skipReason(?Subscription $subscription): ?string

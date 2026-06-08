@@ -22,9 +22,11 @@ use App\Models\User;
 use App\Services\BulkDeletionService;
 use App\Services\RouterOs\RouterOsClient;
 use App\Services\RouterOs\RouterOsCoaClient;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -1069,6 +1071,76 @@ class SubscriptionControllerTest extends TestCase
             ->where('username', 'john.routed')
             ->where('attribute', 'Framed-Route')
             ->count());
+    }
+
+    public function test_sync_ip_routes_action_repairs_legacy_unique_radius_reply_index(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.routed',
+            'pppoe_password' => 'secret-pass',
+        ])->save();
+
+        Schema::table('radreply', function (Blueprint $table): void {
+            $table->unique(['tenant_id', 'username', 'attribute']);
+        });
+
+        $routeIp = IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.10.0.13',
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'metadata' => ['purpose' => 'subscription_ip_route'],
+        ]);
+        SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address_id' => $routeIp->id,
+            'ip_address' => '10.10.0.13',
+            'cidr' => 32,
+            'routeros_comment' => 'skybase:subscription-ip-route:legacy-index',
+            'routeros_sync_status' => 'failed',
+            'routeros_sync_error' => 'RADIUS route sync failed.',
+        ]);
+        SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.10.0.14',
+            'cidr' => 32,
+            'routeros_comment' => 'skybase:subscription-ip-route:legacy-index-second',
+            'routeros_sync_status' => 'failed',
+            'routeros_sync_error' => 'RADIUS route sync failed.',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('subscriptions.ip-routes.sync', $subscription));
+
+        $response
+            ->assertRedirect(route('subscriptions.show', $subscription))
+            ->assertSessionHas('success', 'RADIUS IP route attributes synced successfully.');
+
+        $this->assertSame(2, RadiusReply::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', 'john.routed')
+            ->where('attribute', 'Framed-Route')
+            ->count());
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '10.10.0.13/32 10.10.0.11 1',
+        ]);
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.routed',
+            'attribute' => 'Framed-Route',
+            'op' => '+=',
+            'value' => '10.10.0.14/32 10.10.0.11 1',
+        ]);
     }
 
     private function createTenant(string $slug, string $companyName): Tenant
