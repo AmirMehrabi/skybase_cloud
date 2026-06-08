@@ -8,6 +8,7 @@ use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Router;
 use App\Models\Site;
+use App\Models\Subscription;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -200,6 +201,42 @@ class IpamController extends Controller
             ->paginate(50);
 
         return view('ipam.pools.show', compact('pool', 'ipAddresses'));
+    }
+
+    /**
+     * Release an IP address from the pool.
+     */
+    public function releasePoolIpAddress(IpPool $pool, IpAddress $ipAddress): RedirectResponse
+    {
+        $this->authorizeTenantAccess($pool);
+
+        abort_unless((int) $ipAddress->ip_pool_id === (int) $pool->id, 404);
+        abort_unless((string) $ipAddress->tenant_id === (string) auth()->user()?->tenant_id, 403);
+
+        DB::transaction(function () use ($pool, $ipAddress): void {
+            $subscriptionCode = $ipAddress->subscription_code;
+
+            if ($subscriptionCode) {
+                $subscription = Subscription::query()
+                    ->where('tenant_id', auth()->user()?->tenant_id)
+                    ->where('subscription_code', $subscriptionCode)
+                    ->first();
+
+                if ($subscription && $subscription->ip_address === $ipAddress->ip_address) {
+                    $subscription->update(['ip_address' => null]);
+                }
+            }
+
+            if ($ipAddress->isAssigned() || $ipAddress->isReserved()) {
+                $ipAddress->release();
+            }
+
+            $pool->updateStatistics();
+        });
+
+        return redirect()
+            ->back()
+            ->with('success', "IP {$ipAddress->ip_address} has been released.");
     }
 
     /**
@@ -647,8 +684,8 @@ class IpamController extends Controller
      */
     protected function authorizeTenantAccess(IpPool $IpPool): void
     {
-        // if ($IpPool->tenant_id !== auth()->user->tenant_id) {
-        //     abort(403, 'Unauthorized access to this IP pool.');
-        // }
+        if ((string) $IpPool->tenant_id !== (string) auth()->user()?->tenant_id) {
+            abort(403, 'Unauthorized access to this IP pool.');
+        }
     }
 }

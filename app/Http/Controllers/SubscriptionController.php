@@ -326,6 +326,10 @@ class SubscriptionController extends Controller
         $ipAddress = array_key_exists('ip_address', $validated) ? $validated['ip_address'] : null;
         $ipAddressProvided = array_key_exists('ip_address', $validated);
         unset($validated['ip_address']);
+        $originalPppoeUsername = (string) $subscription->pppoe_username;
+        $originalPppoePassword = (string) $subscription->pppoe_password;
+        $disconnectUsername = null;
+        $disconnectResult = null;
 
         DB::transaction(function () use ($subscription, $validated, $ipAddress, $ipAddressProvided, $ipRoutesProvided, $ipRoutes): void {
             if (array_key_exists('plan_id', $validated)) {
@@ -394,16 +398,50 @@ class SubscriptionController extends Controller
 
         app(SubscriptionIpRouteSyncService::class)->syncRoutes($subscription->fresh(['router', 'ipRoutes']));
 
+        $freshSubscription = $subscription->fresh(['router']);
+        $submittedPppoeUsername = array_key_exists('pppoe_username', $validated) ? (string) $validated['pppoe_username'] : $originalPppoeUsername;
+        $submittedPppoePassword = array_key_exists('pppoe_password', $validated) ? (string) $validated['pppoe_password'] : $originalPppoePassword;
+        $credentialsChanged = $submittedPppoeUsername !== $originalPppoeUsername || $submittedPppoePassword !== $originalPppoePassword;
+
+        if ($credentialsChanged && $freshSubscription->isPppoe() && $freshSubscription->router) {
+            $disconnectUsername = $submittedPppoeUsername !== $originalPppoeUsername ? $originalPppoeUsername : $submittedPppoeUsername;
+
+            if ($disconnectUsername !== '') {
+                $disconnectResult = $this->disconnectService->disconnectForUsername($freshSubscription, $disconnectUsername);
+                $this->disconnectService->recordActivity($freshSubscription, $disconnectResult, $request->user());
+
+                if ($disconnectResult->wasSuccessful()) {
+                    $freshSubscription->forceFill([
+                        'connection_status' => 'offline',
+                        'connection_status_checked_at' => now(),
+                    ])->saveQuietly();
+                }
+            }
+        }
+
+        $message = 'Subscription updated successfully.';
+        $flashKey = 'success';
+
+        if ($disconnectResult) {
+            if ($disconnectResult->wasSuccessful()) {
+                $message = 'Subscription credentials updated successfully. '.$disconnectResult->message;
+            } else {
+                $message = 'Subscription credentials updated successfully, but the router disconnect failed: '.$disconnectResult->message;
+                $flashKey = 'error';
+            }
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Subscription updated successfully.',
+                'message' => $message,
                 'subscription' => $subscription->fresh()->load('customer', 'plan', 'router'),
+                'disconnect_result' => $disconnectResult?->context(),
             ]);
         }
 
         return redirect()
             ->route('subscriptions.show', $subscription)
-            ->with('success', 'Subscription updated successfully.');
+            ->with($flashKey, $message);
     }
 
     public function suggestIp(Subscription $subscription): JsonResponse

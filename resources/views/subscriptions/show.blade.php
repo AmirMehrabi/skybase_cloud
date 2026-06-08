@@ -80,6 +80,16 @@ if (! function_exists('getStatusBadgeClass')) {
     x-data="{
         tab: @js(request('tab', 'overview')),
         copiedField: null,
+        credentials: {
+            open: {{ $errors->has('pppoe_username') || $errors->has('pppoe_password') ? 'true' : 'false' }},
+            form: {
+                pppoe_username: @js(old('pppoe_username', $subscriptionModel->pppoe_username ?? '')),
+                pppoe_password: @js(old('pppoe_password', $subscriptionModel->pppoe_password ?? '')),
+            },
+            submitting: false,
+            message: null,
+            error: null,
+        },
         ipChange: {
             open: {{ $errors->has('ip_address') ? 'true' : 'false' }},
             form: {
@@ -119,6 +129,16 @@ if (! function_exists('getStatusBadgeClass')) {
             } catch (error) {
                 this.copiedField = null;
             }
+        },
+        openCredentialsModal() {
+            this.credentials.open = true;
+            this.credentials.error = null;
+            this.credentials.message = null;
+        },
+        closeCredentialsModal() {
+            this.credentials.open = false;
+            this.credentials.error = null;
+            this.credentials.message = null;
         },
         openIpModal() {
             this.ipChange.open = true;
@@ -256,7 +276,13 @@ if (! function_exists('getStatusBadgeClass')) {
                     Edit
                 </a>
 
-                
+                <button type="button" @click="openCredentialsModal()" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a3 3 0 10-6 0v3H7a2 2 0 00-2 2v5a2 2 0 002 2h8a2 2 0 002-2v-5a2 2 0 00-2-2h-2V7zm-3 7v2"></path>
+                    </svg>
+                    Manage Credentials
+                </button>
+
                 @if($subscription['status'] === 'active')
                     <form method="POST" action="{{ route('subscriptions.suspend', $subscription['id']) }}">
                         @csrf
@@ -1079,6 +1105,70 @@ if (! function_exists('getStatusBadgeClass')) {
                     <x-activity-log :activities="$activityLog" />
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div x-show="credentials.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6" @keydown.escape.window="closeCredentialsModal()">
+        <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" @click="closeCredentialsModal()"></div>
+        <div class="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5">
+            <div class="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Manage Credentials</p>
+                    <h3 class="mt-1 text-lg font-semibold text-gray-900">{{ $subscription['subscription_code'] }}</h3>
+                    <p class="mt-1 text-sm text-gray-500">Update PPPoE username and password without changing the rest of the subscription.</p>
+                </div>
+                <button type="button" @click="closeCredentialsModal()" class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('subscriptions.update', $subscription['id']) }}" class="space-y-5 px-6 py-5" @submit="credentials.submitting = true" autocomplete="off">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label for="show_pppoe_username" class="block text-sm font-medium text-gray-700">PPP Username</label>
+                    <input
+                        type="text"
+                        name="pppoe_username"
+                        id="show_pppoe_username"
+                        x-model="credentials.form.pppoe_username"
+                        autocomplete="off"
+                        class="mt-1 block w-full rounded-xl border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                    @error('pppoe_username')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="show_pppoe_password" class="block text-sm font-medium text-gray-700">PPP Password</label>
+                    <input
+                        type="password"
+                        name="pppoe_password"
+                        id="show_pppoe_password"
+                        x-model="credentials.form.pppoe_password"
+                        autocomplete="new-password"
+                        class="mt-1 block w-full rounded-xl border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                    @error('pppoe_password')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="rounded-2xl border border-gray-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+                    Saving either field will sync RADIUS and disconnect the current PPP session through RouterOS API.
+                </div>
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="text-xs text-gray-500">Leave a value unchanged if you do not want to alter it.</div>
+                    <div class="flex items-center gap-3">
+                        <button type="button" @click="closeCredentialsModal()" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-700">
+                            Save Credentials
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 

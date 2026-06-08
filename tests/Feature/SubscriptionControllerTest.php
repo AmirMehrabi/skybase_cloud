@@ -22,6 +22,8 @@ use App\Models\User;
 use App\Services\BulkDeletionService;
 use App\Services\RouterOs\RouterOsClient;
 use App\Services\RouterOs\RouterOsCoaClient;
+use App\Services\SubscriptionSessionDisconnectResult;
+use App\Services\SubscriptionSessionDisconnectService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -386,6 +388,80 @@ class SubscriptionControllerTest extends TestCase
             'subject_type' => Subscription::class,
             'subject_id' => $subscription->id,
             'event' => 'session_disconnect_succeeded',
+        ]);
+    }
+
+    public function test_update_credentials_changes_username_and_disconnects_the_previous_router_session(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.doe',
+            'pppoe_password' => 'secret-pass',
+            'connection_status' => 'online',
+            'connection_status_checked_at' => now()->subMinutes(5),
+        ])->saveQuietly();
+
+        $tracker = (object) ['calls' => []];
+        $this->bindSuccessfulCredentialDisconnectService($tracker);
+
+        $response = $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'pppoe_username' => 'john.renamed',
+            'pppoe_password' => 'new-secret-pass',
+        ]);
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+        $response->assertSessionHas('success', 'Subscription credentials updated successfully. Disconnected 1 active PPP session(s).');
+
+        $subscription->refresh();
+
+        $this->assertSame('john.renamed', $subscription->pppoe_username);
+        $this->assertSame('offline', $subscription->connection_status);
+        $this->assertSame(['john.doe'], $tracker->calls);
+        $this->assertDatabaseMissing('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.doe',
+            'attribute' => 'Cleartext-Password',
+        ]);
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.renamed',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'new-secret-pass',
+        ]);
+    }
+
+    public function test_update_credentials_with_password_only_disconnects_the_current_router_session(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->forceFill([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.doe',
+            'pppoe_password' => 'secret-pass',
+            'connection_status' => 'online',
+            'connection_status_checked_at' => now()->subMinutes(5),
+        ])->saveQuietly();
+
+        $tracker = (object) ['calls' => []];
+        $this->bindSuccessfulCredentialDisconnectService($tracker);
+
+        $response = $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'pppoe_password' => 'new-secret-pass',
+        ]);
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+        $response->assertSessionHas('success', 'Subscription credentials updated successfully. Disconnected 1 active PPP session(s).');
+
+        $subscription->refresh();
+
+        $this->assertSame('john.doe', $subscription->pppoe_username);
+        $this->assertSame('offline', $subscription->connection_status);
+        $this->assertSame(['john.doe'], $tracker->calls);
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'john.doe',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'new-secret-pass',
         ]);
     }
 
@@ -1141,6 +1217,29 @@ class SubscriptionControllerTest extends TestCase
             'op' => '+=',
             'value' => '10.10.0.14/32 10.10.0.11 1',
         ]);
+    }
+
+    private function bindSuccessfulCredentialDisconnectService(object $tracker): void
+    {
+        $this->app->instance(SubscriptionSessionDisconnectService::class, new class($tracker) extends SubscriptionSessionDisconnectService
+        {
+            public function __construct(private object $tracker) {}
+
+            public function disconnectForUsername(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
+            {
+                $this->tracker->calls[] = $username;
+
+                return SubscriptionSessionDisconnectResult::success(
+                    'Disconnected 1 active PPP session(s).',
+                    'routeros-api',
+                    $subscription->router?->id,
+                    $subscription->router?->name,
+                    1,
+                );
+            }
+
+            public function recordActivity(Subscription $subscription, SubscriptionSessionDisconnectResult $result, ?User $causer = null): void {}
+        });
     }
 
     private function createTenant(string $slug, string $companyName): Tenant

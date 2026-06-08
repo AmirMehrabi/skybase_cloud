@@ -294,6 +294,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
             Route::get('/create', [IpamController::class, 'create'])->name('create');
             Route::post('/', [IpamController::class, 'store'])->name('store');
             Route::get('/{pool}', [IpamController::class, 'show'])->name('show');
+            Route::patch('/{pool}/ip-addresses/{ipAddress}/release', [IpamController::class, 'releasePoolIpAddress'])->name('ip-addresses.release');
             Route::get('/{pool}/edit', [IpamController::class, 'edit'])->name('edit');
             Route::put('/{pool}', [IpamController::class, 'update'])->name('update');
             Route::delete('/{pool}', [IpamController::class, 'destroy'])->name('destroy');

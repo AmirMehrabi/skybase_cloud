@@ -140,7 +140,9 @@ class IpAddress extends Model
             'customer_id' => null,
             'mac_address' => null,
             'subscription_code' => null,
+            'assigned_at' => null,
             'released_at' => now(),
+            'notes' => null,
         ]);
     }
 

@@ -256,12 +256,20 @@ function getIpRowBg($status)
                                         @if($ip->customer)
                                         <a href="{{ route('customers.show', $ip->customer->id) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">View Customer</a>
                                         @endif
-                                        <button @click="releaseIp('{{ $ip->ip_address }}')" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
+                                        <form method="POST" action="{{ route('ipam.pools.ip-addresses.release', [$pool, $ip]) }}" class="inline-flex" onsubmit="return confirm('Release IP {{ $ip->ip_address }}?')">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
+                                        </form>
                                     </div>
                                 @elseif($ip->status === 'reserved')
                                     <div class="flex items-center justify-end gap-1">
                                         <button @click="assignIp('{{ $ip->ip_address }}')" class="text-green-600 hover:text-green-800 text-xs font-medium">Assign</button>
-                                        <button @click="releaseIp('{{ $ip->ip_address }}')" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
+                                        <form method="POST" action="{{ route('ipam.pools.ip-addresses.release', [$pool, $ip]) }}" class="inline-flex" onsubmit="return confirm('Release IP {{ $ip->ip_address }}?')">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="text-gray-600 hover:text-gray-800 text-xs font-medium">Release</button>
+                                        </form>
                                     </div>
                                 @elseif($ip->status === 'blocked')
                                     <button @click="unblockIp('{{ $ip->ip_address }}')" class="text-blue-600 hover:text-blue-800 text-xs font-medium">Unblock</button>
@@ -353,11 +361,6 @@ function poolShow() {
         blockIp(ip) {
             if (confirm(`Block IP ${ip}?`)) {
                 alert(`IP ${ip} has been blocked`);
-            }
-        },
-        releaseIp(ip) {
-            if (confirm(`Release IP ${ip}?`)) {
-                alert(`IP ${ip} has been released`);
             }
         },
         unblockIp(ip) {
