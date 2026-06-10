@@ -71,21 +71,6 @@ class SubscriptionSessionDisconnectServiceTest extends TestCase
             'framedipaddress' => '10.10.10.55',
         ]);
 
-        $service = app(SubscriptionSessionDisconnectService::class);
-        $subscription = new Subscription([
-            'connection_type' => 'pppoe',
-            'pppoe_username' => 'john.doe',
-            'ip_address' => '10.10.10.55',
-        ]);
-        $subscription->setRelation('router', new Router([
-            'ip_address' => '192.168.88.1',
-            'name' => 'Landing Station',
-            'vendor' => 'Mikrotik',
-            'enable_provisioning' => true,
-            'api_username' => 'admin',
-            'api_password' => 'secret',
-        ]));
-
         $client = new class extends RouterOsClient
         {
             public array $sent = [];
@@ -125,6 +110,21 @@ class SubscriptionSessionDisconnectServiceTest extends TestCase
         };
 
         $this->app->instance(RouterOsClient::class, $client);
+
+        $service = app(SubscriptionSessionDisconnectService::class);
+        $subscription = new Subscription([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.doe',
+            'ip_address' => '10.10.10.55',
+        ]);
+        $subscription->setRelation('router', new Router([
+            'ip_address' => '192.168.88.1',
+            'name' => 'Landing Station',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+            'api_username' => 'admin',
+            'api_password' => 'secret',
+        ]));
 
         $result = $service->disconnect($subscription);
 
