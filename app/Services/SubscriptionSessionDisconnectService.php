@@ -6,6 +6,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\RouterOs\RouterOsClient;
 use App\Services\RouterOs\RouterOsCoaClient;
+use App\Services\RouterOs\RouterOsSshClient;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -15,6 +16,7 @@ class SubscriptionSessionDisconnectService
 {
     public function __construct(
         private RouterOsClient $routerOs,
+        private RouterOsSshClient $sshClient,
         private RouterOsCoaClient $coaClient,
     ) {}
 
@@ -45,6 +47,20 @@ class SubscriptionSessionDisconnectService
 
         if ($apiResult->wasSuccessful()) {
             return $apiResult;
+        }
+
+        $sshResult = $this->disconnectViaRouterOsSsh($subscription, $username);
+
+        if ($sshResult->wasSuccessful()) {
+            $message = 'Disconnected 1 active PPP session(s) via SSH after RouterOS API: '.$apiResult->message;
+
+            return SubscriptionSessionDisconnectResult::success(
+                $message,
+                'routeros-ssh',
+                $router->id,
+                $router->name,
+                $sshResult->sessionsRemoved,
+            );
         }
 
         $coaResult = $this->disconnectViaCoa($subscription, $username, $radiusSession);
@@ -78,11 +94,12 @@ class SubscriptionSessionDisconnectService
             'api_result' => $apiResult->context(),
             'coa_result' => $coaResult->context(),
             'message' => $message,
+            'ssh_result' => $sshResult->context() ?? null,
         ]);
 
         return SubscriptionSessionDisconnectResult::failed(
             $message,
-            $coaResult->method ?? $apiResult->method,
+            $coaResult->method ?? $sshResult->method ?? $apiResult->method,
             $router->id,
             $router->name,
         );
@@ -251,6 +268,70 @@ class SubscriptionSessionDisconnectService
             return SubscriptionSessionDisconnectResult::failed(
                 'RouterOS CoA disconnect failed: '.$exception->getMessage(),
                 'routeros-coa',
+                $router->id,
+                $router->name,
+            );
+        }
+    }
+
+    private function disconnectViaRouterOsSsh(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
+    {
+        $router = $subscription->router;
+
+        if (! $router) {
+            return SubscriptionSessionDisconnectResult::skipped('Subscription has no assigned router.');
+        }
+
+        if (! $router->isMikrotik()) {
+            return SubscriptionSessionDisconnectResult::skipped(
+                'Assigned router does not support RouterOS SSH disconnects.',
+                'routeros-ssh',
+                $router->id,
+                $router->name,
+            );
+        }
+
+        if (! $router->ssh_port) {
+            return SubscriptionSessionDisconnectResult::skipped(
+                'Router SSH port is missing.',
+                'routeros-ssh',
+                $router->id,
+                $router->name,
+            );
+        }
+
+        if (! $router->api_username) {
+            return SubscriptionSessionDisconnectResult::failed(
+                'Router SSH username is missing.',
+                'routeros-ssh',
+                $router->id,
+                $router->name,
+            );
+        }
+
+        try {
+            $removed = $this->sshClient->disconnect($router, $username, 5);
+
+            if ($removed === 0) {
+                return SubscriptionSessionDisconnectResult::skipped(
+                    'No active PPP session was removed via SSH.',
+                    'routeros-ssh',
+                    $router->id,
+                    $router->name,
+                );
+            }
+
+            return SubscriptionSessionDisconnectResult::success(
+                'Disconnected 1 active PPP session(s) via SSH.',
+                'routeros-ssh',
+                $router->id,
+                $router->name,
+                $removed,
+            );
+        } catch (Throwable $exception) {
+            return SubscriptionSessionDisconnectResult::failed(
+                'RouterOS SSH disconnect failed: '.$exception->getMessage(),
+                'routeros-ssh',
                 $router->id,
                 $router->name,
             );

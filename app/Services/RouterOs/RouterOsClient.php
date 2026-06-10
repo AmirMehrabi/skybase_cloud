@@ -32,17 +32,27 @@ class RouterOsClient
     public function connect(Router $router, ?int $timeoutSeconds = null)
     {
         $host = $router->ip_address;
-        $port = (int) ($router->api_port ?: 8728);
         $timeout = max(1, (int) ($timeoutSeconds ?? $router->timeout ?? 30));
-        $connection = @stream_socket_client("tcp://{$host}:{$port}", $errno, $error, $timeout);
 
-        if (! $connection) {
-            throw new RuntimeException("Unable to connect to RouterOS API: {$error}", $errno);
+        $ports = array_values(array_unique(array_filter([
+            (int) ($router->api_port ?: 8728),
+            8729,
+        ])));
+        $errors = [];
+
+        foreach ($ports as $port) {
+            $connection = @stream_socket_client("tcp://{$host}:{$port}", $errno, $error, $timeout);
+
+            if ($connection) {
+                stream_set_timeout($connection, $timeout);
+
+                return $connection;
+            }
+
+            $errors[] = "{$host}:{$port} - {$error}";
         }
 
-        stream_set_timeout($connection, $timeout);
-
-        return $connection;
+        throw new RuntimeException('Unable to connect to RouterOS API. Tried '.implode('; ', $errors), $errno ?? 0);
     }
 
     /**
