@@ -788,7 +788,7 @@ if (! function_exists('getStatusBadgeClass')) {
                     <div x-show="bandwidth.live.error" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" x-text="bandwidth.live.error"></div>
 
                     <div class="mt-5 h-96 overflow-hidden rounded-xl border border-gray-200 bg-white p-4">
-                        <template x-if="bandwidth.history.length > 1">
+                        <template x-if="bandwidth.history.length > 1 && bandwidthMax() > 0">
                             <div class="relative h-full w-full">
                                 <svg viewBox="0 0 1000 400" class="h-full w-full" style="overflow: visible;">
                                     <!-- Grid lines -->
@@ -800,21 +800,21 @@ if (! function_exists('getStatusBadgeClass')) {
                                     <rect width="1000" height="400" fill="url(#grid)" />
                                     
                                     <!-- Y-axis labels -->
-                                    <template x-for="i in 5" :key="i">
+                                    <template x-for="(item, idx) in [0, 1, 2, 3, 4]" :key="idx">
                                         <g>
-                                            <line :x1="0" :y1="(i - 1) * 100" :x2="1000" :y2="(i - 1) * 100" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4,4"/>
-                                            <text :x="-10" :y="(i - 1) * 100 + 5" text-anchor="end" class="text-xs fill-gray-500" x-text="formatSpeed(bandwidthMax() * (1 - (i - 1) / 4))"></text>
+                                            <line :x1="0" :y1="idx * 100" :x2="1000" :y2="idx * 100" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4,4"/>
+                                            <text :x="-10" :y="idx * 100 + 5" text-anchor="end" class="text-xs fill-gray-500" x-text="formatSpeed(bandwidthMax() * (1 - idx / 4))"></text>
                                         </g>
                                     </template>
                                     
                                     <!-- X-axis time labels -->
-                                    <template x-for="i in 6" :key="'time-' + i">
+                                    <template x-for="(item, idx) in [0, 1, 2, 3, 4, 5]" :key="'time-' + idx">
                                         <text 
-                                            :x="((i - 1) / 5) * 1000" 
+                                            :x="(idx / 5) * 1000" 
                                             y="420" 
                                             text-anchor="middle" 
                                             class="text-xs fill-gray-500"
-                                            x-text="bandwidth.history[Math.floor(((i - 1) / 5) * (bandwidth.history.length - 1))]?.time || ''"
+                                            x-text="bandwidth.history[Math.floor((idx / 5) * Math.max(0, bandwidth.history.length - 1))]?.time || ''"
                                         ></text>
                                     </template>
                                     
@@ -840,17 +840,21 @@ if (! function_exists('getStatusBadgeClass')) {
                                     <!-- TX line -->
                                     <polyline :points="bandwidthLineScaled('tx_bps')" fill="none" stroke="#059669" stroke-width="2.5"/>
                                     
-                                    <!-- Interactive hover points -->
+                                    <!-- Interactive hover areas -->
                                     <template x-for="(point, index) in bandwidth.history" :key="index">
-                                        <circle 
-                                            :cx="(index / Math.max(1, bandwidth.history.length - 1)) * 1000" 
-                                            :cy="400 - ((Number(point.rx_bps || 0) / bandwidthMax()) * 380)"
-                                            r="4"
-                                            fill="#2563eb"
-                                            class="cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
-                                            @mouseenter="bandwidth.tooltip = { show: true, x: $el.cx.baseVal.value, y: $el.cy.baseVal.value, rx: point.rx_bps, tx: point.tx_bps, time: point.time }"
+                                        <g 
+                                            @mouseenter="bandwidth.tooltip = { show: true, x: (index / Math.max(1, bandwidth.history.length - 1)) * 1000, y: 400 - ((Number(point.rx_bps || 0) / bandwidthMax()) * 380), rx: point.rx_bps, tx: point.tx_bps, time: point.time }"
                                             @mouseleave="bandwidth.tooltip.show = false"
-                                        />
+                                            class="cursor-pointer"
+                                        >
+                                            <circle 
+                                                :cx="(index / Math.max(1, bandwidth.history.length - 1)) * 1000" 
+                                                :cy="400 - ((Number(point.rx_bps || 0) / bandwidthMax()) * 380)"
+                                                r="4"
+                                                fill="#2563eb"
+                                                class="opacity-0 hover:opacity-100 transition-opacity"
+                                            />
+                                        </g>
                                     </template>
                                 </svg>
                                 
@@ -873,8 +877,19 @@ if (! function_exists('getStatusBadgeClass')) {
                                 </div>
                             </div>
                         </template>
-                        <div x-show="bandwidth.history.length <= 1" class="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
-                            No RRD bandwidth history has been collected for this subscription yet.
+                        <div x-show="bandwidth.history.length <= 1 || bandwidthMax() === 0" class="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+                            <svg class="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">No Bandwidth Data Available</p>
+                                <p class="mt-1 text-sm text-gray-500">RRD bandwidth history will appear here once data collection begins.</p>
+                                <p class="mt-2 text-xs text-gray-400">The system collects bandwidth samples every minute for active PPPoE subscriptions.</p>
+                            </div>
+                            <div x-show="bandwidth.live.error" class="mt-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
+                                <p class="font-semibold">Collection Error:</p>
+                                <p x-text="bandwidth.live.error" class="mt-1"></p>
+                            </div>
                         </div>
                     </div>
                     <div class="mt-4 flex flex-wrap items-center justify-between gap-5">
