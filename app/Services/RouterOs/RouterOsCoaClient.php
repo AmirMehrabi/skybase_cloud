@@ -21,6 +21,10 @@ class RouterOsCoaClient
         $secret = trim((string) $router->coa_secret);
 
         if ($secret === '') {
+            $secret = trim((string) data_get($router, 'nas_secret'));
+        }
+
+        if ($secret === '') {
             throw new RuntimeException('RouterOS CoA secret is not configured.');
         }
 

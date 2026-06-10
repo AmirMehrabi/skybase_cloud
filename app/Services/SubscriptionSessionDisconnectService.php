@@ -151,7 +151,14 @@ class SubscriptionSessionDisconnectService
         try {
             $removed = $this->routerOs->execute(
                 $router,
-                function ($connection, RouterOsClient $client) use ($username): int {
+                function ($connection, RouterOsClient $client) use ($subscription, $username): int {
+                    $removed = 0;
+                    $removedConnectionIds = [];
+                    $radiusSession = $this->activeRadiusSession($subscription);
+                    $framedIpAddress = filled($radiusSession?->framedipaddress)
+                        ? (string) $radiusSession->framedipaddress
+                        : (filled($subscription->ip_address) ? (string) $subscription->ip_address : null);
+
                     $client->writeSentence($connection, [
                         '/ppp/active/print',
                         '?name='.$username,
@@ -171,9 +178,44 @@ class SubscriptionSessionDisconnectService
                             '=.id='.$session['.id'],
                         ]);
                         $client->readResponse($connection);
+                        $removed++;
                     }
 
-                    return $sessions->filter(fn (array $session): bool => isset($session['.id']))->count();
+                    if ($removed > 0 || blank($framedIpAddress)) {
+                        return $removed;
+                    }
+
+                    foreach ($this->firewallConnectionFilters($framedIpAddress) as $filter) {
+                        $client->writeSentence($connection, array_merge([
+                            '/ip/firewall/connection/print',
+                        ], $filter));
+
+                        $connections = collect($client->readResponse($connection))
+                            ->filter(function (array $connectionRow) use ($framedIpAddress): bool {
+                                return in_array($framedIpAddress, [
+                                    $connectionRow['src-address'] ?? null,
+                                    $connectionRow['dst-address'] ?? null,
+                                    $connectionRow['reply-src-address'] ?? null,
+                                    $connectionRow['reply-dst-address'] ?? null,
+                                ], true);
+                            });
+
+                        foreach ($connections as $connectionRow) {
+                            if (! isset($connectionRow['.id']) || in_array($connectionRow['.id'], $removedConnectionIds, true)) {
+                                continue;
+                            }
+
+                            $client->writeSentence($connection, [
+                                '/ip/firewall/connection/remove',
+                                '=.id='.$connectionRow['.id'],
+                            ]);
+                            $client->readResponse($connection);
+                            $removedConnectionIds[] = $connectionRow['.id'];
+                            $removed++;
+                        }
+                    }
+
+                    return $removed;
                 },
                 5,
             );
@@ -215,7 +257,13 @@ class SubscriptionSessionDisconnectService
             return SubscriptionSessionDisconnectResult::skipped('Subscription has no assigned router.');
         }
 
-        if (blank($router->coa_secret)) {
+        $coaSecret = trim((string) $router->coa_secret);
+
+        if ($coaSecret === '') {
+            $coaSecret = trim((string) data_get($router, 'nas_secret'));
+        }
+
+        if ($coaSecret === '') {
             return SubscriptionSessionDisconnectResult::failed(
                 'RouterOS CoA secret is missing.',
                 'routeros-coa',
@@ -249,6 +297,19 @@ class SubscriptionSessionDisconnectService
                 $router->name,
             );
         }
+    }
+
+    /**
+     * @return array<int, array<int, string>>
+     */
+    private function firewallConnectionFilters(string $framedIpAddress): array
+    {
+        return [
+            ['?src-address='.$framedIpAddress],
+            ['?dst-address='.$framedIpAddress],
+            ['?reply-src-address='.$framedIpAddress],
+            ['?reply-dst-address='.$framedIpAddress],
+        ];
     }
 
     private function activeRadiusSession(Subscription $subscription): ?object
