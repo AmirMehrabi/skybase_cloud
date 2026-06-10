@@ -284,6 +284,35 @@ class SubscriptionControllerTest extends TestCase
         $response->assertViewHas('currentIpAddress', '10.10.0.11');
     }
 
+    public function test_edit_page_keeps_current_router_and_ip_pool_available_when_they_are_not_active(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        $subscription->router->forceFill([
+            'status' => 'offline',
+        ])->saveQuietly();
+
+        $subscription->ipPool->forceFill([
+            'status' => 'inactive',
+        ])->saveQuietly();
+
+        $subscription->load(['router', 'ipPool', 'ipAddress.ipPool', 'ipRoutes.ipPool']);
+
+        $response = $this->actingAs($user)->get(route('subscriptions.edit', $subscription));
+
+        $response->assertOk();
+        $response->assertSee('Edge Router');
+        $response->assertSee('Core Pool');
+        $response->assertViewHas('currentIpPoolId', (string) $subscription->ip_pool_id);
+        $response->assertViewHas('currentIpAddress', '10.10.0.11');
+        $response->assertViewHas('routers', function ($routers) use ($subscription): bool {
+            return $routers->contains('id', $subscription->router_id);
+        });
+        $response->assertViewHas('ipPools', function ($ipPools) use ($subscription): bool {
+            return $ipPools->contains('id', $subscription->ip_pool_id);
+        });
+    }
+
     public function test_kill_session_route_disconnects_via_routeros_api(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();

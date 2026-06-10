@@ -273,8 +273,43 @@ class SubscriptionController extends Controller
         $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
-        $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
-        $ipPools = IpPool::active()->with(['router', 'availableAddresses'])->get();
+        $currentRouterId = $subscription->router_id;
+        $currentPoolIds = collect([
+            $subscription->ip_pool_id,
+            $subscription->ipAddress?->ip_pool_id,
+            ...$subscription->ipRoutes->pluck('ip_pool_id')->all(),
+        ])
+            ->filter()
+            ->map(fn ($poolId): int => (int) $poolId)
+            ->unique()
+            ->values();
+
+        $routers = Router::query()
+            ->where(function ($query) use ($currentRouterId): void {
+                $query->where('status', 'online');
+
+                if ($currentRouterId) {
+                    $query->orWhere('id', $currentRouterId);
+                }
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'site', 'vendor', 'model', 'status']);
+
+        $ipPools = IpPool::query()
+            ->where(function ($query) use ($subscription, $currentPoolIds): void {
+                $query->active()
+                    ->where(function ($query) use ($subscription): void {
+                        $query->where('router_id', $subscription->router_id)
+                            ->orWhere('all_devices', true);
+                    });
+
+                if ($currentPoolIds->isNotEmpty()) {
+                    $query->orWhereIn('id', $currentPoolIds);
+                }
+            })
+            ->with(['router', 'availableAddresses'])
+            ->orderBy('name')
+            ->get();
         $currentIpPoolId = old('ip_pool_id', $subscription->ip_pool_id ?? $subscription->ipAddress?->ip_pool_id);
         $currentIpAddress = old('ip_address', $subscription->ip_address ?? $subscription->ipAddress?->ip_address);
 
