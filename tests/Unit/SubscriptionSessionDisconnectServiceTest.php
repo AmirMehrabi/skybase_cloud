@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Services\RouterOs\RouterOsClient;
+use App\Services\RouterOs\RouterOsSshClient;
 use App\Services\SubscriptionSessionDisconnectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -135,6 +136,46 @@ class SubscriptionSessionDisconnectServiceTest extends TestCase
 
         $this->assertTrue($result->wasSuccessful());
         $this->assertSame('routeros-api', $result->method);
+        $this->assertSame(1, $result->sessionsRemoved);
+    }
+
+    public function test_disconnect_falls_back_to_ssh_when_routeros_api_fails(): void
+    {
+        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
+        {
+            public function execute($router, callable $callback, ?int $timeoutSeconds = null): mixed
+            {
+                throw new \RuntimeException('API unavailable.');
+            }
+        });
+
+        $this->app->instance(RouterOsSshClient::class, new class extends RouterOsSshClient
+        {
+            public function disconnect(Router $router, string $username, ?int $timeoutSeconds = null): int
+            {
+                return 1;
+            }
+        });
+
+        $service = app(SubscriptionSessionDisconnectService::class);
+        $subscription = new Subscription([
+            'connection_type' => 'pppoe',
+            'pppoe_username' => 'john.doe',
+        ]);
+        $subscription->setRelation('router', new Router([
+            'ip_address' => '192.168.88.1',
+            'name' => 'Landing Station',
+            'vendor' => 'Mikrotik',
+            'enable_provisioning' => true,
+            'api_username' => 'admin',
+            'api_password' => 'secret',
+            'ssh_port' => 22,
+        ]));
+
+        $result = $service->disconnect($subscription);
+
+        $this->assertTrue($result->wasSuccessful());
+        $this->assertSame('routeros-ssh', $result->method);
         $this->assertSame(1, $result->sessionsRemoved);
     }
 }
