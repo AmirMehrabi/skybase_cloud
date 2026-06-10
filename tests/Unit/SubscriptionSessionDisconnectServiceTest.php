@@ -93,7 +93,12 @@ class SubscriptionSessionDisconnectServiceTest extends TestCase
                 $last = $this->sent[array_key_last($this->sent)] ?? [];
 
                 if (($last[0] ?? null) === '/ppp/active/print') {
-                    return [];
+                    return [
+                        [
+                            '.id' => '*1',
+                            'name' => 'john.doe',
+                        ],
+                    ];
                 }
 
                 if (($last[0] ?? null) === '/ip/firewall/connection/print') {
