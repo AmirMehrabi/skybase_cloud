@@ -313,6 +313,60 @@ class SubscriptionControllerTest extends TestCase
         });
     }
 
+    public function test_show_page_change_plan_updates_radius_billing_and_disconnects_active_session(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+
+        $subscription->forceFill([
+            'status' => 'active',
+            'connection_status' => 'online',
+            'connection_status_checked_at' => now()->subMinutes(5),
+        ])->saveQuietly();
+
+        $nextPlan = Plan::factory()->create([
+            'status' => 'active',
+            'name' => 'Fiber 300',
+            'price' => 149.99,
+            'billing_cycle' => 'quarterly',
+            'grace_period_days' => 14,
+            'download_speed' => 300,
+            'upload_speed' => 300,
+            'bandwidth_unit' => 'Mbps',
+            'router_profile' => 'fiber-300',
+            'ip_pool' => 'core-pool',
+        ]);
+
+        $tracker = (object) ['calls' => 0];
+        $this->bindSuccessfulDisconnectServiceForPlanChange($tracker);
+
+        $response = $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'plan_id' => $nextPlan->id,
+            'billing_cycle' => $nextPlan->billing_cycle,
+            'grace_period_days' => $nextPlan->grace_period_days,
+            'billing_enabled' => '1',
+            'name' => $subscription->name,
+            'service_type' => $subscription->service_type,
+            'router_id' => $subscription->router_id,
+            'site' => $subscription->site,
+        ]);
+
+        $response->assertRedirect(route('subscriptions.show', $subscription));
+        $subscription->refresh();
+
+        $this->assertSame($nextPlan->id, $subscription->plan_id);
+        $this->assertSame('quarterly', $subscription->billing_cycle);
+        $this->assertSame(14, (int) $subscription->grace_period_days);
+        $this->assertTrue((bool) $subscription->billing_enabled);
+        $this->assertSame(1, $tracker->calls);
+
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '300M/300M',
+        ]);
+    }
+
     public function test_kill_session_route_disconnects_via_routeros_api(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
@@ -1257,6 +1311,29 @@ class SubscriptionControllerTest extends TestCase
             public function disconnectForUsername(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
             {
                 $this->tracker->calls[] = $username;
+
+                return SubscriptionSessionDisconnectResult::success(
+                    'Disconnected 1 active PPP session(s).',
+                    'routeros-api',
+                    $subscription->router?->id,
+                    $subscription->router?->name,
+                    1,
+                );
+            }
+
+            public function recordActivity(Subscription $subscription, SubscriptionSessionDisconnectResult $result, ?User $causer = null): void {}
+        });
+    }
+
+    private function bindSuccessfulDisconnectServiceForPlanChange(object $tracker): void
+    {
+        $this->app->instance(SubscriptionSessionDisconnectService::class, new class($tracker) extends SubscriptionSessionDisconnectService
+        {
+            public function __construct(private object $tracker) {}
+
+            public function disconnect(Subscription $subscription, ?int $timeoutSeconds = null): SubscriptionSessionDisconnectResult
+            {
+                $this->tracker->calls++;
 
                 return SubscriptionSessionDisconnectResult::success(
                     'Disconnected 1 active PPP session(s).',

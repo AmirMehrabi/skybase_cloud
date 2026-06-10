@@ -248,6 +248,16 @@ class SubscriptionController extends Controller
     public function show(Request $request, Subscription $subscription): View
     {
         $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments']);
+        $plans = Plan::query()
+            ->where(function ($query) use ($subscription): void {
+                $query->where('status', 'active');
+
+                if ($subscription->plan_id) {
+                    $query->orWhere('id', $subscription->plan_id);
+                }
+            })
+            ->ordered()
+            ->get(['id', 'name', 'price', 'billing_cycle', 'grace_period_days', 'download_speed', 'upload_speed', 'bandwidth_unit', 'router_profile', 'ip_pool', 'description', 'status']);
         $activityLog = app(ActivityLogFormatter::class)->forSubject($subscription, $subscription->tenant_id);
         $billingInvoices = $this->billingInvoicesForSubscription($subscription);
         $usageSummary = $this->usageSummaryForSubscription($subscription);
@@ -256,6 +266,7 @@ class SubscriptionController extends Controller
 
         return view('subscriptions.show', compact(
             'subscription',
+            'plans',
             'activityLog',
             'billingInvoices',
             'usageSummary',
@@ -322,6 +333,10 @@ class SubscriptionController extends Controller
     public function update(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
         $effectiveRouterId = $request->input('router_id', $subscription->router_id);
+        $originalPlanId = (string) $subscription->plan_id;
+        $originalBillingCycle = (string) $subscription->billing_cycle;
+        $originalGracePeriodDays = (string) $subscription->grace_period_days;
+        $originalBillingEnabled = (bool) $subscription->billing_enabled;
 
         $validated = $request->validate([
             'plan_id' => 'nullable|exists:plans,id',
@@ -365,6 +380,7 @@ class SubscriptionController extends Controller
         $originalPppoePassword = (string) $subscription->pppoe_password;
         $disconnectUsername = null;
         $disconnectResult = null;
+        $planOrBillingChanged = false;
 
         DB::transaction(function () use ($subscription, $validated, $ipAddress, $ipAddressProvided, $ipRoutesProvided, $ipRoutes): void {
             if (array_key_exists('plan_id', $validated)) {
@@ -430,6 +446,23 @@ class SubscriptionController extends Controller
                 $this->organizationBilling->applyDefaultsToExistingSubscription($subscription->fresh(['items']), $subscription->customer->organization);
             }
         });
+
+        $planOrBillingChanged = (string) $subscription->plan_id !== $originalPlanId
+            || (string) $subscription->billing_cycle !== $originalBillingCycle
+            || (string) $subscription->grace_period_days !== $originalGracePeriodDays
+            || (bool) $subscription->billing_enabled !== $originalBillingEnabled;
+
+        if ($planOrBillingChanged && $subscription->isPppoe() && $subscription->router && filled($subscription->pppoe_username)) {
+            $disconnectResult = $this->disconnectService->disconnect($subscription->fresh(['router']));
+            $this->disconnectService->recordActivity($subscription, $disconnectResult, $request->user());
+
+            if ($disconnectResult->wasSuccessful()) {
+                $subscription->forceFill([
+                    'connection_status' => 'offline',
+                    'connection_status_checked_at' => now(),
+                ])->saveQuietly();
+            }
+        }
 
         app(SubscriptionIpRouteSyncService::class)->syncRoutes($subscription->fresh(['router', 'ipRoutes']));
 
