@@ -43,6 +43,13 @@ class SubscriptionSessionDisconnectService
             return SubscriptionSessionDisconnectResult::skipped('Subscription has no assigned router.');
         }
 
+        $sshResult = SubscriptionSessionDisconnectResult::skipped(
+            'RouterOS SSH disconnect was not attempted.',
+            'routeros-ssh',
+            $router->id,
+            $router->name,
+        );
+
         $apiResult = $this->disconnectViaRouterOsApi($subscription, $username);
 
         if ($apiResult->wasSuccessful()) {

@@ -25,7 +25,7 @@ class RouterOsSshClient
         }
 
         $remoteCommand = sprintf(
-            ':foreach i in=[/ppp active find where name=%s] do={/ppp active remove $i}',
+            ':local removed 0; :foreach i in=[/ppp active find where name=%s] do={/ppp active remove $i; :set removed ($removed + 1)}; :put $removed',
             $this->quoteRouterosString($username),
         );
 
@@ -98,8 +98,14 @@ class RouterOsSshClient
 
     private function countRemovedSessions(string $output): int
     {
-        if (preg_match_all('/removed/i', $output) > 0) {
-            return preg_match_all('/removed/i', $output);
+        $trimmed = trim($output);
+
+        if ($trimmed === '') {
+            return 1;
+        }
+
+        if (is_numeric($trimmed)) {
+            return max(0, (int) $trimmed);
         }
 
         return 1;
