@@ -25,3 +25,4 @@ Homestead.yaml
 Thumbs.db
 storage/imports/import-exports/
 storage/imports/
+.bob/notes/pending-notes.txt
