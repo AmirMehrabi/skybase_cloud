@@ -107,6 +107,7 @@ if (! function_exists('getStatusBadgeClass')) {
             range: '1h',
             timer: null,
             loading: false,
+            tooltip: { show: false, x: 0, y: 0, rx: 0, tx: 0, time: '' },
         },
         initBandwidth() {
             this.loadBandwidthHistory();
@@ -221,6 +222,35 @@ if (! function_exists('getStatusBadgeClass')) {
 
                 return `${x},${Math.max(4, Math.min(96, y))}`;
             }).join(' ');
+        },
+        bandwidthLineScaled(key) {
+            const max = this.bandwidthMax();
+            const last = Math.max(1, this.bandwidth.history.length - 1);
+
+            return this.bandwidth.history.map((point, index) => {
+                const x = (index / last) * 1000;
+                const y = 400 - ((Number(point[key] || 0) / max) * 380);
+
+                return `${x},${Math.max(10, Math.min(400, y))}`;
+            }).join(' ');
+        },
+        bandwidthArea(key) {
+            const max = this.bandwidthMax();
+            const last = Math.max(1, this.bandwidth.history.length - 1);
+            
+            if (this.bandwidth.history.length === 0) return '';
+            
+            let path = 'M 0,400 ';
+            
+            this.bandwidth.history.forEach((point, index) => {
+                const x = (index / last) * 1000;
+                const y = 400 - ((Number(point[key] || 0) / max) * 380);
+                path += `L ${x},${Math.max(10, Math.min(400, y))} `;
+            });
+            
+            path += `L 1000,400 Z`;
+            
+            return path;
         },
         formatSpeed(bits) {
             const units = ['bps', 'Kbps', 'Mbps', 'Gbps'];
@@ -757,21 +787,112 @@ if (! function_exists('getStatusBadgeClass')) {
 
                     <div x-show="bandwidth.live.error" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" x-text="bandwidth.live.error"></div>
 
-                    <div class="mt-5 h-72 overflow-hidden rounded-xl bg-gray-50">
+                    <div class="mt-5 h-96 overflow-hidden rounded-xl border border-gray-200 bg-white p-4">
                         <template x-if="bandwidth.history.length > 1">
-                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="h-full w-full">
-                                <polyline :points="bandwidthLine('rx_bps')" fill="none" stroke="#2563eb" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
-                                <polyline :points="bandwidthLine('tx_bps')" fill="none" stroke="#059669" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>
-                            </svg>
+                            <div class="relative h-full w-full">
+                                <svg viewBox="0 0 1000 400" class="h-full w-full" style="overflow: visible;">
+                                    <!-- Grid lines -->
+                                    <defs>
+                                        <pattern id="grid" width="100" height="80" patternUnits="userSpaceOnUse">
+                                            <path d="M 100 0 L 0 0 0 80" fill="none" stroke="#e5e7eb" stroke-width="1"/>
+                                        </pattern>
+                                    </defs>
+                                    <rect width="1000" height="400" fill="url(#grid)" />
+                                    
+                                    <!-- Y-axis labels -->
+                                    <template x-for="i in 5" :key="i">
+                                        <g>
+                                            <line :x1="0" :y1="(i - 1) * 100" :x2="1000" :y2="(i - 1) * 100" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4,4"/>
+                                            <text :x="-10" :y="(i - 1) * 100 + 5" text-anchor="end" class="text-xs fill-gray-500" x-text="formatSpeed(bandwidthMax() * (1 - (i - 1) / 4))"></text>
+                                        </g>
+                                    </template>
+                                    
+                                    <!-- X-axis time labels -->
+                                    <template x-for="i in 6" :key="'time-' + i">
+                                        <text 
+                                            :x="((i - 1) / 5) * 1000" 
+                                            y="420" 
+                                            text-anchor="middle" 
+                                            class="text-xs fill-gray-500"
+                                            x-text="bandwidth.history[Math.floor(((i - 1) / 5) * (bandwidth.history.length - 1))]?.time || ''"
+                                        ></text>
+                                    </template>
+                                    
+                                    <!-- Data lines with area fill -->
+                                    <defs>
+                                        <linearGradient id="rxGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#2563eb;stop-opacity:0.3" />
+                                            <stop offset="100%" style="stop-color:#2563eb;stop-opacity:0.05" />
+                                        </linearGradient>
+                                        <linearGradient id="txGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#059669;stop-opacity:0.3" />
+                                            <stop offset="100%" style="stop-color:#059669;stop-opacity:0.05" />
+                                        </linearGradient>
+                                    </defs>
+                                    
+                                    <!-- RX area -->
+                                    <path :d="bandwidthArea('rx_bps')" fill="url(#rxGradient)" opacity="0.5"/>
+                                    <!-- TX area -->
+                                    <path :d="bandwidthArea('tx_bps')" fill="url(#txGradient)" opacity="0.5"/>
+                                    
+                                    <!-- RX line -->
+                                    <polyline :points="bandwidthLineScaled('rx_bps')" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+                                    <!-- TX line -->
+                                    <polyline :points="bandwidthLineScaled('tx_bps')" fill="none" stroke="#059669" stroke-width="2.5"/>
+                                    
+                                    <!-- Interactive hover points -->
+                                    <template x-for="(point, index) in bandwidth.history" :key="index">
+                                        <circle 
+                                            :cx="(index / Math.max(1, bandwidth.history.length - 1)) * 1000" 
+                                            :cy="400 - ((Number(point.rx_bps || 0) / bandwidthMax()) * 380)"
+                                            r="4"
+                                            fill="#2563eb"
+                                            class="cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
+                                            @mouseenter="bandwidth.tooltip = { show: true, x: $el.cx.baseVal.value, y: $el.cy.baseVal.value, rx: point.rx_bps, tx: point.tx_bps, time: point.time }"
+                                            @mouseleave="bandwidth.tooltip.show = false"
+                                        />
+                                    </template>
+                                </svg>
+                                
+                                <!-- Tooltip -->
+                                <div 
+                                    x-show="bandwidth.tooltip?.show" 
+                                    x-transition
+                                    class="absolute pointer-events-none bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg z-10"
+                                    :style="`left: ${bandwidth.tooltip?.x}px; top: ${bandwidth.tooltip?.y - 60}px; transform: translateX(-50%);`"
+                                >
+                                    <div class="font-semibold mb-1" x-text="bandwidth.tooltip?.time"></div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+                                        <span>RX: <span x-text="formatSpeed(bandwidth.tooltip?.rx)"></span></span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                                        <span>TX: <span x-text="formatSpeed(bandwidth.tooltip?.tx)"></span></span>
+                                    </div>
+                                </div>
+                            </div>
                         </template>
                         <div x-show="bandwidth.history.length <= 1" class="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
                             No RRD bandwidth history has been collected for this subscription yet.
                         </div>
                     </div>
-                    <div class="mt-4 flex flex-wrap items-center gap-5 text-sm">
-                        <span class="inline-flex items-center gap-2 text-gray-600"><span class="h-2.5 w-2.5 rounded-full bg-blue-600"></span>RX</span>
-                        <span class="inline-flex items-center gap-2 text-gray-600"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>TX</span>
-                        <span class="text-gray-500">Source: <span x-text="bandwidth.live.source"></span></span>
+                    <div class="mt-4 flex flex-wrap items-center justify-between gap-5">
+                        <div class="flex flex-wrap items-center gap-5 text-sm">
+                            <span class="inline-flex items-center gap-2 text-gray-600">
+                                <span class="h-3 w-3 rounded-full bg-blue-600"></span>
+                                <span class="font-medium">Download (RX)</span>
+                                <span class="text-gray-500" x-text="formatSpeed(bandwidth.live.rx_bps)"></span>
+                            </span>
+                            <span class="inline-flex items-center gap-2 text-gray-600">
+                                <span class="h-3 w-3 rounded-full bg-emerald-600"></span>
+                                <span class="font-medium">Upload (TX)</span>
+                                <span class="text-gray-500" x-text="formatSpeed(bandwidth.live.tx_bps)"></span>
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            Source: <span class="font-medium" x-text="bandwidth.live.source"></span>
+                        </div>
                     </div>
                 </div>
 
