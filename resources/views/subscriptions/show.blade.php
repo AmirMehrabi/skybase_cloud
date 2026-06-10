@@ -808,15 +808,17 @@ if (! function_exists('getStatusBadgeClass')) {
                                     </template>
                                     
                                     <!-- X-axis time labels -->
-                                    <template x-for="(item, idx) in [0, 1, 2, 3, 4, 5]" :key="'time-' + idx">
-                                        <text 
-                                            :x="(idx / 5) * 1000" 
-                                            y="420" 
-                                            text-anchor="middle" 
-                                            class="text-xs fill-gray-500"
-                                            x-text="bandwidth.history[Math.floor((idx / 5) * Math.max(0, bandwidth.history.length - 1))]?.time || ''"
-                                        ></text>
-                                    </template>
+                                    <g>
+                                        <template x-for="(item, idx) in [0, 1, 2, 3, 4, 5]" :key="'time-' + idx">
+                                            <text 
+                                                :x="(item / 5) * 1000" 
+                                                y="420" 
+                                                text-anchor="middle" 
+                                                class="text-xs fill-gray-500"
+                                                x-text="bandwidth.history[Math.floor((item / 5) * Math.max(0, bandwidth.history.length - 1))]?.time || ''"
+                                            ></text>
+                                        </template>
+                                    </g>
                                     
                                     <!-- Data lines with area fill -->
                                     <defs>
@@ -840,41 +842,8 @@ if (! function_exists('getStatusBadgeClass')) {
                                     <!-- TX line -->
                                     <polyline :points="bandwidthLineScaled('tx_bps')" fill="none" stroke="#059669" stroke-width="2.5"/>
                                     
-                                    <!-- Interactive hover areas -->
-                                    <template x-for="(point, index) in bandwidth.history" :key="index">
-                                        <g 
-                                            @mouseenter="bandwidth.tooltip = { show: true, x: (index / Math.max(1, bandwidth.history.length - 1)) * 1000, y: 400 - ((Number(point.rx_bps || 0) / bandwidthMax()) * 380), rx: point.rx_bps, tx: point.tx_bps, time: point.time }"
-                                            @mouseleave="bandwidth.tooltip.show = false"
-                                            class="cursor-pointer"
-                                        >
-                                            <circle 
-                                                :cx="(index / Math.max(1, bandwidth.history.length - 1)) * 1000" 
-                                                :cy="400 - ((Number(point.rx_bps || 0) / bandwidthMax()) * 380)"
-                                                r="4"
-                                                fill="#2563eb"
-                                                class="opacity-0 hover:opacity-100 transition-opacity"
-                                            />
-                                        </g>
-                                    </template>
+
                                 </svg>
-                                
-                                <!-- Tooltip -->
-                                <div 
-                                    x-show="bandwidth.tooltip?.show" 
-                                    x-transition
-                                    class="absolute pointer-events-none bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg z-10"
-                                    :style="`left: ${bandwidth.tooltip?.x}px; top: ${bandwidth.tooltip?.y - 60}px; transform: translateX(-50%);`"
-                                >
-                                    <div class="font-semibold mb-1" x-text="bandwidth.tooltip?.time"></div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
-                                        <span>RX: <span x-text="formatSpeed(bandwidth.tooltip?.rx)"></span></span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-                                        <span>TX: <span x-text="formatSpeed(bandwidth.tooltip?.tx)"></span></span>
-                                    </div>
-                                </div>
                             </div>
                         </template>
                         <div x-show="bandwidth.history.length <= 1 || bandwidthMax() === 0" class="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
