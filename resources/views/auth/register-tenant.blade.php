@@ -103,6 +103,7 @@
                 'NG' => 'Nigeria',
                 'KE' => 'Kenya',
                 'ZA' => 'South Africa',
+                'SL' => 'Sierra Leone',
                 'OTHER' => 'Other',
             ]"
             xModel="country"

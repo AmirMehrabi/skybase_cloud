@@ -170,7 +170,7 @@
             <x-ui.input.select
                 label="Country"
                 name="country"
-                :options="['United States' => 'United States', 'Canada' => 'Canada', 'United Kingdom' => 'United Kingdom', 'Germany' => 'Germany', 'France' => 'France', 'Australia' => 'Australia', 'Other' => 'Other']"
+                :options="['United States' => 'United States', 'Canada' => 'Canada', 'United Kingdom' => 'United Kingdom', 'Germany' => 'Germany', 'France' => 'France', 'Australia' => 'Australia', 'Sierra Leone' => 'Sierra Leone', 'Other' => 'Other']"
                 wire:model="country"
             />
 

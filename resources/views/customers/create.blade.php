@@ -210,6 +210,7 @@
                         <option value="Germany">Germany</option>
                         <option value="France">France</option>
                         <option value="Australia">Australia</option>
+                        <option value="Sierra Leone">Sierra Leone</option>
                     </select>
                     @error('country')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
