@@ -69,6 +69,23 @@
         'Cloud hosting included',
     ];
 
+    $comparisonPages = [
+        [
+            'name' => 'Splynx',
+            'route' => route('alternatives.splynx'),
+            'headline' => 'Looking for a Splynx alternative?',
+            'copy' => 'Compare SkyBase with Splynx if you want a simpler MikroTik-first cloud workflow with free entry and clear small-ISP pricing.',
+            'badge' => 'Free up to 40 subscribers',
+        ],
+        [
+            'name' => 'Sonar',
+            'route' => route('alternatives.sonar'),
+            'headline' => 'Looking for a Sonar alternative?',
+            'copy' => 'Compare SkyBase with Sonar if your ISP needs cloud Radius, customer workflows, router visibility, and a lower starting commitment.',
+            'badge' => 'Paid plans from $69/month',
+        ],
+    ];
+
     $faqs = [
         ['question' => 'Is this only for MikroTik networks?', 'answer' => 'SkyBase is designed around MikroTik ISP workflows, including PPPoE, Hotspot, Radius users, router visibility, and customer provisioning.'],
         ['question' => 'Can a small ISP use it?', 'answer' => 'Yes. The landing flow, pricing, and onboarding are meant for small and growing operators that want less infrastructure and fewer manual steps.'],
@@ -274,6 +291,36 @@
                 <div class="mt-6 flex flex-col gap-3 sm:flex-row">
                     <a href="{{ route('pricing') }}" class="inline-flex flex-1 items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">View Pricing</a>
                     <a href="{{ route('auth.register') }}" class="inline-flex flex-1 items-center justify-center rounded-full bg-[#f5c542] px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-[#ffd95d]">Start Trial</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-white py-16 sm:py-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Compare ISP platforms</p>
+                    <h2 class="mt-4 text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl">Choosing between SkyBase, Splynx, and Sonar?</h2>
+                    <p class="mt-5 text-lg leading-8 text-slate-600">If you are searching for a Splynx alternative or Sonar alternative, start with the practical question: do you need a broad enterprise operations suite, or a focused MikroTik cloud system with clear pricing?</p>
+                    <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+                        <a href="{{ route('alternatives.splynx') }}" class="inline-flex items-center justify-center rounded-full bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Compare Splynx</a>
+                        <a href="{{ route('alternatives.sonar') }}" class="inline-flex items-center justify-center rounded-full border border-slate-950/10 bg-[#f6f1e8] px-6 py-3 text-sm font-bold text-slate-800 transition hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed]">Compare Sonar</a>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    @foreach($comparisonPages as $comparisonPage)
+                        <article class="rounded-[2rem] border border-slate-950/10 bg-[#fbf7ed] p-6 shadow-sm">
+                            <div class="flex items-center justify-between gap-4">
+                                <p class="text-sm font-bold uppercase tracking-[0.24em] text-emerald-700">{{ $comparisonPage['name'] }}</p>
+                                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">{{ $comparisonPage['badge'] }}</span>
+                            </div>
+                            <h3 class="mt-5 text-2xl font-bold tracking-tight text-slate-950">{{ $comparisonPage['headline'] }}</h3>
+                            <p class="mt-4 text-sm leading-6 text-slate-600">{{ $comparisonPage['copy'] }}</p>
+                            <a href="{{ $comparisonPage['route'] }}" class="mt-6 inline-flex text-sm font-bold text-teal-700 transition hover:text-teal-900">Read comparison -&gt;</a>
+                        </article>
+                    @endforeach
                 </div>
             </div>
         </div>

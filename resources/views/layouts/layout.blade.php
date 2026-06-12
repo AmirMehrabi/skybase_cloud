@@ -164,6 +164,8 @@
                 <div>
                     <h4 class="mb-3 font-semibold text-white">Resources</h4>
                     <ul class="space-y-2 text-lg">
+                        <li><a href="{{ route('alternatives.splynx') }}" class="hover:text-white">Splynx Alternative</a></li>
+                        <li><a href="{{ route('alternatives.sonar') }}" class="hover:text-white">Sonar Alternative</a></li>
                         <li><a href="#" class="hover:text-white">ISP Management Guide</a></li>
                         <li><a href="#" class="hover:text-white">MikroTik Integration</a></li>
                         <li><a href="#" class="hover:text-white">Radius Authentication</a></li>

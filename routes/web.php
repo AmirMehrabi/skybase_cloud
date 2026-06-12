@@ -81,6 +81,10 @@ Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 // Features page
 Route::get('/features', [PagesController::class, 'features'])->name('features');
 
+// Comparison pages
+Route::get('/alternatives/splynx', [PagesController::class, 'splynxAlternative'])->name('alternatives.splynx');
+Route::get('/alternatives/sonar', [PagesController::class, 'sonarAlternative'])->name('alternatives.sonar');
+
 // Changelog page
 Route::get('/changelog', [PagesController::class, 'changelog'])->name('changelog');
 
