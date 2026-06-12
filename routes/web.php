@@ -282,6 +282,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/data', [AccessPointController::class, 'data'])->name('data');
         Route::get('/filter-options', [AccessPointController::class, 'filterOptions'])->name('filter-options');
         Route::get('/stats', [AccessPointController::class, 'stats'])->name('stats');
+        Route::get('/by-router/{router}', [AccessPointController::class, 'byRouter'])->name('by-router');
         Route::get('/create', [AccessPointController::class, 'create'])->name('create');
         Route::post('/', [AccessPointController::class, 'store'])->name('store');
         Route::get('/{access_point}', [AccessPointController::class, 'show'])->name('show');

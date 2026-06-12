@@ -34,6 +34,7 @@ class StoreSubscriptionRequest extends FormRequest
             'service_type' => 'required|in:hotspot,pppoe,vpn',
             'plan_id' => 'required|exists:plans,id',
             'router_id' => 'required|exists:routers,id',
+            'access_point_id' => 'nullable|exists:access_points,id',
             'site' => 'nullable|string|max:255',
             'connection_type' => 'required|in:pppoe,dhcp,static',
             // PPP credentials (required for PPP connections)

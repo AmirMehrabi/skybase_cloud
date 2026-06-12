@@ -84,6 +84,19 @@ class AccessPointController extends Controller
     }
 
     /**
+     * Get access points for a specific router.
+     */
+    public function byRouter(Router $router): JsonResponse
+    {
+        $accessPoints = AccessPoint::where('router_id', $router->id)
+            ->where('status', '!=', 'decommissioned')
+            ->orderBy('name')
+            ->get(['id', 'name', 'ssid', 'frequency_band', 'vendor']);
+
+        return response()->json($accessPoints);
+    }
+
+    /**
      * Show the form for creating a new access point.
      */
     public function create(): View

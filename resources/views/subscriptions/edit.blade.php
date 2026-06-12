@@ -35,6 +35,7 @@
 @section('content')
 <div class="space-y-6 pb-24" x-data="subscriptionEditForm({
     routerId: @js((string) $currentRouterId),
+    accessPointId: @js((string) old('access_point_id', $subscription->access_point_id ?? '')),
     ipPoolId: @js((string) $currentIpPoolId),
     ipAddress: @js((string) $currentIpAddress),
     ipPools: @js($ipPools),
@@ -108,6 +109,16 @@
                         @endforeach
                     </select>
                     @error('router_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div x-show="form.router_id" x-transition>
+                    <label for="access_point_id" class="block text-sm font-medium text-gray-700 mb-1">Access Point</label>
+                    <select name="access_point_id" id="access_point_id" x-model="form.access_point_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                        <option value="">No access point</option>
+                        <template x-for="ap in accessPoints" :key="ap.id">
+                            <option :value="ap.id" x-text="ap.name + (ap.ssid ? ' (' + ap.ssid + ')' : '') + ' - ' + ap.frequency_band"></option>
+                        </template>
+                    </select>
+                    @error('access_point_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label for="site" class="block text-sm font-medium text-gray-700 mb-1">Site</label>
@@ -342,14 +353,16 @@
 
 @push('scripts')
 <script>
-function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes }) {
+function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes, accessPointId }) {
     return {
         form: {
             router_id: routerId || '',
+            access_point_id: accessPointId || '',
             ip_pool_id: ipPoolId || '',
             ip_address: ipAddress || '',
         },
         ipPools: Array.isArray(ipPools) ? ipPools : [],
+        accessPoints: [],
         ipRoutes: Array.isArray(ipRoutes) ? ipRoutes : [],
         nextIpRouteKey: (Array.isArray(ipRoutes) ? ipRoutes : []).length + 1,
         suggestingIp: false,
@@ -363,6 +376,14 @@ function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes
             }
 
             return this.ipPools.find(pool => String(pool.id) === String(this.form.ip_pool_id)) || null;
+        },
+        init() {
+            if (this.form.router_id) {
+                fetch(`{{ url('access-points/by-router') }}/${this.form.router_id}`)
+                    .then(response => response.ok ? response.json() : [])
+                    .then(data => { this.accessPoints = data; })
+                    .catch(() => { this.accessPoints = []; });
+            }
         },
         get canSuggestIp() {
             return this.availablePoolAddresses().length > 0;
@@ -440,6 +461,16 @@ function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes
                 };
         },
         handleRouterChange() {
+            this.form.access_point_id = '';
+            this.accessPoints = [];
+
+            if (this.form.router_id) {
+                fetch(`{{ url('access-points/by-router') }}/${this.form.router_id}`)
+                    .then(response => response.ok ? response.json() : [])
+                    .then(data => { this.accessPoints = data; })
+                    .catch(() => { this.accessPoints = []; });
+            }
+
             const pools = this.availableIpPools();
 
             if (! pools.length) {

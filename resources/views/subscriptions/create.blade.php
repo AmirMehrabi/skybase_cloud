@@ -154,7 +154,7 @@
                 <!-- Router / NAS -->
                 <div>
                     <label for="router_id" class="block text-sm font-medium text-gray-700 mb-1">Router / NAS <span class="text-red-500">*</span></label>
-                    <select name="router_id" id="router_id" x-model="form.router_id" :class="hasValidationError('router_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
+                    <select name="router_id" id="router_id" x-model="form.router_id" @change="handleRouterChange()" :class="hasValidationError('router_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
                         <option value="">Select a router</option>
                         @foreach($routers as $router)
                             <option value="{{ $router->id }}" data-site="{{ $router->site }}">{{ $router->name }} ({{ $router->vendor }} {{ $router->model }})</option>
@@ -165,6 +165,23 @@
                     @enderror
                     <template x-if="validationError('router_id') && !{{ $errors->has('router_id') ? 'true' : 'false' }}">
                         <p class="mt-1 text-sm text-red-600" x-text="validationError('router_id')"></p>
+                    </template>
+                </div>
+
+                <!-- Access Point (filtered by router) -->
+                <div x-show="form.router_id" x-transition>
+                    <label for="access_point_id" class="block text-sm font-medium text-gray-700 mb-1">Access Point</label>
+                    <select name="access_point_id" id="access_point_id" x-model="form.access_point_id" :class="hasValidationError('access_point_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white">
+                        <option value="">No access point</option>
+                        <template x-for="ap in accessPoints" :key="ap.id">
+                            <option :value="ap.id" x-text="ap.name + (ap.ssid ? ' (' + ap.ssid + ')' : '') + ' - ' + ap.frequency_band"></option>
+                        </template>
+                    </select>
+                    @error('access_point_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <template x-if="validationError('access_point_id') && !{{ $errors->has('access_point_id') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('access_point_id')"></p>
                     </template>
                 </div>
 
@@ -833,6 +850,7 @@ function subscriptionCreateForm() {
             service_type: @js(old('service_type', 'hotspot')),
             plan_id: '',
             router_id: '',
+            access_point_id: '',
             site: '',
             connection_type: 'pppoe',
             ip_management: null,
@@ -856,6 +874,7 @@ function subscriptionCreateForm() {
 
         // IP pools data
         ipPools: @json( $ipPools ),
+        accessPoints: [],
         customerNames: @json($customerNames),
         customerBillingProfiles: @json($customerBillingProfiles),
 
@@ -941,6 +960,22 @@ function subscriptionCreateForm() {
         handleCustomerChange(event) {
             const selectedOption = event.target.options[event.target.selectedIndex];
             this.updateCustomerInfo(selectedOption?.dataset.name || '', this.form.customer_id);
+        },
+
+        async handleRouterChange() {
+            this.form.access_point_id = '';
+            this.accessPoints = [];
+
+            if (!this.form.router_id) return;
+
+            try {
+                const response = await fetch(`{{ url('access-points/by-router') }}/${this.form.router_id}`);
+                if (response.ok) {
+                    this.accessPoints = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading access points:', error);
+            }
         },
 
         updatePlanPrice() {
@@ -1308,6 +1343,7 @@ function subscriptionCreateForm() {
             formData.append('service_type', this.form.service_type || 'hotspot');
             if (this.form.plan_id) formData.append('plan_id', this.form.plan_id);
             if (this.form.router_id) formData.append('router_id', this.form.router_id);
+            if (this.form.access_point_id) formData.append('access_point_id', this.form.access_point_id);
             if (this.form.site) formData.append('site', this.form.site);
 
             // Connection type and IP management

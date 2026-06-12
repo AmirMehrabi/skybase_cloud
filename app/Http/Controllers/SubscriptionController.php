@@ -343,6 +343,7 @@ class SubscriptionController extends Controller
             'name' => 'nullable|string|max:255',
             'service_type' => 'nullable|in:hotspot,pppoe,vpn',
             'router_id' => 'nullable|exists:routers,id',
+            'access_point_id' => 'nullable|exists:access_points,id',
             'site' => 'nullable|string|max:255',
             'ip_pool_id' => [
                 'nullable',
