@@ -122,6 +122,11 @@ class Router extends Model
         return $this->hasOne(RouterMonitoringState::class);
     }
 
+    public function accessPoints(): HasMany
+    {
+        return $this->hasMany(AccessPoint::class);
+    }
+
     public function isMikrotik(): bool
     {
         return strcasecmp((string) $this->vendor, 'Mikrotik') === 0;

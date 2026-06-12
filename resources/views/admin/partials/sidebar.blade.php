@@ -163,6 +163,17 @@
         </a>
     </li>
 
+    <!-- Access Points -->
+    <li>
+        <a href="{{ route('access-points.index') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg border text-sm font-medium transition {{ str_starts_with($currentRoute, 'access-points.') ? 'border-white/15 bg-white/[0.12] text-white shadow-sm' : 'border-transparent text-teal-50/85 hover:border-white/10 hover:bg-white/10 hover:text-white' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+            </svg>
+            <span>Access Points</span>
+        </a>
+    </li>
+
     <!-- VPN Users -->
     <li>
         <a href="{{ route('vpn-users.index') }}"

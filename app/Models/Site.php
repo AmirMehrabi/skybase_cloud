@@ -42,6 +42,11 @@ class Site extends Model
         return $this->hasMany(Router::class);
     }
 
+    public function accessPoints(): HasMany
+    {
+        return $this->hasMany(AccessPoint::class);
+    }
+
     public function scopeActive($query)
     {
         $query->where('status', 'active');

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccessPointController;
 use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Auth\TenantLoginController;
@@ -273,6 +274,20 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::get('/{router}/interfaces', [RouterController::class, 'interfaces'])->name('interfaces');
         Route::get('/{router}/ip-pools', [RouterController::class, 'ipPools'])->name('ip-pools');
         Route::get('/{router}/logs', [RouterController::class, 'logs'])->name('logs');
+    });
+
+    // Access Point Management Routes
+    Route::prefix('access-points')->name('access-points.')->group(function () {
+        Route::get('/', [AccessPointController::class, 'index'])->name('index');
+        Route::get('/data', [AccessPointController::class, 'data'])->name('data');
+        Route::get('/filter-options', [AccessPointController::class, 'filterOptions'])->name('filter-options');
+        Route::get('/stats', [AccessPointController::class, 'stats'])->name('stats');
+        Route::get('/create', [AccessPointController::class, 'create'])->name('create');
+        Route::post('/', [AccessPointController::class, 'store'])->name('store');
+        Route::get('/{access_point}', [AccessPointController::class, 'show'])->name('show');
+        Route::get('/{access_point}/edit', [AccessPointController::class, 'edit'])->name('edit');
+        Route::put('/{access_point}', [AccessPointController::class, 'update'])->name('update');
+        Route::delete('/{access_point}', [AccessPointController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('sites')->name('sites.')->group(function () {
