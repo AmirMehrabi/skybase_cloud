@@ -11,6 +11,35 @@
 @php
     $releases = [
         [
+            'version' => '0.9.5',
+            'date' => 'June 12, 2026',
+            'title' => 'Access Points, Country Expansion, and Subscription Controls',
+            'summary' => 'This release introduces wireless access point management, expands country and currency coverage, and adds new subscriber control features.',
+            'sections' => [
+                'Added' => [
+                    'Wireless access point management with full create, edit, and tracking pages.',
+                    'Assign wireless access points to customer subscriptions during setup and editing.',
+                    'Sierra Leone added to country selection across all forms.',
+                    'South African Rand added as a currency option for billing.',
+                    'New comparison pages for Sonar and Splynx alternatives.',
+                    'More reliable user disconnect with automatic fallback methods.',
+                    'One-click disconnect button for active subscriptions.',
+                    'Ability to release IP addresses from subscriptions.',
+                    'Change subscriber usernames and passwords directly from the subscription page.',
+                    'Improved real-time usage graphs for subscription monitoring.',
+                ],
+                'Changed' => [
+                    'Subscription setup now lets you assign a wireless access point to each subscriber.',
+                    'Country selection expanded with Sierra Leone across all forms.',
+                    'Currency options expanded with South African Rand for billing.',
+                ],
+                'Fixed' => [
+                    'Fixed IP address assignment issues.',
+                    'General stability improvements.',
+                ],
+            ],
+        ],
+        [
             'version' => '0.9.4',
             'date' => 'June 6, 2026',
             'title' => 'CoA, Queue Infrastructure, and IP Selection Improvements',
@@ -334,8 +363,8 @@
                     Product updates for ISP operators using SkyBase to manage MikroTik routers, subscribers, billing, IPAM, VPN users, and tenant operations.
                 </p>
                 <div class="mt-8 flex flex-wrap gap-3">
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.9.4</span>
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated June 6, 2026</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.9.5</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated June 12, 2026</span>
                 </div>
             </div>
         </div>
