@@ -200,7 +200,7 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <x-ui.action-icon x-bind:href="urls.show + '/' + ap.id" icon="view" label="View" />
-                                    <x-ui.action-icon x-bind:href="urls.edit + '/' + ap.id" icon="edit" label="Edit" />
+                                    <x-ui.action-icon x-bind:href="urls.edit + '/' + ap.id + '/edit'" icon="edit" label="Edit" />
                                     <x-ui.action-icon as="button" icon="delete" label="Delete" @click="confirmDelete(ap)" />
                                 </div>
                             </td>
