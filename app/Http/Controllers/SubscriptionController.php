@@ -64,7 +64,7 @@ class SubscriptionController extends Controller
         $filters = $request->only(['search', 'status', 'plan', 'customer']);
 
         $subscriptions = Subscription::filter($filters)
-            ->with(['customer', 'plan', 'router'])
+            ->with(['customer', 'plan', 'router', 'activatedBy', 'suspendedBy'])
             ->orderBy('created_at', 'desc')
             ->paginate($request->integer('per_page', 100))
             ->through(
@@ -74,9 +74,11 @@ class SubscriptionController extends Controller
                     'name' => $subscription->name,
                     'service_type' => $subscription->service_type,
                     'connection_type' => $subscription->connection_type,
+                    'customer_id' => $subscription->customer_id,
                     'customer_name' => $subscription->customer->full_name ?? 'N/A',
                     'customer_email' => $subscription->customer->email ?? 'N/A',
                     'plan' => $subscription->plan?->name ?? 'N/A',
+                    'bandwidth' => $subscription->plan ? $subscription->plan->download_speed.'↓/'.$subscription->plan->upload_speed.'↑ '.$subscription->plan->bandwidth_unit : 'N/A',
                     'router' => $subscription->router?->name ?? 'N/A',
                     'pppoe_username' => $subscription->pppoe_username,
                     'pppoe_password' => $subscription->pppoe_password,
@@ -86,6 +88,10 @@ class SubscriptionController extends Controller
                     'total_price' => (float) $subscription->total_price,
                     'billing_cycle' => $subscription->billing_cycle,
                     'activation_date' => $subscription->activation_date?->format('M d, Y'),
+                    'suspended_at' => $subscription->suspended_at?->format('M d, Y'),
+                    'activated_by_name' => $subscription->activatedBy?->name ?? 'N/A',
+                    'suspended_by_name' => $subscription->suspendedBy?->name ?? 'N/A',
+                    'next_billing_date' => $subscription->next_billing_date?->format('M d, Y') ?? 'N/A',
                     'created_at' => $subscription->created_at?->format('M d, Y'),
                 ],
             );
@@ -648,6 +654,7 @@ class SubscriptionController extends Controller
         $subscription->forceFill([
             'status' => 'suspended',
             'suspended_at' => now(),
+            'suspended_by' => auth()->id(),
         ])->saveQuietly();
 
         SuspendSubscriptionJob::dispatch(
@@ -707,6 +714,7 @@ class SubscriptionController extends Controller
             'status' => 'active',
             'activation_date' => $subscription->activation_date ?? now(),
             'suspended_at' => null,
+            'activated_by' => auth()->id(),
         ])->saveQuietly();
 
         ActivateSubscriptionJob::dispatch(

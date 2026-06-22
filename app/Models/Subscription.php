@@ -19,7 +19,7 @@ class Subscription extends Model implements LdapImportable
 {
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at'];
+    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
 
     protected function activityLogExcept(): array
     {
@@ -150,6 +150,16 @@ class Subscription extends Model implements LdapImportable
     public function ipPool(): BelongsTo
     {
         return $this->belongsTo(IpPool::class);
+    }
+
+    public function activatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'activated_by');
+    }
+
+    public function suspendedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'suspended_by');
     }
 
     public function ipAddress()
@@ -473,20 +483,22 @@ class Subscription extends Model implements LdapImportable
         return true;
     }
 
-    public function activate(): void
+    public function activate(?int $userId = null): void
     {
         $this->update([
             'status' => 'active',
             'activation_date' => $this->activation_date ?? now(),
             'suspended_at' => null,
+            'activated_by' => $userId,
         ]);
     }
 
-    public function suspend(?string $reason = null): void
+    public function suspend(?string $reason = null, ?int $userId = null): void
     {
         $this->update([
             'status' => 'suspended',
             'suspended_at' => now(),
+            'suspended_by' => $userId,
         ]);
     }
 
@@ -526,6 +538,8 @@ class Subscription extends Model implements LdapImportable
             'suspended' => (clone $query)->suspended()->count(),
             'pending' => (clone $query)->pending()->count(),
             'cancelled' => (clone $query)->cancelled()->count(),
+            'corporate' => (clone $query)->whereHas('customer', fn ($q) => $q->where('customer_type', 'business'))->count(),
+            'residential' => (clone $query)->whereHas('customer', fn ($q) => $q->where('customer_type', 'individual'))->count(),
         ];
     }
 }
