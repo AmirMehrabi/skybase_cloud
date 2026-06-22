@@ -54,9 +54,8 @@
                     <p class="text-sm text-gray-500">Total</p>
                     <div class="flex items-baseline gap-2">
                         <p class="text-2xl font-bold text-gray-900" x-text="stats.total"></p>
+                        <p class="text-xs text-red-500" x-show="stats.suspended > 0">(<span x-text="stats.suspended"></span> suspended)</p>
                     </div>
-                                            <p class="text-xs text-red-500" x-show="stats.suspended > 0">(<span x-text="stats.suspended"></span> suspended)</p>
-
                 </div>
                 <div class="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
