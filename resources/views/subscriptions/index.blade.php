@@ -51,7 +51,7 @@
         <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-500">Total Connections</p>
+                    <p class="text-sm text-gray-500">Total</p>
                     <div class="flex items-baseline gap-2">
                         <p class="text-2xl font-bold text-gray-900" x-text="stats.total"></p>
                         <p class="text-xs text-red-500" x-show="stats.suspended > 0">(<span x-text="stats.suspended"></span> suspended)</p>
@@ -68,7 +68,7 @@
         <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-500">Active Connections</p>
+                    <p class="text-sm text-gray-500">Active</p>
                     <p class="text-2xl font-bold text-green-600" x-text="stats.active"></p>
                 </div>
                 <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -82,7 +82,7 @@
         <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-500">Online Connections</p>
+                    <p class="text-sm text-gray-500">Online</p>
                     <p class="text-2xl font-bold text-green-600" x-text="stats.online"></p>
                 </div>
                 <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -96,7 +96,7 @@
         <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-500">Corporate Connections</p>
+                    <p class="text-sm text-gray-500">Corporate</p>
                     <p class="text-2xl font-bold text-purple-600" x-text="stats.corporate"></p>
                 </div>
                 <div class="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -110,7 +110,7 @@
         <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-500">Residential Connections</p>
+                    <p class="text-sm text-gray-500">Residential</p>
                     <p class="text-2xl font-bold text-orange-600" x-text="stats.residential"></p>
                 </div>
                 <div class="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
