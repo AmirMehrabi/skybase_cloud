@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Billing;
 
+use App\Models\Invoice;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -40,5 +41,16 @@ class StorePaymentRequest extends FormRequest
             'invoice_id.required' => 'The invoice is required.',
             'invoice_id.exists' => 'The selected invoice is invalid.',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $invoice = $this->route('invoice');
+
+        if ($invoice instanceof Invoice) {
+            $this->merge([
+                'invoice_id' => $invoice->id,
+            ]);
+        }
     }
 }

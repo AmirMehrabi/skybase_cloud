@@ -14,13 +14,12 @@ class BillingInvoiceActionsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_payment_can_be_recorded_from_an_invoice_show_page_payload(): void
+    public function test_payment_can_be_recorded_from_an_invoice_show_page_without_an_invoice_id_payload(): void
     {
         [$tenant, $user, $customer] = $this->createTenantContext('payment');
         $invoice = $this->createInvoice($tenant, $customer);
 
-        $response = $this->actingAs($user)->postJson(route('billing.payments.store'), [
-            'invoice_id' => $invoice->id,
+        $response = $this->actingAs($user)->postJson(route('billing.invoices.payments.store', $invoice), [
             'amount' => 40,
             'payment_method' => 'cash',
             'paid_at' => now()->toDateString(),

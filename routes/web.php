@@ -334,6 +334,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
             Route::get('/', [InvoiceController::class, 'index'])->name('index');
             Route::post('/generate-recurring', [InvoiceController::class, 'generateRecurring'])->name('generate-recurring');
             Route::get('/create', fn () => view('billing.invoices.create'))->name('create');
+            Route::post('/{invoice}/payments', [PaymentController::class, 'storeForInvoice'])->name('payments.store');
             Route::get('/{invoice}', [InvoiceController::class, 'show'])->name('show');
             Route::get('/{invoice}/edit', fn ($invoice) => view('billing.invoices.edit', compact('invoice')))->name('edit');
             Route::patch('/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('cancel');

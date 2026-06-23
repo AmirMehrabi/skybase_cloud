@@ -124,6 +124,14 @@ class PaymentController extends Controller
         ], 201);
     }
 
+    public function storeForInvoice(
+        Invoice $invoice,
+        StorePaymentRequest $request,
+        TenantNotificationService $notifications
+    ): JsonResponse|RedirectResponse {
+        return $this->store($request, $notifications);
+    }
+
     protected function transformPayment(Payment $payment): array
     {
         return [

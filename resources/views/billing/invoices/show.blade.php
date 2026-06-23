@@ -324,10 +324,10 @@
 @push('scripts')
 <script>
     window.billingInvoiceShow = @json($invoice ?? []);
-    window.billingPaymentStoreUrl = @json(route('billing.payments.store'));
+    window.billingPaymentStoreUrl = @json(route('billing.invoices.payments.store', $invoice['id']));
     window.billingInvoiceCancelUrl = @json(route('billing.invoices.cancel', $invoice['id']));
     window.billingCsrfToken = @json(csrf_token());
 </script>
-<script src="{{ asset('js/billing/invoices-show.js') }}"></script>
+<script src="{{ asset('js/billing/invoices-show.js') }}?v={{ filemtime(public_path('js/billing/invoices-show.js')) }}"></script>
 @endpush
 @endsection
