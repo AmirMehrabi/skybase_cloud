@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class InvoiceController extends Controller
@@ -36,6 +38,22 @@ class InvoiceController extends Controller
         $created = $billing->generateDueInvoices();
 
         return back()->with('success', "Generated {$created} due invoice(s).");
+    }
+
+    public function cancel(Invoice $invoice): JsonResponse
+    {
+        if ((float) $invoice->paid_amount > 0) {
+            throw ValidationException::withMessages([
+                'invoice' => 'An invoice with recorded payments cannot be cancelled.',
+            ]);
+        }
+
+        $invoice->update(['status' => 'void']);
+
+        return response()->json([
+            'message' => 'Invoice cancelled successfully.',
+            'invoice' => $this->transformInvoice($invoice->fresh()),
+        ]);
     }
 
     protected function transformInvoice(Invoice $invoice, bool $includeDetails = false): array

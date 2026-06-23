@@ -75,6 +75,7 @@ function invoiceShow() {
                     'X-CSRF-TOKEN': window.billingCsrfToken
                 },
                 body: JSON.stringify({
+                    invoice_id: this.invoice.id,
                     amount: this.paymentForm.amount,
                     payment_method: this.paymentForm.method,
                     paid_at: this.paymentForm.date
@@ -101,6 +102,34 @@ function invoiceShow() {
             });
 
             this.openPaymentModal = false;
+        },
+
+        async cancelInvoice() {
+            if (!window.billingInvoiceCancelUrl) {
+                alert('Invoice cancellation endpoint is unavailable.');
+                return;
+            }
+
+            if (!confirm('Cancel this invoice? This action cannot be undone.')) {
+                return;
+            }
+
+            const response = await fetch(window.billingInvoiceCancelUrl, {
+                method: 'PATCH',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': window.billingCsrfToken
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.message || 'Could not cancel invoice.');
+                return;
+            }
+
+            this.invoice.status = data.invoice.status;
         }
     }
 }

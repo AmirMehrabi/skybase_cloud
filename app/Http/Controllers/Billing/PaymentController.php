@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Billing\StorePaymentRequest;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -10,7 +11,7 @@ use App\Services\TenantNotificationService;
 use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PaymentController extends Controller
@@ -66,17 +67,23 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function store(Request $request, TenantNotificationService $notifications): JsonResponse|RedirectResponse
+    public function store(StorePaymentRequest $request, TenantNotificationService $notifications): JsonResponse|RedirectResponse
     {
-        $validated = $request->validate([
-            'invoice_id' => ['required', 'exists:invoices,id'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_method' => ['nullable', 'string', 'max:255'],
-            'paid_at' => ['nullable', 'date'],
-            'notes' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $invoice = Invoice::query()->findOrFail($validated['invoice_id']);
+
+        if ($invoice->status === 'void') {
+            throw ValidationException::withMessages([
+                'invoice_id' => 'A payment cannot be recorded for a cancelled invoice.',
+            ]);
+        }
+
+        if ((float) $validated['amount'] > (float) $invoice->balance_due) {
+            throw ValidationException::withMessages([
+                'amount' => 'The payment amount cannot exceed the invoice balance.',
+            ]);
+        }
 
         $payment = $invoice->payments()->create([
             'tenant_id' => $invoice->tenant_id,

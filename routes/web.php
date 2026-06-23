@@ -336,6 +336,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
             Route::get('/create', fn () => view('billing.invoices.create'))->name('create');
             Route::get('/{invoice}', [InvoiceController::class, 'show'])->name('show');
             Route::get('/{invoice}/edit', fn ($invoice) => view('billing.invoices.edit', compact('invoice')))->name('edit');
+            Route::patch('/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('cancel');
         });
 
         Route::prefix('payments')->name('payments.')->group(function () {
