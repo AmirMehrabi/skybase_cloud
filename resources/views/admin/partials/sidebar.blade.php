@@ -343,7 +343,7 @@
         <a href="{{ route('admin.tenant.roles.index') }}"
            class="flex items-center gap-3 px-3 py-2 rounded-lg border text-sm font-medium transition {{ str_starts_with($currentRoute, 'admin.tenant.roles') ? 'border-white/15 bg-white/[0.12] text-white shadow-sm' : 'border-transparent text-teal-50/85 hover:border-white/10 hover:bg-white/10 hover:text-white' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V8a4 4 0 10-8 0v3m-2 0h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2z"></path>
             </svg>
             <span>Roles</span>
         </a>
