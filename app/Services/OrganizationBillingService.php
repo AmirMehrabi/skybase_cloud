@@ -83,6 +83,12 @@ class OrganizationBillingService
     public function applyDefaultsToPlanItem(SubscriptionItem $item, Organization $organization): void
     {
         $organization->loadMissing('defaultPlan');
+        $item->loadMissing('subscription.customer');
+        $tax = app(TaxResolverService::class)->resolve(
+            $item->subscription->customer,
+            $organization->defaultPlan,
+            'plan',
+        );
 
         $item->fill([
             'plan_id' => $organization->default_plan_id,
@@ -90,7 +96,7 @@ class OrganizationBillingService
             'unit_price' => $organization->defaultPlan?->price ?? $item->unit_price,
             'discount_type' => $organization->default_discount_type,
             'discount_amount' => $organization->default_discount_amount,
-            'tax_percentage' => $organization->default_tax_percentage,
+            'tax_percentage' => $tax['percentage'],
             'recurring' => true,
             'billing_cycle' => $organization->default_billing_cycle,
         ]);

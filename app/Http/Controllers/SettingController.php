@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Setting\TestEmailSettingRequest;
+use App\Http\Requests\Setting\UpdateBillingTaxSettingRequest;
 use App\Http\Requests\Setting\UpdateBrandingSettingRequest;
 use App\Http\Requests\Setting\UpdateEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateGeneralSettingRequest;
 use App\Http\Requests\Setting\UpdateLdapSettingRequest;
 use App\Http\Requests\Setting\UpdateNotificationSettingRequest;
 use App\Models\Setting;
+use App\Models\Subscription;
+use App\Models\SubscriptionItem;
 use App\Models\Tenant;
 use App\Services\Ldap\LdapConnectionFactory;
 use App\Services\Ldap\LdapSyncService;
 use App\Services\NotificationPreferenceService;
 use App\Services\RadiusProvisioningService;
+use App\Services\TaxResolverService;
 use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -35,8 +39,37 @@ class SettingController extends Controller
         $ldapSettings = app(LdapSyncService::class)->settingsForTenant($tenant->id);
         $notificationSettings = app(NotificationPreferenceService::class)->tenantSettings($tenant->id);
         $notificationEvents = NotificationEventRegistry::events();
+        $taxSettings = app(TaxResolverService::class)->settings($tenant->id);
 
-        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings', 'ldapSettings', 'notificationSettings', 'notificationEvents'));
+        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings', 'ldapSettings', 'notificationSettings', 'notificationEvents', 'taxSettings'));
+    }
+
+    public function updateBillingTax(UpdateBillingTaxSettingRequest $request, TaxResolverService $taxResolver): RedirectResponse
+    {
+        $tenant = $this->getTenant();
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'billing.tax'],
+            [
+                'value' => [
+                    'enabled' => $request->boolean('tax_enabled'),
+                    'name' => $request->string('tax_name')->toString(),
+                    'percentage' => round((float) $request->input('tax_percentage'), 2),
+                    'show_tax_id_on_invoice' => $request->boolean('show_tax_id_on_invoice'),
+                    'invoice_note' => $request->filled('invoice_note') ? $request->string('invoice_note')->toString() : null,
+                ],
+                'type' => 'json',
+                'group' => 'billing',
+            ]
+        );
+
+        if ($request->boolean('sync_existing_subscription_items')) {
+            $this->syncSubscriptionItemsTax($tenant->id, $taxResolver);
+        }
+
+        return redirect()
+            ->route('settings.index', ['tab' => 'billing'])
+            ->with('success', 'Billing tax settings updated successfully.');
     }
 
     public function updateNotifications(UpdateNotificationSettingRequest $request): RedirectResponse
@@ -63,6 +96,31 @@ class SettingController extends Controller
         return redirect()
             ->route('settings.index', ['tab' => 'notifications'])
             ->with('success', 'Notification settings updated successfully.');
+    }
+
+    private function syncSubscriptionItemsTax(string $tenantId, TaxResolverService $taxResolver): void
+    {
+        Subscription::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('billing_enabled', true)
+            ->whereIn('status', ['pending', 'active'])
+            ->with(['customer.organization', 'plan', 'items'])
+            ->chunkById(100, function ($subscriptions) use ($taxResolver): void {
+                foreach ($subscriptions as $subscription) {
+                    $subscription->items->each(function (SubscriptionItem $item) use ($subscription, $taxResolver): void {
+                        $tax = $taxResolver->resolve(
+                            $subscription->customer,
+                            $subscription->plan,
+                            (string) $item->item_type,
+                        );
+
+                        $item->tax_percentage = $tax['percentage'];
+                        $item->calculateTotals();
+                    });
+
+                    $subscription->calculateTotalPrice();
+                }
+            });
     }
 
     public function updateEmail(UpdateEmailSettingRequest $request): RedirectResponse

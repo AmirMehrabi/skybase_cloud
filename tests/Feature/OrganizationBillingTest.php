@@ -121,11 +121,25 @@ class OrganizationBillingTest extends TestCase
 
     private function customer(Tenant $tenant, Organization $organization): Customer
     {
-        return Customer::factory()->create([
+        return Customer::create([
             'tenant_id' => $tenant->id,
             'organization_id' => $organization->id,
+            'customer_code' => 'CUS-'.Str::upper(Str::random(8)),
+            'customer_type' => 'individual',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'name' => 'Jane Doe',
+            'email' => Str::random(8).'@example.com',
+            'mobile' => '555-0101',
+            'address_line1' => '123 Main Street',
+            'city' => 'Springfield',
+            'country' => 'United States',
             'status' => 'active',
+            'billing_type' => 'postpaid',
             'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 100,
+            'tax_exempt' => false,
         ]);
     }
 

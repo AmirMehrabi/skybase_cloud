@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
+use App\Services\TaxResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
@@ -26,7 +27,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice): View
     {
-        $invoice->load(['customer', 'subscription', 'items', 'payments']);
+        $invoice->load(['tenant', 'customer', 'subscription', 'items', 'payments']);
 
         return view('billing.invoices.show', [
             'invoice' => $this->transformInvoice($invoice, true),
@@ -80,10 +81,18 @@ class InvoiceController extends Controller
         ];
 
         if ($includeDetails) {
+            $taxSettings = app(TaxResolverService::class)->settings((string) $invoice->tenant_id);
+
+            $data['tax_label'] = $taxSettings['name'];
+            $data['tax_note'] = $taxSettings['invoice_note'];
+            $data['show_tax_id_on_invoice'] = $taxSettings['show_tax_id_on_invoice'];
+            $data['tenant_tax_id'] = $invoice->tenant?->tax_id;
             $data['items'] = $invoice->items->map(fn ($item): array => [
                 'description' => $item->description,
                 'quantity' => $item->quantity,
                 'unit_price' => (float) $item->unit_price,
+                'tax_percentage' => (float) $item->tax_percentage,
+                'tax_amount' => (float) $item->tax_amount,
                 'total' => (float) $item->total,
             ])->values();
 

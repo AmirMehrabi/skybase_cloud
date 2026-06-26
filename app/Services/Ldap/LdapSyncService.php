@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\Tenant;
+use App\Services\TaxResolverService;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -1047,6 +1048,11 @@ class LdapSyncService
             ->where('item_type', 'plan')
             ->oldest()
             ->first() ?? new SubscriptionItem(['subscription_id' => $subscription->id, 'item_type' => 'plan']);
+        $tax = app(TaxResolverService::class)->resolve(
+            $subscription->customer,
+            $organization->defaultPlan,
+            'plan',
+        );
 
         $item->fill([
             'description' => $organization->defaultPlan->name,
@@ -1055,7 +1061,7 @@ class LdapSyncService
             'unit_price' => $organization->defaultPlan->price,
             'discount_type' => $organization->default_discount_type,
             'discount_amount' => $organization->default_discount_amount,
-            'tax_percentage' => $organization->default_tax_percentage,
+            'tax_percentage' => $tax['percentage'],
             'recurring' => true,
             'billing_cycle' => $organization->default_billing_cycle,
         ]);

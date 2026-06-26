@@ -28,6 +28,7 @@ use App\Services\RadiusAccountingUsageService;
 use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\TaxResolverService;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -46,6 +47,7 @@ class SubscriptionController extends Controller
         protected OrganizationBillingService $organizationBilling,
         protected RadiusAccountingUsageService $radiusAccountingUsage,
         protected SubscriptionSessionDisconnectService $disconnectService,
+        protected TaxResolverService $taxResolver,
     ) {}
 
     /**
@@ -171,7 +173,7 @@ class SubscriptionController extends Controller
             unset($validated['ip_address']);
         }
 
-        [$subscription, $invoice] = DB::transaction(function () use ($validated, $items, $primaryIpAddress, $ipRoutes): array {
+        [$subscription, $invoice] = DB::transaction(function () use ($validated, $items, $primaryIpAddress, $ipRoutes, $plan): array {
             $subscription = Subscription::create($validated);
 
             if ($subscription->isSystemManagedIp()) {
@@ -204,7 +206,6 @@ class SubscriptionController extends Controller
                     'unit_price' => $itemData['unit_price'],
                     'discount_amount' => $itemData['discount_amount'] ?? 0,
                     'discount_type' => $itemData['discount_type'] ?? 'none',
-                    'tax_percentage' => $itemData['tax_percentage'] ?? 0,
                     'recurring' => $itemData['recurring'],
                     'billing_cycle' => $itemData['billing_cycle'] ?? $validated['billing_cycle'],
                 ]);
@@ -216,6 +217,13 @@ class SubscriptionController extends Controller
                     continue;
                 }
 
+                $tax = $this->taxResolver->resolve(
+                    $subscription->customer,
+                    $plan,
+                    (string) $item->item_type,
+                    isset($itemData['tax_percentage']) ? (float) $itemData['tax_percentage'] : null,
+                );
+                $item->tax_percentage = $tax['percentage'];
                 $item->calculateTotals();
                 $totalPrice += $item->total;
             }

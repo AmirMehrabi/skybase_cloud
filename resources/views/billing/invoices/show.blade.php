@@ -102,8 +102,12 @@
                             <span class="text-sm font-medium text-gray-900" x-text="formatCurrency(invoice.subtotal)"></span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-sm text-gray-500">Tax</span>
+                            <span class="text-sm text-gray-500" x-text="invoice.tax_label || 'Tax'"></span>
                             <span class="text-sm font-medium text-gray-900" x-text="formatCurrency(invoice.tax)"></span>
+                        </div>
+                        <div class="flex justify-between" x-show="invoice.show_tax_id_on_invoice && invoice.tenant_tax_id">
+                            <span class="text-sm text-gray-500">Tax ID</span>
+                            <span class="text-sm font-medium text-gray-900" x-text="invoice.tenant_tax_id"></span>
                         </div>
                         <div class="flex justify-between" x-show="invoice.discount > 0">
                             <span class="text-sm text-gray-500">Discount</span>
@@ -127,6 +131,7 @@
                         </div>
                     </div>
                 </div>
+                <div x-show="invoice.tax_note" class="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900" x-text="invoice.tax_note"></div>
             </div>
 
             <!-- Line Items -->
@@ -140,6 +145,7 @@
                                 <th class="pb-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
                                 <th class="pb-3 text-center text-xs font-semibold text-gray-500 uppercase">Qty</th>
                                 <th class="pb-3 text-right text-xs font-semibold text-gray-500 uppercase">Unit Price</th>
+                                <th class="pb-3 text-right text-xs font-semibold text-gray-500 uppercase">Tax</th>
                                 <th class="pb-3 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
                             </tr>
                         </thead>
@@ -150,6 +156,7 @@
                                     <td class="py-3 text-sm font-medium text-gray-900" x-text="item.description"></td>
                                     <td class="py-3 text-sm text-gray-700 text-center" x-text="item.quantity"></td>
                                     <td class="py-3 text-sm text-gray-700 text-right" x-text="formatCurrency(item.unit_price)"></td>
+                                    <td class="py-3 text-sm text-gray-700 text-right" x-text="formatCurrency(item.tax_amount)"></td>
                                     <td class="py-3 text-sm font-semibold text-gray-900 text-right" x-text="formatCurrency(item.total)"></td>
                                 </tr>
                             </template>

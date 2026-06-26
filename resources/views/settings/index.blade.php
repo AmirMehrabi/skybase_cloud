@@ -41,6 +41,9 @@
             <button onclick="showTab('branding')" id="tab-branding" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'branding' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                 Branding & Appearance
             </button>
+            <button onclick="showTab('billing')" id="tab-billing" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'billing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                Billing
+            </button>
             <button onclick="showTab('email')" id="tab-email" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'email' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                 Email
             </button>
@@ -61,6 +64,11 @@
     <!-- Branding Tab -->
     <div id="content-branding" class="tab-content {{ $activeTab === 'branding' ? '' : 'hidden' }}">
         @include('settings.partials.branding')
+    </div>
+
+    <!-- Billing Tab -->
+    <div id="content-billing" class="tab-content {{ $activeTab === 'billing' ? '' : 'hidden' }}">
+        @include('settings.partials.billing')
     </div>
 
     <!-- Email Tab -->

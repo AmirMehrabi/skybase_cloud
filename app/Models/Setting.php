@@ -107,6 +107,18 @@ class Setting extends Model
                 'group' => 'billing',
             ],
             [
+                'key' => 'billing.tax',
+                'value' => [
+                    'enabled' => false,
+                    'name' => 'Tax',
+                    'percentage' => 0,
+                    'show_tax_id_on_invoice' => false,
+                    'invoice_note' => null,
+                ],
+                'type' => 'json',
+                'group' => 'billing',
+            ],
+            [
                 'key' => 'default_plan_id',
                 'value' => null,
                 'type' => 'integer',
