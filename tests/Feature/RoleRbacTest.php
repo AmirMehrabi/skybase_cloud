@@ -90,6 +90,25 @@ class RoleRbacTest extends TestCase
         $response->assertSee('Role Management');
     }
 
+    public function test_user_without_dashboard_permission_is_redirected_to_first_accessible_page(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        Role::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Customer Reader',
+            'permissions' => ['customers.read'],
+        ]);
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'Customer Reader',
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertRedirect(route('customers.index'));
+    }
+
     public function test_assigned_role_cannot_be_deleted(): void
     {
         $tenant = $this->createTenant('alpha-net');

@@ -2,6 +2,7 @@
 
 namespace App\Support\Rbac;
 
+use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -359,6 +360,44 @@ class PermissionRegistry
             'settings.sync.*' => 'settings.actions',
             'settings.delete.asset' => 'settings.delete',
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function landingRoutes(): array
+    {
+        return [
+            'dashboard',
+            'organizations.index',
+            'customers.index',
+            'subscriptions.index',
+            'support.tickets.index',
+            'support.teams.index',
+            'plans.index',
+            'billing.dashboard',
+            'ipam.dashboard',
+            'sites.index',
+            'routers.index',
+            'access-points.index',
+            'vpn-users.index',
+            'network.bandwidth',
+            'reports.usage',
+            'admin.tenant.users.index',
+            'admin.tenant.roles.index',
+            'settings.index',
+        ];
+    }
+
+    public static function firstAccessibleRoute(User $user): ?string
+    {
+        foreach (self::landingRoutes() as $routeName) {
+            if ($user->canAccessRoute($routeName)) {
+                return $routeName;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -27,6 +27,14 @@ class CheckPermission
         }
 
         if (! $user->hasPermission($permission)) {
+            if ($request->routeIs('dashboard')) {
+                $landingRoute = PermissionRegistry::firstAccessibleRoute($user);
+
+                if ($landingRoute) {
+                    return redirect()->route($landingRoute);
+                }
+            }
+
             if ($request->expectsJson()) {
                 return response()->json(['message' => PermissionRegistry::DENIED_MESSAGE], 403);
             }

@@ -3,6 +3,7 @@
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckTenantStatus;
 use App\Http\Middleware\InitializeTenancy;
+use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -30,11 +31,15 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $middleware->redirectUsersTo(function ($request): string {
+            $landingRoute = auth()->check()
+                ? PermissionRegistry::firstAccessibleRoute(auth()->user()) ?? 'dashboard'
+                : 'dashboard';
+
             if ($request->routeIs('customer.*')) {
                 return route('customer.dashboard');
             }
 
-            return route('dashboard');
+            return route($landingRoute);
         });
 
     })

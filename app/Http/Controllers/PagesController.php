@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,9 @@ class PagesController extends Controller
         }
 
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            $landingRoute = PermissionRegistry::firstAccessibleRoute(Auth::user()) ?? 'dashboard';
+
+            return redirect()->route($landingRoute);
         }
 
         if (! config('app.cloud.enabled')) {
@@ -29,7 +32,9 @@ class PagesController extends Controller
     public function pricing(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            $landingRoute = PermissionRegistry::firstAccessibleRoute(Auth::user()) ?? 'dashboard';
+
+            return redirect()->route($landingRoute);
         }
 
         return view('pricing');
@@ -38,7 +43,9 @@ class PagesController extends Controller
     public function features(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            $landingRoute = PermissionRegistry::firstAccessibleRoute(Auth::user()) ?? 'dashboard';
+
+            return redirect()->route($landingRoute);
         }
 
         return view('features');
@@ -67,7 +74,9 @@ class PagesController extends Controller
     public function contact(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            $landingRoute = PermissionRegistry::firstAccessibleRoute(Auth::user()) ?? 'dashboard';
+
+            return redirect()->route($landingRoute);
         }
 
         return view('contact');
@@ -83,7 +92,9 @@ class PagesController extends Controller
     private function alternativePage(string $competitor): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            $landingRoute = PermissionRegistry::firstAccessibleRoute(Auth::user()) ?? 'dashboard';
+
+            return redirect()->route($landingRoute);
         }
 
         $pages = [

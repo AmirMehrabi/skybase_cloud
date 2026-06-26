@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TenantLoginRequest;
 use App\Models\User;
+use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,7 +68,9 @@ class TenantLoginController extends Controller
 
         $user->update(['last_login_at' => now()]);
 
-        return redirect()->intended(route('dashboard'));
+        $landingRoute = PermissionRegistry::firstAccessibleRoute($user) ?? 'dashboard';
+
+        return redirect()->intended(route($landingRoute));
     }
 
     public function logout(Request $request): RedirectResponse
