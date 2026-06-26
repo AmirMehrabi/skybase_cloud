@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\LogsTenantActivity;
+use App\Support\Rbac\PermissionRegistry;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -94,7 +96,13 @@ class User extends Authenticatable
 
     public function getRoleDisplayName(): string
     {
-        return match ($this->role) {
+        $role = $this->resolvedRole();
+
+        if ($role) {
+            return $role->name;
+        }
+
+        return match ($this->normalizedRoleName()) {
             'owner' => 'Owner',
             'admin' => 'Administrator',
             'billing' => 'Billing Manager',
@@ -106,30 +114,38 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
-        if ($this->role === 'owner') {
+        if ($this->normalizedRoleName() === 'owner') {
             return true;
         }
 
-        $role = Role::where('tenant_id', $this->tenant_id)
-            ->where('name', $this->role)
-            ->first();
+        $role = $this->resolvedRole();
 
         if (! $role) {
-            return false;
+            $permissions = PermissionRegistry::defaultRolePermissions()[$this->normalizedRoleName()] ?? [];
+
+            return in_array('*', $permissions, true)
+                || in_array($permission, $permissions, true);
         }
 
-        return in_array($permission, $role->permissions ?? [])
-            || in_array('*', $role->permissions ?? []);
+        return $role->hasPermission($permission);
+    }
+
+    public function canAccessRoute(?string $routeName): bool
+    {
+        $permission = PermissionRegistry::routePermission($routeName);
+
+        return $permission === null || $this->hasPermission($permission);
     }
 
     public function isOwner(): bool
     {
-        return $this->role === 'owner';
+        return $this->normalizedRoleName() === 'owner';
     }
 
     public function isAdmin(): bool
     {
-        return in_array($this->role, ['owner', 'admin']);
+        return in_array($this->normalizedRoleName(), ['owner', 'admin'], true)
+            || $this->hasPermission('roles.write');
     }
 
     public function isActive(): bool
@@ -168,5 +184,19 @@ class User extends Authenticatable
     public function canAccessTenant(string $tenantId): bool
     {
         return (string) $this->tenant_id === $tenantId;
+    }
+
+    public function resolvedRole(): ?Role
+    {
+        if (! $this->tenant_id || ! $this->role) {
+            return null;
+        }
+
+        return Role::findForTenantRole((string) $this->tenant_id, $this->role);
+    }
+
+    public function normalizedRoleName(): string
+    {
+        return Str::of((string) $this->role)->lower()->replace(' ', '_')->toString();
     }
 }

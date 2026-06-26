@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Tenant\StoreUserRequest;
 use App\Http\Requests\Admin\Tenant\UpdateUserRequest;
 use App\Http\Requests\NotificationPreferenceRequest;
 use App\Models\ActivityLog;
@@ -20,6 +21,7 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $tenantId = $this->currentTenantId($request);
+        Role::ensureDefaultsForTenant($tenantId);
 
         $users = User::where('tenant_id', $tenantId)
             ->with('tenant')
@@ -30,7 +32,7 @@ class UserController extends Controller
                 });
             })
             ->when($request->input('role'), function ($query, $role) {
-                $query->where('role', $role);
+                $query->whereRaw('LOWER(role) = ?', [strtolower((string) $role)]);
             })
             ->when($request->input('status'), function ($query, $status) {
                 $query->where('status', $status);
@@ -39,7 +41,7 @@ class UserController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $roles = Role::where('tenant_id', $tenantId)->pluck('name', 'name');
+        $roles = Role::where('tenant_id', $tenantId)->orderBy('name')->pluck('name', 'name');
 
         return view('admin.tenant.users.index', compact('users', 'roles'));
     }
@@ -47,8 +49,11 @@ class UserController extends Controller
     public function create(Request $request): View
     {
         $tenantId = $this->currentTenantId($request);
+        Role::ensureDefaultsForTenant($tenantId);
 
         $roles = Role::where('tenant_id', $tenantId)
+            ->whereRaw('LOWER(name) != ?', ['owner'])
+            ->orderBy('name')
             ->get()
             ->map(function ($role) {
                 return [
@@ -59,26 +64,12 @@ class UserController extends Controller
                 ];
             });
 
-        $availableRoles = [
-            'admin' => 'Administrator - Full access to all features',
-            'billing' => 'Billing Manager - Manage invoices and payments',
-            'support' => 'Support Agent - Help customers and manage tickets',
-            'noc' => 'NOC Engineer - Monitor network and routers',
-        ];
-
-        return view('admin.tenant.users.create', compact('roles', 'availableRoles'));
+        return view('admin.tenant.users.create', compact('roles'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => ['required', 'in:admin,billing,support,noc'],
-            'status' => ['required', 'in:active,inactive'],
-            'send_invite' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
         $tenantId = $this->currentTenantId($request);
 
@@ -129,12 +120,10 @@ class UserController extends Controller
     {
         $this->authorizeUserAccess($user);
 
-        $roles = [
-            'admin' => 'Administrator - Full access to all features',
-            'billing' => 'Billing Manager - Manage invoices and payments',
-            'support' => 'Support Agent - Help customers and manage tickets',
-            'noc' => 'NOC Engineer - Monitor network and routers',
-        ];
+        Role::ensureDefaultsForTenant((string) $user->tenant_id);
+        $roles = Role::where('tenant_id', $user->tenant_id)
+            ->orderBy('name')
+            ->pluck('description', 'name');
 
         return view('admin.tenant.users.edit', compact('user', 'roles'));
     }

@@ -636,7 +636,7 @@ class SettingController extends Controller
 
     private function authorizeLdapSettings(): void
     {
-        abort_unless(auth()->user()?->isAdmin() === true, 403);
+        abort_unless(auth()->user()?->hasPermission('settings.actions') === true, 403);
     }
 
     /**

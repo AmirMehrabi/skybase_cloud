@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin\Tenant;
 
+use App\Models\Role;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends FormRequest
 {
@@ -13,11 +15,21 @@ class StoreUserRequest extends FormRequest
 
     public function rules(): array
     {
+        $tenantId = tenant_id() ?? $this->user()?->tenant_id;
+        if ($tenantId) {
+            Role::ensureDefaultsForTenant((string) $tenantId);
+        }
+        $roleNames = Role::query()
+            ->where('tenant_id', $tenantId)
+            ->whereRaw('LOWER(name) != ?', ['owner'])
+            ->pluck('name')
+            ->all();
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => ['required', 'in:admin,billing,support,noc'],
+            'role' => ['required', Rule::in($roleNames)],
             'status' => ['required', 'in:active,inactive'],
             'send_invite' => ['nullable', 'boolean'],
         ];
@@ -37,5 +49,21 @@ class StoreUserRequest extends FormRequest
             'role.in' => 'The selected role is invalid.',
             'status.required' => 'Please select a status for this user.',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $tenantId = tenant_id() ?? $this->user()?->tenant_id;
+
+        if (! $tenantId || ! $this->has('role')) {
+            return;
+        }
+
+        Role::ensureDefaultsForTenant((string) $tenantId);
+        $role = Role::findForTenantRole((string) $tenantId, (string) $this->input('role'));
+
+        if ($role) {
+            $this->merge(['role' => $role->name]);
+        }
     }
 }

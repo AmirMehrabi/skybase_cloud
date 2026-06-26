@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccessPointController;
 use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantController;
+use App\Http\Controllers\Admin\Tenant\RoleController;
 use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
@@ -112,7 +113,7 @@ Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
 Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('auth.logout')->middleware('auth');
 
 // Protected Routes (Require Authentication & Tenancy)
-Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(function () {
+Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -132,6 +133,16 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status'])->group(
         Route::put('/{user}', [UserController::class, 'update'])->name('update');
         Route::patch('/{user}/notifications', [UserController::class, 'updateNotifications'])->name('notifications.update');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('settings/roles')->name('admin.tenant.roles.')->group(function () {
+        Route::get('/', [RoleController::class, 'index'])->name('index');
+        Route::get('/create', [RoleController::class, 'create'])->name('create');
+        Route::post('/', [RoleController::class, 'store'])->name('store');
+        Route::get('/{role}', [RoleController::class, 'show'])->name('show');
+        Route::get('/{role}/edit', [RoleController::class, 'edit'])->name('edit');
+        Route::put('/{role}', [RoleController::class, 'update'])->name('update');
+        Route::delete('/{role}', [RoleController::class, 'destroy'])->name('destroy');
     });
 
     // Settings Routes

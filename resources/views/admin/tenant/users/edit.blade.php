@@ -100,19 +100,22 @@
                         id="role"
                         name="role"
                         required
-                        @if($user->role === 'owner') disabled @endif
+                        @if($user->isOwner()) disabled @endif
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                        @if($user->role === 'owner')
-                        <option value="owner" selected>Owner - Full account access</option>
+                        @if($user->isOwner())
+                        <option value="{{ $user->role }}" selected>Owner - Full account access</option>
                         @else
-                        <option value="admin" {{ $user->role === 'admin' ? 'selected' : '' }}>Admin - Full management access</option>
-                        <option value="billing" {{ $user->role === 'billing' ? 'selected' : '' }}>Billing - Invoices and payments</option>
-                        <option value="support" {{ $user->role === 'support' ? 'selected' : '' }}>Support - Customer support</option>
-                        <option value="noc" {{ $user->role === 'noc' ? 'selected' : '' }}>NOC - Network operations</option>
+                            @foreach($roles as $roleName => $description)
+                                @if(strtolower($roleName) !== 'owner')
+                                    <option value="{{ $roleName }}" {{ strcasecmp($user->role, $roleName) === 0 ? 'selected' : '' }}>
+                                        {{ $roleName }}@if($description) - {{ $description }}@endif
+                                    </option>
+                                @endif
+                            @endforeach
                         @endif
                     </select>
-                    @if($user->role === 'owner')
+                    @if($user->isOwner())
                     <p class="text-xs text-gray-500 mt-1">The owner role cannot be changed.</p>
                     @endif
                     @error('role')

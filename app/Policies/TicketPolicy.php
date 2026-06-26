@@ -58,12 +58,13 @@ class TicketPolicy
     {
         return $user->isAdmin()
             || in_array($user->role, ['support', 'noc'], true)
-            || $user->hasPermission('tickets.view')
-            || $user->hasPermission('tickets.manage');
+            || $user->hasPermission('support_tickets.read')
+            || $user->hasPermission('support_tickets.write')
+            || $user->hasPermission('support_tickets.actions');
     }
 
     private function canManageAllTickets(User $user): bool
     {
-        return $user->isAdmin() || $user->hasPermission('tickets.manage');
+        return $user->isAdmin();
     }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Admin\Tenant;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -14,10 +16,24 @@ class UpdateUserRequest extends FormRequest
 
     public function rules(): array
     {
+        $tenantId = tenant_id() ?? $this->user()?->tenant_id;
+        if ($tenantId) {
+            Role::ensureDefaultsForTenant((string) $tenantId);
+        }
+        $roleNames = Role::query()
+            ->where('tenant_id', $tenantId)
+            ->pluck('name')
+            ->all();
+        $user = $this->route('user');
+
+        if ($user instanceof User && ! in_array($user->role, $roleNames, true)) {
+            $roleNames[] = $user->role;
+        }
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$this->route('user')->id],
-            'role' => ['required', 'in:owner,admin,billing,support,noc'],
+            'role' => ['required', Rule::in($roleNames)],
             'status' => ['required', 'in:active,inactive'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ];
@@ -46,8 +62,17 @@ class UpdateUserRequest extends FormRequest
             return;
         }
 
+        $role = $this->has('role') ? $this->input('role') : $user->role;
+        $tenantId = tenant_id() ?? $this->user()?->tenant_id;
+
+        if ($tenantId && $this->has('role')) {
+            Role::ensureDefaultsForTenant((string) $tenantId);
+            $roleModel = Role::findForTenantRole((string) $tenantId, (string) $role);
+            $role = $roleModel?->name ?? $role;
+        }
+
         $this->merge([
-            'role' => $this->has('role') ? $this->input('role') : $user->role,
+            'role' => $role,
             'status' => $this->has('status') ? $this->input('status') : $user->status,
         ]);
     }

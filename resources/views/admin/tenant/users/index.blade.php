@@ -34,10 +34,9 @@
         <div>
             <select name="role" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">All Roles</option>
-                <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin</option>
-                <option value="billing" {{ request('role') === 'billing' ? 'selected' : '' }}>Billing</option>
-                <option value="support" {{ request('role') === 'support' ? 'selected' : '' }}>Support</option>
-                <option value="noc" {{ request('role') === 'noc' ? 'selected' : '' }}>NOC</option>
+                @foreach($roles as $roleName)
+                    <option value="{{ $roleName }}" {{ request('role') === $roleName ? 'selected' : '' }}>{{ $roleName }}</option>
+                @endforeach
             </select>
         </div>
         <div>
@@ -93,11 +92,11 @@
                     </td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                            @if($user->role === 'owner') bg-purple-100 text-purple-800
-                            @elseif($user->role === 'admin') bg-blue-100 text-blue-800
-                            @elseif($user->role === 'billing') bg-green-100 text-green-800
-                            @elseif($user->role === 'support') bg-yellow-100 text-yellow-800
-                            @elseif($user->role === 'noc') bg-orange-100 text-orange-800
+                            @if($user->normalizedRoleName() === 'owner') bg-purple-100 text-purple-800
+                            @elseif($user->normalizedRoleName() === 'admin') bg-blue-100 text-blue-800
+                            @elseif($user->normalizedRoleName() === 'billing') bg-green-100 text-green-800
+                            @elseif($user->normalizedRoleName() === 'support') bg-yellow-100 text-yellow-800
+                            @elseif($user->normalizedRoleName() === 'noc') bg-orange-100 text-orange-800
                             @else bg-gray-100 text-gray-800
                             @endif">
                             {{ $user->getRoleDisplayName() }}
@@ -126,7 +125,7 @@
                         <div class="flex items-center justify-end gap-2" x-data="{ deleting: false }">
                             <x-ui.action-icon href="{{ route('admin.tenant.users.show', $user) }}" icon="view" label="View" />
                             <x-ui.action-icon href="{{ route('admin.tenant.users.edit', $user) }}" icon="edit" label="Edit" />
-                            @if($user->id !== auth()->id() && $user->role !== 'owner')
+                            @if($user->id !== auth()->id() && ! $user->isOwner() && auth()->user()?->hasPermission('users.delete'))
                                 <x-ui.action-icon as="button" icon="delete" label="Delete" @click="deleting = true" />
                                 <form x-ref="deleteForm" method="POST" action="{{ route('admin.tenant.users.destroy', $user) }}" class="hidden">
                                     @csrf

@@ -9,7 +9,7 @@ class UpdateLdapSettingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() === true;
+        return $this->user()?->hasPermission('settings.write') === true;
     }
 
     public function rules(): array

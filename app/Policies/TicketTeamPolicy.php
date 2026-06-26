@@ -52,6 +52,6 @@ class TicketTeamPolicy
 
     private function canManageTeams(User $user): bool
     {
-        return $user->isAdmin() || $user->hasPermission('tickets.manage');
+        return $user->isAdmin() || $user->hasPermission('support_teams.write');
     }
 }

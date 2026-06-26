@@ -108,10 +108,11 @@
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                     <option value="">Select a role</option>
-                    <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin - Full management access</option>
-                    <option value="billing" {{ old('role') == 'billing' ? 'selected' : '' }}>Billing - Invoices and payments</option>
-                    <option value="support" {{ old('role') == 'support' ? 'selected' : '' }}>Support - Customer support</option>
-                    <option value="noc" {{ old('role') == 'noc' ? 'selected' : '' }}>NOC - Network operations</option>
+                    @foreach($roles as $role)
+                        <option value="{{ $role['id'] }}" {{ old('role') === $role['id'] ? 'selected' : '' }}>
+                            {{ $role['name'] }}@if($role['description']) - {{ $role['description'] }}@endif
+                        </option>
+                    @endforeach
                 </select>
                 @error('role')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -122,10 +123,9 @@
             <div class="mt-4 p-4 bg-gray-50 rounded-lg">
                 <p class="text-sm font-medium text-gray-900 mb-2">Role Permissions:</p>
                 <div class="space-y-2 text-xs text-gray-600">
-                    <div><strong>Admin:</strong> Full access to customers, billing, routers, reports, and user management</div>
-                    <div><strong>Billing:</strong> View customers, manage invoices, payments, and billing reports</div>
-                    <div><strong>Support:</strong> View and edit customers, manage routers, and handle support tickets</div>
-                    <div><strong>NOC:</strong> Full router access, network monitoring, and network reports</div>
+                    @foreach($roles as $role)
+                        <div><strong>{{ $role['name'] }}:</strong> {{ $role['description'] ?: 'Custom role permissions' }}</div>
+                    @endforeach
                 </div>
             </div>
         </div>
