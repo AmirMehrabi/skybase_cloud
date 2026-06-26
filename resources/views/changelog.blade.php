@@ -11,6 +11,32 @@
 @php
     $releases = [
         [
+            'version' => '0.9.6',
+            'date' => 'June 26, 2026',
+            'title' => 'Role-Based Access Control and Permission Routing',
+            'summary' => 'This release extends the existing roles system into a full RBAC layer with module-level permissions, clearer access denial handling, and first-page login routing for users without dashboard access.',
+            'sections' => [
+                'Added' => [
+                    'Role-based access control built on the existing roles system, with per-module read, write, create, update, delete, export, import, and manage permissions.',
+                    'English permission labels and descriptions for the full permission registry so access rules are easier to review and maintain.',
+                    'Tenant role management screens for creating, editing, and assigning role-based permissions from the admin area.',
+                    'Permission coverage across sidebar modules and management pages so navigation reflects the user’s actual access.',
+                    'First-accessible-page routing after login for users who do not have dashboard access.',
+                ],
+                'Changed' => [
+                    'Permission checks now return clear English denial messages instead of falling back to ambiguous or localized text.',
+                    'Sidebar navigation now hides modules and pages the current user cannot access.',
+                    'Dashboard entry behavior now redirects restricted users to the first page they are allowed to open.',
+                    'Role update and access feedback messages were standardized across the admin experience.',
+                ],
+                'Fixed' => [
+                    'Fixed ticketing and other tenant pages that depended on inconsistent permission or pivot behavior under restricted accounts.',
+                    'Resolved Farsi-facing RBAC messages in app-facing permission and role flows.',
+                    'Closed gaps where users with limited access could be blocked on login without a valid fallback route.',
+                ],
+            ],
+        ],
+        [
             'version' => '0.9.5',
             'date' => 'June 12, 2026',
             'title' => 'Access Points, Country Expansion, and Subscription Controls',
@@ -363,8 +389,8 @@
                     Product updates for ISP operators using SkyBase to manage MikroTik routers, subscribers, billing, IPAM, VPN users, and tenant operations.
                 </p>
                 <div class="mt-8 flex flex-wrap gap-3">
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.9.5</span>
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated June 12, 2026</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.9.6</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated June 26, 2026</span>
                 </div>
             </div>
         </div>
