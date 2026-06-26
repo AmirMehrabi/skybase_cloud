@@ -206,13 +206,17 @@ function getVisibilityBadgeClass($visibility)
             </dl>
         </div>
 
-        <!-- Speed Configuration -->
+        <!-- Traffic Shaping -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <div class="mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Speed Configuration</h3>
-                <p class="text-sm text-gray-500 mt-1">Bandwidth settings</p>
+                <h3 class="text-lg font-semibold text-gray-900">Traffic Shaping</h3>
+                <p class="text-sm text-gray-500 mt-1">RouterOS-compatible bandwidth settings</p>
             </div>
             <dl class="space-y-4">
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">Shaping Mode</dt>
+                    <dd class="text-sm font-medium text-gray-900">{{ ucfirst($plan['shaping_mode']) }}</dd>
+                </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Download Speed</dt>
                     <dd class="text-sm font-medium text-gray-900">{{ $plan['download_speed'] }} {{ $plan['bandwidth_unit'] }}</dd>
@@ -228,6 +232,28 @@ function getVisibilityBadgeClass($visibility)
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Burst Upload</dt>
                     <dd class="text-sm font-medium text-gray-900">{{ $plan['burst_upload'] ?? '-' }} {{ $plan['burst_upload'] ? $plan['bandwidth_unit'] : '' }}</dd>
+                </div>
+                @if($plan['shaping_mode'] === 'advanced')
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500">Burst Threshold</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ $plan['burst_threshold_download'] ?? '-' }} / {{ $plan['burst_threshold_upload'] ?? '-' }} {{ $plan['bandwidth_unit'] }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500">Burst Time</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ $plan['burst_time_download'] ?? '-' }} / {{ $plan['burst_time_upload'] ?? '-' }} sec</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500">Minimum Rate</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ $plan['min_download_speed'] ?? '-' }} / {{ $plan['min_upload_speed'] ?? '-' }} {{ $plan['bandwidth_unit'] }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500">MikroTik Priority</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ $plan['shaping_priority'] ?? '-' }}</dd>
+                    </div>
+                @endif
+                <div>
+                    <dt class="text-sm text-gray-500">MikroTik Rate-Limit</dt>
+                    <dd class="mt-1 break-all rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium text-gray-900">{{ $plan['mikrotik_rate_limit'] ?? 'Not configured' }}</dd>
                 </div>
             </dl>
         </div>
@@ -254,6 +280,16 @@ function getVisibilityBadgeClass($visibility)
                     <dt class="text-sm text-gray-500">Data Limit</dt>
                     <dd class="text-sm font-medium text-gray-900">{{ $plan['data_limit'] }} {{ $plan['data_unit'] }}</dd>
                 </div>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500">Data Cap Action</dt>
+                    <dd class="text-sm font-medium text-gray-900">{{ str($plan['data_cap_action'])->replace('_', ' ')->headline() }}</dd>
+                </div>
+                @if($plan['data_cap_action'] === 'throttle')
+                    <div class="flex justify-between">
+                        <dt class="text-sm text-gray-500">Throttle Speed</dt>
+                        <dd class="text-sm font-medium text-gray-900">{{ $plan['throttle_download_speed'] ?? '-' }} / {{ $plan['throttle_upload_speed'] ?? '-' }} {{ $plan['bandwidth_unit'] }}</dd>
+                    </div>
+                @endif
                 @endif
             </dl>
         </div>

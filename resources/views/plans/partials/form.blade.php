@@ -139,11 +139,21 @@
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900">Speed Configuration</h3>
-            <p class="text-sm text-gray-500 mt-1">Bandwidth and data settings</p>
+            <h3 class="text-lg font-semibold text-gray-900">Traffic Shaping</h3>
+            <p class="text-sm text-gray-500 mt-1">RouterOS-compatible bandwidth and data settings</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Shaping Mode</label>
+                <select name="shaping_mode" x-model="form.shapingMode" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <option value="basic">Basic rate limit</option>
+                    <option value="advanced">Advanced MikroTik shaping</option>
+                    <option value="disabled">Disabled</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">Basic mode preserves the existing upload/download rate-limit behavior.</p>
+            </div>
+
             <div :class="{ 'has-error': frontendErrors.downloadSpeed }">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Download Speed <span class="text-red-500">*</span></label>
                 <div class="flex gap-2">
@@ -183,6 +193,63 @@
                 <input type="number" name="burst_upload" x-model="form.burstUpload" min="0" placeholder="20" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
             </div>
 
+            <template x-if="form.shapingMode === 'advanced'">
+                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Burst Threshold Download</label>
+                        <input type="number" name="burst_threshold_download" x-model="form.burstThresholdDownload" min="0" placeholder="60" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Burst Threshold Upload</label>
+                        <input type="number" name="burst_threshold_upload" x-model="form.burstThresholdUpload" min="0" placeholder="15" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Burst Time Download</label>
+                        <div class="flex gap-2">
+                            <input type="number" name="burst_time_download" x-model="form.burstTimeDownload" min="1" max="86400" placeholder="10" class="flex-1 block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <span class="inline-flex items-center px-3 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg bg-white">sec</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Burst Time Upload</label>
+                        <div class="flex gap-2">
+                            <input type="number" name="burst_time_upload" x-model="form.burstTimeUpload" min="1" max="86400" placeholder="10" class="flex-1 block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <span class="inline-flex items-center px-3 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg bg-white">sec</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Download</label>
+                        <input type="number" name="min_download_speed" x-model="form.minDownloadSpeed" min="0" placeholder="25" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Minimum Upload</label>
+                        <input type="number" name="min_upload_speed" x-model="form.minUploadSpeed" min="0" placeholder="5" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">MikroTik Priority</label>
+                        <input type="number" name="shaping_priority" x-model="form.shapingPriority" min="1" max="8" placeholder="8" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">RouterOS uses 1 as highest priority and 8 as lowest.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Queue Type</label>
+                        <input type="text" name="queue_type" x-model="form.queueType" placeholder="default-small" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">Stored for policy documentation; RADIUS rate-limit does not include queue type.</p>
+                    </div>
+                </div>
+            </template>
+
+            <div class="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                <label class="block text-sm font-medium text-blue-900 mb-2">MikroTik Rate-Limit Preview</label>
+                <code class="block break-all rounded-lg bg-white px-3 py-2 text-sm text-blue-950" x-text="mikrotikRateLimitPreview()"></code>
+            </div>
+
             <div class="md:col-span-2">
                 <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4">
                     <div>
@@ -214,6 +281,30 @@
                 </template>
             </div>
             <input x-show="form.unlimited" type="hidden" name="data_unit" :value="form.dataUnit">
+
+            <div x-show="!form.unlimited" class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Data Cap Action</label>
+                <select name="data_cap_action" x-model="form.dataCapAction" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <option value="none">No automatic action</option>
+                    <option value="notify">Notify only</option>
+                    <option value="throttle">Throttle after limit</option>
+                    <option value="suspend">Suspend after limit</option>
+                </select>
+            </div>
+
+            <template x-if="!form.unlimited && form.dataCapAction === 'throttle'">
+                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Throttle Download</label>
+                        <input type="number" name="throttle_download_speed" x-model="form.throttleDownloadSpeed" min="0" placeholder="5" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Throttle Upload</label>
+                        <input type="number" name="throttle_upload_speed" x-model="form.throttleUploadSpeed" min="0" placeholder="1" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 
@@ -360,11 +451,23 @@ function planForm() {
             downloadSpeed: @js(old('download_speed', data_get($plan, 'download_speed', ''))),
             uploadSpeed: @js(old('upload_speed', data_get($plan, 'upload_speed', ''))),
             bandwidthUnit: @js(old('bandwidth_unit', data_get($plan, 'bandwidth_unit', 'Mbps'))),
+            shapingMode: @js(old('shaping_mode', data_get($plan, 'shaping_mode', 'basic'))),
             burstDownload: @js(old('burst_download', data_get($plan, 'burst_download', ''))),
             burstUpload: @js(old('burst_upload', data_get($plan, 'burst_upload', ''))),
+            burstThresholdDownload: @js(old('burst_threshold_download', data_get($plan, 'burst_threshold_download', ''))),
+            burstThresholdUpload: @js(old('burst_threshold_upload', data_get($plan, 'burst_threshold_upload', ''))),
+            burstTimeDownload: @js(old('burst_time_download', data_get($plan, 'burst_time_download', ''))),
+            burstTimeUpload: @js(old('burst_time_upload', data_get($plan, 'burst_time_upload', ''))),
+            minDownloadSpeed: @js(old('min_download_speed', data_get($plan, 'min_download_speed', ''))),
+            minUploadSpeed: @js(old('min_upload_speed', data_get($plan, 'min_upload_speed', ''))),
+            shapingPriority: @js(old('shaping_priority', data_get($plan, 'shaping_priority', ''))),
+            queueType: @js(old('queue_type', data_get($plan, 'queue_type', ''))),
             unlimited: @js((bool) old('unlimited', data_get($plan, 'unlimited', false))),
             dataLimit: @js(old('data_limit', data_get($plan, 'data_limit', ''))),
             dataUnit: @js(old('data_unit', data_get($plan, 'data_unit', 'GB'))),
+            dataCapAction: @js(old('data_cap_action', data_get($plan, 'data_cap_action', 'none'))),
+            throttleDownloadSpeed: @js(old('throttle_download_speed', data_get($plan, 'throttle_download_speed', ''))),
+            throttleUploadSpeed: @js(old('throttle_upload_speed', data_get($plan, 'throttle_upload_speed', ''))),
             price: @js(old('price', data_get($plan, 'price', ''))),
             currency: @js(old('currency', data_get($plan, 'currency', 'USD'))),
             billingCycle: @js(old('billing_cycle', data_get($plan, 'billing_cycle', 'monthly'))),
@@ -379,6 +482,57 @@ function planForm() {
         },
         frontendErrors: {},
         isSubmitting: false,
+
+        mikrotikRateLimitPreview() {
+            if (this.form.shapingMode === 'disabled') {
+                return 'Disabled';
+            }
+
+            const upload = this.rate(this.form.uploadSpeed);
+            const download = this.rate(this.form.downloadSpeed);
+
+            if (!upload || !download) {
+                return 'Enter upload and download speeds';
+            }
+
+            if (this.form.shapingMode !== 'advanced') {
+                return `${upload}/${download}`;
+            }
+
+            const burstUpload = this.rate(this.form.burstUpload || this.form.uploadSpeed);
+            const burstDownload = this.rate(this.form.burstDownload || this.form.downloadSpeed);
+            const thresholdUpload = this.rate(this.form.burstThresholdUpload || this.form.uploadSpeed);
+            const thresholdDownload = this.rate(this.form.burstThresholdDownload || this.form.downloadSpeed);
+            const timeUpload = parseInt(this.form.burstTimeUpload || 1);
+            const timeDownload = parseInt(this.form.burstTimeDownload || 1);
+            const priority = parseInt(this.form.shapingPriority || 8);
+            const minUpload = this.rate(this.valueOrDefault(this.form.minUploadSpeed, this.form.uploadSpeed), true);
+            const minDownload = this.rate(this.valueOrDefault(this.form.minDownloadSpeed, this.form.downloadSpeed), true);
+
+            return `${upload}/${download} ${burstUpload}/${burstDownload} ${thresholdUpload}/${thresholdDownload} ${Math.max(1, timeUpload)}/${Math.max(1, timeDownload)} ${priority} ${minUpload}/${minDownload}`;
+        },
+
+        valueOrDefault(value, fallback) {
+            return value === '' || value === null || value === undefined ? fallback : value;
+        },
+
+        rate(value, allowZero = false) {
+            const numericValue = parseInt(value || 0);
+
+            if (!numericValue && !allowZero) {
+                return '';
+            }
+
+            if (this.form.bandwidthUnit === 'Kbps') {
+                return `${numericValue}k`;
+            }
+
+            if (this.form.bandwidthUnit === 'Gbps') {
+                return `${numericValue * 1000}M`;
+            }
+
+            return `${numericValue}M`;
+        },
 
         validateField(field) {
             this.frontendErrors[field] = '';

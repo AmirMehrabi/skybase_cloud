@@ -9,12 +9,17 @@ use App\Models\RadiusReply;
 use App\Models\RadiusUserGroup;
 use App\Models\Setting;
 use App\Models\Subscription;
+use App\Services\TrafficShaping\PlanTrafficShapingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class RadiusProvisioningService
 {
+    public function __construct(
+        protected PlanTrafficShapingService $trafficShaping,
+    ) {}
+
     public function syncSubscription(Subscription $subscription, ?string $previousUsername = null): void
     {
         $subscription->loadMissing(['customer.organization', 'plan']);
@@ -223,13 +228,7 @@ class RadiusProvisioningService
 
     public function rateLimitForPlan(?Plan $plan): ?string
     {
-        if (! $plan || ! $plan->upload_speed || ! $plan->download_speed) {
-            return null;
-        }
-
-        $suffix = $this->rateSuffix((string) $plan->bandwidth_unit);
-
-        return ((int) $plan->upload_speed).$suffix.'/'.((int) $plan->download_speed).$suffix;
+        return $this->trafficShaping->mikrotikRateLimit($plan);
     }
 
     public function provisioningSkipReason(Subscription $subscription): ?string
@@ -267,15 +266,6 @@ class RadiusProvisioningService
         }
 
         return null;
-    }
-
-    protected function rateSuffix(string $unit): string
-    {
-        return match (strtolower($unit)) {
-            'kbps', 'kbit', 'kbits' => 'k',
-            'gbps', 'gbit', 'gbits' => 'G',
-            default => 'M',
-        };
     }
 
     protected function groupNameForPlan(?Plan $plan): string

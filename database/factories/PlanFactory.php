@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Plan>
+ * @extends Factory<Plan>
  */
 class PlanFactory extends Factory
 {
@@ -31,8 +32,20 @@ class PlanFactory extends Factory
             'burst_download' => fake()->numberBetween(0, 1000),
             'burst_upload' => fake()->numberBetween(0, 500),
             'bandwidth_unit' => fake()->randomElement(['Kbps', 'Mbps', 'Gbps']),
+            'shaping_mode' => 'basic',
+            'burst_threshold_download' => null,
+            'burst_threshold_upload' => null,
+            'burst_time_download' => null,
+            'burst_time_upload' => null,
+            'min_download_speed' => null,
+            'min_upload_speed' => null,
+            'shaping_priority' => null,
+            'queue_type' => null,
             'data_limit' => fake()->boolean() ? fake()->numberBetween(10, 5000) : null,
             'data_unit' => fake()->randomElement(['MB', 'GB', 'TB']),
+            'data_cap_action' => 'none',
+            'throttle_download_speed' => null,
+            'throttle_upload_speed' => null,
             'unlimited' => fake()->boolean(),
             'price' => fake()->randomFloat(2, 9.99, 499.99),
             'currency' => fake()->randomElement(['USD', 'EUR', 'GBP']),

@@ -76,8 +76,20 @@ class PlanController extends Controller
             'burst_download' => ['nullable', 'integer', 'min:0'],
             'burst_upload' => ['nullable', 'integer', 'min:0'],
             'bandwidth_unit' => ['required', Rule::in(['Kbps', 'Mbps', 'Gbps'])],
+            'shaping_mode' => ['nullable', Rule::in(['basic', 'advanced', 'disabled'])],
+            'burst_threshold_download' => ['nullable', 'integer', 'min:0'],
+            'burst_threshold_upload' => ['nullable', 'integer', 'min:0'],
+            'burst_time_download' => ['nullable', 'integer', 'min:1', 'max:86400'],
+            'burst_time_upload' => ['nullable', 'integer', 'min:1', 'max:86400'],
+            'min_download_speed' => ['nullable', 'integer', 'min:0', 'lte:download_speed'],
+            'min_upload_speed' => ['nullable', 'integer', 'min:0', 'lte:upload_speed'],
+            'shaping_priority' => ['nullable', 'integer', 'min:1', 'max:8'],
+            'queue_type' => ['nullable', 'string', 'max:255'],
             'data_limit' => ['nullable', 'integer', 'min:0'],
             'data_unit' => ['required', Rule::in(['MB', 'GB', 'TB'])],
+            'data_cap_action' => ['nullable', Rule::in(['none', 'notify', 'throttle', 'suspend'])],
+            'throttle_download_speed' => ['nullable', 'integer', 'min:0'],
+            'throttle_upload_speed' => ['nullable', 'integer', 'min:0'],
             'unlimited' => ['nullable', 'boolean'],
             'price' => ['required', 'numeric', 'min:0'],
             'currency' => ['required', 'string', 'max:10'],
@@ -97,12 +109,17 @@ class PlanController extends Controller
 
         $validated['unlimited'] = $request->boolean('unlimited');
         $validated['contract_required'] = $request->boolean('contract_required');
+        $validated['shaping_mode'] = $validated['shaping_mode'] ?? 'basic';
         $validated['burst_download'] = $validated['burst_download'] ?? 0;
         $validated['burst_upload'] = $validated['burst_upload'] ?? 0;
+        $validated['data_cap_action'] = $validated['data_cap_action'] ?? 'none';
         $validated['setup_fee'] = $validated['setup_fee'] ?? 0;
         $validated['grace_period_days'] = $validated['grace_period_days'] ?? 7;
         $validated['priority'] = $validated['priority'] ?? 5;
         $validated['data_limit'] = $validated['unlimited'] ? null : ($validated['data_limit'] ?? null);
+        $validated['data_cap_action'] = $validated['unlimited'] ? 'none' : $validated['data_cap_action'];
+        $validated['throttle_download_speed'] = $validated['data_cap_action'] === 'throttle' ? ($validated['throttle_download_speed'] ?? null) : null;
+        $validated['throttle_upload_speed'] = $validated['data_cap_action'] === 'throttle' ? ($validated['throttle_upload_speed'] ?? null) : null;
         $validated['contract_duration'] = $validated['contract_required'] ? ($validated['contract_duration'] ?? null) : null;
 
         return $validated;
@@ -124,8 +141,22 @@ class PlanController extends Controller
             'burst_download' => $plan->burst_download,
             'burst_upload' => $plan->burst_upload,
             'bandwidth_unit' => $plan->bandwidth_unit,
+            'shaping_mode' => $plan->shaping_mode ?? 'basic',
+            'burst_threshold_download' => $plan->burst_threshold_download,
+            'burst_threshold_upload' => $plan->burst_threshold_upload,
+            'burst_time_download' => $plan->burst_time_download,
+            'burst_time_upload' => $plan->burst_time_upload,
+            'min_download_speed' => $plan->min_download_speed,
+            'min_upload_speed' => $plan->min_upload_speed,
+            'shaping_priority' => $plan->shaping_priority,
+            'queue_type' => $plan->queue_type,
+            'mikrotik_rate_limit' => $plan->mikrotikRateLimit(),
+            'traffic_shaping_summary' => $plan->trafficShapingSummary(),
             'data_limit' => $plan->data_limit,
             'data_unit' => $plan->data_unit,
+            'data_cap_action' => $plan->data_cap_action ?? 'none',
+            'throttle_download_speed' => $plan->throttle_download_speed,
+            'throttle_upload_speed' => $plan->throttle_upload_speed,
             'unlimited' => $plan->unlimited,
             'price' => (float) $plan->price,
             'currency' => $plan->currency,

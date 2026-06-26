@@ -73,6 +73,52 @@ class RadiusProvisioningTest extends TestCase
         );
     }
 
+    public function test_advanced_plan_shaping_generates_routeros_rate_limit(): void
+    {
+        [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
+
+        $plan->update([
+            'shaping_mode' => 'advanced',
+            'download_speed' => 100,
+            'upload_speed' => 20,
+            'burst_download' => 150,
+            'burst_upload' => 40,
+            'burst_threshold_download' => 75,
+            'burst_threshold_upload' => 15,
+            'burst_time_download' => 10,
+            'burst_time_upload' => 8,
+            'min_download_speed' => 25,
+            'min_upload_speed' => 5,
+            'shaping_priority' => 6,
+        ]);
+
+        Subscription::create($this->subscriptionAttributes($tenant, $customer, $plan));
+
+        $this->assertDatabaseHas('radreply', [
+            'tenant_id' => $tenant->id,
+            'username' => 'jane.doe',
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'value' => '20M/100M 40M/150M 15M/75M 8/10 6 5M/25M',
+        ]);
+    }
+
+    public function test_disabled_plan_shaping_removes_radius_rate_limit(): void
+    {
+        [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();
+
+        Subscription::create($this->subscriptionAttributes($tenant, $customer, $plan));
+
+        $plan->update([
+            'shaping_mode' => 'disabled',
+        ]);
+
+        $this->assertSame(0, RadiusReply::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('username', 'jane.doe')
+            ->where('attribute', 'Mikrotik-Rate-Limit')
+            ->count());
+    }
+
     public function test_activating_pending_subscription_pushes_radius_entries(): void
     {
         [$tenant, $customer, $plan] = $this->tenantCustomerAndPlan();

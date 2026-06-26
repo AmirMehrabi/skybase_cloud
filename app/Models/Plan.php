@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
+use App\Services\TrafficShaping\PlanTrafficShapingService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,8 +26,20 @@ class Plan extends Model
         'burst_download',
         'burst_upload',
         'bandwidth_unit',
+        'shaping_mode',
+        'burst_threshold_download',
+        'burst_threshold_upload',
+        'burst_time_download',
+        'burst_time_upload',
+        'min_download_speed',
+        'min_upload_speed',
+        'shaping_priority',
+        'queue_type',
         'data_limit',
         'data_unit',
+        'data_cap_action',
+        'throttle_download_speed',
+        'throttle_upload_speed',
         'unlimited',
         'price',
         'currency',
@@ -52,6 +65,15 @@ class Plan extends Model
             'price' => 'decimal:2',
             'setup_fee' => 'decimal:2',
             'grace_period_days' => 'integer',
+            'burst_threshold_download' => 'integer',
+            'burst_threshold_upload' => 'integer',
+            'burst_time_download' => 'integer',
+            'burst_time_upload' => 'integer',
+            'min_download_speed' => 'integer',
+            'min_upload_speed' => 'integer',
+            'shaping_priority' => 'integer',
+            'throttle_download_speed' => 'integer',
+            'throttle_upload_speed' => 'integer',
             'available_from' => 'date',
             'available_to' => 'date',
         ];
@@ -105,6 +127,36 @@ class Plan extends Model
             ->count();
     }
 
+    public function usesAdvancedShaping(): bool
+    {
+        return $this->shaping_mode === 'advanced';
+    }
+
+    public function mikrotikRateLimit(): ?string
+    {
+        return app(PlanTrafficShapingService::class)->mikrotikRateLimit($this);
+    }
+
+    public function trafficShapingSummary(): string
+    {
+        return app(PlanTrafficShapingService::class)->summary($this);
+    }
+
+    public function effectiveDownloadSpeed(): int
+    {
+        return (int) $this->download_speed;
+    }
+
+    public function effectiveUploadSpeed(): int
+    {
+        return (int) $this->upload_speed;
+    }
+
+    public function shouldThrottleAfterDataLimit(): bool
+    {
+        return $this->data_cap_action === 'throttle';
+    }
+
     protected static function booted(): void
     {
         static::saved(function (Plan $plan): void {
@@ -112,7 +164,17 @@ class Plan extends Model
                 'status',
                 'download_speed',
                 'upload_speed',
+                'burst_download',
+                'burst_upload',
                 'bandwidth_unit',
+                'shaping_mode',
+                'burst_threshold_download',
+                'burst_threshold_upload',
+                'burst_time_download',
+                'burst_time_upload',
+                'min_download_speed',
+                'min_upload_speed',
+                'shaping_priority',
                 'internal_name',
                 'router_profile',
             ])) {
