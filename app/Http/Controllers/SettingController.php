@@ -432,7 +432,7 @@ class SettingController extends Controller
             'BWP' => 'BWP - Botswana Pula (P)',
             'MZN' => 'MZN - Mozambican Metical (MT)',
             'MWK' => 'MWK - Malawian Kwacha (MK)',
-            'SDG' => 'SDG - Sudanese Pound (ج.س.)',
+            'SDG' => 'SDG - Sudanese Pound',
             'ETB' => 'ETB - Ethiopian Birr (Br)',
             'SOS' => 'SOS - Somali Shilling (Sh)',
             'DJF' => 'DJF - Djiboutian Franc (Fdj)',
