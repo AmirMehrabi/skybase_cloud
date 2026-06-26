@@ -39,11 +39,11 @@
         <table class="w-full min-w-[760px] divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">بخش</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">مشاهده</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">ایجاد و ویرایش</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">حذف</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">عملیات ویژه</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Module</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Read</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Write</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Delete</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">

@@ -37,9 +37,9 @@ class UpdateRoleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'نام نقش الزامی است.',
-            'name.unique' => 'این نقش قبلا برای این سازمان ثبت شده است.',
-            'permissions.*.in' => 'دسترسی انتخاب شده معتبر نیست.',
+            'name.required' => 'Role name is required.',
+            'name.unique' => 'A role with this name already exists for this tenant.',
+            'permissions.*.in' => 'The selected permission is invalid.',
         ];
     }
 }

@@ -49,7 +49,7 @@ class RoleController extends Controller
 
         return redirect()
             ->route('admin.tenant.roles.show', $role)
-            ->with('success', 'نقش با موفقیت ایجاد شد.');
+            ->with('success', 'Role created successfully.');
     }
 
     public function show(Request $request, Role $role): View
@@ -93,7 +93,7 @@ class RoleController extends Controller
 
         return redirect()
             ->route('admin.tenant.roles.show', $role)
-            ->with('success', 'نقش با موفقیت به روز شد.');
+            ->with('success', 'Role updated successfully.');
     }
 
     public function destroy(Request $request, Role $role): RedirectResponse
@@ -101,18 +101,18 @@ class RoleController extends Controller
         $this->authorizeTenantRole($request, $role);
 
         if ($this->assignedUsersCount($this->currentTenantId($request), $role) > 0) {
-            return back()->with('error', 'این نقش به کاربر اختصاص داده شده و قابل حذف نیست.');
+            return back()->with('error', 'This role is assigned to users and cannot be deleted.');
         }
 
         if ($role->normalizedName() === 'owner') {
-            return back()->with('error', 'نقش مالک قابل حذف نیست.');
+            return back()->with('error', 'The owner role cannot be deleted.');
         }
 
         $role->delete();
 
         return redirect()
             ->route('admin.tenant.roles.index')
-            ->with('success', 'نقش با موفقیت حذف شد.');
+            ->with('success', 'Role deleted successfully.');
     }
 
     private function authorizeTenantRole(Request $request, Role $role): void

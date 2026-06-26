@@ -35,7 +35,7 @@ class RoleRbacTest extends TestCase
         $this->assertSame(['customers.read', 'support_tickets.read', 'support_tickets.write'], $role->permissions);
     }
 
-    public function test_user_without_permission_gets_farsi_denied_message_for_direct_page_access(): void
+    public function test_user_without_permission_gets_english_denied_message_for_direct_page_access(): void
     {
         $tenant = $this->createTenant('alpha-net');
         Role::create([
@@ -55,7 +55,7 @@ class RoleRbacTest extends TestCase
         $response->assertSee(PermissionRegistry::DENIED_MESSAGE);
     }
 
-    public function test_user_without_permission_gets_farsi_json_denial(): void
+    public function test_user_without_permission_gets_english_json_denial(): void
     {
         $tenant = $this->createTenant('alpha-net');
         Role::create([
@@ -131,7 +131,7 @@ class RoleRbacTest extends TestCase
         $response = $this->actingAs($admin)->delete(route('admin.tenant.roles.destroy', $role));
 
         $response->assertRedirect();
-        $response->assertSessionHas('error', 'این نقش به کاربر اختصاص داده شده و قابل حذف نیست.');
+        $response->assertSessionHas('error', 'This role is assigned to users and cannot be deleted.');
         $this->assertDatabaseHas('roles', ['id' => $role->id]);
     }
 

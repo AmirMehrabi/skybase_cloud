@@ -7,7 +7,7 @@
     <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <div class="grid gap-5 md:grid-cols-2">
             <div>
-                <label for="name" class="mb-2 block text-sm font-medium text-gray-700">نام نقش <span class="text-red-500">*</span></label>
+                <label for="name" class="mb-2 block text-sm font-medium text-gray-700">Role name <span class="text-red-500">*</span></label>
                 <input
                     id="name"
                     name="name"
@@ -22,7 +22,7 @@
             </div>
 
             <div>
-                <label for="description" class="mb-2 block text-sm font-medium text-gray-700">توضیح</label>
+                <label for="description" class="mb-2 block text-sm font-medium text-gray-700">Description</label>
                 <input
                     id="description"
                     name="description"
@@ -41,12 +41,12 @@
         <div class="border-b border-gray-200 p-6">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900">دسترسی ها</h2>
-                    <p class="mt-1 text-sm text-gray-600">برای هر بخش، نوع دسترسی مورد نیاز این نقش را انتخاب کنید.</p>
+                    <h2 class="text-lg font-semibold text-gray-900">Permissions</h2>
+                    <p class="mt-1 text-sm text-gray-600">Choose the required access level for each module.</p>
                 </div>
                 <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">
                     <input type="checkbox" name="permissions[]" value="*" x-model="fullAccess" class="h-4 w-4 rounded border-gray-300 text-blue-600">
-                    دسترسی کامل
+                    Full access
                 </label>
             </div>
         </div>
@@ -55,11 +55,11 @@
             <table class="w-full min-w-[760px] divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">بخش</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">مشاهده</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">ایجاد و ویرایش</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">حذف</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">عملیات ویژه</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Module</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Read</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Write</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Delete</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">

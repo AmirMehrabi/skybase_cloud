@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class PermissionRegistry
 {
-    public const DENIED_MESSAGE = 'شما مجوز دسترسی به این بخش را ندارید. برای دسترسی، با مدیر سامانه تماس بگیرید.';
+    public const DENIED_MESSAGE = 'You do not have permission to access this area. Please contact the system administrator for access.';
 
     /**
      * @return array<string, array{label: string, description: string, actions: array<string, string>}>
