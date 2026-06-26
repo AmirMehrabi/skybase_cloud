@@ -224,7 +224,7 @@ class TicketController extends Controller
 
         return $query->where(function ($query) use ($user): void {
             $query->where('assigned_user_id', $user->id)
-                ->orWhereHas('team.users', fn ($query) => $query->where('users.id', $user->id)->wherePivot('is_active', true));
+                ->orWhereHas('team.users', fn ($query) => $query->where('users.id', $user->id)->where('ticket_team_user.is_active', true));
         });
     }
 

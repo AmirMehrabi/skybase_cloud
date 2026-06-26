@@ -19,7 +19,7 @@ class TicketPolicy
             || (int) $ticket->assigned_user_id === (int) $user->id
             || $user->ticketTeams()
                 ->where('ticket_teams.id', $ticket->ticket_team_id)
-                ->wherePivot('is_active', true)
+                ->where('ticket_team_user.is_active', true)
                 ->exists()
         );
     }
