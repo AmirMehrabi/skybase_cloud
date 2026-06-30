@@ -49,7 +49,7 @@
             </div>
             <div>
                 <span class="text-slate-500">Last login</span>
-                <p class="font-medium text-slate-900">{{ $user->last_login_at?->diffForHumans() ?? 'Never' }}</p>
+                <p class="font-medium text-slate-900">{{ $user->last_login_at?->diffForHumans() ?? 'N/A' }}</p>
             </div>
         </div>
     </div>
