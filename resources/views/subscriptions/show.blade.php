@@ -1097,8 +1097,8 @@
                             <template x-if="bandwidth.graphSrc && !bandwidth.graphError">
                                 <img
                                     :src="bandwidth.graphSrc"
-                                    @load="onGraphLoad()"
-                                    @error="onGraphError()"
+                                    x-on:load="onGraphLoad()"
+                                    x-on:error="onGraphError()"
                                     alt="Bandwidth graph"
                                     class="w-full h-auto"
                                     style="display: block;"
