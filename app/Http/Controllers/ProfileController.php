@@ -30,7 +30,7 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         if (! Hash::check($request->input('current_password'), $user->password)) {
-            return back()->withErrors(['current_password' => 'The current password is incorrect.']);
+            return back()->with('error', 'The current password is incorrect.');
         }
 
         $user->update([
