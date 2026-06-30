@@ -29,6 +29,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController as GeneralReportController;
 use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
@@ -122,6 +123,11 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
     Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
     Route::delete('/notifications/{notification}', [NotificationController::class, 'archive'])->name('notifications.archive');
+
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.password');
 
     // Tenant User Management
     Route::prefix('settings/users')->name('admin.tenant.users.')->group(function () {
@@ -232,6 +238,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::post('/{subscription}/ip-routes/sync', [SubscriptionController::class, 'syncIpRoutes'])->name('ip-routes.sync');
         Route::get('/{subscription}/bandwidth/live', [SubscriptionController::class, 'liveBandwidth'])->name('bandwidth.live');
         Route::get('/{subscription}/bandwidth/history', [SubscriptionController::class, 'bandwidthHistory'])->name('bandwidth.history');
+        Route::get('/{subscription}/bandwidth/graph', [SubscriptionController::class, 'bandwidthGraph'])->name('bandwidth.graph');
         Route::get('/{subscription}/edit', [SubscriptionController::class, 'edit'])->name('edit');
         Route::put('/{subscription}', [SubscriptionController::class, 'update'])->name('update');
         Route::delete('/{subscription}', [SubscriptionController::class, 'destroy'])->name('destroy');

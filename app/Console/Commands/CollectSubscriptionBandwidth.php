@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
 use Throwable;
 
 #[Signature('monitoring:collect-subscription-bandwidth {--tenant= : Only collect subscriptions for a tenant ID} {--subscription= : Only collect one subscription ID}')]
-#[Description('Collect live bandwidth samples for active MikroTik PPPoE subscriptions')]
+#[Description('Collect live bandwidth samples for active subscriptions via RouterOS or RADIUS accounting')]
 class CollectSubscriptionBandwidth extends Command
 {
     public function handle(SubscriptionBandwidthCollector $collector): int
@@ -27,8 +27,6 @@ class CollectSubscriptionBandwidth extends Command
                 Subscription::withoutGlobalScopes()
                     ->where('tenant_id', $tenant->id)
                     ->where('status', 'active')
-                    ->where('connection_type', 'pppoe')
-                    ->whereNotNull('pppoe_username')
                     ->when($this->option('subscription'), fn ($query, string $subscriptionId) => $query->whereKey($subscriptionId))
                     ->with('router')
                     ->orderBy('id')

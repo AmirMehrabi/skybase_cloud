@@ -197,6 +197,7 @@ class PermissionRegistry
             'subscriptions.suggest-ip' => 'subscriptions.read',
             'subscriptions.bandwidth.live' => 'subscriptions.read',
             'subscriptions.bandwidth.history' => 'subscriptions.read',
+            'subscriptions.bandwidth.graph' => 'subscriptions.read',
             'subscriptions.create' => 'subscriptions.write',
             'subscriptions.store' => 'subscriptions.write',
             'subscriptions.edit' => 'subscriptions.write',

@@ -39,6 +39,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class SubscriptionController extends Controller
 {
@@ -845,7 +846,7 @@ class SubscriptionController extends Controller
         ]);
     }
 
-    public function liveBandwidth(Subscription $subscription, SubscriptionBandwidthCollector $collector): JsonResponse
+    public function liveBandwidth(Subscription $subscription, SubscriptionBandwidthCollector $collector, RrdToolService $rrdTool): JsonResponse
     {
         $this->authorizeTenantAccess($subscription);
         $state = $subscription->bandwidthState;
@@ -863,6 +864,8 @@ class SubscriptionController extends Controller
             'source' => $state?->source ?? 'routeros',
             'sampled_at' => $state?->sampled_at?->diffForHumans(),
             'error' => $state?->error,
+            'rrd_available' => $rrdTool->subscriptionBandwidthFileExists($subscription),
+            'last_sampled_at' => $state?->sampled_at?->toIso8601String(),
         ]);
     }
 
@@ -871,19 +874,43 @@ class SubscriptionController extends Controller
         $this->authorizeTenantAccess($subscription);
 
         try {
-            $chartData = collect($rrdTool->subscriptionBandwidthSeries($subscription, (string) $request->query('range', '1h')))
-                ->map(fn (array $row): array => [
-                    ...$row,
-                    'time' => date('H:i', (int) $row['timestamp']),
-                ])
-                ->values();
+            $result = $rrdTool->subscriptionBandwidthChartData($subscription, (string) $request->query('range', '1h'));
         } catch (\Throwable) {
-            $chartData = collect();
+            $result = ['chartData' => [], 'hasData' => false];
         }
 
         return response()->json([
-            'chartData' => $chartData,
+            'chartData' => $result['chartData'],
+            'hasData' => $result['hasData'],
         ]);
+    }
+
+    public function bandwidthGraph(Request $request, Subscription $subscription, RrdToolService $rrdTool): Response
+    {
+        $this->authorizeTenantAccess($subscription);
+
+        $range = (string) $request->query('range', '1h');
+        $width = min(1600, max(200, (int) $request->query('width', 800)));
+        $height = min(600, max(100, (int) $request->query('height', 300)));
+
+        try {
+            $graphPath = $rrdTool->renderSubscriptionBandwidthGraph($subscription, $range, $width, $height);
+        } catch (\Throwable) {
+            $graphPath = null;
+        }
+
+        if (! $graphPath || ! file_exists($graphPath)) {
+            return response('No bandwidth data available for this subscription.', 404)
+                ->header('Content-Type', 'text/plain');
+        }
+
+        $contents = file_get_contents($graphPath);
+
+        @unlink($graphPath);
+
+        return response($contents)
+            ->header('Content-Type', 'image/png')
+            ->header('Cache-Control', 'public, max-age=30');
     }
 
     /**

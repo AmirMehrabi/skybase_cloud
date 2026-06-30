@@ -37,28 +37,40 @@ class SubscriptionBandwidthCollector
         ];
 
         try {
-            if (! $subscription->isPppoe() || blank($subscription->pppoe_username)) {
-                throw new MonitoringStorageUnavailable('Live bandwidth is available for PPPoE subscriptions with a username.');
-            }
+            if ($subscription->isPppoe() && filled($subscription->pppoe_username)) {
+                // PPPoE: try RouterOS API first, then RADIUS accounting fallback
+                if ($router && $router->isMikrotik() && $router->api_username && $router->api_password) {
+                    $interface = $this->routerOsMonitoring->activePppInterface($router, (string) $subscription->pppoe_username);
 
-            if (! $router || ! $router->isMikrotik() || ! $router->api_username || ! $router->api_password) {
-                throw new MonitoringStorageUnavailable('A MikroTik router with API credentials is required.');
-            }
-
-            $interface = $this->routerOsMonitoring->activePppInterface($router, (string) $subscription->pppoe_username);
-
-            if ($interface) {
-                $traffic = $this->routerOsMonitoring->interfaceTraffic($router, $interface);
-                $sample['interface_name'] = $interface;
-                $sample['rx_bps'] = $traffic['rx_bps'];
-                $sample['tx_bps'] = $traffic['tx_bps'];
-                $sample['source'] = $traffic['source'];
-            } else {
+                    if ($interface) {
+                        $traffic = $this->routerOsMonitoring->interfaceTraffic($router, $interface);
+                        $sample['interface_name'] = $interface;
+                        $sample['rx_bps'] = $traffic['rx_bps'];
+                        $sample['tx_bps'] = $traffic['tx_bps'];
+                        $sample['source'] = $traffic['source'];
+                    } else {
+                        $fallback = $this->radiusAccountingDelta($subscription);
+                        $sample['rx_bps'] = $fallback['rx_bps'];
+                        $sample['tx_bps'] = $fallback['tx_bps'];
+                        $sample['source'] = 'radius-accounting';
+                        $sample['error'] = $fallback['error'];
+                    }
+                } else {
+                    $fallback = $this->radiusAccountingDelta($subscription);
+                    $sample['rx_bps'] = $fallback['rx_bps'];
+                    $sample['tx_bps'] = $fallback['tx_bps'];
+                    $sample['source'] = 'radius-accounting';
+                    $sample['error'] = $fallback['error'];
+                }
+            } elseif (filled($subscription->pppoe_username)) {
+                // Non-PPPoE with username (hotspot): use RADIUS accounting
                 $fallback = $this->radiusAccountingDelta($subscription);
                 $sample['rx_bps'] = $fallback['rx_bps'];
                 $sample['tx_bps'] = $fallback['tx_bps'];
                 $sample['source'] = 'radius-accounting';
                 $sample['error'] = $fallback['error'];
+            } else {
+                throw new MonitoringStorageUnavailable('No username configured for bandwidth collection.');
             }
 
             $this->rrdTool->updateSubscriptionBandwidth($subscription, [
@@ -86,11 +98,20 @@ class SubscriptionBandwidthCollector
             return ['rx_bps' => 0, 'tx_bps' => 0, 'error' => 'No active RouterOS PPP session was found and radacct is unavailable.'];
         }
 
-        $session = DB::table('radacct')
-            ->where('username', $subscription->pppoe_username)
-            ->whereNull('acctstoptime')
-            ->orderByDesc('acctupdatetime')
-            ->first();
+        $username = $subscription->pppoe_username;
+
+        $query = DB::table('radacct')->whereNull('acctstoptime');
+
+        if (filled($username)) {
+            $query->where('username', $username);
+        } elseif (filled($subscription->mac_address)) {
+            // For hotspot users, try matching by MAC address (calledstationid)
+            $query->where('calledstationid', 'like', '%'.$subscription->mac_address.'%');
+        } else {
+            return ['rx_bps' => 0, 'tx_bps' => 0, 'error' => 'No username or MAC address configured for RADIUS lookup.'];
+        }
+
+        $session = $query->orderByDesc('acctupdatetime')->first();
 
         if (! $session) {
             return ['rx_bps' => 0, 'tx_bps' => 0, 'error' => 'No active PPP or RADIUS accounting session was found.'];

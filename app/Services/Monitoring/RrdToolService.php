@@ -73,6 +73,137 @@ class RrdToolService
         ]);
     }
 
+    /**
+     * Render a PNG graph of subscription bandwidth using rrdtool.
+     *
+     * @return string|null Path to the rendered PNG file, or null if no data
+     */
+    public function renderSubscriptionBandwidthGraph(Subscription $subscription, string $range = '1h', int $width = 800, int $height = 300): ?string
+    {
+        $path = $this->subscriptionBandwidthPath($subscription);
+
+        if (! File::exists($path)) {
+            return null;
+        }
+
+        $tmpFile = sys_get_temp_dir().'/rrd_bw_'.$subscription->id.'_'.$range.'_'.$width.'x'.$height.'.png';
+        $seconds = $this->rangeSeconds($range);
+
+        $title = match ($range) {
+            '1h' => 'Bandwidth - Last Hour',
+            '6h' => 'Bandwidth - Last 6 Hours',
+            '7d' => 'Bandwidth - Last 7 Days',
+            '30d' => 'Bandwidth - Last 30 Days',
+            default => 'Bandwidth - Last 24 Hours',
+        };
+
+        $vformat = match ($range) {
+            '1h' => '%.1lf %Sbps',
+            '6h' => '%.1lf %Sbps',
+            default => '%.1lf %Sbps',
+        };
+
+        $command = [
+            (string) config('monitoring.rrdtool'),
+            'graph', $tmpFile,
+            '--start', '-'.$seconds,
+            '--end', 'now',
+            '--width', (string) $width,
+            '--height', (string) $height,
+            '--title', $title,
+            '--vertical-label', 'Bits per second',
+            '--lower-limit', '0',
+            '--rigid',
+            '--imgformat', 'PNG',
+            '--font', 'DEFAULT:10:',
+            '--font', 'TITLE:13:',
+            '--color', 'BACK#FFFFFF',
+            '--color', 'CANVAS#FFFFFF',
+            '--color', 'GRID#E5E7EB',
+            '--color', 'MGRID#D1D5DB',
+            '--color', 'SHADEA#FFFFFF',
+            '--color', 'SHADEB#FFFFFF',
+            "DEF:rx_avg={$path}:rx_bps:AVERAGE",
+            "DEF:tx_avg={$path}:tx_bps:AVERAGE",
+            "DEF:rx_max={$path}:rx_bps:MAX",
+            "DEF:tx_max={$path}:tx_bps:MAX",
+            'CDEF:rx_bits=rx_avg',
+            'CDEF:tx_bits=tx_avg',
+            'CDEF:rx_kbits=rx_avg,1000,/',
+            'CDEF:tx_kbits=tx_avg,1000,/',
+            'AREA:rx_avg#2563EB20:',
+            'LINE1.5:rx_avg#2563EB:Download (RX)',
+            'GPRINT:rx_avg:LAST:Current\: '.($vformat),
+            'GPRINT:rx_avg:AVERAGE:Average\: '.($vformat),
+            'GPRINT:rx_max:MAX:Max\: '.($vformat),
+            'AREA:tx_avg#05966920:',
+            'LINE1.5:tx_avg#059669:Upload (TX)',
+            'GPRINT:tx_avg:LAST:Current\: '.($vformat),
+            'GPRINT:tx_avg:AVERAGE:Average\: '.($vformat),
+            'GPRINT:tx_max:MAX:Max\: '.($vformat),
+        ];
+
+        $this->run($command, throw: false);
+
+        if (! File::exists($tmpFile)) {
+            return null;
+        }
+
+        return $tmpFile;
+    }
+
+    /**
+     * Return bandwidth series with richer data for chart rendering.
+     *
+     * @return array{chartData: list<array{timestamp: int, time: string, rx_bps: float|null, tx_bps: float|null, rx_max: float|null, tx_max: float|null}>, hasData: bool}
+     */
+    public function subscriptionBandwidthChartData(Subscription $subscription, string $range = '1h'): array
+    {
+        $path = $this->subscriptionBandwidthPath($subscription);
+
+        if (! File::exists($path)) {
+            return ['chartData' => [], 'hasData' => false];
+        }
+
+        $rows = $this->fetch($path, $range, ['rx_bps', 'tx_bps']);
+
+        $chartData = array_map(function (array $row) use ($range): array {
+            return [
+                'timestamp' => $row['timestamp'],
+                'time' => $this->formatTimestamp($row['timestamp'], $range),
+                'rx_bps' => $row['rx_bps'],
+                'tx_bps' => $row['tx_bps'],
+            ];
+        }, $rows);
+
+        $hasData = false;
+        foreach ($chartData as $row) {
+            if (($row['rx_bps'] ?? 0) > 0 || ($row['tx_bps'] ?? 0) > 0) {
+                $hasData = true;
+                break;
+            }
+        }
+
+        return ['chartData' => $chartData, 'hasData' => $hasData];
+    }
+
+    /**
+     * Check if an RRD file exists for a subscription.
+     */
+    public function subscriptionBandwidthFileExists(Subscription $subscription): bool
+    {
+        return File::exists($this->subscriptionBandwidthPath($subscription));
+    }
+
+    private function formatTimestamp(int $timestamp, string $range): string
+    {
+        return match ($range) {
+            '1h', '6h' => date('H:i', $timestamp),
+            '7d', '30d' => date('M/d', $timestamp).' '.date('H:i', $timestamp),
+            default => date('M/d H:i', $timestamp),
+        };
+    }
+
     private function ensureRouterHealthArchive(string $path): void
     {
         if (File::exists($path)) {
