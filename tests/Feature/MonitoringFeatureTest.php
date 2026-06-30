@@ -118,6 +118,64 @@ class MonitoringFeatureTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_subscription_bandwidth_history_returns_line_chart_data_and_metadata(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha-net');
+        $subscription = $this->subscription($tenant);
+
+        SubscriptionBandwidthState::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'router_id' => $subscription->router_id,
+            'rx_bps' => 12000000,
+            'tx_bps' => 3000000,
+            'source' => 'routeros',
+            'sampled_at' => now(),
+            'last_success_at' => now(),
+        ]);
+
+        $this->mock(RrdToolService::class)
+            ->shouldReceive('subscriptionBandwidthChartData')
+            ->once()
+            ->withArgs(fn (Subscription $seriesSubscription, string $range): bool => $seriesSubscription->id === $subscription->id && $range === '24h')
+            ->andReturn([
+                'chartData' => [
+                    ['timestamp' => 1710000000, 'time' => '00:00', 'rx_bps' => 12000000, 'tx_bps' => 3000000],
+                    ['timestamp' => 1710000300, 'time' => '00:05', 'rx_bps' => null, 'tx_bps' => null],
+                ],
+                'hasData' => true,
+            ]);
+
+        $this->actingAs($user)
+            ->getJson(route('subscriptions.bandwidth.history', [$subscription, 'range' => '24h']))
+            ->assertOk()
+            ->assertJsonPath('range', '24h')
+            ->assertJsonPath('hasData', true)
+            ->assertJsonPath('chartData.0.rx_bps', 12000000)
+            ->assertJsonPath('chartData.1.rx_bps', null)
+            ->assertJsonPath('stale', false)
+            ->assertJsonPath('status', 'available');
+    }
+
+    public function test_subscription_bandwidth_history_degrades_to_an_empty_graph_payload(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha-net');
+        $subscription = $this->subscription($tenant);
+
+        $this->mock(RrdToolService::class)
+            ->shouldReceive('subscriptionBandwidthChartData')
+            ->once()
+            ->andThrow(new \RuntimeException('RRD unavailable'));
+
+        $this->actingAs($user)
+            ->getJson(route('subscriptions.bandwidth.history', [$subscription, 'range' => 'invalid']))
+            ->assertOk()
+            ->assertJsonPath('range', '1h')
+            ->assertJsonPath('hasData', false)
+            ->assertJsonPath('chartData', [])
+            ->assertJsonMissing(['error']);
+    }
+
     public function test_router_health_collection_command_uses_collector_for_due_monitored_routers(): void
     {
         [$tenant] = $this->tenantUser('alpha-net');
@@ -145,6 +203,7 @@ class MonitoringFeatureTest extends TestCase
         $tenant = $this->createTenant($slug);
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
+            'role' => 'owner',
             'status' => 'active',
         ]);
 

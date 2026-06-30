@@ -139,32 +139,20 @@
             },
         },
         bandwidth: {
-            live: { rx_bps: 0, tx_bps: 0, interface_name: null, source: 'routeros', sampled_at: null, error: null, rrd_available: false, last_sampled_at: null },
+            live: { rx_bps: 0, tx_bps: 0, interface_name: null, source: 'routeros', sampled_at: null, status: 'available', rrd_available: false, last_sampled_at: null, stale: true },
             history: [],
             range: '1h',
             timer: null,
             loading: false,
-            graphSrc: '',
-            graphLoading: false,
-            graphError: false,
-            tooltip: { show: false, x: 0, y: 0, rx: 0, tx: 0, time: '' },
+            historyLoading: false,
+            hasData: false,
+            tooltip: { show: false, x: 0, y: 0, rx: null, tx: null, time: '' },
         },
         initBandwidth() {
-            this.updateGraphSrc();
+            this.loadBandwidthHistory();
             this.refreshLiveBandwidth();
             this.bandwidth.timer = setInterval(() => this.refreshLiveBandwidth(), 5000);
-        },
-        updateGraphSrc() {
-            this.bandwidth.graphLoading = true;
-            this.bandwidth.graphError = false;
-            this.bandwidth.graphSrc = @js(route('subscriptions.bandwidth.graph', $subscription['id'])) + '?range=' + this.bandwidth.range + '&width=800&height=300&_t=' + Date.now();
-        },
-        onGraphLoad() {
-            this.bandwidth.graphLoading = false;
-        },
-        onGraphError() {
-            this.bandwidth.graphLoading = false;
-            this.bandwidth.graphError = true;
+            setInterval(() => this.loadBandwidthHistory(false), 60000);
         },
         async copyCredential(field, value) {
             if (!value || value === 'N/A') {
@@ -259,7 +247,102 @@
             }
         },
         async loadBandwidthHistory() {
-            this.updateGraphSrc();
+            this.bandwidth.historyLoading = true;
+
+            try {
+                const params = new URLSearchParams({ range: this.bandwidth.range });
+                const response = await fetch(@js(route('subscriptions.bandwidth.history', $subscription['id'])) + '?' + params.toString(), {
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+                this.bandwidth.history = payload.chartData || [];
+                this.bandwidth.hasData = Boolean(payload.hasData);
+                this.bandwidth.tooltip.show = false;
+            } catch (error) {
+                // Retain the last successful series. The chart itself remains usable.
+            } finally {
+                this.bandwidth.historyLoading = false;
+            }
+        },
+        chartMax() {
+            return Math.max(1, ...this.bandwidth.history.flatMap((point) => [
+                Number(point.rx_bps || 0),
+                Number(point.tx_bps || 0),
+            ]));
+        },
+        chartSegments(field) {
+            const points = this.bandwidth.history;
+            const max = this.chartMax();
+            const last = Math.max(1, points.length - 1);
+            const segments = [];
+            let current = [];
+
+            points.forEach((point, index) => {
+                const value = point[field];
+
+                if (value === null || value === undefined) {
+                    if (current.length) {
+                        segments.push(current);
+                        current = [];
+                    }
+
+                    return;
+                }
+
+                current.push({
+                    x: 56 + ((index / last) * 920),
+                    y: 264 - ((Number(value) / max) * 232),
+                });
+            });
+
+            if (current.length) {
+                segments.push(current);
+            }
+
+            return segments;
+        },
+        linePath(segment) {
+            return segment.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+        },
+        areaPath(segment) {
+            if (!segment.length) {
+                return '';
+            }
+
+            return `${this.linePath(segment)} L ${segment[segment.length - 1].x} 264 L ${segment[0].x} 264 Z`;
+        },
+        axisLabels() {
+            const points = this.bandwidth.history;
+
+            if (!points.length) {
+                return [];
+            }
+
+            return [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])]
+                .map((index) => ({ x: 56 + ((index / Math.max(1, points.length - 1)) * 920), label: points[index].time }));
+        },
+        updateBandwidthTooltip(event) {
+            if (!this.bandwidth.history.length) {
+                return;
+            }
+
+            const bounds = event.currentTarget.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+            const index = Math.round(ratio * (this.bandwidth.history.length - 1));
+            const point = this.bandwidth.history[index];
+            this.bandwidth.tooltip = {
+                show: true,
+                x: Math.max(72, Math.min(928, 56 + (ratio * 920))),
+                y: 26,
+                rx: point.rx_bps,
+                tx: point.tx_bps,
+                time: point.time,
+            };
         },
         formatSpeed(bits) {
             const units = ['bps', 'Kbps', 'Mbps', 'Gbps'];
@@ -1055,10 +1138,6 @@
                             </div>
                         </div>
 
-                        <div x-show="bandwidth.live.error"
-                            class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
-                            x-text="bandwidth.live.error"></div>
-
                         <!-- Collection Status -->
                         <div class="mt-4 flex flex-wrap items-center gap-4 text-sm">
                             <div class="flex items-center gap-2">
@@ -1080,48 +1159,87 @@
                             </div>
                         </div>
 
-                        <!-- Server-rendered RRD Graph -->
-                        <div class="mt-5 rounded-xl border border-gray-200 bg-white overflow-hidden" style="min-height: 300px;">
-                            <!-- Loading state -->
-                            <div x-show="bandwidth.graphLoading" class="flex h-72 items-center justify-center">
-                                <div class="flex items-center gap-3 text-gray-500">
-                                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span class="text-sm">Loading graph...</span>
-                                </div>
+                        <!-- Responsive RRD Line Graph -->
+                        <div class="relative mt-5 overflow-hidden rounded-xl border border-gray-200 bg-slate-50">
+                            <div x-show="bandwidth.historyLoading"
+                                class="absolute right-4 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs text-gray-500 shadow-sm">
+                                <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                Updating
                             </div>
 
-                            <!-- Graph image -->
-                            <template x-if="bandwidth.graphSrc && !bandwidth.graphError">
-                                <img
-                                    :src="bandwidth.graphSrc"
-                                    x-on:load="onGraphLoad()"
-                                    x-on:error="onGraphError()"
-                                    alt="Bandwidth graph"
-                                    class="w-full h-auto"
-                                    style="display: block;"
-                                >
-                            </template>
+                            <svg viewBox="0 0 1000 300" role="img" aria-label="Download and upload bandwidth history"
+                                class="block h-72 w-full select-none"
+                                @mousemove="updateBandwidthTooltip($event)"
+                                @mouseleave="bandwidth.tooltip.show = false">
+                                <defs>
+                                    <linearGradient id="bandwidth-rx-fill" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#2563eb" stop-opacity=".22"></stop>
+                                        <stop offset="100%" stop-color="#2563eb" stop-opacity=".02"></stop>
+                                    </linearGradient>
+                                    <linearGradient id="bandwidth-tx-fill" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#059669" stop-opacity=".18"></stop>
+                                        <stop offset="100%" stop-color="#059669" stop-opacity=".02"></stop>
+                                    </linearGradient>
+                                </defs>
 
-                            <!-- Error / No data state -->
-                            <div x-show="bandwidth.graphError || !bandwidth.graphSrc" class="flex h-72 flex-col items-center justify-center gap-4 px-6 text-center">
-                                <svg class="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-gray-900">No Bandwidth Data Available</p>
-                                    <p class="mt-1 text-sm text-gray-500">RRD bandwidth history will appear here once data
-                                        collection begins.</p>
-                                    <p class="mt-2 text-xs text-gray-400">The system collects bandwidth samples every
-                                        minute for active subscriptions.</p>
-                                </div>
-                                <div x-show="bandwidth.live.error"
-                                    class="mt-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
-                                    <p class="font-semibold">Collection Error:</p>
-                                    <p x-text="bandwidth.live.error" class="mt-1"></p>
-                                </div>
+                                <template x-for="y in [32, 90, 148, 206, 264]" :key="y">
+                                    <line x1="56" :y1="y" x2="976" :y2="y" stroke="#e2e8f0"
+                                        stroke-width="1"></line>
+                                </template>
+                                <line x1="56" y1="32" x2="56" y2="264" stroke="#cbd5e1" stroke-width="1"></line>
+                                <line x1="56" y1="264" x2="976" y2="264" stroke="#cbd5e1" stroke-width="1"></line>
+
+                                <text x="48" y="38" text-anchor="end" class="fill-slate-400 text-[11px]"
+                                    x-text="formatSpeed(chartMax())"></text>
+                                <text x="48" y="269" text-anchor="end" class="fill-slate-400 text-[11px]">0</text>
+
+                                <template x-for="(segment, index) in chartSegments('rx_bps')" :key="'rx-area-' + index">
+                                    <path :d="areaPath(segment)" fill="url(#bandwidth-rx-fill)"></path>
+                                </template>
+                                <template x-for="(segment, index) in chartSegments('tx_bps')" :key="'tx-area-' + index">
+                                    <path :d="areaPath(segment)" fill="url(#bandwidth-tx-fill)"></path>
+                                </template>
+                                <template x-for="(segment, index) in chartSegments('rx_bps')" :key="'rx-line-' + index">
+                                    <path :d="linePath(segment)" fill="none" stroke="#2563eb" stroke-width="2.5"
+                                        stroke-linecap="round" stroke-linejoin="round"></path>
+                                </template>
+                                <template x-for="(segment, index) in chartSegments('tx_bps')" :key="'tx-line-' + index">
+                                    <path :d="linePath(segment)" fill="none" stroke="#059669" stroke-width="2.5"
+                                        stroke-linecap="round" stroke-linejoin="round"></path>
+                                </template>
+
+                                <template x-for="label in axisLabels()" :key="label.x">
+                                    <text :x="label.x" y="286" text-anchor="middle"
+                                        class="fill-slate-400 text-[11px]" x-text="label.label"></text>
+                                </template>
+
+                                <g x-show="bandwidth.tooltip.show">
+                                    <line :x1="bandwidth.tooltip.x" y1="32" :x2="bandwidth.tooltip.x" y2="264"
+                                        stroke="#94a3b8" stroke-dasharray="4 4"></line>
+                                    <rect :x="bandwidth.tooltip.x - 70" y="38" width="140" height="66" rx="8"
+                                        fill="#0f172a" opacity=".94"></rect>
+                                    <text :x="bandwidth.tooltip.x" y="57" text-anchor="middle"
+                                        class="fill-white text-[11px] font-semibold"
+                                        x-text="bandwidth.tooltip.time"></text>
+                                    <text :x="bandwidth.tooltip.x" y="76" text-anchor="middle"
+                                        class="fill-blue-300 text-[11px]"
+                                        x-text="'RX ' + (bandwidth.tooltip.rx === null ? '—' : formatSpeed(bandwidth.tooltip.rx))"></text>
+                                    <text :x="bandwidth.tooltip.x" y="94" text-anchor="middle"
+                                        class="fill-emerald-300 text-[11px]"
+                                        x-text="'TX ' + (bandwidth.tooltip.tx === null ? '—' : formatSpeed(bandwidth.tooltip.tx))"></text>
+                                </g>
+                            </svg>
+
+                            <div x-show="!bandwidth.hasData && !bandwidth.historyLoading"
+                                class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <span class="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm text-slate-500 shadow-sm">
+                                    No bandwidth samples for this range
+                                </span>
                             </div>
                         </div>
 

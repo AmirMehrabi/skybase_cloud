@@ -238,7 +238,6 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::post('/{subscription}/ip-routes/sync', [SubscriptionController::class, 'syncIpRoutes'])->name('ip-routes.sync');
         Route::get('/{subscription}/bandwidth/live', [SubscriptionController::class, 'liveBandwidth'])->name('bandwidth.live');
         Route::get('/{subscription}/bandwidth/history', [SubscriptionController::class, 'bandwidthHistory'])->name('bandwidth.history');
-        Route::get('/{subscription}/bandwidth/graph', [SubscriptionController::class, 'bandwidthGraph'])->name('bandwidth.graph');
         Route::get('/{subscription}/edit', [SubscriptionController::class, 'edit'])->name('edit');
         Route::put('/{subscription}', [SubscriptionController::class, 'update'])->name('update');
         Route::delete('/{subscription}', [SubscriptionController::class, 'destroy'])->name('destroy');

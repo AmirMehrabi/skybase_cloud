@@ -14,8 +14,13 @@ class SubscriptionBandwidthState extends Model
         'interface_name',
         'rx_bps',
         'tx_bps',
+        'last_download_bytes',
+        'last_upload_bytes',
+        'counter_sampled_at',
         'source',
         'sampled_at',
+        'last_success_at',
+        'consecutive_failures',
         'error',
     ];
 
@@ -24,7 +29,12 @@ class SubscriptionBandwidthState extends Model
         return [
             'rx_bps' => 'integer',
             'tx_bps' => 'integer',
+            'last_download_bytes' => 'integer',
+            'last_upload_bytes' => 'integer',
+            'counter_sampled_at' => 'datetime',
             'sampled_at' => 'datetime',
+            'last_success_at' => 'datetime',
+            'consecutive_failures' => 'integer',
         ];
     }
 

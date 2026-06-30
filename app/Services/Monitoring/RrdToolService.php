@@ -4,6 +4,7 @@ namespace App\Services\Monitoring;
 
 use App\Models\Router;
 use App\Models\Subscription;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 use Throwable;
@@ -155,7 +156,7 @@ class RrdToolService
     /**
      * Return bandwidth series with richer data for chart rendering.
      *
-     * @return array{chartData: list<array{timestamp: int, time: string, rx_bps: float|null, tx_bps: float|null, rx_max: float|null, tx_max: float|null}>, hasData: bool}
+     * @return array{chartData: list<array{timestamp: int, time: string, rx_bps: float|null, tx_bps: float|null}>, hasData: bool}
      */
     public function subscriptionBandwidthChartData(Subscription $subscription, string $range = '1h'): array
     {
@@ -212,7 +213,7 @@ class RrdToolService
 
         $this->ensureDirectory($path);
         $step = $this->step();
-        $heartbeat = $step * 2;
+        $heartbeat = $step * 3;
 
         $this->run([
             (string) config('monitoring.rrdtool'),
@@ -242,7 +243,7 @@ class RrdToolService
 
         $this->ensureDirectory($path);
         $step = $this->step();
-        $heartbeat = $step * 2;
+        $heartbeat = $step * 3;
 
         $this->run([
             (string) config('monitoring.rrdtool'),
@@ -290,9 +291,11 @@ class RrdToolService
             $path,
             'AVERAGE',
             '--start',
-            '-'.$this->rangeSeconds($range),
+            (string) CarbonImmutable::now()->subSeconds($this->rangeSeconds($range))->timestamp,
             '--end',
-            'now',
+            (string) CarbonImmutable::now()->timestamp,
+            '--resolution',
+            (string) $this->rangeResolution($range),
         ]);
 
         $rows = [];
@@ -366,6 +369,16 @@ class RrdToolService
             '7d' => 604800,
             '30d' => 2592000,
             default => 86400,
+        };
+    }
+
+    private function rangeResolution(string $range): int
+    {
+        return match ($range) {
+            '1h' => 60,
+            '6h', '24h' => 300,
+            '7d', '30d' => 3600,
+            default => 300,
         };
     }
 

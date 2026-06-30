@@ -4,8 +4,8 @@ namespace App\Services\Monitoring;
 
 use App\Models\Subscription;
 use App\Models\SubscriptionBandwidthState;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -40,15 +40,19 @@ class SubscriptionBandwidthCollector
             if ($subscription->isPppoe() && filled($subscription->pppoe_username)) {
                 // PPPoE: try RouterOS API first, then RADIUS accounting fallback
                 if ($router && $router->isMikrotik() && $router->api_username && $router->api_password) {
-                    $interface = $this->routerOsMonitoring->activePppInterface($router, (string) $subscription->pppoe_username);
+                    try {
+                        $interface = $this->routerOsMonitoring->activePppInterface($router, (string) $subscription->pppoe_username);
 
-                    if ($interface) {
+                        if (! $interface) {
+                            throw new MonitoringStorageUnavailable('No active RouterOS PPP session was found.');
+                        }
+
                         $traffic = $this->routerOsMonitoring->interfaceTraffic($router, $interface);
                         $sample['interface_name'] = $interface;
                         $sample['rx_bps'] = $traffic['rx_bps'];
                         $sample['tx_bps'] = $traffic['tx_bps'];
                         $sample['source'] = $traffic['source'];
-                    } else {
+                    } catch (Throwable) {
                         $fallback = $this->radiusAccountingDelta($subscription);
                         $sample['rx_bps'] = $fallback['rx_bps'];
                         $sample['tx_bps'] = $fallback['tx_bps'];
@@ -73,18 +77,37 @@ class SubscriptionBandwidthCollector
                 throw new MonitoringStorageUnavailable('No username configured for bandwidth collection.');
             }
 
-            $this->rrdTool->updateSubscriptionBandwidth($subscription, [
-                'rx_bps' => $sample['rx_bps'],
-                'tx_bps' => $sample['tx_bps'],
-            ]);
+            if ($sample['error'] === null) {
+                $this->rrdTool->updateSubscriptionBandwidth($subscription, [
+                    'rx_bps' => $sample['rx_bps'],
+                    'tx_bps' => $sample['tx_bps'],
+                ]);
+            }
         } catch (Throwable $exception) {
             $sample['error'] = $exception->getMessage();
         }
+
+        $existingState = SubscriptionBandwidthState::withoutGlobalScopes()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->where('subscription_id', $subscription->id)
+            ->first();
+        $sample['last_success_at'] = $sample['error'] === null ? $sampledAt : $existingState?->last_success_at;
+        $sample['consecutive_failures'] = $sample['error'] === null ? 0 : ((int) $existingState?->consecutive_failures + 1);
 
         SubscriptionBandwidthState::withoutGlobalScopes()->updateOrCreate(
             ['tenant_id' => $subscription->tenant_id, 'subscription_id' => $subscription->id],
             $sample,
         );
+
+        if ($sample['error'] !== null) {
+            Log::warning('Subscription bandwidth collection failed.', [
+                'tenant_id' => $subscription->tenant_id,
+                'subscription_id' => $subscription->id,
+                'router_id' => $router?->id,
+                'source' => $sample['source'],
+                'error' => $sample['error'],
+            ]);
+        }
 
         return $sample;
     }
@@ -119,24 +142,35 @@ class SubscriptionBandwidthCollector
 
         $downloadBytes = $this->octets($session, 'acctoutputoctets', 'acctoutputgigawords');
         $uploadBytes = $this->octets($session, 'acctinputoctets', 'acctinputgigawords');
-        $cacheKey = "monitoring:subscription-bandwidth:{$subscription->tenant_id}:{$subscription->id}";
-        $previous = Cache::get($cacheKey);
+        $sampledAt = now();
+        $state = SubscriptionBandwidthState::withoutGlobalScopes()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->where('subscription_id', $subscription->id)
+            ->first();
 
-        Cache::put($cacheKey, [
-            'download' => $downloadBytes,
-            'upload' => $uploadBytes,
-            'sampled_at' => now()->timestamp,
-        ], now()->addMinutes(10));
+        SubscriptionBandwidthState::withoutGlobalScopes()->updateOrCreate(
+            ['tenant_id' => $subscription->tenant_id, 'subscription_id' => $subscription->id],
+            [
+                'router_id' => $subscription->router_id,
+                'last_download_bytes' => $downloadBytes,
+                'last_upload_bytes' => $uploadBytes,
+                'counter_sampled_at' => $sampledAt,
+            ],
+        );
 
-        if (! is_array($previous) || ! isset($previous['sampled_at'])) {
+        if (! $state?->counter_sampled_at || $state->last_download_bytes === null || $state->last_upload_bytes === null) {
             return ['rx_bps' => 0, 'tx_bps' => 0, 'error' => 'Waiting for the next accounting sample to calculate live bandwidth.'];
         }
 
-        $seconds = max(1, now()->timestamp - (int) $previous['sampled_at']);
+        if ($downloadBytes < $state->last_download_bytes || $uploadBytes < $state->last_upload_bytes) {
+            return ['rx_bps' => 0, 'tx_bps' => 0, 'error' => 'Accounting counters restarted; waiting for the next sample.'];
+        }
+
+        $seconds = max(1, $state->counter_sampled_at->diffInSeconds($sampledAt));
 
         return [
-            'rx_bps' => max(0, (int) round((($downloadBytes - (int) ($previous['download'] ?? 0)) * 8) / $seconds)),
-            'tx_bps' => max(0, (int) round((($uploadBytes - (int) ($previous['upload'] ?? 0)) * 8) / $seconds)),
+            'rx_bps' => (int) round((($downloadBytes - $state->last_download_bytes) * 8) / $seconds),
+            'tx_bps' => (int) round((($uploadBytes - $state->last_upload_bytes) * 8) / $seconds),
             'error' => null,
         ];
     }
