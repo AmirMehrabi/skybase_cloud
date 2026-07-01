@@ -37,6 +37,28 @@ class SubscriptionControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_create_page_lists_online_and_offline_routers(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+        $subscription->router->update([
+            'name' => 'Online Edge',
+            'status' => 'online',
+        ]);
+        Router::factory()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Offline Edge',
+            'status' => 'offline',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('subscriptions.create'))
+            ->assertOk()
+            ->assertSee('Online Edge')
+            ->assertSee('Offline Edge')
+            ->assertSee('— Online')
+            ->assertSee('— Offline');
+    }
+
     public function test_show_page_uses_the_subscription_status_from_the_model(): void
     {
         $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');

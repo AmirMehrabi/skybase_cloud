@@ -157,7 +157,7 @@
                     <select name="router_id" id="router_id" x-model="form.router_id" @change="handleRouterChange()" :class="hasValidationError('router_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
                         <option value="">Select a router</option>
                         @foreach($routers as $router)
-                            <option value="{{ $router->id }}" data-site="{{ $router->site }}">{{ $router->name }} ({{ $router->vendor }} {{ $router->model }})</option>
+                            <option value="{{ $router->id }}" data-site="{{ $router->site }}" data-status="{{ $router->status }}">{{ $router->name }} ({{ $router->vendor }} {{ $router->model }}) — {{ ucfirst($router->status) }}</option>
                         @endforeach
                     </select>
                     @error('router_id')

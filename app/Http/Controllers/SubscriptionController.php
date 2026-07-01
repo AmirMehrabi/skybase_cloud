@@ -134,7 +134,9 @@ class SubscriptionController extends Controller
         $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
-        $routers = Router::where('status', 'online')->get(['id', 'name', 'site', 'vendor', 'model']);
+        $routers = Router::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'site', 'vendor', 'model', 'status']);
         $ipPools = IpPool::active()->with(['router', 'availableAddresses'])->get();
 
         return view('subscriptions.create', compact('customer', 'customers', 'plans', 'routers', 'ipPools'));
