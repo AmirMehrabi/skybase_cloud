@@ -92,6 +92,8 @@
 @section('content')
     <div x-data="{
         tab: @js(request('tab', 'overview')),
+        usageView: @js(request('usage_view', 'table')),
+        usageChart: @js($usageChart),
         copiedField: null,
         credentials: {
             open: {{ $errors->has('pppoe_username') || $errors->has('pppoe_password') ? 'true' : 'false' }},
@@ -376,6 +378,63 @@
             }
 
             return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+        },
+        formatBytes(bytes) {
+            const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            let size = Number(bytes || 0);
+            let unit = 0;
+
+            while (size >= 1024 && unit < units.length - 1) {
+                size = size / 1024;
+                unit++;
+            }
+
+            return `${size.toFixed(unit === 0 ? 0 : 2)} ${units[unit]}`;
+        },
+        usageChartMax() {
+            return Math.max(1, ...this.usageChart.download, ...this.usageChart.upload);
+        },
+        usageChartPoints(field) {
+            const values = this.usageChart[field] || [];
+            const max = this.usageChartMax();
+            const last = Math.max(1, values.length - 1);
+
+            return values.map((value, index) => ({
+                x: 64 + ((index / last) * 900),
+                y: 258 - ((Number(value || 0) / max) * 218),
+            }));
+        },
+        usageChartLinePath(field) {
+            return this.usageChartPoints(field)
+                .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+                .join(' ');
+        },
+        usageChartAreaPath(field) {
+            const points = this.usageChartPoints(field);
+
+            if (!points.length) {
+                return '';
+            }
+
+            return `${this.usageChartLinePath(field)} L ${points[points.length - 1].x} 258 L ${points[0].x} 258 Z`;
+        },
+        usageChartPointPath(field) {
+            return this.usageChartPoints(field)
+                .map((point) => `M ${point.x - 3} ${point.y} a 3 3 0 1 0 6 0 a 3 3 0 1 0 -6 0`)
+                .join(' ');
+        },
+        usageChartLabel(position) {
+            const labels = this.usageChart.labels || [];
+
+            if (!labels.length) {
+                return '';
+            }
+
+            const index = position === 'start'
+                ? 0
+                : (position === 'end' ? labels.length - 1 : Math.floor((labels.length - 1) / 2));
+
+            return labels[index] || '';
         },
     }" x-init="initBandwidth()" class="space-y-6">
         <!-- Top Header Card -->
@@ -1374,98 +1433,155 @@
 
                     <!-- Accounting Sessions -->
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                        <div class="mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">RADIUS Accounting Sessions</h3>
-                            <p class="text-sm text-gray-500 mt-1">Latest sessions from FreeRADIUS accounting for this PPP
-                                username</p>
+                        <div class="flex flex-col gap-4 border-b border-gray-200 pb-5 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">RADIUS Accounting Sessions</h3>
+                                <p class="text-sm text-gray-500 mt-1">Explore session-level records or aggregated usage for {{ $subscription['pppoe_username'] }}.</p>
+                            </div>
+                            <div class="inline-flex w-fit rounded-xl border border-gray-200 bg-gray-50 p-1">
+                                <button type="button" @click="usageView = 'table'"
+                                    :class="usageView === 'table' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                    class="rounded-lg px-4 py-2 text-sm font-medium transition">Table</button>
+                                <button type="button" @click="usageView = 'chart'"
+                                    :class="usageView === 'chart' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                    class="rounded-lg px-4 py-2 text-sm font-medium transition">Usage chart</button>
+                            </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Started</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Stopped</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Status</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Duration</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Download</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Upload</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Total</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Router</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            IP Address</th>
-                                        <th
-                                            class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Terminate Cause</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    @forelse($usageSessions as $session)
-                                        <tr class="hover:bg-gray-50 transition-colors duration-150">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="text-sm text-gray-900">{{ $session['date'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="text-sm text-gray-900">{{ $session['stopped_at'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span
-                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $session['status'] === 'online' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200' }}">
-                                                    {{ ucfirst($session['status']) }}
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="text-sm text-gray-900">{{ $session['duration'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span
-                                                    class="text-sm font-medium text-green-600">{{ $session['download'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span
-                                                    class="text-sm font-medium text-blue-600">{{ $session['upload'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span
-                                                    class="text-sm font-semibold text-gray-900">{{ $session['total'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="text-sm text-gray-900">{{ $session['router'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span
-                                                    class="text-sm font-mono text-gray-900">{{ $session['ip_address'] }}</span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span
-                                                    class="text-sm text-gray-500">{{ $session['terminate_cause'] }}</span>
-                                            </td>
-                                        </tr>
-                                    @empty
+
+                        <div x-show="usageView === 'table'" x-cloak class="pt-5">
+                            <form method="GET" action="{{ route('subscriptions.show', $subscription['id']) }}"
+                                class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                <input type="hidden" name="tab" value="usage">
+                                <input type="hidden" name="usage_view" value="table">
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                    <x-input.text name="session_started_from" type="date" label="Started From" :value="request('session_started_from')" />
+                                    <x-input.text name="session_stopped_to" type="date" label="Stopped By" :value="request('session_stopped_to')" />
+                                    <x-input.select name="session_status" label="Session Status" :options="['' => 'All statuses', 'online' => 'Online', 'offline' => 'Offline']" :value="request('session_status')" />
+                                    <x-input.text name="session_nas_ip" label="NAS / Router IP" :value="request('session_nas_ip')" placeholder="192.0.2.10" />
+                                    <x-input.text name="session_ip_address" label="Framed IP Address" :value="request('session_ip_address')" placeholder="10.0.0.25" />
+                                    <x-input.text name="session_terminate_cause" label="Terminate Cause" :value="request('session_terminate_cause')" placeholder="User-Request" />
+                                    <x-input.select name="usage_per_page" label="Rows Per Page" :options="[10 => '10', 25 => '25', 50 => '50', 100 => '100']" :value="request('usage_per_page', 25)" />
+                                </div>
+                                <div class="mt-4 flex flex-wrap justify-end gap-3">
+                                    <a href="{{ route('subscriptions.show', ['subscription' => $subscription['id'], 'tab' => 'usage', 'usage_view' => 'table']) }}"
+                                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Reset</a>
+                                    <button type="submit"
+                                        class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Apply filters</button>
+                                </div>
+                            </form>
+
+                            <div class="mt-5 overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
                                         <tr>
-                                            <td colspan="10" class="px-6 py-10 text-center text-sm text-gray-500">
-                                                No RADIUS accounting sessions have been captured for this subscription yet.
-                                            </td>
+                                            @foreach (['Started', 'Stopped', 'Status', 'Duration', 'Download', 'Upload', 'Total', 'Router', 'IP Address', 'Calling Station', 'Terminate Cause'] as $heading)
+                                                <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">{{ $heading }}</th>
+                                            @endforeach
                                         </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        @forelse($usageSessions as $session)
+                                            <tr class="transition-colors duration-150 hover:bg-gray-50">
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['started_at_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['stopped_at_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4">
+                                                    <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium {{ $session['status'] === 'online' ? 'border-green-200 bg-green-100 text-green-800' : 'border-gray-200 bg-gray-100 text-gray-800' }}">{{ ucfirst($session['status']) }}</span>
+                                                </td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['duration'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-medium text-blue-600">{{ $session['download_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-medium text-emerald-600">{{ $session['upload_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-semibold text-gray-900">{{ $session['total_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['router'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 font-mono text-sm text-gray-900">{{ $session['ip_address'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 font-mono text-sm text-gray-500">{{ $session['calling_station_id'] ?: '—' }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-500">{{ $session['terminate_cause'] }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="11" class="px-6 py-12 text-center text-sm text-gray-500">No accounting sessions match these filters.</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mt-5 flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                                <p class="text-sm text-gray-500">Showing {{ $usageSessions->firstItem() ?? 0 }} to {{ $usageSessions->lastItem() ?? 0 }} of {{ $usageSessions->total() }} sessions</p>
+                                @if ($usageSessions->hasPages())
+                                    {{ $usageSessions->links() }}
+                                @endif
+                            </div>
+                        </div>
+
+                        <div x-show="usageView === 'chart'" x-cloak class="pt-5">
+                            <form method="GET" action="{{ route('subscriptions.show', $subscription['id']) }}"
+                                class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                <input type="hidden" name="tab" value="usage">
+                                <input type="hidden" name="usage_view" value="chart">
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
+                                    <x-input.select name="usage_chart_range" label="Usage Period" :options="['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'custom' => 'Custom range']" :value="$usageChartRange" />
+                                    <x-input.text name="usage_chart_from" type="date" label="Custom Start" :value="request('usage_chart_from')" />
+                                    <x-input.text name="usage_chart_to" type="date" label="Custom End" :value="request('usage_chart_to')" />
+                                    <div class="flex items-end">
+                                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">Update chart</button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <div class="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-blue-600">Download</p>
+                                    <p class="mt-2 text-xl font-bold text-gray-900" x-text="formatBytes(usageChart.total_download)"></p>
+                                </div>
+                                <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">Upload</p>
+                                    <p class="mt-2 text-xl font-bold text-gray-900" x-text="formatBytes(usageChart.total_upload)"></p>
+                                </div>
+                                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Combined</p>
+                                    <p class="mt-2 text-xl font-bold text-gray-900" x-text="formatBytes(usageChart.total_download + usageChart.total_upload)"></p>
+                                </div>
+                            </div>
+
+                            <div class="relative mt-5 overflow-hidden rounded-xl border border-gray-200 bg-slate-50">
+                                <svg viewBox="0 0 1000 300" role="img" aria-label="Aggregated RADIUS download and upload usage"
+                                    class="block h-80 w-full">
+                                    <defs>
+                                        <linearGradient id="usage-download-fill" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="#2563eb" stop-opacity=".24"></stop>
+                                            <stop offset="100%" stop-color="#2563eb" stop-opacity=".02"></stop>
+                                        </linearGradient>
+                                        <linearGradient id="usage-upload-fill" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="#059669" stop-opacity=".20"></stop>
+                                            <stop offset="100%" stop-color="#059669" stop-opacity=".02"></stop>
+                                        </linearGradient>
+                                    </defs>
+                                    <line x1="64" y1="40" x2="964" y2="40" stroke="#e2e8f0"></line>
+                                    <line x1="64" y1="94" x2="964" y2="94" stroke="#e2e8f0"></line>
+                                    <line x1="64" y1="149" x2="964" y2="149" stroke="#e2e8f0"></line>
+                                    <line x1="64" y1="203" x2="964" y2="203" stroke="#e2e8f0"></line>
+                                    <line x1="64" y1="258" x2="964" y2="258" stroke="#cbd5e1"></line>
+                                    <text x="55" y="45" text-anchor="end" class="fill-slate-400 text-[11px]" x-text="formatBytes(usageChartMax())"></text>
+                                    <text x="55" y="263" text-anchor="end" class="fill-slate-400 text-[11px]">0</text>
+                                    <path :d="usageChartAreaPath('download')" fill="url(#usage-download-fill)"></path>
+                                    <path :d="usageChartAreaPath('upload')" fill="url(#usage-upload-fill)"></path>
+                                    <path :d="usageChartLinePath('download')" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path :d="usageChartLinePath('upload')" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path :d="usageChartPointPath('download')" fill="#2563eb"></path>
+                                    <path :d="usageChartPointPath('upload')" fill="#059669"></path>
+                                    <text x="64" y="282" text-anchor="start" class="fill-slate-400 text-[11px]" x-text="usageChartLabel('start')"></text>
+                                    <text x="514" y="282" text-anchor="middle" class="fill-slate-400 text-[11px]" x-text="usageChartLabel('middle')"></text>
+                                    <text x="964" y="282" text-anchor="end" class="fill-slate-400 text-[11px]" x-text="usageChartLabel('end')"></text>
+                                </svg>
+                                <div x-show="!usageChart.labels.length" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                    <span class="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-500 shadow-sm">No usage data for this period</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex flex-wrap items-center gap-5 text-sm text-gray-600">
+                                <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-blue-600"></span>Download</span>
+                                <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>Upload</span>
+                                <span>{{ $usageChart['from'] }} through {{ $usageChart['to'] }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1478,12 +1594,12 @@
                                 <h3 class="text-lg font-semibold text-gray-900">Recent RADIUS Auth Attempts</h3>
                                 <p class="text-sm text-gray-500 mt-1">
                                     Latest radpostauth rows for {{ $subscription['pppoe_username'] }}.
-                                    Entries older than 20 minutes are pruned automatically.
+                                    Entries are retained for 30 days.
                                 </p>
                             </div>
                             <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
                                 <p class="font-medium text-gray-900">Retention window</p>
-                                <p class="mt-1">20 minutes maximum</p>
+                                <p class="mt-1">30 days</p>
                             </div>
                         </div>
 
@@ -1540,8 +1656,8 @@
                                     @empty
                                         <tr>
                                             <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
-                                                No authentication attempts have been recorded in the last 20 minutes for
-                                                this subscription.
+                                                No authentication attempts have been recorded for this subscription in
+                                                the retained 30-day history.
                                             </td>
                                         </tr>
                                     @endforelse

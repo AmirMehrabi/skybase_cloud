@@ -11,6 +11,8 @@ class RadiusPostAuthRecord extends Model
 {
     use MassPrunable;
 
+    public const RETENTION_DAYS = 30;
+
     protected $table = 'radpostauth';
 
     public $timestamps = false;
@@ -38,7 +40,7 @@ class RadiusPostAuthRecord extends Model
     public function prunable(): Builder
     {
         return static::query()
-            ->where('authdate', '<=', now()->subMinutes(20));
+            ->where('authdate', '<=', now()->subDays(self::RETENTION_DAYS));
     }
 
     protected static function booted(): void

@@ -10,6 +10,7 @@
 ])
 
 @php
+    $id ??= $name;
     $options = $options instanceof \Illuminate\Support\Collection ? $options->toArray() : $options;
     $isList = array_is_list($options);
 @endphp

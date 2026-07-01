@@ -1,5 +1,6 @@
 @props([
     'id' => null,
+    'type' => 'text',
     'name' => null,
     'label' => null,
     'value' => null,
@@ -9,6 +10,10 @@
     'icon' => null,
     'xModel' => null,
 ])
+
+@php
+    $id ??= $name;
+@endphp
 
 <div class="mb-4">
     @if($label)
@@ -26,7 +31,7 @@
         @endif
 
         <input
-            type="text"
+            type="{{ $type }}"
             id="{{ $id }}"
             name="{{ $name }}"
             value="{{ old($name, $value) }}"

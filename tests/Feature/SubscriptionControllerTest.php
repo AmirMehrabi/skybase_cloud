@@ -166,10 +166,10 @@ class SubscriptionControllerTest extends TestCase
                 && (int) $usageSummary['sessions'] === 1;
         });
         $response->assertViewHas('usageSessions', function (mixed $usageSessions): bool {
-            return is_array($usageSessions)
-                && count($usageSessions) === 1
-            && $usageSessions[0]['download'] === '2.00 GB'
-            && $usageSessions[0]['upload'] === '1.00 GB';
+            return $usageSessions instanceof \Illuminate\Pagination\LengthAwarePaginator
+                && $usageSessions->total() === 1
+                && $usageSessions->items()[0]['download_label'] === '2.00 GB'
+                && $usageSessions->items()[0]['upload_label'] === '1.00 GB';
         });
     }
 
@@ -195,7 +195,7 @@ class SubscriptionControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Recent RADIUS Auth Attempts');
-        $response->assertSee('Entries older than 20 minutes are pruned automatically.');
+        $response->assertSee('Entries are retained for 30 days.');
         $response->assertViewHas('authAttempts', function (mixed $authAttempts): bool {
             return $authAttempts->total() === 11
                 && $authAttempts->perPage() === 10
@@ -204,7 +204,7 @@ class SubscriptionControllerTest extends TestCase
         });
     }
 
-    public function test_model_prune_removes_radius_post_auth_attempts_older_than_twenty_minutes(): void
+    public function test_model_prune_removes_radius_post_auth_attempts_older_than_thirty_days(): void
     {
         [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
 
@@ -213,7 +213,7 @@ class SubscriptionControllerTest extends TestCase
             'username' => $subscription->pppoe_username,
             'pass' => 'old-secret',
             'reply' => 'Access-Reject',
-            'authdate' => now()->subMinutes(21),
+            'authdate' => now()->subDays(31),
         ]);
 
         RadiusPostAuthRecord::withoutGlobalScopes()->create([
@@ -221,7 +221,7 @@ class SubscriptionControllerTest extends TestCase
             'username' => $subscription->pppoe_username,
             'pass' => 'recent-secret',
             'reply' => 'Access-Accept',
-            'authdate' => now()->subMinutes(5),
+            'authdate' => now()->subDays(29),
         ]);
 
         $this->artisan('model:prune', [

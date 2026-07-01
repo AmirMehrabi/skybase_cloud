@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubscriptionRequest;
 use App\Http\Requests\Subscription\BulkDeleteSubscriptionsRequest;
+use App\Http\Requests\Subscription\ShowSubscriptionRequest;
 use App\Http\Requests\Subscription\UpdateSubscriptionBillingRequest;
 use App\Jobs\BulkDeleteModelsJob;
 use App\Jobs\Subscriptions\ActivateSubscriptionJob;
@@ -30,6 +31,7 @@ use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionSessionDisconnectService;
 use App\Services\TaxResolverService;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -261,8 +263,9 @@ class SubscriptionController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, Subscription $subscription): View
+    public function show(ShowSubscriptionRequest $request, Subscription $subscription): View
     {
+        $filters = $request->validated();
         $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments']);
         $plans = Plan::query()
             ->where(function ($query) use ($subscription): void {
@@ -277,7 +280,23 @@ class SubscriptionController extends Controller
         $activityLog = app(ActivityLogFormatter::class)->forSubject($subscription, $subscription->tenant_id);
         $billingInvoices = $this->billingInvoicesForSubscription($subscription);
         $usageSummary = $this->usageSummaryForSubscription($subscription);
-        $usageSessions = $this->usageSessionsForSubscription($subscription);
+        $usageSessions = $this->radiusAccountingUsage->paginatedSessionsForSubscription(
+            $subscription,
+            $filters,
+            (int) ($filters['usage_per_page'] ?? 25),
+        );
+        $usageSessions->appends([
+            ...$request->except('usage_page'),
+            'tab' => 'usage',
+            'usage_view' => 'table',
+        ]);
+        $usageChartRange = (string) ($filters['usage_chart_range'] ?? 'weekly');
+        $usageChart = $this->radiusAccountingUsage->usageChartForSubscription(
+            $subscription,
+            $usageChartRange,
+            filled($filters['usage_chart_from'] ?? null) ? Carbon::parse($filters['usage_chart_from']) : null,
+            filled($filters['usage_chart_to'] ?? null) ? Carbon::parse($filters['usage_chart_to']) : null,
+        );
         $authAttempts = $this->recentRadiusPostAuthAttemptsForSubscription($subscription, $request);
 
         return view('subscriptions.show', compact(
@@ -287,6 +306,8 @@ class SubscriptionController extends Controller
             'billingInvoices',
             'usageSummary',
             'usageSessions',
+            'usageChart',
+            'usageChartRange',
             'authAttempts',
         ));
     }
@@ -911,7 +932,6 @@ class SubscriptionController extends Controller
 
         $query = RadiusPostAuthRecord::withoutGlobalScopes()
             ->where('tenant_id', $subscription->tenant_id)
-            ->where('authdate', '>=', now()->subMinutes(20))
             ->when(filled($subscription->pppoe_username), function ($query) use ($subscription): void {
                 $query->where('username', $subscription->pppoe_username);
             }, function ($query): void {
@@ -1212,33 +1232,6 @@ class SubscriptionController extends Controller
             'peak_time' => $peakSession['last_activity_date_label'] ?? 'No usage yet',
             'last_activity' => $latestSession['last_activity'] ?? 'No usage yet',
         ];
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function usageSessionsForSubscription(Subscription $subscription): array
-    {
-        return $this->radiusAccountingUsage->sessionsForSubscription(
-            $subscription,
-            $this->usageWindowStartForSubscription($subscription),
-            now(),
-            25,
-        )
-            ->map(fn (array $session): array => [
-                'date' => $session['started_at_label'],
-                'stopped_at' => $session['stopped_at_label'],
-                'duration' => $session['duration'],
-                'download' => $session['download_label'],
-                'upload' => $session['upload_label'],
-                'total' => $session['total_label'],
-                'router' => $session['router'],
-                'ip_address' => $session['ip_address'],
-                'status' => $session['status'],
-                'terminate_cause' => $session['terminate_cause'],
-            ])
-            ->values()
-            ->all();
     }
 
     private function usageWindowStartForSubscription(Subscription $subscription): CarbonInterface

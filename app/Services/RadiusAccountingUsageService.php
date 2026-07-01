@@ -8,12 +8,107 @@ use App\Models\Router;
 use App\Models\Subscription;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class RadiusAccountingUsageService
 {
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    public function paginatedSessionsForSubscription(
+        Subscription $subscription,
+        array $filters,
+        int $perPage = 25,
+        string $pageName = 'usage_page',
+    ): LengthAwarePaginator {
+        if (! $this->canReadAccounting() || blank($subscription->pppoe_username)) {
+            return new LengthAwarePaginator([], 0, $perPage, 1, [
+                'path' => request()->url(),
+                'pageName' => $pageName,
+            ]);
+        }
+
+        $subscription->loadMissing(['customer', 'plan', 'router']);
+        $query = $this->accountingQuery(collect([(string) $subscription->pppoe_username]));
+
+        $this->applySessionFilters($query, $filters);
+
+        $paginator = $query
+            ->orderByDesc(DB::raw('coalesce(acctstoptime, acctupdatetime, acctstarttime)'))
+            ->paginate($perPage, ['*'], $pageName);
+        $routers = $this->routersForTenant((string) $subscription->tenant_id);
+
+        $paginator->setCollection(
+            $paginator->getCollection()
+                ->map(fn (object $session): array => $this->sessionRow(
+                    $session,
+                    $subscription,
+                    $subscription->customer,
+                    $subscription->plan,
+                    $subscription->router ?? $routers->get($session->nasipaddress),
+                )),
+        );
+
+        return $paginator;
+    }
+
+    /**
+     * @return array{range: string, from: string, to: string, bucket: string, labels: list<string>, download: list<int>, upload: list<int>, total_download: int, total_upload: int}
+     */
+    public function usageChartForSubscription(
+        Subscription $subscription,
+        string $range,
+        ?CarbonInterface $customFrom = null,
+        ?CarbonInterface $customTo = null,
+    ): array {
+        [$from, $to, $bucket] = $this->chartWindow($range, $customFrom, $customTo);
+        $empty = [
+            'range' => $range,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'bucket' => $bucket,
+            'labels' => [],
+            'download' => [],
+            'upload' => [],
+            'total_download' => 0,
+            'total_upload' => 0,
+        ];
+
+        if (! $this->canReadAccounting() || blank($subscription->pppoe_username)) {
+            return $empty;
+        }
+
+        $activityExpression = 'coalesce(acctstarttime, acctupdatetime, acctstoptime)';
+        $bucketExpression = $this->bucketExpression($activityExpression, $bucket);
+        $downloadExpression = '(coalesce(acctoutputoctets, 0) + (coalesce(acctoutputgigawords, 0) * 4294967296))';
+        $uploadExpression = '(coalesce(acctinputoctets, 0) + (coalesce(acctinputgigawords, 0) * 4294967296))';
+
+        $rows = $this->accountingQuery(collect([(string) $subscription->pppoe_username]))
+            ->whereBetween(DB::raw($activityExpression), [$from, $to])
+            ->selectRaw("{$bucketExpression} as usage_bucket")
+            ->selectRaw("sum({$downloadExpression}) as download_bytes")
+            ->selectRaw("sum({$uploadExpression}) as upload_bytes")
+            ->groupByRaw($bucketExpression)
+            ->orderBy('usage_bucket')
+            ->get();
+
+        return [
+            ...$empty,
+            'labels' => $rows
+                ->map(fn (object $row): string => $this->bucketLabel((string) $row->usage_bucket, $bucket))
+                ->values()
+                ->all(),
+            'download' => $rows->map(fn (object $row): int => (int) $row->download_bytes)->values()->all(),
+            'upload' => $rows->map(fn (object $row): int => (int) $row->upload_bytes)->values()->all(),
+            'total_download' => (int) $rows->sum('download_bytes'),
+            'total_upload' => (int) $rows->sum('upload_bytes'),
+        ];
+    }
+
     /**
      * @return Collection<int, array<string, mixed>>
      */
@@ -193,6 +288,87 @@ class RadiusAccountingUsageService
         }
 
         return $query;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function applySessionFilters(mixed $query, array $filters): void
+    {
+        if (filled($filters['session_started_from'] ?? null)) {
+            $query->where('acctstarttime', '>=', Carbon::parse($filters['session_started_from'])->startOfDay());
+        }
+
+        if (filled($filters['session_stopped_to'] ?? null)) {
+            $query->where(
+                DB::raw('coalesce(acctstoptime, acctupdatetime, acctstarttime)'),
+                '<=',
+                Carbon::parse($filters['session_stopped_to'])->endOfDay(),
+            );
+        }
+
+        if (($filters['session_status'] ?? null) === 'online') {
+            $query->whereNull('acctstoptime');
+        } elseif (($filters['session_status'] ?? null) === 'offline') {
+            $query->whereNotNull('acctstoptime');
+        }
+
+        foreach ([
+            'session_nas_ip' => 'nasipaddress',
+            'session_ip_address' => 'framedipaddress',
+            'session_terminate_cause' => 'acctterminatecause',
+        ] as $filter => $column) {
+            if (filled($filters[$filter] ?? null)) {
+                $query->where($column, 'like', '%'.trim((string) $filters[$filter]).'%');
+            }
+        }
+    }
+
+    /**
+     * @return array{CarbonInterface, CarbonInterface, string}
+     */
+    private function chartWindow(
+        string $range,
+        ?CarbonInterface $customFrom,
+        ?CarbonInterface $customTo,
+    ): array {
+        if ($range === 'custom' && $customFrom && $customTo) {
+            $from = Carbon::parse($customFrom)->startOfDay();
+            $to = Carbon::parse($customTo)->endOfDay();
+            $bucket = $from->diffInDays($to) <= 2 ? 'hour' : 'day';
+
+            return [$from, $to, $bucket];
+        }
+
+        return match ($range) {
+            'daily' => [now()->startOfDay(), now()->endOfDay(), 'hour'],
+            'weekly' => [now()->subDays(6)->startOfDay(), now()->endOfDay(), 'day'],
+            default => [now()->subDays(29)->startOfDay(), now()->endOfDay(), 'day'],
+        };
+    }
+
+    private function bucketExpression(string $activityExpression, string $bucket): string
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return $bucket === 'hour'
+                ? "strftime('%Y-%m-%d %H:00:00', {$activityExpression})"
+                : "strftime('%Y-%m-%d', {$activityExpression})";
+        }
+
+        return $bucket === 'hour'
+            ? "date_format({$activityExpression}, '%Y-%m-%d %H:00:00')"
+            : "date({$activityExpression})";
+    }
+
+    private function bucketLabel(string $bucketValue, string $bucket): string
+    {
+        $date = Carbon::parse($bucketValue);
+
+        return $bucket === 'hour'
+            ? $date->format('H:i')
+            : $date->format('M j');
     }
 
     /**
