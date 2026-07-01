@@ -26,7 +26,7 @@ Schedule::command('monitoring:collect-router-health')
     ->withoutOverlapping();
 
 Schedule::command('monitoring:collect-subscription-bandwidth')
-    ->everyMinute()
+    ->everyFiveMinutes()
     ->withoutOverlapping();
 
 Schedule::command('subscriptions:sync-connection-status')

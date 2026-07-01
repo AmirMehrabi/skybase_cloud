@@ -154,7 +154,7 @@
             this.loadBandwidthHistory();
             this.refreshLiveBandwidth();
             this.bandwidth.timer = setInterval(() => this.refreshLiveBandwidth(), 5000);
-            setInterval(() => this.loadBandwidthHistory(false), 60000);
+            setInterval(() => this.loadBandwidthHistory(false), 300000);
         },
         async copyCredential(field, value) {
             if (!value || value === 'N/A') {
@@ -318,15 +318,34 @@
 
             return `${this.linePath(segment)} L ${segment[segment.length - 1].x} 264 L ${segment[0].x} 264 Z`;
         },
-        axisLabels() {
+        seriesLinePath(field) {
+            return this.chartSegments(field)
+                .map((segment) => this.linePath(segment))
+                .join(' ');
+        },
+        seriesAreaPath(field) {
+            return this.chartSegments(field)
+                .map((segment) => this.areaPath(segment))
+                .join(' ');
+        },
+        seriesPointPath(field) {
+            return this.chartSegments(field)
+                .flat()
+                .map((point) => `M ${point.x - 2.5} ${point.y} a 2.5 2.5 0 1 0 5 0 a 2.5 2.5 0 1 0 -5 0`)
+                .join(' ');
+        },
+        axisLabel(position) {
             const points = this.bandwidth.history;
 
             if (!points.length) {
-                return [];
+                return '';
             }
 
-            return [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])]
-                .map((index) => ({ x: 56 + ((index / Math.max(1, points.length - 1)) * 920), label: points[index].time }));
+            const index = position === 'start'
+                ? 0
+                : (position === 'end' ? points.length - 1 : Math.floor((points.length - 1) / 2));
+
+            return points[index]?.time || '';
         },
         updateBandwidthTooltip(event) {
             if (!this.bandwidth.history.length) {
@@ -1225,10 +1244,11 @@
                                     </linearGradient>
                                 </defs>
 
-                                <template x-for="y in [32, 90, 148, 206, 264]" :key="y">
-                                    <line x1="56" :y1="y" x2="976" :y2="y" stroke="#e2e8f0"
-                                        stroke-width="1"></line>
-                                </template>
+                                <line x1="56" y1="32" x2="976" y2="32" stroke="#e2e8f0" stroke-width="1"></line>
+                                <line x1="56" y1="90" x2="976" y2="90" stroke="#e2e8f0" stroke-width="1"></line>
+                                <line x1="56" y1="148" x2="976" y2="148" stroke="#e2e8f0" stroke-width="1"></line>
+                                <line x1="56" y1="206" x2="976" y2="206" stroke="#e2e8f0" stroke-width="1"></line>
+                                <line x1="56" y1="264" x2="976" y2="264" stroke="#e2e8f0" stroke-width="1"></line>
                                 <line x1="56" y1="32" x2="56" y2="264" stroke="#cbd5e1" stroke-width="1"></line>
                                 <line x1="56" y1="264" x2="976" y2="264" stroke="#cbd5e1" stroke-width="1"></line>
 
@@ -1236,25 +1256,21 @@
                                     x-text="formatSpeed(chartMax())"></text>
                                 <text x="48" y="269" text-anchor="end" class="fill-slate-400 text-[11px]">0</text>
 
-                                <template x-for="(segment, index) in chartSegments('rx_bps')" :key="'rx-area-' + index">
-                                    <path :d="areaPath(segment)" fill="url(#bandwidth-rx-fill)"></path>
-                                </template>
-                                <template x-for="(segment, index) in chartSegments('tx_bps')" :key="'tx-area-' + index">
-                                    <path :d="areaPath(segment)" fill="url(#bandwidth-tx-fill)"></path>
-                                </template>
-                                <template x-for="(segment, index) in chartSegments('rx_bps')" :key="'rx-line-' + index">
-                                    <path :d="linePath(segment)" fill="none" stroke="#2563eb" stroke-width="2.5"
-                                        stroke-linecap="round" stroke-linejoin="round"></path>
-                                </template>
-                                <template x-for="(segment, index) in chartSegments('tx_bps')" :key="'tx-line-' + index">
-                                    <path :d="linePath(segment)" fill="none" stroke="#059669" stroke-width="2.5"
-                                        stroke-linecap="round" stroke-linejoin="round"></path>
-                                </template>
+                                <path :d="seriesAreaPath('rx_bps')" fill="url(#bandwidth-rx-fill)"></path>
+                                <path :d="seriesAreaPath('tx_bps')" fill="url(#bandwidth-tx-fill)"></path>
+                                <path :d="seriesLinePath('rx_bps')" fill="none" stroke="#2563eb" stroke-width="2.5"
+                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                                <path :d="seriesLinePath('tx_bps')" fill="none" stroke="#059669" stroke-width="2.5"
+                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                                <path :d="seriesPointPath('rx_bps')" fill="#2563eb"></path>
+                                <path :d="seriesPointPath('tx_bps')" fill="#059669"></path>
 
-                                <template x-for="label in axisLabels()" :key="label.x">
-                                    <text :x="label.x" y="286" text-anchor="middle"
-                                        class="fill-slate-400 text-[11px]" x-text="label.label"></text>
-                                </template>
+                                <text x="56" y="286" text-anchor="start"
+                                    class="fill-slate-400 text-[11px]" x-text="axisLabel('start')"></text>
+                                <text x="516" y="286" text-anchor="middle"
+                                    class="fill-slate-400 text-[11px]" x-text="axisLabel('middle')"></text>
+                                <text x="976" y="286" text-anchor="end"
+                                    class="fill-slate-400 text-[11px]" x-text="axisLabel('end')"></text>
 
                                 <g x-show="bandwidth.tooltip.show">
                                     <line :x1="bandwidth.tooltip.x" y1="32" :x2="bandwidth.tooltip.x" y2="264"

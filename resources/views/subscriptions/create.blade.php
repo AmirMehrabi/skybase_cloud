@@ -197,17 +197,6 @@
                     </template>
                 </div>
 
-                <!-- Router-managed IP Address -->
-                <div x-show="form.ip_management !== 'system'">
-                    <label for="manual_ip_address" class="block text-sm font-medium text-gray-700 mb-1">Manual IP Address</label>
-                    <input type="text" id="manual_ip_address" x-model="form.ip_address" placeholder="192.168.1.100" :class="hasValidationError('ip_address') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border">
-                    @error('ip_address')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                    <template x-if="validationError('ip_address') && !{{ $errors->has('ip_address') ? 'true' : 'false' }}">
-                        <p class="mt-1 text-sm text-red-600" x-text="validationError('ip_address')"></p>
-                    </template>
-                </div>
             </div>
         </div>
 
@@ -403,6 +392,18 @@
                             </div>
                         </div>
                     </label>
+                </div>
+
+                <div x-show="form.ip_management === 'router'" x-transition class="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4">
+                    <label for="manual_ip_address" class="block text-sm font-medium text-gray-700 mb-1">Manual IP Address</label>
+                    <input type="text" id="manual_ip_address" x-model="form.ip_address" placeholder="192.168.1.100" :class="hasValidationError('ip_address') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full max-w-md rounded-lg bg-white shadow-sm sm:text-sm py-2 px-3 border">
+                    <p class="mt-1 text-xs text-gray-500">Optional fixed IP sent to the router through RADIUS. It is not reserved or tracked in SkyBase IPAM.</p>
+                    @error('ip_address')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <template x-if="validationError('ip_address') && !{{ $errors->has('ip_address') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('ip_address')"></p>
+                    </template>
                 </div>
             </div>
 

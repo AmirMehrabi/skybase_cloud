@@ -71,7 +71,7 @@ class RrdToolService
         return $this->fetch($this->subscriptionBandwidthPath($subscription), $range, [
             'rx_bps',
             'tx_bps',
-        ]);
+        ], $this->subscriptionRangeResolution($range));
     }
 
     /**
@@ -166,7 +166,12 @@ class RrdToolService
             return ['chartData' => [], 'hasData' => false];
         }
 
-        $rows = $this->fetch($path, $range, ['rx_bps', 'tx_bps']);
+        $rows = $this->fetch(
+            $path,
+            $range,
+            ['rx_bps', 'tx_bps'],
+            $this->subscriptionRangeResolution($range),
+        );
 
         $chartData = array_map(function (array $row) use ($range): array {
             return [
@@ -238,11 +243,18 @@ class RrdToolService
     private function ensureSubscriptionBandwidthArchive(string $path): void
     {
         if (File::exists($path)) {
-            return;
+            $currentStep = $this->archiveStep($path);
+
+            if ($currentStep === $this->subscriptionStep()) {
+                return;
+            }
+
+            $legacyPath = $path.'.legacy-step-'.$currentStep.'-'.now()->format('YmdHis');
+            File::move($path, $legacyPath);
         }
 
         $this->ensureDirectory($path);
-        $step = $this->step();
+        $step = $this->subscriptionStep();
         $heartbeat = $step * 3;
 
         $this->run([
@@ -253,10 +265,11 @@ class RrdToolService
             (string) $step,
             "DS:rx_bps:GAUGE:{$heartbeat}:0:U",
             "DS:tx_bps:GAUGE:{$heartbeat}:0:U",
-            'RRA:AVERAGE:0.5:1:1440',
-            'RRA:AVERAGE:0.5:5:2016',
-            'RRA:AVERAGE:0.5:60:2160',
-            'RRA:MAX:0.5:5:2016',
+            'RRA:AVERAGE:0.5:1:8640',
+            'RRA:AVERAGE:0.5:12:8760',
+            'RRA:AVERAGE:0.5:288:1095',
+            'RRA:MAX:0.5:1:8640',
+            'RRA:MAX:0.5:12:8760',
         ]);
     }
 
@@ -279,7 +292,7 @@ class RrdToolService
      * @param  array<int|string, string>  $fields
      * @return array<int, array<string, mixed>>
      */
-    private function fetch(string $path, string $range, array $fields): array
+    private function fetch(string $path, string $range, array $fields, ?int $resolution = null): array
     {
         if (! File::exists($path)) {
             return [];
@@ -295,7 +308,7 @@ class RrdToolService
             '--end',
             (string) CarbonImmutable::now()->timestamp,
             '--resolution',
-            (string) $this->rangeResolution($range),
+            (string) ($resolution ?? $this->rangeResolution($range)),
         ]);
 
         $rows = [];
@@ -361,6 +374,26 @@ class RrdToolService
         return max(10, (int) config('monitoring.step_seconds'));
     }
 
+    private function subscriptionStep(): int
+    {
+        return max(60, (int) config('monitoring.subscription_step_seconds'));
+    }
+
+    private function archiveStep(string $path): int
+    {
+        $info = $this->run([
+            (string) config('monitoring.rrdtool'),
+            'info',
+            $path,
+        ]);
+
+        if (preg_match('/^step\\s*=\\s*(\\d+)$/m', $info, $matches) !== 1) {
+            throw new MonitoringStorageUnavailable("Unable to determine the RRD step for {$path}.");
+        }
+
+        return (int) $matches[1];
+    }
+
     private function rangeSeconds(string $range): int
     {
         return match ($range) {
@@ -379,6 +412,15 @@ class RrdToolService
             '6h', '24h' => 300,
             '7d', '30d' => 3600,
             default => 300,
+        };
+    }
+
+    private function subscriptionRangeResolution(string $range): int
+    {
+        return match ($range) {
+            '1h', '6h', '24h' => $this->subscriptionStep(),
+            '7d', '30d' => 3600,
+            default => $this->subscriptionStep(),
         };
     }
 

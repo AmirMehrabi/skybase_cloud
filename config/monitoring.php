@@ -11,6 +11,7 @@ return [
     'rrdtool' => env('RRDTOOL_BINARY', 'rrdtool'),
     'rrd_root' => env('MONITORING_RRD_ROOT', $defaultRrdRoot),
     'step_seconds' => (int) env('MONITORING_RRD_STEP', 60),
+    'subscription_step_seconds' => (int) env('MONITORING_SUBSCRIPTION_RRD_STEP', 300),
     'ping_count' => (int) env('MONITORING_PING_COUNT', 5),
     'ping_timeout_seconds' => (int) env('MONITORING_PING_TIMEOUT', 2),
     'router_status_tcp_timeout_seconds' => (float) env('ROUTER_STATUS_TCP_TIMEOUT', 2),
