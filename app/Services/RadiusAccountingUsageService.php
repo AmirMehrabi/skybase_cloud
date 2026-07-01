@@ -84,8 +84,8 @@ class RadiusAccountingUsageService
 
         $activityExpression = 'coalesce(acctstarttime, acctupdatetime, acctstoptime)';
         $bucketExpression = $this->bucketExpression($activityExpression, $bucket);
-        $downloadExpression = '(coalesce(acctoutputoctets, 0) + (coalesce(acctoutputgigawords, 0) * 4294967296))';
-        $uploadExpression = '(coalesce(acctinputoctets, 0) + (coalesce(acctinputgigawords, 0) * 4294967296))';
+        $downloadExpression = $this->bytesExpression('acctoutputoctets', 'acctoutputgigawords');
+        $uploadExpression = $this->bytesExpression('acctinputoctets', 'acctinputgigawords');
 
         $rows = $this->accountingQuery(collect([(string) $subscription->pppoe_username]))
             ->whereBetween(DB::raw($activityExpression), [$from, $to])
@@ -360,6 +360,17 @@ class RadiusAccountingUsageService
         return $bucket === 'hour'
             ? "date_format({$activityExpression}, '%Y-%m-%d %H:00:00')"
             : "date({$activityExpression})";
+    }
+
+    private function bytesExpression(string $octetsColumn, string $gigawordsColumn): string
+    {
+        $octets = "coalesce({$octetsColumn}, 0)";
+
+        if (! Schema::hasColumn('radacct', $gigawordsColumn)) {
+            return $octets;
+        }
+
+        return "({$octets} + (coalesce({$gigawordsColumn}, 0) * 4294967296))";
     }
 
     private function bucketLabel(string $bucketValue, string $bucket): string

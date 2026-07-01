@@ -26,6 +26,7 @@ use App\Services\SubscriptionSessionDisconnectResult;
 use App\Services\SubscriptionSessionDisconnectService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
@@ -166,7 +167,7 @@ class SubscriptionControllerTest extends TestCase
                 && (int) $usageSummary['sessions'] === 1;
         });
         $response->assertViewHas('usageSessions', function (mixed $usageSessions): bool {
-            return $usageSessions instanceof \Illuminate\Pagination\LengthAwarePaginator
+            return $usageSessions instanceof LengthAwarePaginator
                 && $usageSessions->total() === 1
                 && $usageSessions->items()[0]['download_label'] === '2.00 GB'
                 && $usageSessions->items()[0]['upload_label'] === '1.00 GB';
@@ -239,6 +240,78 @@ class SubscriptionControllerTest extends TestCase
             'username' => $subscription->pppoe_username,
             'pass' => 'recent-secret',
         ]);
+    }
+
+    public function test_auth_attempts_older_than_twenty_minutes_remain_visible_within_retention_window(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+
+        RadiusPostAuthRecord::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'pass' => 'retained-secret',
+            'reply' => 'Access-Accept',
+            'authdate' => now()->subDays(2),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('subscriptions.show', [
+                'subscription' => $subscription,
+                'tab' => 'auth',
+            ]))
+            ->assertOk()
+            ->assertSee('Access-Accept')
+            ->assertViewHas('authAttempts', fn (mixed $attempts): bool => $attempts->total() === 1);
+    }
+
+    public function test_usage_sessions_are_filtered_paginated_and_aggregated_for_charting(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+
+        foreach (range(1, 12) as $index) {
+            DB::table('radacct')->insert([
+                'acctsessionid' => 'usage-session-'.$index,
+                'acctuniqueid' => 'usage-unique-'.$index,
+                'username' => $subscription->pppoe_username,
+                'nasipaddress' => $subscription->router->ip_address,
+                'acctstarttime' => now()->subDays($index % 6)->subHour(),
+                'acctupdatetime' => now()->subDays($index % 6),
+                'acctstoptime' => $index === 12 ? null : now()->subDays($index % 6),
+                'acctsessiontime' => 3600,
+                'acctinputoctets' => 1048576,
+                'acctoutputoctets' => 2097152,
+                'framedipaddress' => '192.0.2.'.($index + 10),
+                'callingstationid' => 'AA-BB-CC-DD-EE-'.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+                'acctterminatecause' => $index === 12 ? null : 'User-Request',
+            ]);
+        }
+
+        $response = $this->actingAs($user)->get(route('subscriptions.show', [
+            'subscription' => $subscription,
+            'tab' => 'usage',
+            'usage_view' => 'table',
+            'usage_per_page' => 10,
+            'session_status' => 'offline',
+            'session_terminate_cause' => 'User',
+            'usage_chart_range' => 'weekly',
+        ]));
+
+        $response->assertOk()
+            ->assertSee('Usage chart')
+            ->assertSee('Calling Station')
+            ->assertViewHas('usageSessions', function (mixed $sessions): bool {
+                return $sessions instanceof LengthAwarePaginator
+                    && $sessions->total() === 11
+                    && $sessions->perPage() === 10
+                    && $sessions->count() === 10;
+            })
+            ->assertViewHas('usageChart', function (mixed $chart): bool {
+                return is_array($chart)
+                    && $chart['range'] === 'weekly'
+                    && count($chart['labels']) > 0
+                    && $chart['total_download'] === 25165824
+                    && $chart['total_upload'] === 12582912;
+            });
     }
 
     public function test_show_and_edit_pages_expose_ip_change_actions(): void

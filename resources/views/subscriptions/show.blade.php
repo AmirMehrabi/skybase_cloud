@@ -1480,21 +1480,21 @@
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 bg-white">
-                                        @forelse($usageSessions as $session)
+                                        @forelse($usageSessions->items() as $accountingSession)
                                             <tr class="transition-colors duration-150 hover:bg-gray-50">
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['started_at_label'] }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['stopped_at_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $accountingSession['started_at_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $accountingSession['stopped_at_label'] }}</td>
                                                 <td class="whitespace-nowrap px-5 py-4">
-                                                    <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium {{ $session['status'] === 'online' ? 'border-green-200 bg-green-100 text-green-800' : 'border-gray-200 bg-gray-100 text-gray-800' }}">{{ ucfirst($session['status']) }}</span>
+                                                    <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium {{ $accountingSession['status'] === 'online' ? 'border-green-200 bg-green-100 text-green-800' : 'border-gray-200 bg-gray-100 text-gray-800' }}">{{ ucfirst($accountingSession['status']) }}</span>
                                                 </td>
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['duration'] }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-medium text-blue-600">{{ $session['download_label'] }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-medium text-emerald-600">{{ $session['upload_label'] }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-semibold text-gray-900">{{ $session['total_label'] }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $session['router'] }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 font-mono text-sm text-gray-900">{{ $session['ip_address'] }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 font-mono text-sm text-gray-500">{{ $session['calling_station_id'] ?: '—' }}</td>
-                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-500">{{ $session['terminate_cause'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $accountingSession['duration'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-medium text-blue-600">{{ $accountingSession['download_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-medium text-emerald-600">{{ $accountingSession['upload_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm font-semibold text-gray-900">{{ $accountingSession['total_label'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-900">{{ $accountingSession['router'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 font-mono text-sm text-gray-900">{{ $accountingSession['ip_address'] }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 font-mono text-sm text-gray-500">{{ $accountingSession['calling_station_id'] ?: '—' }}</td>
+                                                <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-500">{{ $accountingSession['terminate_cause'] }}</td>
                                             </tr>
                                         @empty
                                             <tr>
