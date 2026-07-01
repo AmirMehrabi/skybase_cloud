@@ -139,10 +139,11 @@ class TicketingTest extends TestCase
             'first_response_minutes' => 240,
             'resolution_minutes' => 2880,
         ]);
+        $subscription = $this->createSubscription($tenant, $customer);
 
         $this->actingAs($admin)
             ->post(route('support.tickets.store'), [
-                'customer_id' => $customer->id,
+                'subscription_id' => $subscription->id,
                 'ticket_team_id' => $team->id,
                 'priority' => Ticket::PRIORITY_NORMAL,
                 'subject' => 'Invoice question',
@@ -151,6 +152,53 @@ class TicketingTest extends TestCase
             ->assertRedirect();
 
         $this->assertNull(Ticket::withoutGlobalScopes()->firstOrFail()->assigned_user_id);
+    }
+
+    public function test_agent_can_search_ticket_subscription_by_customer_name_and_pppoe_username(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant, [
+            'first_name' => 'Fatemeh',
+            'last_name' => 'Karimi',
+            'name' => 'Fatemeh Karimi',
+        ]);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $subscription = $this->createSubscription($tenant, $customer, ['pppoe_username' => 'fatemeh.karimi']);
+
+        $this->actingAs($admin)
+            ->get(route('support.tickets.create'))
+            ->assertOk()
+            ->assertSee('Fatemeh Karimi')
+            ->assertSee('fatemeh.karimi')
+            ->assertSee('Search by customer name or PPPoE username');
+
+        $this->assertSame($customer->id, $subscription->customer_id);
+    }
+
+    public function test_agent_ticket_customer_is_derived_from_the_selected_subscription(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $subscriptionCustomer = $this->createCustomer($tenant, ['email' => 'subscription@example.com']);
+        $unrelatedCustomer = $this->createCustomer($tenant, ['email' => 'unrelated@example.com']);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $team = $this->createTeam($tenant);
+        $subscription = $this->createSubscription($tenant, $subscriptionCustomer, ['pppoe_username' => 'derived.user']);
+
+        $this->actingAs($admin)
+            ->post(route('support.tickets.store'), [
+                'customer_id' => $unrelatedCustomer->id,
+                'subscription_id' => $subscription->id,
+                'ticket_team_id' => $team->id,
+                'priority' => Ticket::PRIORITY_NORMAL,
+                'subject' => 'Derived customer',
+                'message' => 'Use the subscription owner.',
+            ])
+            ->assertRedirect();
+
+        $ticket = Ticket::withoutGlobalScopes()->firstOrFail();
+
+        $this->assertSame($subscriptionCustomer->id, $ticket->customer_id);
+        $this->assertSame($subscription->id, $ticket->subscription_id);
     }
 
     private function createTenant(string $slug): Tenant
@@ -206,11 +254,14 @@ class TicketingTest extends TestCase
         ]);
     }
 
-    private function createSubscription(Tenant $tenant, Customer $customer): Subscription
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function createSubscription(Tenant $tenant, Customer $customer, array $overrides = []): Subscription
     {
         $plan = Plan::factory()->create(['name' => 'Fiber 100']);
 
-        return Subscription::withoutGlobalScopes()->create([
+        return Subscription::withoutGlobalScopes()->create(array_merge([
             'tenant_id' => $tenant->id,
             'customer_id' => $customer->id,
             'subscription_code' => 'SUB-'.Str::upper(Str::random(6)),
@@ -225,7 +276,7 @@ class TicketingTest extends TestCase
             'billing_enabled' => true,
             'status' => 'active',
             'start_date' => now(),
-        ]);
+        ], $overrides));
     }
 
     private function createTicket(Tenant $tenant, Customer $customer, TicketTeam $team): Ticket

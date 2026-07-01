@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Support;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Support\StoreTicketMessageRequest;
 use App\Http\Requests\Support\StoreTicketRequest;
-use App\Models\Customer;
 use App\Models\Subscription;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
@@ -58,23 +57,28 @@ class TicketController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         Gate::authorize('create', Ticket::class);
+        $tenantId = tenant_id() ?? $request->user()?->tenant_id;
 
         return view('support.tickets.create', [
-            'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'email']),
             'teams' => TicketTeam::query()->active()->orderBy('sort_order')->orderBy('name')->get(),
-            'subscriptionsByCustomer' => Subscription::query()
-                ->with('plan')
-                ->latest()
+            'subscriptions' => Subscription::query()
+                ->with(['customer:id,tenant_id,first_name,last_name,name', 'plan:id,name'])
+                ->where('tenant_id', $tenantId)
+                ->latest('id')
                 ->get()
-                ->groupBy('customer_id')
-                ->map(fn ($subscriptions) => $subscriptions->map(fn (Subscription $subscription): array => [
+                ->map(fn (Subscription $subscription): array => [
                     'id' => $subscription->id,
-                    'label' => trim($subscription->subscription_code.' - '.($subscription->plan?->name ?? ucfirst($subscription->status))),
-                ])->values())
-                ->toArray(),
+                    'customer_id' => $subscription->customer_id,
+                    'customer_name' => trim($subscription->customer?->first_name.' '.$subscription->customer?->last_name)
+                        ?: $subscription->customer?->name,
+                    'pppoe_username' => $subscription->pppoe_username,
+                    'label' => $subscription->pppoe_username
+                        ?: trim($subscription->subscription_code.' - '.($subscription->plan?->name ?? ucfirst($subscription->status))),
+                ])
+                ->values(),
         ]);
     }
 
@@ -83,7 +87,12 @@ class TicketController extends Controller
         Gate::authorize('create', Ticket::class);
 
         $validated = $request->validated();
-        $customer = Customer::query()->whereKey($validated['customer_id'])->firstOrFail();
+        $tenantId = tenant_id() ?? $request->user()?->tenant_id;
+        $subscription = Subscription::query()
+            ->where('tenant_id', $tenantId)
+            ->with('customer')
+            ->findOrFail($validated['subscription_id']);
+        $customer = $subscription->customer()->firstOrFail();
         $team = TicketTeam::query()->whereKey($validated['ticket_team_id'])->firstOrFail();
         $ticket = $tickets->createFromUser($request->user(), $customer, $team, $validated, $this->attachments($request));
 

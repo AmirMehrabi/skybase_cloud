@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Support;
 
-use App\Models\Customer;
 use App\Models\Subscription;
 use App\Models\Ticket;
 use App\Models\TicketTeam;
@@ -22,20 +21,15 @@ class StoreTicketRequest extends FormRequest
     public function rules(): array
     {
         $tenantId = tenant_id() ?? $this->user()?->tenant_id;
-        $customerId = $this->integer('customer_id') ?: null;
 
         return [
-            'customer_id' => [
-                'required',
-                Rule::exists(Customer::class, 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
-            ],
             'ticket_team_id' => [
                 'required',
                 Rule::exists(TicketTeam::class, 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)->where('status', 'active')),
             ],
             'subscription_id' => [
-                'nullable',
-                Rule::exists(Subscription::class, 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)->where('customer_id', $customerId)),
+                'required',
+                Rule::exists(Subscription::class, 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
             ],
             'priority' => ['required', Rule::in([Ticket::PRIORITY_LOW, Ticket::PRIORITY_NORMAL, Ticket::PRIORITY_HIGH, Ticket::PRIORITY_URGENT])],
             'subject' => ['required', 'string', 'max:255'],
