@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubscriptionRequest;
 use App\Http\Requests\Subscription\BulkDeleteSubscriptionsRequest;
+use App\Http\Requests\Subscription\UpdateSubscriptionBillingRequest;
 use App\Jobs\BulkDeleteModelsJob;
 use App\Jobs\Subscriptions\ActivateSubscriptionJob;
 use App\Jobs\Subscriptions\SuspendSubscriptionJob;
@@ -373,6 +374,7 @@ class SubscriptionController extends Controller
             'pppoe_password' => 'nullable|string|max:255',
             'billing_cycle' => 'nullable|in:monthly,quarterly,yearly',
             'billing_enabled' => 'nullable|boolean',
+            'auto_suspension_enabled' => 'nullable|boolean',
             'grace_period_days' => 'nullable|integer|min:0|max:365',
             'next_billing_date' => 'nullable|date',
             'status' => 'nullable|in:pending,active,suspended,cancelled',
@@ -762,16 +764,13 @@ class SubscriptionController extends Controller
             ->with('success', 'Subscription cancelled successfully.');
     }
 
-    public function updateBilling(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
+    public function updateBilling(UpdateSubscriptionBillingRequest $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
-        $validated = $request->validate([
-            'billing_enabled' => 'required|boolean',
-            'grace_period_days' => 'nullable|integer|min:0|max:365',
-            'next_billing_date' => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
         $subscription->update([
             'billing_enabled' => $validated['billing_enabled'],
+            'auto_suspension_enabled' => $validated['billing_enabled'] && $validated['auto_suspension_enabled'],
             'billing_disabled_at' => $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now()),
             'grace_period_days' => $validated['grace_period_days'] ?? null,
             'next_billing_date' => $validated['next_billing_date'] ?? $subscription->next_billing_date,

@@ -733,16 +733,29 @@
                         <p class="mt-1 text-sm text-red-600" x-text="validationError('grace_period_days')"></p>
                     </template>
                 </div>
-                <div class="md:col-span-2 lg:col-span-2 flex items-center justify-between rounded-xl border border-gray-200 p-4">
+                <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4">
                     <div>
                         <label for="billing_enabled" class="text-sm font-medium text-gray-700">Billing Enabled</label>
                         <p class="text-xs text-gray-500 mt-1">Create invoices and include this subscription in automated billing.</p>
                     </div>
                     <div>
                         <input type="hidden" name="billing_enabled" value="0">
-                        <input type="checkbox" name="billing_enabled" id="billing_enabled" value="1" x-model="form.billing_enabled" :disabled="!!selectedOrganizationBilling" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
+                        <input type="checkbox" name="billing_enabled" id="billing_enabled" value="1" x-model="form.billing_enabled" @change="if (!form.billing_enabled) form.auto_suspension_enabled = false" :disabled="!!selectedOrganizationBilling" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
                     </div>
                     @error('billing_enabled')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4" :class="{ 'bg-gray-50': !form.billing_enabled }">
+                    <div>
+                        <label for="auto_suspension_enabled" class="text-sm font-medium text-gray-700">Auto Suspension Enabled</label>
+                        <p class="text-xs text-gray-500 mt-1">Suspend service when an invoice remains unpaid past its due date.</p>
+                    </div>
+                    <div>
+                        <input type="hidden" name="auto_suspension_enabled" value="0">
+                        <input type="checkbox" name="auto_suspension_enabled" id="auto_suspension_enabled" value="1" x-model="form.auto_suspension_enabled" :disabled="!form.billing_enabled" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
+                    </div>
+                    @error('auto_suspension_enabled')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
@@ -860,7 +873,8 @@ function subscriptionCreateForm() {
             pppoe_username: '',
             pppoe_password: '',
             billing_cycle: 'monthly',
-            billing_enabled: true,
+            billing_enabled: @js((bool) old('billing_enabled', true)),
+            auto_suspension_enabled: @js((bool) old('billing_enabled', true) && (bool) old('auto_suspension_enabled', true)),
             grace_period_days: '',
             status: 'active',
             start_date: '',
@@ -1366,6 +1380,7 @@ function subscriptionCreateForm() {
 
             if (this.form.billing_cycle) formData.append('billing_cycle', this.form.billing_cycle);
             formData.append('billing_enabled', this.form.billing_enabled ? '1' : '0');
+            formData.append('auto_suspension_enabled', this.form.billing_enabled && this.form.auto_suspension_enabled ? '1' : '0');
             if (this.form.grace_period_days !== '') formData.append('grace_period_days', this.form.grace_period_days);
             if (this.form.status) formData.append('status', this.form.status);
             if (this.form.start_date) formData.append('start_date', this.form.start_date);

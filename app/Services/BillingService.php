@@ -177,6 +177,7 @@ class BillingService
         Subscription::withoutGlobalScopes()
             ->where('status', 'active')
             ->where('billing_enabled', true)
+            ->where('auto_suspension_enabled', true)
             ->whereHas('customer', function ($query) {
                 $query->withoutGlobalScopes()->where('billing_enabled', true);
             })

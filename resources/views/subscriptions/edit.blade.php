@@ -40,6 +40,8 @@
     ipAddress: @js((string) $currentIpAddress),
     ipPools: @js($ipPools),
     ipRoutes: @js($initialIpRoutes),
+    billingEnabled: @js((bool) old('billing_enabled', $organizationBilling ? true : $subscription->billing_enabled)),
+    autoSuspensionEnabled: @js((bool) old('auto_suspension_enabled', $subscription->auto_suspension_enabled)),
 })" x-cloak>
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
@@ -320,10 +322,20 @@
                     </div>
                     <div>
                         <input type="hidden" name="billing_enabled" value="0">
-                        <input type="checkbox" name="billing_enabled" id="billing_enabled" value="1" @checked(old('billing_enabled', $organizationBilling ? true : $subscription->billing_enabled)) @disabled($organizationBilling) class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
+                        <input type="checkbox" name="billing_enabled" id="billing_enabled" value="1" x-model="form.billing_enabled" @change="if (!form.billing_enabled) form.auto_suspension_enabled = false" @disabled($organizationBilling) class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
                         @if($organizationBilling)
                             <input type="hidden" name="billing_enabled" value="1">
                         @endif
+                    </div>
+                </div>
+                <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4" :class="{ 'bg-gray-50': !form.billing_enabled }">
+                    <div>
+                        <label for="auto_suspension_enabled" class="text-sm font-medium text-gray-700">Auto Suspension Enabled</label>
+                        <p class="text-xs text-gray-500 mt-1">Suspend service when an invoice remains unpaid past its due date.</p>
+                    </div>
+                    <div>
+                        <input type="hidden" name="auto_suspension_enabled" value="0">
+                        <input type="checkbox" name="auto_suspension_enabled" id="auto_suspension_enabled" value="1" x-model="form.auto_suspension_enabled" :disabled="!form.billing_enabled" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
                     </div>
                 </div>
                 <div>
@@ -353,13 +365,15 @@
 
 @push('scripts')
 <script>
-function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes, accessPointId }) {
+function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes, accessPointId, billingEnabled, autoSuspensionEnabled }) {
     return {
         form: {
             router_id: routerId || '',
             access_point_id: accessPointId || '',
             ip_pool_id: ipPoolId || '',
             ip_address: ipAddress || '',
+            billing_enabled: billingEnabled,
+            auto_suspension_enabled: billingEnabled && autoSuspensionEnabled,
         },
         ipPools: Array.isArray(ipPools) ? ipPools : [],
         accessPoints: [],

@@ -145,7 +145,7 @@ class SubscriptionControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Pending');
-        $response->assertDontSee('Suspend');
+        $response->assertDontSee('action="'.route('subscriptions.suspend', $subscription).'"', false);
         $response->assertSee('Activate');
         $response->assertSee('INV-TEST-0001');
         $response->assertSee('3.00 GB');

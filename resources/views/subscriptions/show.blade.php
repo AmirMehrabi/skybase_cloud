@@ -35,6 +35,7 @@
             $subscription->end_date ?? $subscription->created_at?->copy()->addYear(),
         )->toDateString(),
         'billing_enabled' => (bool) $subscription->billing_enabled,
+        'auto_suspension_enabled' => (bool) $subscription->auto_suspension_enabled,
         'grace_period_days' => $subscription->effectiveGracePeriodDays(),
         'next_billing_date' => optional(
             $subscription->next_billing_date ?? $subscription->created_at?->copy()->addMonth(),
@@ -121,7 +122,8 @@
                 plan_id: @js(old('plan_id', (string) $subscriptionModel->plan_id)),
                 billing_cycle: @js(old('billing_cycle', $subscriptionModel->billing_cycle)),
                 grace_period_days: @js(old('grace_period_days', $subscriptionModel->grace_period_days)),
-                billing_enabled: @js(old('billing_enabled', $subscriptionModel->billing_enabled ? '1' : '0')),
+                billing_enabled: @js((bool) old('billing_enabled', $subscriptionModel->billing_enabled)),
+                auto_suspension_enabled: @js((bool) old('auto_suspension_enabled', $subscriptionModel->auto_suspension_enabled)),
                 next_billing_date: @js(old('next_billing_date', optional($subscriptionModel->next_billing_date)->toDateString())),
             },
             get selectedPlan() {
@@ -583,7 +585,11 @@
         <!-- Billing Controls -->
         <div class="bg-white rounded-2xl p-6 mb-6 border border-gray-200 shadow-sm">
             <form method="POST" action="{{ route('subscriptions.billing.update', $subscription['id']) }}"
-                class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_160px_180px_auto] gap-4 md:items-end">
+                x-data="{
+                    billingEnabled: @js((bool) $subscription['billing_enabled']),
+                    autoSuspensionEnabled: @js((bool) $subscription['auto_suspension_enabled']),
+                }"
+                class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px_180px_auto] gap-4 md:items-end">
                 @csrf
                 @method('PATCH')
                 <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4">
@@ -596,8 +602,23 @@
                     <div>
                         <input type="hidden" name="billing_enabled" value="0">
                         <input type="checkbox" id="subscription_billing_enabled" name="billing_enabled" value="1"
-                            @checked($subscription['billing_enabled'])
+                            x-model="billingEnabled"
+                            @change="if (!billingEnabled) autoSuspensionEnabled = false"
                             class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4"
+                    :class="{ 'bg-gray-50': !billingEnabled }">
+                    <div>
+                        <label for="subscription_auto_suspension_enabled" class="text-sm font-medium text-gray-700">Auto Suspension Enabled</label>
+                        <p class="text-xs text-gray-500 mt-1">Suspend service after an unpaid invoice passes its due date.</p>
+                    </div>
+                    <div>
+                        <input type="hidden" name="auto_suspension_enabled" value="0">
+                        <input type="checkbox" id="subscription_auto_suspension_enabled" name="auto_suspension_enabled" value="1"
+                            x-model="autoSuspensionEnabled"
+                            :disabled="!billingEnabled"
+                            class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
                     </div>
                 </div>
                 <div>
@@ -741,7 +762,24 @@
                                         <input type="hidden" name="billing_enabled" value="0">
                                         <input id="plan_change_billing_enabled" type="checkbox" name="billing_enabled"
                                             value="1" x-model="planChange.form.billing_enabled"
+                                            @change="if (!planChange.form.billing_enabled) planChange.form.auto_suspension_enabled = false"
                                             class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between rounded-xl border border-gray-200 p-4"
+                                    :class="{ 'bg-gray-50': !planChange.form.billing_enabled }">
+                                    <div>
+                                        <label for="plan_change_auto_suspension_enabled"
+                                            class="text-sm font-medium text-gray-700">Auto Suspension Enabled</label>
+                                        <p class="text-xs text-gray-500 mt-1">Suspend service after an unpaid invoice passes its due date.</p>
+                                    </div>
+                                    <div>
+                                        <input type="hidden" name="auto_suspension_enabled" value="0">
+                                        <input id="plan_change_auto_suspension_enabled" type="checkbox"
+                                            name="auto_suspension_enabled" value="1"
+                                            x-model="planChange.form.auto_suspension_enabled"
+                                            :disabled="!planChange.form.billing_enabled"
+                                            class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60">
                                     </div>
                                 </div>
                             </div>

@@ -53,6 +53,7 @@ class StoreSubscriptionRequest extends FormRequest
             'ip_routes.*.cidr' => 'nullable|integer|min:1|max:32',
             'billing_cycle' => 'required|in:monthly,quarterly,yearly',
             'billing_enabled' => 'boolean',
+            'auto_suspension_enabled' => 'boolean',
             'grace_period_days' => 'nullable|integer|min:0|max:365',
             'status' => 'required|in:pending,active,suspended,cancelled',
             'start_date' => 'nullable|date',
@@ -175,6 +176,8 @@ class StoreSubscriptionRequest extends FormRequest
             'name' => $this->filled('name') ? $this->input('name') : ($customerId ? Subscription::defaultNameForCustomer((int) $customerId) : null),
             'service_type' => $this->input('service_type', 'hotspot'),
             'billing_enabled' => $this->boolean('billing_enabled', true),
+            'auto_suspension_enabled' => $this->boolean('billing_enabled', true)
+                && $this->boolean('auto_suspension_enabled', true),
         ]);
     }
 }

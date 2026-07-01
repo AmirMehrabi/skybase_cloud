@@ -19,7 +19,7 @@ class Subscription extends Model implements LdapImportable
 {
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
+    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'auto_suspension_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
 
     protected function activityLogExcept(): array
     {
@@ -34,6 +34,7 @@ class Subscription extends Model implements LdapImportable
             'tax_amount' => 'decimal:2',
             'total_price' => 'decimal:2',
             'billing_enabled' => 'boolean',
+            'auto_suspension_enabled' => 'boolean',
             'grace_period_days' => 'integer',
             'next_billing_date' => 'date',
             'last_billed_at' => 'datetime',
@@ -55,6 +56,12 @@ class Subscription extends Model implements LdapImportable
 
             if ($tenantId) {
                 $query->where('tenant_id', $tenantId);
+            }
+        });
+
+        static::saving(function (Subscription $subscription): void {
+            if (array_key_exists('billing_enabled', $subscription->getAttributes()) && ! $subscription->billing_enabled) {
+                $subscription->auto_suspension_enabled = false;
             }
         });
 
