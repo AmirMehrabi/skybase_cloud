@@ -70,7 +70,6 @@
     $usagePercent = $usageSummary['usage_percent'] ?? 0;
     $quotaLabel = $usageSummary['quota_label'] ?? 'Unlimited';
     $billingInvoices = collect($billingInvoices ?? []);
-    $usageSessions = collect($usageSessions ?? []);
 
     if (!function_exists('getStatusBadgeClass')) {
         function getStatusBadgeClass($status)
@@ -94,6 +93,7 @@
         tab: @js(request('tab', 'overview')),
         usageView: @js(request('usage_view', 'table')),
         usageChart: @js($usageChart),
+        usageChartTooltip: { show: false, x: 0, label: '', download: 0, upload: 0 },
         copiedField: null,
         credentials: {
             open: {{ $errors->has('pppoe_username') || $errors->has('pppoe_password') ? 'true' : 'false' }},
@@ -435,6 +435,25 @@
                 : (position === 'end' ? labels.length - 1 : Math.floor((labels.length - 1) / 2));
 
             return labels[index] || '';
+        },
+        updateUsageChartTooltip(event) {
+            const labels = this.usageChart.labels || [];
+
+            if (!labels.length) {
+                return;
+            }
+
+            const bounds = event.currentTarget.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+            const index = Math.round(ratio * (labels.length - 1));
+
+            this.usageChartTooltip = {
+                show: true,
+                x: Math.max(90, Math.min(910, 64 + (ratio * 900))),
+                label: labels[index] || '',
+                download: Number(this.usageChart.download[index] || 0),
+                upload: Number(this.usageChart.upload[index] || 0),
+            };
         },
     }" x-init="initBandwidth()" class="space-y-6">
         <!-- Top Header Card -->
@@ -1545,7 +1564,9 @@
 
                             <div class="relative mt-5 overflow-hidden rounded-xl border border-gray-200 bg-slate-50">
                                 <svg viewBox="0 0 1000 300" role="img" aria-label="Aggregated RADIUS download and upload usage"
-                                    class="block h-80 w-full">
+                                    class="block h-80 w-full select-none"
+                                    @mousemove="updateUsageChartTooltip($event)"
+                                    @mouseleave="usageChartTooltip.show = false">
                                     <defs>
                                         <linearGradient id="usage-download-fill" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="0%" stop-color="#2563eb" stop-opacity=".24"></stop>
@@ -1572,6 +1593,18 @@
                                     <text x="64" y="282" text-anchor="start" class="fill-slate-400 text-[11px]" x-text="usageChartLabel('start')"></text>
                                     <text x="514" y="282" text-anchor="middle" class="fill-slate-400 text-[11px]" x-text="usageChartLabel('middle')"></text>
                                     <text x="964" y="282" text-anchor="end" class="fill-slate-400 text-[11px]" x-text="usageChartLabel('end')"></text>
+                                    <g x-show="usageChartTooltip.show">
+                                        <line :x1="usageChartTooltip.x" y1="40" :x2="usageChartTooltip.x" y2="258"
+                                            stroke="#94a3b8" stroke-dasharray="4 4"></line>
+                                        <rect :x="usageChartTooltip.x - 82" y="48" width="164" height="70" rx="8"
+                                            fill="#0f172a" opacity=".95"></rect>
+                                        <text :x="usageChartTooltip.x" y="68" text-anchor="middle"
+                                            class="fill-white text-[11px] font-semibold" x-text="usageChartTooltip.label"></text>
+                                        <text :x="usageChartTooltip.x" y="88" text-anchor="middle"
+                                            class="fill-blue-300 text-[11px]" x-text="'Download ' + formatBytes(usageChartTooltip.download)"></text>
+                                        <text :x="usageChartTooltip.x" y="106" text-anchor="middle"
+                                            class="fill-emerald-300 text-[11px]" x-text="'Upload ' + formatBytes(usageChartTooltip.upload)"></text>
+                                    </g>
                                 </svg>
                                 <div x-show="!usageChart.labels.length" class="pointer-events-none absolute inset-0 flex items-center justify-center">
                                     <span class="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-500 shadow-sm">No usage data for this period</span>
