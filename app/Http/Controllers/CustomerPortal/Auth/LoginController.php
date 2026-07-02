@@ -20,7 +20,11 @@ class LoginController extends Controller
             return redirect()->route('dashboard');
         }
 
-        if (! config('app.cloud.enabled') && config('app.cloud.guest_entry') !== 'customer') {
+        if (
+            ! config('app.cloud.enabled')
+            && config('app.cloud.guest_entry') !== 'customer'
+            && blank(config('app.customer_portal_domain'))
+        ) {
             return redirect()->route('auth.login');
         }
 

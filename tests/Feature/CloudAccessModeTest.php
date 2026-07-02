@@ -38,6 +38,7 @@ class CloudAccessModeTest extends TestCase
     public function test_disabled_cloud_mode_redirects_guest_login_forms_to_configured_entry(): void
     {
         config()->set('app.cloud.enabled', false);
+        config()->set('app.customer_portal_domain', null);
         config()->set('app.cloud.guest_entry', 'customer');
 
         $this->get(route('auth.login'))
@@ -47,6 +48,17 @@ class CloudAccessModeTest extends TestCase
 
         $this->get(route('customer.login'))
             ->assertRedirect(route('auth.login'));
+    }
+
+    public function test_dedicated_customer_portal_domain_can_show_customer_login_independently(): void
+    {
+        config()->set('app.cloud.enabled', false);
+        config()->set('app.cloud.guest_entry', 'admin');
+        config()->set('app.customer_portal_domain', 'customers.onlimeafrica.com');
+
+        $this->get(route('customer.login'))
+            ->assertOk()
+            ->assertViewIs('customer.auth.login');
     }
 
     public function test_registration_is_disabled_when_cloud_mode_is_disabled(): void
