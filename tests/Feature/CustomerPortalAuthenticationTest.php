@@ -81,6 +81,33 @@ class CustomerPortalAuthenticationTest extends TestCase
         $this->assertGuest('customer');
     }
 
+    public function test_self_hosted_customer_login_uses_the_first_tenant_without_a_tenant_code(): void
+    {
+        config()->set('app.cloud.enabled', false);
+        config()->set('app.cloud.guest_entry', 'customer');
+
+        $tenant = $this->createTenant('first-tenant');
+        $customer = $this->createCustomer($tenant, [
+            'email' => 'jane@example.com',
+            'password' => 'password123',
+        ]);
+
+        $this->createTenant('second-tenant');
+
+        $this->get(route('customer.login'))
+            ->assertOk()
+            ->assertDontSee('Tenant code')
+            ->assertSee('Sign in with your account email.');
+
+        $response = $this->post(route('customer.login.store'), [
+            'email' => 'jane@example.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertRedirect(route('customer.dashboard'));
+        $this->assertAuthenticatedAs($customer, 'customer');
+    }
+
     public function test_customer_portal_only_lists_the_authenticated_customers_records(): void
     {
         $tenant = $this->createTenant('alpha-net');

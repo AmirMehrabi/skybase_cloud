@@ -29,9 +29,13 @@ class LoginController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
-        $tenant = Tenant::query()
-            ->where('slug', $request->string('tenant')->toString())
-            ->first();
+        $tenant = config('app.cloud.enabled')
+            ? Tenant::query()
+                ->where('slug', $request->string('tenant')->toString())
+                ->first()
+            : Tenant::query()
+                ->oldest()
+                ->first();
 
         if (! $tenant || $tenant->isSuspended()) {
             return back()

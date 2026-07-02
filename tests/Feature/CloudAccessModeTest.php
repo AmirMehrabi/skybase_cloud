@@ -49,6 +49,17 @@ class CloudAccessModeTest extends TestCase
             ->assertRedirect(route('auth.login'));
     }
 
+    public function test_registration_is_disabled_when_cloud_mode_is_disabled(): void
+    {
+        config()->set('app.cloud.enabled', false);
+
+        $this->get(route('auth.register'))
+            ->assertNotFound();
+
+        $this->post(route('auth.register.store'))
+            ->assertForbidden();
+    }
+
     public function test_authenticated_admins_are_sent_to_the_admin_dashboard(): void
     {
         config()->set('app.cloud.enabled', false);

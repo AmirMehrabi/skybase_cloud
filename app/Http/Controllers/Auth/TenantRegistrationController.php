@@ -8,14 +8,18 @@ use App\Models\Role;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class TenantRegistrationController extends Controller
 {
-    public function showRegistrationForm()
+    public function showRegistrationForm(): View
     {
+        abort_unless(config('app.cloud.enabled'), 404);
+
         return view('auth.register-tenant');
     }
 
@@ -66,7 +70,7 @@ class TenantRegistrationController extends Controller
             return redirect()->route('dashboard')
                 ->with('success', 'Welcome to SkyBase Cloud! Your account has been created with a 14-day trial.');
 
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             DB::rollBack();
             \Log::error('Registration database error: '.$e->getMessage());
 

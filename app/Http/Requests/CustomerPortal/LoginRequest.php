@@ -17,7 +17,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tenant' => ['required', 'string', 'max:255'],
+            'tenant' => [config('app.cloud.enabled') ? 'required' : 'nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string'],
             'remember' => ['nullable', 'boolean'],

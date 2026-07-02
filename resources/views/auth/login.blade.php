@@ -73,7 +73,7 @@
         </button>
     </form>
 
-    @if (env('ISP_CLOUD_ENABLED') == 'true')
+    @if (config('app.cloud.enabled'))
         <!-- Register Link -->
     <div class="mt-6 text-center">
         <p class="text-slate-600">

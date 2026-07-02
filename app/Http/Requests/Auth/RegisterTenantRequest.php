@@ -8,7 +8,7 @@ class RegisterTenantRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return (bool) config('app.cloud.enabled');
     }
 
     public function rules(): array
