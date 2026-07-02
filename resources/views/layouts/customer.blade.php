@@ -59,14 +59,18 @@
 
         <div id="main-content-wrapper" class="{{ $isRtl ? 'pr-0 lg:pr-64' : 'pl-0 lg:pl-64' }}">
             <header class="fixed top-0 z-30 h-[60px] border-b border-slate-900/10 bg-[#fffaf0]/90 shadow-sm backdrop-blur-xl {{ $isRtl ? 'right-0 left-0 lg:right-64' : 'right-0 left-0 lg:left-64' }}">
-                <div class="flex h-full items-center gap-3 px-6">
-                    <div class="flex items-center gap-2">
-                        <button id="mobile-menu-button" class="rounded-lg p-2 text-slate-600 hover:bg-[#fbf7ed] hover:text-slate-950 lg:hidden" type="button">
+                <div class="flex h-full items-center gap-3 px-4 sm:px-6">
+                    <button id="mobile-menu-button" class="rounded-lg p-2 text-slate-600 hover:bg-[#fbf7ed] hover:text-slate-950 lg:hidden" type="button" aria-label="Open navigation">
                             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
-                        </button>
+                    </button>
 
+                    <div class="min-w-0 flex-1 px-1 sm:px-4">
+                        <h1 class="truncate text-base font-semibold text-slate-950">@yield('page_title', 'Dashboard')</h1>
+                    </div>
+
+                    <div class="flex shrink-0 items-center gap-1 sm:gap-2">
                         <x-notifications.dropdown guard="customer" />
 
                         <div class="relative">
@@ -80,21 +84,23 @@
                                 </svg>
                             </button>
 
-                            <div id="user-menu" class="absolute {{ $isRtl ? 'right-0' : 'left-0' }} z-50 mt-2 hidden w-56 rounded-xl border border-slate-900/10 bg-white py-1 shadow-xl">
+                            <div id="user-menu" class="absolute {{ $isRtl ? 'left-0' : 'right-0' }} z-50 mt-2 hidden w-56 rounded-xl border border-slate-900/10 bg-white py-1 shadow-xl">
                                 <div class="border-b border-slate-900/10 px-4 py-3">
                                     <p class="truncate text-sm font-semibold text-slate-950">{{ $customer?->full_name }}</p>
                                     <p class="truncate text-xs text-slate-500">{{ $customer?->email }}</p>
                                 </div>
+                                <a href="{{ route('customer.profile.show') }}" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">
+                                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM5 21a7 7 0 0114 0"></path>
+                                    </svg>
+                                    Profile
+                                </a>
                                 <form method="POST" action="{{ route('customer.logout') }}">
                                     @csrf
                                     <button type="submit" class="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-[#fbf7ed]">Logout</button>
                                 </form>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="min-w-0 flex-1 px-4">
-                        <h1 class="truncate text-base font-semibold text-slate-950">@yield('page_title', 'Dashboard')</h1>
                     </div>
                 </div>
             </header>

@@ -18,6 +18,7 @@ use App\Http\Controllers\CustomerPortal\Auth\LoginController as CustomerPortalLo
 use App\Http\Controllers\CustomerPortal\DashboardController as CustomerPortalDashboardController;
 use App\Http\Controllers\CustomerPortal\InvoiceController as CustomerPortalInvoiceController;
 use App\Http\Controllers\CustomerPortal\NotificationController as CustomerPortalNotificationController;
+use App\Http\Controllers\CustomerPortal\ProfileController as CustomerPortalProfileController;
 use App\Http\Controllers\CustomerPortal\SubscriptionController as CustomerPortalSubscriptionController;
 use App\Http\Controllers\CustomerPortal\TicketController as CustomerPortalTicketController;
 use App\Http\Controllers\DashboardController;
@@ -51,7 +52,12 @@ $customerPortalRoutes = function (): void {
         Route::post('/logout', [CustomerPortalLoginController::class, 'destroy'])->name('logout');
         Route::get('/', CustomerPortalDashboardController::class)->name('dashboard');
         Route::get('/dashboard', CustomerPortalDashboardController::class)->name('dashboard.redirect');
+        Route::get('/dashboard/usage', [CustomerPortalDashboardController::class, 'usage'])->name('dashboard.usage');
         Route::get('/subscriptions', [CustomerPortalSubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::get('/subscriptions/{subscription}', [CustomerPortalSubscriptionController::class, 'show'])->whereNumber('subscription')->name('subscriptions.show');
+        Route::get('/subscriptions/{subscription}/bandwidth/history', [CustomerPortalSubscriptionController::class, 'bandwidthHistory'])->whereNumber('subscription')->name('subscriptions.bandwidth.history');
+        Route::get('/profile', [CustomerPortalProfileController::class, 'show'])->name('profile.show');
+        Route::patch('/profile/password', [CustomerPortalProfileController::class, 'updatePassword'])->middleware('throttle:6,1')->name('profile.password.update');
         Route::get('/invoices', [CustomerPortalInvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/notifications', [CustomerPortalNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('/notifications/read-all', [CustomerPortalNotificationController::class, 'readAll'])->name('notifications.read-all');
