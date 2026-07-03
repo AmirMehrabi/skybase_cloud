@@ -62,8 +62,18 @@ class TicketController extends Controller
         Gate::authorize('create', Ticket::class);
         $tenantId = tenant_id() ?? $request->user()?->tenant_id;
 
+        $teams = TicketTeam::query()->active()->with(['users' => function ($query) {
+            $query->wherePivot('is_active', true);
+        }])->orderBy('sort_order')->orderBy('name')->get();
+
         return view('support.tickets.create', [
-            'teams' => TicketTeam::query()->active()->orderBy('sort_order')->orderBy('name')->get(),
+            'teams' => $teams,
+            'teamAgents' => $teams->mapWithKeys(fn (TicketTeam $team): array => [
+                $team->id => $team->users->map(fn (User $user): array => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                ])->values(),
+            ]),
             'subscriptions' => Subscription::query()
                 ->with(['customer:id,tenant_id,first_name,last_name,name', 'plan:id,name'])
                 ->where('tenant_id', $tenantId)
@@ -94,7 +104,16 @@ class TicketController extends Controller
             ->findOrFail($validated['subscription_id']);
         $customer = $subscription->customer()->firstOrFail();
         $team = TicketTeam::query()->whereKey($validated['ticket_team_id'])->firstOrFail();
-        $ticket = $tickets->createFromUser($request->user(), $customer, $team, $validated, $this->attachments($request));
+
+        $assignee = null;
+        if (! empty($validated['assigned_user_id'])) {
+            $assignee = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($validated['assigned_user_id'])
+                ->first();
+        }
+
+        $ticket = $tickets->createFromUser($request->user(), $customer, $team, $validated, $this->attachments($request), $assignee);
 
         return redirect()
             ->route('support.tickets.show', $ticket)

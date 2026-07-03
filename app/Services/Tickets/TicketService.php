@@ -55,10 +55,10 @@ class TicketService
      * @param  list<UploadedFile>  $attachments
      * @param  array<string, mixed>  $data
      */
-    public function createFromUser(User $user, Customer $customer, TicketTeam $team, array $data, array $attachments = []): Ticket
+    public function createFromUser(User $user, Customer $customer, TicketTeam $team, array $data, array $attachments = [], ?User $assignee = null): Ticket
     {
-        return DB::transaction(function () use ($user, $customer, $team, $data, $attachments): Ticket {
-            $ticket = $this->createTicket($customer, $team, $data, 'admin_portal', openedByUser: $user);
+        return DB::transaction(function () use ($user, $customer, $team, $data, $attachments, $assignee): Ticket {
+            $ticket = $this->createTicket($customer, $team, $data, 'admin_portal', openedByUser: $user, explicitAssignee: $assignee);
 
             $message = $this->addMessage(
                 ticket: $ticket,
@@ -82,10 +82,10 @@ class TicketService
     /**
      * @param  array<string, mixed>  $data
      */
-    private function createTicket(Customer $customer, TicketTeam $team, array $data, string $source, ?Customer $openedByCustomer = null, ?User $openedByUser = null): Ticket
+    private function createTicket(Customer $customer, TicketTeam $team, array $data, string $source, ?Customer $openedByCustomer = null, ?User $openedByUser = null, ?User $explicitAssignee = null): Ticket
     {
         $tenantId = (string) $customer->tenant_id;
-        $assignee = $this->assignmentService->assigneeFor($team);
+        $assignee = $explicitAssignee ?? $this->assignmentService->assigneeFor($team);
         $dueDates = $this->slaService->dueDatesFor($team);
 
         return Ticket::create(array_merge($dueDates, [

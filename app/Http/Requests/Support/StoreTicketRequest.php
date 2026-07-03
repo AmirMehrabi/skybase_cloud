@@ -5,6 +5,7 @@ namespace App\Http\Requests\Support;
 use App\Models\Subscription;
 use App\Models\Ticket;
 use App\Models\TicketTeam;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,6 +27,11 @@ class StoreTicketRequest extends FormRequest
             'ticket_team_id' => [
                 'required',
                 Rule::exists(TicketTeam::class, 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)->where('status', 'active')),
+            ],
+            'assigned_user_id' => [
+                'nullable',
+                'string',
+                Rule::exists(User::class, 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)->where('status', 'active')),
             ],
             'subscription_id' => [
                 'required',

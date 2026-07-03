@@ -9,7 +9,7 @@
         <p class="text-sm text-slate-600">Create a customer-visible ticket on behalf of a customer.</p>
     </div>
 
-    <form method="POST" action="{{ route('support.tickets.store') }}" enctype="multipart/form-data" class="rounded-xl border border-slate-900/10 bg-white p-6 shadow-sm" x-data="supportTicketCreate(@js($subscriptions), @js((string) old('subscription_id', request('subscription_id'))))">
+    <form method="POST" action="{{ route('support.tickets.store') }}" enctype="multipart/form-data" class="rounded-xl border border-slate-900/10 bg-white p-6 shadow-sm" x-data="supportTicketCreate(@js($subscriptions), @js((string) old('subscription_id', request('subscription_id'))), @js($teamAgents))">
         @csrf
         <x-form.validation-summary />
 
@@ -53,7 +53,42 @@
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
-            <x-input.select id="ticket_team_id" name="ticket_team_id" label="Team" :options="$teams->pluck('name', 'id')" placeholder="Select team" required />
+            <div class="mb-4">
+                <label for="ticket_team_id" class="block text-sm font-medium text-slate-700">Team <span class="text-red-500">*</span></label>
+                <select
+                    id="ticket_team_id"
+                    name="ticket_team_id"
+                    x-model="selectedTeamId"
+                    @change="selectedAssigneeId = ''"
+                    required
+                    class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-slate-950 shadow-sm focus:border-transparent focus:ring-2 focus:ring-emerald-600 sm:text-sm @error('ticket_team_id') border-red-500 @enderror"
+                >
+                    <option value="">Select team</option>
+                    @foreach($teams as $team)
+                        <option value="{{ $team->id }}" @selected(old('ticket_team_id') == $team->id)>{{ $team->name }}</option>
+                    @endforeach
+                </select>
+                @error('ticket_team_id')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <div class="mb-4">
+                <label for="assigned_user_id" class="block text-sm font-medium text-slate-700">Assignee</label>
+                <select
+                    id="assigned_user_id"
+                    name="assigned_user_id"
+                    x-model="selectedAssigneeId"
+                    class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-slate-950 shadow-sm focus:border-transparent focus:ring-2 focus:ring-emerald-600 sm:text-sm @error('assigned_user_id') border-red-500 @enderror"
+                >
+                    <option value="">Auto select</option>
+                    <template x-for="agent in availableAgents" :key="agent.id">
+                        <option :value="agent.id" x-text="agent.name"></option>
+                    </template>
+                </select>
+                @error('assigned_user_id')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
             <x-input.select id="priority" name="priority" label="Priority" :value="old('priority', 'normal')" :options="['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent']" required />
         </div>
 
@@ -75,12 +110,18 @@
 
 @push('scripts')
 <script>
-    function supportTicketCreate(subscriptions, initialSubscriptionId) {
+    function supportTicketCreate(subscriptions, initialSubscriptionId, teamAgents) {
         return {
             open: false,
             search: '',
             selectedSubscriptionId: initialSubscriptionId || '',
             selectedCustomerName: '',
+            selectedTeamId: '{{ old('ticket_team_id') }}',
+            selectedAssigneeId: '{{ old('assigned_user_id') }}',
+            teamAgents: teamAgents,
+            get availableAgents() {
+                return this.teamAgents[this.selectedTeamId] || [];
+            },
             get filteredSubscriptions() {
                 const search = this.search.trim().toLocaleLowerCase();
 
