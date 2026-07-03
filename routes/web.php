@@ -185,6 +185,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::patch('/tickets/{ticket}/assign', [SupportTicketController::class, 'assign'])->name('tickets.assign');
         Route::patch('/tickets/{ticket}/team', [SupportTicketController::class, 'moveTeam'])->name('tickets.team');
         Route::get('/tickets/{ticket}/attachments/{attachment}', [SupportTicketController::class, 'download'])->name('tickets.attachments.download');
+        Route::post('/tickets/view-scope', [SupportTicketController::class, 'updateViewScope'])->name('tickets.view-scope');
 
         Route::get('/teams', [SupportTicketTeamController::class, 'index'])->name('teams.index');
         Route::get('/teams/create', [SupportTicketTeamController::class, 'create'])->name('teams.create');

@@ -12,28 +12,35 @@
         <a href="{{ route('support.tickets.create') }}" class="inline-flex items-center justify-center rounded-lg bg-[#0d2f35] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#123f3d]">New ticket</a>
     </div>
 
-    <form method="GET" class="grid gap-3 rounded-xl border border-slate-900/10 bg-white p-4 shadow-sm md:grid-cols-6">
-        <input name="search" value="{{ request('search') }}" placeholder="Search ticket, customer, or subscription" class="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2">
-        <select name="status" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-            <option value="">All statuses</option>
-            @foreach(['new', 'open', 'pending_customer', 'pending_staff', 'resolved', 'closed'] as $status)
-                <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->replace('_', ' ')->headline() }}</option>
-            @endforeach
-        </select>
-        <select name="team" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-            <option value="">All teams</option>
-            @foreach($teams as $team)
-                <option value="{{ $team->id }}" @selected((string) request('team') === (string) $team->id)>{{ $team->name }}</option>
-            @endforeach
-        </select>
-        <select name="assigned" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-            <option value="">Any assignee</option>
-            <option value="unassigned" @selected(request('assigned') === 'unassigned')>Unassigned</option>
-            @foreach($agents as $agent)
-                <option value="{{ $agent->id }}" @selected((string) request('assigned') === (string) $agent->id)>{{ $agent->name }}</option>
-            @endforeach
-        </select>
-        <button class="rounded-lg border border-slate-900/10 bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Filter</button>
+    <form method="GET" class="flex flex-col gap-3 rounded-xl border border-slate-900/10 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between" x-data="{ scope: '{{ $viewScope }}' }">
+        <div class="flex gap-1 rounded-lg bg-slate-100 p-1">
+            <button type="submit" name="scope" value="team" class="rounded-md px-4 py-1.5 text-sm font-semibold transition" :class="scope === 'team' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'">Team tickets</button>
+            <button type="submit" name="scope" value="mine" class="rounded-md px-4 py-1.5 text-sm font-semibold transition" :class="scope === 'mine' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'">My tickets</button>
+        </div>
+        <input type="hidden" name="scope" :value="scope">
+        <div class="flex flex-1 gap-3">
+            <input name="search" value="{{ request('search') }}" placeholder="Search ticket, customer, or subscription" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <select name="status" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="">All statuses</option>
+                @foreach(['new', 'open', 'pending_customer', 'pending_staff', 'resolved', 'closed'] as $status)
+                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->replace('_', ' ')->headline() }}</option>
+                @endforeach
+            </select>
+            <select name="team" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="">All teams</option>
+                @foreach($teams as $team)
+                    <option value="{{ $team->id }}" @selected((string) request('team') === (string) $team->id)>{{ $team->name }}</option>
+                @endforeach
+            </select>
+            <select name="assigned" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="">Any assignee</option>
+                <option value="unassigned" @selected(request('assigned') === 'unassigned')>Unassigned</option>
+                @foreach($agents as $agent)
+                    <option value="{{ $agent->id }}" @selected((string) request('assigned') === (string) $agent->id)>{{ $agent->name }}</option>
+                @endforeach
+            </select>
+            <button class="rounded-lg border border-slate-900/10 bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Filter</button>
+        </div>
     </form>
 
     <div class="overflow-hidden rounded-xl border border-slate-900/10 bg-white shadow-sm">

@@ -57,7 +57,7 @@
         </form>
     </section>
 
-    <aside class="space-y-4" x-data="ticketWorkflow({{ Js::from($ticket->ticket_team_id) }}, {{ Js::from($teams->mapWithKeys(fn ($t) => [$t->id => $t->users->filter(fn ($u) => $u->pivot->is_active)->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values()])) })})">
+    <aside class="space-y-4" x-data="ticketWorkflow(@js($currentTeamId), {!! $teamAgentsJson !!})">
         <div class="rounded-xl border border-slate-900/10 bg-white p-5 shadow-sm">
             <h2 class="mb-4 text-base font-semibold text-slate-950">Workflow</h2>
             <form method="POST" action="{{ route('support.tickets.status', $ticket) }}" class="mb-3 flex gap-2">

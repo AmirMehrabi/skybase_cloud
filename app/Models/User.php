@@ -94,6 +94,26 @@ class User extends Authenticatable
         return $this->hasMany(CustomerNote::class);
     }
 
+    public function settings(): HasMany
+    {
+        return $this->hasMany(UserSetting::class);
+    }
+
+    public function getSetting(string $key, mixed $default = null): mixed
+    {
+        $setting = $this->settings()->where('key', $key)->first();
+
+        return $setting?->value ?? $default;
+    }
+
+    public function setSetting(string $key, mixed $value): void
+    {
+        $this->settings()->updateOrCreate(
+            ['key' => $key],
+            ['value' => $value],
+        );
+    }
+
     public function getRoleDisplayName(): string
     {
         $role = $this->resolvedRole();

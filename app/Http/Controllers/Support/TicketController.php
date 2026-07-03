@@ -8,6 +8,7 @@ use App\Http\Requests\Support\StoreTicketRequest;
 use App\Models\Subscription;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
+use App\Models\TicketEvent;
 use App\Models\TicketTeam;
 use App\Models\User;
 use App\Services\Tickets\TicketEventService;
@@ -28,7 +29,9 @@ class TicketController extends Controller
         Gate::authorize('viewAny', Ticket::class);
 
         $user = $request->user();
-        $tickets = $this->visibleTickets($user)
+        $viewScope = $request->input('scope') ?? $user->getSetting('ticket_view_scope', 'team');
+
+        $tickets = $this->visibleTickets($user, $viewScope)
             ->with(['customer', 'team', 'assignedUser', 'subscription'])
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')))
             ->when($request->filled('priority'), fn ($query) => $query->where('priority', $request->input('priority')))
@@ -55,6 +58,7 @@ class TicketController extends Controller
             'tickets' => $tickets,
             'teams' => $this->visibleTeams($user),
             'agents' => $this->visibleAgents($user),
+            'viewScope' => $viewScope,
         ]);
     }
 
@@ -145,10 +149,29 @@ class TicketController extends Controller
             ])->values(),
         ]);
 
+        $teamAgentsJson = $teamAgents->toJson();
+        $currentTeamId = $ticket->ticket_team_id;
+
         $timeline = $ticket->messages->concat($ticket->events)->sortBy('created_at');
 
-        $eventDetails = $timeline->filter(fn ($item) => $item instanceof \App\Models\TicketEvent)
-            ->mapWithKeys(fn (\App\Models\TicketEvent $event): array => [
+        $eventDetails = $timeline->filter(fn ($item) => $item instanceof TicketEvent)
+            ->mapWithKeys(fn (TicketEvent $event): array => [
+                $event->id => $this->resolveEventDetail($event),
+            ]);
+
+        return view('support.tickets.show', [
+            'ticket' => $ticket,
+            'teams' => $teams,
+            'teamAgentsJson' => $teamAgentsJson,
+            'currentTeamId' => $currentTeamId,
+            'timeline' => $timeline,
+            'eventDetails' => $eventDetails,
+        ]);
+
+        $timeline = $ticket->messages->concat($ticket->events)->sortBy('created_at');
+
+        $eventDetails = $timeline->filter(fn ($item) => $item instanceof TicketEvent)
+            ->mapWithKeys(fn (TicketEvent $event): array => [
                 $event->id => $this->resolveEventDetail($event),
             ]);
 
@@ -262,12 +285,19 @@ class TicketController extends Controller
         return Storage::disk($attachment->disk)->download($attachment->path, $attachment->downloadName());
     }
 
-    private function visibleTickets(User $user)
+    private function visibleTickets(User $user, string $scope = 'team')
     {
         $query = Ticket::query();
 
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() && $scope === 'team') {
             return $query;
+        }
+
+        if ($scope === 'mine') {
+            return $query->where(function ($query) use ($user): void {
+                $query->where('assigned_user_id', $user->id)
+                    ->orWhere('opened_by_user_id', $user->id);
+            });
         }
 
         return $query->where(function ($query) use ($user): void {
@@ -321,13 +351,13 @@ class TicketController extends Controller
         return array_values($request->file('attachments', []) ?: []);
     }
 
-    private function resolveEventDetail(\App\Models\TicketEvent $event): ?string
+    private function resolveEventDetail(TicketEvent $event): ?string
     {
         return match ($event->event_type) {
             'ticket.assigned' => $this->resolveUserTransition($event->old_values['assigned_user_id'] ?? null, $event->new_values['assigned_user_id'] ?? null),
             'ticket.team_changed' => $this->resolveTeamTransition($event->old_values['ticket_team_id'] ?? null, $event->new_values['ticket_team_id'] ?? null),
-            'ticket.status_changed' => str($event->old_values['status'] ?? '')->replace('_', ' ')->headline() . ' → ' . str($event->new_values['status'] ?? '')->replace('_', ' ')->headline(),
-            'ticket.priority_changed' => ucfirst($event->old_values['priority'] ?? '') . ' → ' . ucfirst($event->new_values['priority'] ?? ''),
+            'ticket.status_changed' => str($event->old_values['status'] ?? '')->replace('_', ' ')->headline().' → '.str($event->new_values['status'] ?? '')->replace('_', ' ')->headline(),
+            'ticket.priority_changed' => ucfirst($event->old_values['priority'] ?? '').' → '.ucfirst($event->new_values['priority'] ?? ''),
             default => null,
         };
     }
@@ -346,5 +376,17 @@ class TicketController extends Controller
         $new = $newId ? TicketTeam::withoutGlobalScopes()->find($newId)?->name ?? 'Unknown' : 'None';
 
         return "{$old} → {$new}";
+    }
+
+    public function updateViewScope(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'scope' => ['required', Rule::in(['team', 'mine'])],
+        ]);
+
+        $request->user()->setSetting('ticket_view_scope', $validated['scope']);
+
+        return redirect()->route('support.tickets.index', ['scope' => $validated['scope']])
+            ->with('success', 'View preference saved.');
     }
 }
