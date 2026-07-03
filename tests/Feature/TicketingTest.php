@@ -201,6 +201,95 @@ class TicketingTest extends TestCase
         $this->assertSame($subscription->id, $ticket->subscription_id);
     }
 
+    public function test_admin_can_move_ticket_to_another_team_and_assign_a_specific_team_agent(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $currentTeam = $this->createTeam($tenant);
+        $destinationTeam = $this->createTeam($tenant, 'Network Operations', 'network-operations');
+        $destinationAgent = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'support', 'status' => 'active']);
+        $destinationTeam->users()->attach($destinationAgent->id, [
+            'tenant_id' => $tenant->id,
+            'is_active' => true,
+            'accepts_auto_assignment' => false,
+        ]);
+        $ticket = $this->createTicket($tenant, $customer, $currentTeam);
+
+        $this->actingAs($admin)
+            ->patch(route('support.tickets.assign', $ticket), [
+                'ticket_team_id' => $destinationTeam->id,
+                'assigned_user_id' => $destinationAgent->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Ticket assignment updated.');
+
+        $ticket->refresh();
+
+        $this->assertSame($destinationTeam->id, $ticket->ticket_team_id);
+        $this->assertSame($destinationAgent->id, $ticket->assigned_user_id);
+        $this->assertDatabaseHas('ticket_events', [
+            'ticket_id' => $ticket->id,
+            'event_type' => 'ticket.team_changed',
+        ]);
+        $this->assertDatabaseHas('ticket_events', [
+            'ticket_id' => $ticket->id,
+            'event_type' => 'ticket.assigned',
+        ]);
+    }
+
+    public function test_ticket_cannot_be_assigned_to_an_agent_outside_the_selected_team(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $team = $this->createTeam($tenant);
+        $unrelatedAgent = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'support', 'status' => 'active']);
+        $ticket = $this->createTicket($tenant, $customer, $team);
+
+        $this->actingAs($admin)
+            ->from(route('support.tickets.show', $ticket))
+            ->patch(route('support.tickets.assign', $ticket), [
+                'ticket_team_id' => $team->id,
+                'assigned_user_id' => $unrelatedAgent->id,
+            ])
+            ->assertRedirect(route('support.tickets.show', $ticket))
+            ->assertSessionHasErrors([
+                'assigned_user_id' => 'The selected agent is not an active member of this team.',
+            ]);
+
+        $this->assertNull($ticket->fresh()->assigned_user_id);
+    }
+
+    public function test_ticket_page_displays_pppoe_username_and_available_team_agents(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $team = $this->createTeam($tenant);
+        $agent = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'support',
+            'status' => 'active',
+            'name' => 'Network Agent',
+        ]);
+        $team->users()->attach($agent->id, [
+            'tenant_id' => $tenant->id,
+            'is_active' => true,
+            'accepts_auto_assignment' => false,
+        ]);
+        $subscription = $this->createSubscription($tenant, $customer, ['pppoe_username' => 'jane.pppoe']);
+        $ticket = $this->createTicket($tenant, $customer, $team);
+        $ticket->forceFill(['subscription_id' => $subscription->id])->save();
+
+        $this->actingAs($admin)
+            ->get(route('support.tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('jane.pppoe')
+            ->assertSee('Network Agent')
+            ->assertSee('Update ownership');
+    }
+
     private function createTenant(string $slug): Tenant
     {
         return Tenant::create([

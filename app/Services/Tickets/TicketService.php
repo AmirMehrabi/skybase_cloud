@@ -220,16 +220,24 @@ class TicketService
         $this->eventService->record($ticket, $eventType, ['status' => $oldStatus], ['status' => $status], $actorType, $actorId);
     }
 
-    public function assign(Ticket $ticket, ?User $user, User $actor): void
+    public function updateAssignment(Ticket $ticket, TicketTeam $team, ?User $user, User $actor): void
     {
+        $oldTeam = $ticket->ticket_team_id;
         $oldAssignee = $ticket->assigned_user_id;
 
         $ticket->forceFill([
+            'ticket_team_id' => $team->id,
             'assigned_user_id' => $user?->id,
             'last_activity_at' => now(),
         ])->save();
 
-        $this->eventService->record($ticket, 'ticket.assigned', ['assigned_user_id' => $oldAssignee], ['assigned_user_id' => $user?->id], 'user', $actor->id);
+        if ((int) $oldTeam !== (int) $team->id) {
+            $this->eventService->record($ticket, 'ticket.team_changed', ['ticket_team_id' => $oldTeam], ['ticket_team_id' => $team->id], 'user', $actor->id);
+        }
+
+        if ((int) $oldAssignee !== (int) $user?->id) {
+            $this->eventService->record($ticket, 'ticket.assigned', ['assigned_user_id' => $oldAssignee], ['assigned_user_id' => $user?->id], 'user', $actor->id);
+        }
     }
 
     public function moveTeam(Ticket $ticket, TicketTeam $team, User $actor): void

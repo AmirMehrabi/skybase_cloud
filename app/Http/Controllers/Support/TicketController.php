@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Support;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Support\StoreTicketMessageRequest;
 use App\Http\Requests\Support\StoreTicketRequest;
+use App\Http\Requests\Support\UpdateTicketAssignmentRequest;
 use App\Models\Subscription;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
@@ -149,25 +150,6 @@ class TicketController extends Controller
             ])->values(),
         ]);
 
-        $teamAgentsJson = $teamAgents->toJson();
-        $currentTeamId = $ticket->ticket_team_id;
-
-        $timeline = $ticket->messages->concat($ticket->events)->sortBy('created_at');
-
-        $eventDetails = $timeline->filter(fn ($item) => $item instanceof TicketEvent)
-            ->mapWithKeys(fn (TicketEvent $event): array => [
-                $event->id => $this->resolveEventDetail($event),
-            ]);
-
-        return view('support.tickets.show', [
-            'ticket' => $ticket,
-            'teams' => $teams,
-            'teamAgentsJson' => $teamAgentsJson,
-            'currentTeamId' => $currentTeamId,
-            'timeline' => $timeline,
-            'eventDetails' => $eventDetails,
-        ]);
-
         $timeline = $ticket->messages->concat($ticket->events)->sortBy('created_at');
 
         $eventDetails = $timeline->filter(fn ($item) => $item instanceof TicketEvent)
@@ -238,22 +220,22 @@ class TicketController extends Controller
         return back()->with('success', 'Ticket priority updated.');
     }
 
-    public function assign(Request $request, Ticket $ticket, TicketService $tickets): RedirectResponse
+    public function assign(UpdateTicketAssignmentRequest $request, Ticket $ticket, TicketService $tickets): RedirectResponse
     {
         Gate::authorize('update', $ticket);
 
-        $validated = $request->validate([
-            'assigned_user_id' => [
-                'nullable',
-                Rule::exists(User::class, 'id')->where(fn ($query) => $query->where('tenant_id', tenant_id())->where('status', 'active')),
-            ],
-        ]);
+        $validated = $request->validated();
+        $tenantId = tenant_id() ?? $request->user()?->tenant_id;
+        $team = TicketTeam::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($validated['ticket_team_id'])
+            ->firstOrFail();
 
-        $user = isset($validated['assigned_user_id'])
-            ? User::query()->where('tenant_id', tenant_id())->whereKey($validated['assigned_user_id'])->first()
+        $user = ! empty($validated['assigned_user_id'])
+            ? User::query()->where('tenant_id', $tenantId)->whereKey($validated['assigned_user_id'])->firstOrFail()
             : null;
 
-        $tickets->assign($ticket, $user, $request->user());
+        $tickets->updateAssignment($ticket, $team, $user, $request->user());
 
         return back()->with('success', 'Ticket assignment updated.');
     }
