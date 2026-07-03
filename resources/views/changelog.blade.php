@@ -11,6 +11,37 @@
 @php
     $releases = [
         [
+            'version' => '0.9.7',
+            'date' => 'July 3, 2026',
+            'title' => 'Advanced Traffic Shaping, Customer Portal, and Usage Insights',
+            'summary' => 'This release gives ISPs more control over service quality and billing while introducing a complete self-service portal where customers can follow their subscriptions, usage, invoices, and support activity.',
+            'sections' => [
+                'Added' => [
+                    'Advanced traffic shaping for Plans, including configurable burst speeds, burst thresholds and duration, guaranteed minimum speeds, traffic priority, and queue type.',
+                    'Data-cap actions that let you choose whether service continues normally or slows to a defined speed after the allowance is reached.',
+                    'A self-service Customer Portal with an account dashboard, subscription details, invoices, support access, and profile management.',
+                    'Download and upload usage graphs for every subscription, with clear historical views for both staff and customers.',
+                    'A combined usage graph on the Customer Portal dashboard for a quick view across all of a customer’s subscriptions.',
+                    'Billing tax settings for future invoices, including tax rates, invoice tax notes, and an option to display the business tax ID.',
+                    'Profile and password management for both staff users and Customer Portal users.',
+                    'Per-subscription automatic suspension controls for overdue invoices.',
+                ],
+                'Changed' => [
+                    'Plan pages now present traffic-shaping settings and their effective service limits more clearly.',
+                    'The Customer Portal dashboard now highlights online services, outstanding invoices, open support tickets, recent billing activity, and upcoming billing dates.',
+                    'Customers can now open a secure detail page for each subscription to review service, connection, billing, and recent invoice information.',
+                    'Support tickets can be linked to a subscription using its service identifier, making it easier to request help for the correct connection.',
+                    'Subscription setup now keeps temporarily offline routers available for selection.',
+                    'Usage reporting and live bandwidth charts now provide clearer time ranges, tooltips, totals, and empty-data states.',
+                ],
+                'Fixed' => [
+                    'Improved the reliability of usage totals and graphs across different accounting setups.',
+                    'Resolved Customer Portal sign-in and password-change edge cases.',
+                    'Improved subscription billing, invoice tax calculations, and service provisioning consistency.',
+                ],
+            ],
+        ],
+        [
             'version' => '0.9.6',
             'date' => 'June 26, 2026',
             'title' => 'Role-Based Access Control and Permission Routing',
