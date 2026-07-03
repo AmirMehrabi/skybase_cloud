@@ -37,8 +37,26 @@
                         @endif
                     </article>
                 @else
+                    @php
+                        $eventLabel = str($item->event_type)->replace('.', ' ')->headline();
+                        $eventDetail = null;
+
+                        if ($item->event_type === 'ticket.assigned') {
+                            $oldUser = $item->old_values['assigned_user_id'] ? \App\Models\User::query()->find($item->old_values['assigned_user_id'])?->name ?? 'Unknown' : 'Queue';
+                            $newUser = $item->new_values['assigned_user_id'] ? \App\Models\User::query()->find($item->new_values['assigned_user_id'])?->name ?? 'Unknown' : 'Queue';
+                            $eventDetail = "{$oldUser} → {$newUser}";
+                        } elseif ($item->event_type === 'ticket.team_changed') {
+                            $oldTeam = $item->old_values['ticket_team_id'] ? \App\Models\TicketTeam::withoutGlobalScopes()->find($item->old_values['ticket_team_id'])?->name ?? 'Unknown' : 'None';
+                            $newTeam = $item->new_values['ticket_team_id'] ? \App\Models\TicketTeam::withoutGlobalScopes()->find($item->new_values['ticket_team_id'])?->name ?? 'Unknown' : 'None';
+                            $eventDetail = "{$oldTeam} → {$newTeam}";
+                        } elseif ($item->event_type === 'ticket.status_changed') {
+                            $eventDetail = str($item->old_values['status'] ?? '')->replace('_', ' ')->headline() . ' → ' . str($item->new_values['status'] ?? '')->replace('_', ' ')->headline();
+                        } elseif ($item->event_type === 'ticket.priority_changed') {
+                            $eventDetail = ucfirst($item->old_values['priority'] ?? '') . ' → ' . ucfirst($item->new_values['priority'] ?? '');
+                        }
+                    @endphp
                     <div class="rounded-lg border border-slate-900/10 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                        {{ $item->actorName() }} · {{ str($item->event_type)->replace('.', ' ')->headline() }} · {{ $item->created_at?->format('Y-m-d H:i') }}
+                        <span class="font-medium text-slate-700">{{ $item->actorName() }}</span> · {{ $eventLabel }}@if($eventDetail) <span class="font-medium text-slate-700">{{ $eventDetail }}</span>@endif · {{ $item->created_at?->format('Y-m-d H:i') }}
                     </div>
                 @endif
             @endforeach
@@ -57,7 +75,7 @@
         </form>
     </section>
 
-    <aside class="space-y-4">
+    <aside class="space-y-4" x-data="ticketWorkflow({{ Js::from($ticket->ticket_team_id) }}, {{ Js::from($teams->mapWithKeys(fn ($t) => [$t->id => $t->users->filter(fn ($u) => $u->pivot->is_active)->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values()])) })})">
         <div class="rounded-xl border border-slate-900/10 bg-white p-5 shadow-sm">
             <h2 class="mb-4 text-base font-semibold text-slate-950">Workflow</h2>
             <form method="POST" action="{{ route('support.tickets.status', $ticket) }}" class="mb-3 flex gap-2">
@@ -85,16 +103,16 @@
                 @method('PATCH')
                 <select name="assigned_user_id" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
                     <option value="">Queue</option>
-                    @foreach($agents as $agent)
-                        <option value="{{ $agent->id }}" @selected($ticket->assigned_user_id === $agent->id)>{{ $agent->name }}</option>
-                    @endforeach
+                    <template x-for="agent in teamAgents" :key="agent.id">
+                        <option :value="agent.id" x-text="agent.name" :selected="agent.id == '{{ $ticket->assigned_user_id }}'"></option>
+                    </template>
                 </select>
                 <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Assign</button>
             </form>
             <form method="POST" action="{{ route('support.tickets.team', $ticket) }}" class="flex gap-2">
                 @csrf
                 @method('PATCH')
-                <select name="ticket_team_id" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <select name="ticket_team_id" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" x-model="selectedTeamId" @change="selectedAssigneeId = ''">
                     @foreach($teams as $team)
                         <option value="{{ $team->id }}" @selected($ticket->ticket_team_id === $team->id)>{{ $team->name }}</option>
                     @endforeach
@@ -117,3 +135,18 @@
     </aside>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function ticketWorkflow(initialTeamId, teamAgentsMap) {
+        return {
+            selectedTeamId: initialTeamId,
+            selectedAssigneeId: '',
+            teamAgentsMap: teamAgentsMap,
+            get teamAgents() {
+                return this.teamAgentsMap[this.selectedTeamId] || [];
+            },
+        };
+    }
+</script>
+@endpush

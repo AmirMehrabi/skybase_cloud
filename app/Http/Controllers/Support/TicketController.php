@@ -134,10 +134,21 @@ class TicketController extends Controller
             'events',
         ]);
 
+        $teams = TicketTeam::query()->active()->with(['users' => function ($query) {
+            $query->wherePivot('is_active', true);
+        }])->orderBy('sort_order')->orderBy('name')->get();
+
+        $teamAgents = $teams->mapWithKeys(fn (TicketTeam $team): array => [
+            $team->id => $team->users->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+            ])->values(),
+        ]);
+
         return view('support.tickets.show', [
             'ticket' => $ticket,
-            'teams' => TicketTeam::query()->active()->orderBy('sort_order')->orderBy('name')->get(),
-            'agents' => User::query()->where('tenant_id', tenant_id())->whereIn('role', ['owner', 'support', 'noc', 'admin'])->active()->orderBy('name')->get(),
+            'teams' => $teams,
+            'teamAgents' => $teamAgents,
             'timeline' => $ticket->messages->concat($ticket->events)->sortBy('created_at'),
         ]);
     }
