@@ -83,11 +83,8 @@
             <form method="POST" action="{{ route('support.tickets.assign', $ticket) }}" class="mb-3 flex gap-2">
                 @csrf
                 @method('PATCH')
-                <select name="assigned_user_id" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <select name="assigned_user_id" id="assigned_user_id" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" x-ref="assignSelect">
                     <option value="">Queue</option>
-                    <template x-for="agent in teamAgents" :key="agent.id">
-                        <option :value="agent.id" x-text="agent.name" :selected="agent.id == '{{ $ticket->assigned_user_id }}'"></option>
-                    </template>
                 </select>
                 <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Assign</button>
             </form>
@@ -127,6 +124,27 @@
             teamAgentsMap: teamAgentsMap,
             get teamAgents() {
                 return this.teamAgentsMap[this.selectedTeamId] || [];
+            },
+            init() {
+                this.$watch('selectedTeamId', () => this.populateAssignSelect());
+                this.populateAssignSelect();
+            },
+            populateAssignSelect() {
+                const select = this.$refs.assignSelect;
+                const agents = this.teamAgents;
+                const current = '{{ $ticket->assigned_user_id }}';
+
+                select.innerHTML = '<option value="">Queue</option>';
+
+                agents.forEach((agent) => {
+                    const option = document.createElement('option');
+                    option.value = agent.id;
+                    option.textContent = agent.name;
+                    if (String(agent.id) === String(current)) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
             },
         };
     }
