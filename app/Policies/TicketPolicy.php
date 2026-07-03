@@ -17,6 +17,7 @@ class TicketPolicy
         return $this->sameTenant($user, $ticket) && (
             $this->canManageAllTickets($user)
             || (int) $ticket->assigned_user_id === (int) $user->id
+            || (int) $ticket->opened_by_user_id === (int) $user->id
             || $user->ticketTeams()
                 ->where('ticket_teams.id', $ticket->ticket_team_id)
                 ->where('ticket_team_user.is_active', true)

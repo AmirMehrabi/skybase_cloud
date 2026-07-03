@@ -52,8 +52,8 @@ class TicketController extends Controller
 
         return view('support.tickets.index', [
             'tickets' => $tickets,
-            'teams' => TicketTeam::query()->orderBy('sort_order')->orderBy('name')->get(),
-            'agents' => User::query()->where('tenant_id', tenant_id())->whereIn('role', ['owner', 'support', 'noc', 'admin'])->orderBy('name')->get(),
+            'teams' => $this->visibleTeams($user),
+            'agents' => $this->visibleAgents($user),
         ]);
     }
 
@@ -252,8 +252,45 @@ class TicketController extends Controller
 
         return $query->where(function ($query) use ($user): void {
             $query->where('assigned_user_id', $user->id)
+                ->orWhere('opened_by_user_id', $user->id)
                 ->orWhereHas('team.users', fn ($query) => $query->where('users.id', $user->id)->where('ticket_team_user.is_active', true));
         });
+    }
+
+    private function visibleTeams(User $user)
+    {
+        if ($user->isAdmin()) {
+            return TicketTeam::query()->orderBy('sort_order')->orderBy('name')->get();
+        }
+
+        return $user->ticketTeams()
+            ->wherePivot('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function visibleAgents(User $user)
+    {
+        if ($user->isAdmin()) {
+            return User::query()->where('tenant_id', tenant_id())->whereIn('role', ['owner', 'support', 'noc', 'admin'])->orderBy('name')->get();
+        }
+
+        $teamIds = $user->ticketTeams()->wherePivot('is_active', true)->pluck('ticket_teams.id');
+
+        return User::query()
+            ->where('tenant_id', tenant_id())
+            ->where(function ($query) use ($user, $teamIds): void {
+                $query->where('id', $user->id)
+                    ->orWhereIn('id', function ($query) use ($teamIds): void {
+                        $query->select('user_id')
+                            ->from('ticket_team_user')
+                            ->whereIn('ticket_team_id', $teamIds)
+                            ->where('is_active', true);
+                    });
+            })
+            ->orderBy('name')
+            ->get();
     }
 
     /**
