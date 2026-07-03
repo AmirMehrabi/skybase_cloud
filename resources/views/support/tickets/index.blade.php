@@ -12,12 +12,12 @@
         <a href="{{ route('support.tickets.create') }}" class="inline-flex items-center justify-center rounded-lg bg-[#0d2f35] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#123f3d]">New ticket</a>
     </div>
 
-    <form method="GET" class="flex flex-col gap-3 rounded-xl border border-slate-900/10 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between" x-data="{ scope: '{{ $viewScope }}' }">
+    <form method="GET" class="flex flex-col gap-3 rounded-xl border border-slate-900/10 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div class="flex gap-1 rounded-lg bg-slate-100 p-1">
-            <button type="submit" name="scope" value="team" class="rounded-md px-4 py-1.5 text-sm font-semibold transition" :class="scope === 'team' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'">Team tickets</button>
-            <button type="submit" name="scope" value="mine" class="rounded-md px-4 py-1.5 text-sm font-semibold transition" :class="scope === 'mine' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'">My tickets</button>
+            <a href="{{ route('support.tickets.index', array_merge(request()->except(['page', 'scope']), ['scope' => 'team'])) }}" class="rounded-md px-4 py-1.5 text-sm font-semibold transition {{ $viewScope === 'team' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">Team tickets</a>
+            <a href="{{ route('support.tickets.index', array_merge(request()->except(['page', 'scope']), ['scope' => 'mine'])) }}" class="rounded-md px-4 py-1.5 text-sm font-semibold transition {{ $viewScope === 'mine' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">My tickets</a>
         </div>
-        <input type="hidden" name="scope" :value="scope">
+        <input type="hidden" name="scope" value="{{ $viewScope }}">
         <div class="flex flex-1 gap-3">
             <input name="search" value="{{ request('search') }}" placeholder="Search ticket, customer, or subscription" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <select name="status" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">

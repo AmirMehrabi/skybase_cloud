@@ -290,6 +290,37 @@ class TicketingTest extends TestCase
             ->assertSee('Update ownership');
     }
 
+    public function test_admin_can_toggle_between_team_and_my_tickets(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $otherAgent = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'support', 'status' => 'active']);
+        $team = $this->createTeam($tenant);
+        $myTicket = $this->createTicket($tenant, $customer, $team, [
+            'ticket_number' => 'TCK-260703-0001',
+            'subject' => 'Assigned to administrator',
+            'assigned_user_id' => $admin->id,
+        ]);
+        $teamTicket = $this->createTicket($tenant, $customer, $team, [
+            'ticket_number' => 'TCK-260703-0002',
+            'subject' => 'Assigned to another agent',
+            'assigned_user_id' => $otherAgent->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('support.tickets.index', ['scope' => 'team']))
+            ->assertOk()
+            ->assertSee($myTicket->ticket_number)
+            ->assertSee($teamTicket->ticket_number);
+
+        $this->actingAs($admin)
+            ->get(route('support.tickets.index', ['scope' => 'mine']))
+            ->assertOk()
+            ->assertSee($myTicket->ticket_number)
+            ->assertDontSee($teamTicket->ticket_number);
+    }
+
     private function createTenant(string $slug): Tenant
     {
         return Tenant::create([
@@ -368,9 +399,12 @@ class TicketingTest extends TestCase
         ], $overrides));
     }
 
-    private function createTicket(Tenant $tenant, Customer $customer, TicketTeam $team): Ticket
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function createTicket(Tenant $tenant, Customer $customer, TicketTeam $team, array $overrides = []): Ticket
     {
-        return Ticket::withoutGlobalScopes()->create([
+        return Ticket::withoutGlobalScopes()->create(array_merge([
             'tenant_id' => $tenant->id,
             'ticket_number' => 'TCK-260529-0001',
             'customer_id' => $customer->id,
@@ -380,6 +414,6 @@ class TicketingTest extends TestCase
             'priority' => Ticket::PRIORITY_NORMAL,
             'status' => Ticket::STATUS_NEW,
             'last_activity_at' => now(),
-        ]);
+        ], $overrides));
     }
 }
