@@ -37,26 +37,8 @@
                         @endif
                     </article>
                 @else
-                    @php
-                        $eventLabel = str($item->event_type)->replace('.', ' ')->headline();
-                        $eventDetail = null;
-
-                        if ($item->event_type === 'ticket.assigned') {
-                            $oldUser = $item->old_values['assigned_user_id'] ? \App\Models\User::query()->find($item->old_values['assigned_user_id'])?->name ?? 'Unknown' : 'Queue';
-                            $newUser = $item->new_values['assigned_user_id'] ? \App\Models\User::query()->find($item->new_values['assigned_user_id'])?->name ?? 'Unknown' : 'Queue';
-                            $eventDetail = "{$oldUser} → {$newUser}";
-                        } elseif ($item->event_type === 'ticket.team_changed') {
-                            $oldTeam = $item->old_values['ticket_team_id'] ? \App\Models\TicketTeam::withoutGlobalScopes()->find($item->old_values['ticket_team_id'])?->name ?? 'Unknown' : 'None';
-                            $newTeam = $item->new_values['ticket_team_id'] ? \App\Models\TicketTeam::withoutGlobalScopes()->find($item->new_values['ticket_team_id'])?->name ?? 'Unknown' : 'None';
-                            $eventDetail = "{$oldTeam} → {$newTeam}";
-                        } elseif ($item->event_type === 'ticket.status_changed') {
-                            $eventDetail = str($item->old_values['status'] ?? '')->replace('_', ' ')->headline() . ' → ' . str($item->new_values['status'] ?? '')->replace('_', ' ')->headline();
-                        } elseif ($item->event_type === 'ticket.priority_changed') {
-                            $eventDetail = ucfirst($item->old_values['priority'] ?? '') . ' → ' . ucfirst($item->new_values['priority'] ?? '');
-                        }
-                    @endphp
                     <div class="rounded-lg border border-slate-900/10 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                        <span class="font-medium text-slate-700">{{ $item->actorName() }}</span> · {{ $eventLabel }}@if($eventDetail) <span class="font-medium text-slate-700">{{ $eventDetail }}</span>@endif · {{ $item->created_at?->format('Y-m-d H:i') }}
+                        <span class="font-medium text-slate-700">{{ $item->actorName() }}</span> · {{ str($item->event_type)->replace('.', ' ')->headline() }}@if($eventDetails[$item->id] ?? null) <span class="font-medium text-slate-700">{{ $eventDetails[$item->id] }}</span>@endif · {{ $item->created_at?->format('Y-m-d H:i') }}
                     </div>
                 @endif
             @endforeach

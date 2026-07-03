@@ -145,11 +145,19 @@ class TicketController extends Controller
             ])->values(),
         ]);
 
+        $timeline = $ticket->messages->concat($ticket->events)->sortBy('created_at');
+
+        $eventDetails = $timeline->filter(fn ($item) => $item instanceof \App\Models\TicketEvent)
+            ->mapWithKeys(fn (\App\Models\TicketEvent $event): array => [
+                $event->id => $this->resolveEventDetail($event),
+            ]);
+
         return view('support.tickets.show', [
             'ticket' => $ticket,
             'teams' => $teams,
             'teamAgents' => $teamAgents,
-            'timeline' => $ticket->messages->concat($ticket->events)->sortBy('created_at'),
+            'timeline' => $timeline,
+            'eventDetails' => $eventDetails,
         ]);
     }
 
@@ -311,5 +319,32 @@ class TicketController extends Controller
     private function attachments(Request $request): array
     {
         return array_values($request->file('attachments', []) ?: []);
+    }
+
+    private function resolveEventDetail(\App\Models\TicketEvent $event): ?string
+    {
+        return match ($event->event_type) {
+            'ticket.assigned' => $this->resolveUserTransition($event->old_values['assigned_user_id'] ?? null, $event->new_values['assigned_user_id'] ?? null),
+            'ticket.team_changed' => $this->resolveTeamTransition($event->old_values['ticket_team_id'] ?? null, $event->new_values['ticket_team_id'] ?? null),
+            'ticket.status_changed' => str($event->old_values['status'] ?? '')->replace('_', ' ')->headline() . ' → ' . str($event->new_values['status'] ?? '')->replace('_', ' ')->headline(),
+            'ticket.priority_changed' => ucfirst($event->old_values['priority'] ?? '') . ' → ' . ucfirst($event->new_values['priority'] ?? ''),
+            default => null,
+        };
+    }
+
+    private function resolveUserTransition(?int $oldId, ?int $newId): string
+    {
+        $old = $oldId ? User::query()->find($oldId)?->name ?? 'Unknown' : 'Queue';
+        $new = $newId ? User::query()->find($newId)?->name ?? 'Unknown' : 'Queue';
+
+        return "{$old} → {$new}";
+    }
+
+    private function resolveTeamTransition(?int $oldId, ?int $newId): string
+    {
+        $old = $oldId ? TicketTeam::withoutGlobalScopes()->find($oldId)?->name ?? 'Unknown' : 'None';
+        $new = $newId ? TicketTeam::withoutGlobalScopes()->find($newId)?->name ?? 'Unknown' : 'None';
+
+        return "{$old} → {$new}";
     }
 }
