@@ -43,7 +43,8 @@ class TicketController extends Controller
                 $query->where(function ($query) use ($search): void {
                     $query->where('ticket_number', 'like', "%{$search}%")
                         ->orWhere('subject', 'like', "%{$search}%")
-                        ->orWhereHas('customer', fn ($query) => $query->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"));
+                        ->orWhereHas('customer', fn ($query) => $query->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
+                        ->orWhereHas('subscription', fn ($query) => $query->where('subscription_code', 'like', "%{$search}%")->orWhere('pppoe_username', 'like', "%{$search}%"));
                 });
             })
             ->latest('last_activity_at')
