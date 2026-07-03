@@ -15,7 +15,7 @@ class TicketPolicy
     public function view(User $user, Ticket $ticket): bool
     {
         return $this->sameTenant($user, $ticket) && (
-            $this->canManageAllTickets($user)
+            $this->canWorkTickets($user)
             || (int) $ticket->assigned_user_id === (int) $user->id
             || $user->ticketTeams()
                 ->where('ticket_teams.id', $ticket->ticket_team_id)
