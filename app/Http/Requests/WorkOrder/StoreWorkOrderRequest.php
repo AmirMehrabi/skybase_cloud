@@ -8,6 +8,8 @@ use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Ticket;
+use App\Models\TicketTeam;
+use App\Models\User;
 use App\Models\WorkOrder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -30,6 +32,18 @@ class StoreWorkOrderRequest extends FormRequest
             'subscription_id' => ['nullable', Rule::exists(Subscription::class, 'id')->where('tenant_id', $tenantId)],
             'source_ticket_id' => ['nullable', Rule::exists(Ticket::class, 'id')->where('tenant_id', $tenantId)],
             'plan_id' => ['nullable', Rule::exists(Plan::class, 'id')],
+            'assigned_team_id' => [
+                'required',
+                Rule::exists(TicketTeam::class, 'id')->where(
+                    fn ($query) => $query->where('tenant_id', $tenantId)->where('status', 'active')
+                ),
+            ],
+            'assigned_user_id' => [
+                'nullable',
+                Rule::exists(User::class, 'id')->where(
+                    fn ($query) => $query->where('tenant_id', $tenantId)->where('status', 'active')
+                ),
+            ],
             'type' => ['required', Rule::enum(WorkOrderType::class)],
             'priority' => ['required', Rule::enum(WorkOrderPriority::class)],
             'title' => ['required', 'string', 'max:255'],
@@ -73,6 +87,17 @@ class StoreWorkOrderRequest extends FormRequest
                 ->where('customer_id', $this->integer('customer_id'))
                 ->exists()) {
                 $validator->errors()->add('source_ticket_id', 'The selected ticket does not belong to this customer.');
+            }
+
+            if ($this->filled('assigned_user_id') && ! TicketTeam::query()
+                ->whereKey($this->integer('assigned_team_id'))
+                ->whereHas('users', function ($query): void {
+                    $query->where('users.id', $this->integer('assigned_user_id'))
+                        ->where('users.status', 'active')
+                        ->where('ticket_team_user.is_active', true);
+                })
+                ->exists()) {
+                $validator->errors()->add('assigned_user_id', 'The selected member is not an active member of this team.');
             }
         });
     }

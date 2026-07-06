@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Models\TicketTeam;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Services\WorkOrders\WorkOrderProvisioningService;
@@ -26,9 +27,17 @@ class WorkOrderTest extends TestCase
     public function test_new_installation_can_be_created_without_subscription(): void
     {
         [$tenant, $admin, $customer] = $this->context('alpha');
+        $team = $this->team($tenant);
+        $team->users()->attach($admin->id, [
+            'tenant_id' => $tenant->id,
+            'is_active' => true,
+            'accepts_auto_assignment' => false,
+        ]);
 
         $this->actingAs($admin)->post(route('work-orders.store'), [
             'customer_id' => $customer->id,
+            'assigned_team_id' => $team->id,
+            'assigned_user_id' => $admin->id,
             'type' => WorkOrderType::NewInstallation->value,
             'priority' => 'normal',
             'title' => 'Install residential fiber',
@@ -42,10 +51,33 @@ class WorkOrderTest extends TestCase
         $workOrder = WorkOrder::withoutGlobalScopes()->firstOrFail();
         $this->assertSame($tenant->id, $workOrder->tenant_id);
         $this->assertNull($workOrder->subscription_id);
+        $this->assertSame($team->id, $workOrder->assigned_team_id);
+        $this->assertSame($admin->id, $workOrder->assigned_user_id);
         $this->assertSame(WorkOrderStatus::Draft, $workOrder->status);
         $this->assertStringStartsWith('WO-', $workOrder->work_order_number);
         $this->assertSame(5, $workOrder->tasks()->count());
         $this->assertDatabaseHas('work_order_events', ['work_order_id' => $workOrder->id, 'event_type' => 'work_order.created']);
+    }
+
+    public function test_work_order_cannot_be_created_with_member_outside_selected_team(): void
+    {
+        [$tenant, $admin, $customer] = $this->context('alpha');
+        $team = $this->team($tenant);
+        $otherMember = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'support', 'status' => 'active']);
+
+        $this->actingAs($admin)->post(route('work-orders.store'), [
+            'customer_id' => $customer->id,
+            'assigned_team_id' => $team->id,
+            'assigned_user_id' => $otherMember->id,
+            'type' => WorkOrderType::NewInstallation->value,
+            'priority' => 'normal',
+            'title' => 'Install residential fiber',
+            'service_address_line1' => '10 Main Street',
+        ])->assertSessionHasErrors([
+            'assigned_user_id' => 'The selected member is not an active member of this team.',
+        ]);
+
+        $this->assertDatabaseCount('work_orders', 0);
     }
 
     public function test_admin_can_render_work_order_queue_and_detail(): void
@@ -166,6 +198,19 @@ class WorkOrderTest extends TestCase
             'customer_id' => $customer->id, 'created_by_user_id' => $admin->id,
             'type' => WorkOrderType::Other, 'priority' => 'normal', 'status' => WorkOrderStatus::Draft,
             'title' => 'Test work', 'service_address_line1' => '10 Main Street',
+        ]);
+    }
+
+    private function team(Tenant $tenant): TicketTeam
+    {
+        return TicketTeam::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Installations',
+            'slug' => 'installations',
+            'status' => 'active',
+            'assignment_strategy' => TicketTeam::STRATEGY_QUEUE,
+            'first_response_minutes' => 240,
+            'resolution_minutes' => 2880,
         ]);
     }
 }

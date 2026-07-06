@@ -277,6 +277,15 @@ class WorkOrderController extends Controller
             'plans' => Plan::query()->where('status', 'active')->orderBy('name')->get(),
             'types' => WorkOrderType::cases(),
             'priorities' => WorkOrderPriority::cases(),
+            'teams' => TicketTeam::query()
+                ->active()
+                ->with(['users' => fn ($query) => $query
+                    ->where('users.status', 'active')
+                    ->wherePivot('is_active', true)
+                    ->orderBy('users.name')])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
         ];
     }
 
