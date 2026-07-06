@@ -143,6 +143,11 @@ class Ticket extends Model
         return $this->hasMany(TicketEvent::class);
     }
 
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class, 'source_ticket_id');
+    }
+
     public function scopeOpen(Builder $query): Builder
     {
         return $query->whereNotIn('status', [self::STATUS_RESOLVED, self::STATUS_CLOSED]);

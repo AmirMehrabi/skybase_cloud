@@ -261,6 +261,31 @@ class TicketingTest extends TestCase
         $this->assertNull($ticket->fresh()->assigned_user_id);
     }
 
+    public function test_ticket_cannot_be_created_with_an_agent_outside_the_selected_team(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $team = $this->createTeam($tenant);
+        $unrelatedAgent = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'support', 'status' => 'active']);
+        $subscription = $this->createSubscription($tenant, $customer);
+
+        $this->actingAs($admin)
+            ->post(route('support.tickets.store'), [
+                'subscription_id' => $subscription->id,
+                'ticket_team_id' => $team->id,
+                'assigned_user_id' => $unrelatedAgent->id,
+                'priority' => Ticket::PRIORITY_NORMAL,
+                'subject' => 'Invalid assignment',
+                'message' => 'Do not create this ticket.',
+            ])
+            ->assertSessionHasErrors([
+                'assigned_user_id' => 'The selected agent is not an active member of this team.',
+            ]);
+
+        $this->assertDatabaseCount('tickets', 0);
+    }
+
     public function test_ticket_page_displays_pppoe_username_and_available_team_agents(): void
     {
         $tenant = $this->createTenant('alpha-net');

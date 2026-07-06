@@ -40,6 +40,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Support\TicketController as SupportTicketController;
 use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamController;
 use App\Http\Controllers\VpnUserController;
+use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
 
 $customerPortalRoutes = function (): void {
@@ -193,6 +194,24 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::get('/teams/{team}/edit', [SupportTicketTeamController::class, 'edit'])->name('teams.edit');
         Route::put('/teams/{team}', [SupportTicketTeamController::class, 'update'])->name('teams.update');
         Route::delete('/teams/{team}', [SupportTicketTeamController::class, 'destroy'])->name('teams.destroy');
+    });
+
+    Route::prefix('work-orders')->name('work-orders.')->group(function () {
+        Route::get('/', [WorkOrderController::class, 'index'])->name('index');
+        Route::get('/create', [WorkOrderController::class, 'create'])->name('create');
+        Route::post('/', [WorkOrderController::class, 'store'])->name('store');
+        Route::get('/{work_order}', [WorkOrderController::class, 'show'])->name('show');
+        Route::get('/{work_order}/edit', [WorkOrderController::class, 'edit'])->name('edit');
+        Route::put('/{work_order}', [WorkOrderController::class, 'update'])->name('update');
+        Route::patch('/{work_order}/assign', [WorkOrderController::class, 'assign'])->name('assign');
+        Route::post('/{work_order}/schedule', [WorkOrderController::class, 'schedule'])->name('schedule');
+        Route::patch('/{work_order}/transition', [WorkOrderController::class, 'transition'])->name('transition');
+        Route::patch('/{work_order}/tasks/{task}', [WorkOrderController::class, 'updateTask'])->name('tasks.update');
+        Route::post('/{work_order}/notes', [WorkOrderController::class, 'storeNote'])->name('notes.store');
+        Route::post('/{work_order}/materials', [WorkOrderController::class, 'storeMaterial'])->name('materials.store');
+        Route::post('/{work_order}/attachments', [WorkOrderController::class, 'storeAttachment'])->name('attachments.store');
+        Route::get('/{work_order}/attachments/{attachment}', [WorkOrderController::class, 'downloadAttachment'])->name('attachments.download');
+        Route::post('/{work_order}/provision', [WorkOrderController::class, 'provision'])->name('provision');
     });
 
     // Customer Management Routes

@@ -8,6 +8,7 @@ use App\Models\TicketTeam;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreTicketRequest extends FormRequest
 {
@@ -42,6 +43,33 @@ class StoreTicketRequest extends FormRequest
             'message' => ['required', 'string', 'max:10000'],
             'attachments' => ['nullable', 'array', 'max:5'],
             'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,gif,webp,pdf,txt,csv,doc,docx,xls,xlsx'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if (! $this->filled('assigned_user_id') || ! $this->filled('ticket_team_id')) {
+                    return;
+                }
+
+                $tenantId = tenant_id() ?? $this->user()?->tenant_id;
+                $isActiveTeamMember = TicketTeam::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereKey($this->integer('ticket_team_id'))
+                    ->whereHas('users', function ($query) use ($tenantId): void {
+                        $query->where('users.tenant_id', $tenantId)
+                            ->where('users.id', $this->integer('assigned_user_id'))
+                            ->where('users.status', 'active')
+                            ->where('ticket_team_user.is_active', true);
+                    })
+                    ->exists();
+
+                if (! $isActiveTeamMember) {
+                    $validator->errors()->add('assigned_user_id', 'The selected agent is not an active member of this team.');
+                }
+            },
         ];
     }
 }

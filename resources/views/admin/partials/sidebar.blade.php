@@ -3,6 +3,7 @@
     $sidebarUser = auth()->user();
     $can = fn (string $route): bool => $sidebarUser?->canAccessRoute($route) ?? false;
     $canSupport = $can('support.tickets.index') || $can('support.teams.index');
+    $canWorkOrders = $can('work-orders.index');
     $canBilling = $can('billing.dashboard') || $can('billing.invoices.index') || $can('billing.payments.index') || $can('billing.credits') || $can('billing.reports');
     $canNetwork = $can('ipam.dashboard') || $can('sites.index') || $can('routers.index') || $can('access-points.index') || $can('vpn-users.index') || $can('network.bandwidth') || $can('network.data-usage') || $can('network.status') || $can('network.monitoring');
     $canReports = $can('reports.usage') || $can('reports.financial');
@@ -87,6 +88,18 @@
             </a>
             @endif
         </div>
+    </li>
+    @endif
+
+    @if($canWorkOrders)
+    <li>
+        <a href="{{ route('work-orders.index') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg border text-sm font-medium transition {{ str_starts_with($currentRoute, 'work-orders.') ? 'border-white/15 bg-white/[0.12] text-white shadow-sm' : 'border-transparent text-teal-50/85 hover:border-white/10 hover:bg-white/10 hover:text-white' }}">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5h6m-6 4h6m-7 4h8m-9 8h10a2 2 0 002-2V5a2 2 0 00-2-2h-3.2a2 2 0 00-3.6 0H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <span>Work Orders</span>
+        </a>
     </li>
     @endif
 

@@ -189,6 +189,11 @@ class Subscription extends Model implements LdapImportable
         return $this->hasMany(Ticket::class);
     }
 
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class);
+    }
+
     public function ipRoutes(): HasMany
     {
         return $this->hasMany(SubscriptionIpRoute::class);
