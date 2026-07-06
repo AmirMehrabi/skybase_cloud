@@ -175,6 +175,86 @@ class RadiusAccountingUsageService
     }
 
     /**
+     * Return daily subscriber and NAS aggregates without loading raw accounting
+     * sessions into PHP memory.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function dailyUsageForTenant(string $tenantId, CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        $subscriptions = $this->pppoeSubscriptionsForTenant($tenantId);
+
+        if (! $this->canReadAccounting() || $subscriptions->isEmpty()) {
+            return collect();
+        }
+
+        $subscriptionsByUsername = $subscriptions->keyBy(fn (Subscription $subscription): string => (string) $subscription->pppoe_username);
+        $routers = $this->routersForTenant($tenantId);
+        $activityExpression = 'coalesce(acctstoptime, acctupdatetime, acctstarttime)';
+        $dateExpression = $this->bucketExpression($activityExpression, 'day');
+        $downloadExpression = $this->bytesExpression('acctoutputoctets', 'acctoutputgigawords');
+        $uploadExpression = $this->bytesExpression('acctinputoctets', 'acctinputgigawords');
+
+        return $this->accountingQuery($subscriptionsByUsername->keys())
+            ->whereBetween(DB::raw($activityExpression), [$from, $to])
+            ->select(['username', 'nasipaddress'])
+            ->selectRaw('max(framedipaddress) as framedipaddress')
+            ->selectRaw("{$dateExpression} as usage_date")
+            ->selectRaw("sum({$downloadExpression}) as download_bytes")
+            ->selectRaw("sum({$uploadExpression}) as upload_bytes")
+            ->selectRaw('sum(coalesce(acctsessiontime, 0)) as duration_seconds')
+            ->selectRaw('count(*) as session_count')
+            ->selectRaw('sum(case when acctstoptime is null then 1 else 0 end) as online_sessions')
+            ->selectRaw("max({$activityExpression}) as last_activity_at")
+            ->groupBy(['username', 'nasipaddress'])
+            ->groupByRaw($dateExpression)
+            ->orderByDesc('usage_date')
+            ->get()
+            ->map(function (object $row) use ($subscriptionsByUsername, $routers): ?array {
+                $subscription = $subscriptionsByUsername->get((string) $row->username);
+
+                if (! $subscription instanceof Subscription) {
+                    return null;
+                }
+
+                $customer = $subscription->customer;
+                $plan = $subscription->plan;
+                $router = $subscription->router ?? $routers->get($row->nasipaddress);
+                $download = (int) $row->download_bytes;
+                $upload = (int) $row->upload_bytes;
+                $duration = (int) $row->duration_seconds;
+                $lastActivity = $this->dateValue($row->last_activity_at);
+
+                return [
+                    'id' => implode(':', [$subscription->id, $row->nasipaddress, $row->usage_date]),
+                    'customer' => $customer?->full_name ?? 'Unknown customer',
+                    'customer_id' => $customer?->id,
+                    'customer_code' => $customer?->customer_code ?? '-',
+                    'subscription' => $subscription->subscription_code,
+                    'subscription_id' => $subscription->id,
+                    'plan' => $plan?->name ?? 'Unassigned plan',
+                    'router' => $router?->name ?? ($row->nasipaddress ?: 'Unknown NAS'),
+                    'router_id' => $router?->id,
+                    'ip_address' => $row->framedipaddress ?: ($subscription->ip_address ?? '-'),
+                    'download' => $download,
+                    'upload' => $upload,
+                    'total' => $download + $upload,
+                    'quota' => $this->quotaBytes($plan),
+                    'duration' => $this->formatDuration($duration),
+                    'duration_seconds' => $duration,
+                    'sessions' => (int) $row->session_count,
+                    'online_sessions' => (int) $row->online_sessions,
+                    'status' => (int) $row->online_sessions > 0 ? 'online' : 'offline',
+                    'last_activity' => $lastActivity?->diffForHumans() ?? 'No activity',
+                    'last_activity_date' => (string) $row->usage_date,
+                    'last_activity_date_label' => $lastActivity?->format('M j, Y') ?? 'No usage yet',
+                ];
+            })
+            ->filter()
+            ->values();
+    }
+
+    /**
      * @return Collection<int, array<string, mixed>>
      */
     public function groupedUsageForTenant(string $tenantId, ?CarbonInterface $from = null, ?CarbonInterface $to = null): Collection
@@ -238,7 +318,9 @@ class RadiusAccountingUsageService
             'peakUsage' => (int) ($peak['total'] ?? 0),
             'peakDate' => $peak['last_activity_date_label'] ?? 'No usage yet',
             'activeUsers' => $customers->count(),
-            'onlineSessions' => $sessions->where('status', 'online')->count(),
+            'onlineSessions' => $sessions->contains(fn (array $session): bool => array_key_exists('online_sessions', $session))
+                ? (int) $sessions->sum('online_sessions')
+                : $sessions->where('status', 'online')->count(),
         ];
     }
 

@@ -110,7 +110,7 @@ class NetworkController extends Controller
     public function dataUsage(): View
     {
         $tenantId = $this->tenantId();
-        $sessions = $this->radiusAccountingUsage->sessionsForTenant($tenantId, now()->subYear()->startOfDay(), now());
+        $sessions = $this->radiusAccountingUsage->dailyUsageForTenant($tenantId, now()->subYear()->startOfDay(), now());
         $usageData = $sessions->map(fn (array $session): array => $this->usageRow($session))->values();
         $summary = $this->radiusAccountingUsage->summary($sessions);
         $todaySessions = $sessions->filter(fn (array $session): bool => ($session['last_activity_date'] ?? null) === now()->toDateString());
@@ -336,7 +336,7 @@ class NetworkController extends Controller
             'quota' => $session['quota'],
             'sessionTime' => $session['duration'],
             'sessionSeconds' => $session['duration_seconds'],
-            'sessions' => 1,
+            'sessions' => $session['sessions'] ?? 1,
             'lastActivity' => $session['last_activity'],
             'lastActivityDate' => $session['last_activity_date'],
             'plan' => $session['plan'],
@@ -364,7 +364,7 @@ class NetworkController extends Controller
                     'maxUsage' => max($download, $upload, 1),
                     'sessionSeconds' => (int) $rows->sum('sessionSeconds'),
                     'sessionTime' => $this->radiusAccountingUsage->formatDuration((int) $rows->sum('sessionSeconds')),
-                    'sessions' => $rows->count(),
+                    'sessions' => (int) $rows->sum('sessions'),
                     'lastActivity' => $last['lastActivity'] ?? 'No usage yet',
                     'lastActivityDate' => $last['lastActivityDate'] ?? null,
                 ];

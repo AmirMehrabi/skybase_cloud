@@ -20,7 +20,26 @@ class RadiusAccountingUsageServiceTest extends TestCase
     public function test_it_maps_radius_accounting_sessions_to_tenant_subscriptions_by_pppoe_username(): void
     {
         $tenant = $this->createTenant();
-        $customer = Customer::factory()->create(['tenant_id' => $tenant->id]);
+        $customer = Customer::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-ALPHA',
+            'customer_type' => 'individual',
+            'first_name' => 'Alpha',
+            'last_name' => 'Customer',
+            'name' => 'Alpha Customer',
+            'email' => 'customer@example.com',
+            'mobile' => '555-0100',
+            'address_line1' => '10 Main Street',
+            'city' => 'Tehran',
+            'country' => 'Iran',
+            'status' => 'active',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 0,
+            'tax_exempt' => false,
+            'password' => 'password123',
+        ]);
         $plan = Plan::factory()->create(['status' => 'active', 'data_limit' => 100, 'data_unit' => 'GB', 'unlimited' => false]);
         $router = Router::factory()->create(['tenant_id' => $tenant->id, 'ip_address' => '10.0.0.1']);
         $subscription = Subscription::withoutEvents(fn (): Subscription => Subscription::create([
@@ -72,6 +91,15 @@ class RadiusAccountingUsageServiceTest extends TestCase
         $this->assertSame(2048, $sessions->first()['download']);
         $this->assertSame(1024, $sessions->first()['upload']);
         $this->assertSame('172.16.0.10', $sessions->first()['ip_address']);
+
+        $dailyUsage = app(RadiusAccountingUsageService::class)->dailyUsageForTenant($tenant->id, now()->subDay(), now());
+
+        $this->assertCount(1, $dailyUsage);
+        $this->assertSame($subscription->id, $dailyUsage->first()['subscription_id']);
+        $this->assertSame(2048, $dailyUsage->first()['download']);
+        $this->assertSame(1024, $dailyUsage->first()['upload']);
+        $this->assertSame(1, $dailyUsage->first()['sessions']);
+        $this->assertSame(1, $dailyUsage->first()['online_sessions']);
     }
 
     private function createTenant(): Tenant
