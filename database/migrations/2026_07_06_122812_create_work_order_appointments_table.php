@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('work_order_appointments');
+
         Schema::create('work_order_appointments', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id');
@@ -28,8 +30,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
 
-            $table->index(['tenant_id', 'starts_at', 'status']);
-            $table->index(['tenant_id', 'assigned_user_id', 'starts_at']);
+            $table->index(['tenant_id', 'starts_at', 'status'], 'wo_appt_tenant_start_status_idx');
+            $table->index(['tenant_id', 'assigned_user_id', 'starts_at'], 'wo_appt_tenant_user_start_idx');
         });
     }
 
