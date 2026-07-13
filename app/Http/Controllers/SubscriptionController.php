@@ -37,6 +37,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -871,15 +872,34 @@ class SubscriptionController extends Controller
     public function liveBandwidth(Subscription $subscription, SubscriptionBandwidthCollector $collector, RrdToolService $rrdTool): JsonResponse
     {
         $this->authorizeTenantAccess($subscription);
-        $state = $subscription->bandwidthState;
-        $stale = ! $state?->sampled_at || $state->sampled_at->lte(now()->subSeconds((int) config('monitoring.subscription_live_ttl_seconds')));
 
-        if ($stale) {
-            $collector->collect($subscription->fresh(['router']));
-            $state = $subscription->fresh('bandwidthState')->bandwidthState;
+        $cacheTtl = (int) config('monitoring.subscription_live_ttl_seconds', 10);
+        $cacheKey = 'bandwidth:live:'.$subscription->tenant_id.':'.$subscription->id;
+        $lockKey = 'bandwidth:collect:'.$subscription->tenant_id.':'.$subscription->id;
+
+        $cached = Cache::get($cacheKey);
+
+        if ($cached !== null) {
+            return response()->json($cached);
         }
 
-        return response()->json([
+        $state = $subscription->bandwidthState;
+        $stale = ! $state?->sampled_at || $state->sampled_at->lte(now()->subSeconds($cacheTtl));
+
+        if ($stale) {
+            $lock = Cache::lock($lockKey, 15);
+
+            if ($lock->get()) {
+                try {
+                    $collector->collect($subscription->fresh(['router']), 5);
+                    $state = $subscription->fresh('bandwidthState')->bandwidthState;
+                } finally {
+                    $lock->release();
+                }
+            }
+        }
+
+        $payload = [
             'rx_bps' => (int) ($state?->rx_bps ?? 0),
             'tx_bps' => (int) ($state?->tx_bps ?? 0),
             'interface_name' => $state?->interface_name,
@@ -889,7 +909,11 @@ class SubscriptionController extends Controller
             'rrd_available' => $rrdTool->subscriptionBandwidthFileExists($subscription),
             'last_sampled_at' => $state?->sampled_at?->toIso8601String(),
             'stale' => ! $state?->last_success_at || $state->last_success_at->lte(now()->subMinutes(3)),
-        ]);
+        ];
+
+        Cache::put($cacheKey, $payload, $cacheTtl);
+
+        return response()->json($payload);
     }
 
     public function bandwidthHistory(Request $request, Subscription $subscription, RrdToolService $rrdTool): JsonResponse

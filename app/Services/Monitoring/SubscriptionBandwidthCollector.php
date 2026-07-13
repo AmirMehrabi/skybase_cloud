@@ -19,7 +19,7 @@ class SubscriptionBandwidthCollector
     /**
      * @return array<string, mixed>
      */
-    public function collect(Subscription $subscription): array
+    public function collect(Subscription $subscription, ?int $timeoutSeconds = null): array
     {
         $subscription->loadMissing('router');
         $sampledAt = now();
@@ -41,13 +41,13 @@ class SubscriptionBandwidthCollector
                 // PPPoE: try RouterOS API first, then RADIUS accounting fallback
                 if ($router && $router->isMikrotik() && $router->api_username && $router->api_password) {
                     try {
-                        $interface = $this->routerOsMonitoring->activePppInterface($router, (string) $subscription->pppoe_username);
+                        $interface = $this->routerOsMonitoring->activePppInterface($router, (string) $subscription->pppoe_username, $timeoutSeconds);
 
                         if (! $interface) {
                             throw new MonitoringStorageUnavailable('No active RouterOS PPP session was found.');
                         }
 
-                        $traffic = $this->routerOsMonitoring->interfaceTraffic($router, $interface);
+                        $traffic = $this->routerOsMonitoring->interfaceTraffic($router, $interface, $timeoutSeconds);
                         $sample['interface_name'] = $interface;
                         $sample['rx_bps'] = $traffic['rx_bps'];
                         $sample['tx_bps'] = $traffic['tx_bps'];

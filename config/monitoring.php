@@ -20,5 +20,5 @@ return [
     'cache_seconds' => (int) env('MONITORING_CACHE_SECONDS', 5),
     'router_latency_warning_ms' => (float) env('MONITORING_ROUTER_LATENCY_WARNING_MS', 120),
     'router_packet_loss_warning_percent' => (float) env('MONITORING_ROUTER_PACKET_LOSS_WARNING', 5),
-    'subscription_live_ttl_seconds' => (int) env('MONITORING_SUBSCRIPTION_LIVE_TTL', 5),
+    'subscription_live_ttl_seconds' => (int) env('MONITORING_SUBSCRIPTION_LIVE_TTL', 10),
 ];

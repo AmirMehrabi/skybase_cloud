@@ -33,7 +33,7 @@ class RouterOsMonitoringService
         });
     }
 
-    public function activePppInterface(Router $router, string $username): ?string
+    public function activePppInterface(Router $router, string $username, ?int $timeoutSeconds = null): ?string
     {
         return $this->client->execute($router, function ($connection, RouterOsClient $client) use ($username): ?string {
             $client->writeSentence($connection, [
@@ -45,13 +45,13 @@ class RouterOsMonitoringService
             $session = $client->readResponse($connection)[0] ?? null;
 
             return $session['interface'] ?? null;
-        });
+        }, $timeoutSeconds);
     }
 
     /**
      * @return array{rx_bps: int, tx_bps: int, source: string}
      */
-    public function interfaceTraffic(Router $router, string $interface): array
+    public function interfaceTraffic(Router $router, string $interface, ?int $timeoutSeconds = null): array
     {
         return $this->client->execute($router, function ($connection, RouterOsClient $client) use ($interface): array {
             $client->writeSentence($connection, [
@@ -67,7 +67,7 @@ class RouterOsMonitoringService
                 'tx_bps' => (int) ($traffic['tx-bits-per-second'] ?? 0),
                 'source' => 'routeros',
             ];
-        });
+        }, $timeoutSeconds);
     }
 
     /**

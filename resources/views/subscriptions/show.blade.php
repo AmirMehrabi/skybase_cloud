@@ -155,7 +155,7 @@
         initBandwidth() {
             this.loadBandwidthHistory();
             this.refreshLiveBandwidth();
-            this.bandwidth.timer = setInterval(() => this.refreshLiveBandwidth(), 5000);
+            this.bandwidth.timer = setInterval(() => this.refreshLiveBandwidth(), 10000);
             setInterval(() => this.loadBandwidthHistory(false), 300000);
         },
         async copyCredential(field, value) {
