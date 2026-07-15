@@ -19,7 +19,6 @@ use App\Models\AccessPoint;
 use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\Router;
-use App\Models\Subscription;
 use App\Models\TicketTeam;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAttachment;
@@ -272,8 +271,11 @@ class WorkOrderController extends Controller
         $tenantId = tenant_id() ?? $request->user()?->tenant_id;
 
         return [
-            'customers' => Customer::query()->where('tenant_id', $tenantId)->orderBy('name')->get(),
-            'subscriptions' => Subscription::query()->where('tenant_id', $tenantId)->with('customer')->latest()->get(),
+            'customers' => Customer::query()
+                ->where('tenant_id', $tenantId)
+                ->with(['subscriptions' => fn ($query) => $query->latest()])
+                ->orderBy('name')
+                ->get(),
             'plans' => Plan::query()->where('status', 'active')->orderBy('name')->get(),
             'types' => WorkOrderType::cases(),
             'priorities' => WorkOrderPriority::cases(),

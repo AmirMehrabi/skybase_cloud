@@ -97,6 +97,34 @@ class WorkOrderTest extends TestCase
             ->assertSee('Customer and service');
     }
 
+    public function test_create_form_only_exposes_subscriptions_for_the_selected_customer(): void
+    {
+        [$tenant, $admin, $customer] = $this->context('alpha');
+        $subscription = Subscription::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'subscription_code' => 'SUB-ALPHA1',
+            'connection_type' => 'dhcp',
+            'base_price' => 100,
+            'discount_amount' => 0,
+            'discount_type' => 'none',
+            'tax_amount' => 0,
+            'total_price' => 100,
+            'billing_cycle' => 'monthly',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'start_date' => now(),
+            'pppoe_username' => 'jane.fiber',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('work-orders.create'));
+
+        $response->assertOk()
+            ->assertSee('subscriptionsByCustomer')
+            ->assertSee('jane.fiber')
+            ->assertDontSee('>jane.fiber</option>', false);
+    }
+
     public function test_subscription_required_work_type_is_rejected_without_subscription(): void
     {
         [, $admin, $customer] = $this->context('alpha');

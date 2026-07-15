@@ -7,6 +7,7 @@
     'placeholder' => null,
     'required' => false,
     'xModel' => null,
+    'xChange' => null,
 ])
 
 @php
@@ -28,6 +29,7 @@
         name="{{ $name }}"
         @if($required) required @endif
         @if($xModel) x-model="{{ $xModel }}" @endif
+        @if($xChange) @change="{{ $xChange }}" @endif
         @error($name)
             class="mt-1 block w-full rounded-lg border border-red-500 bg-white px-3 py-3 text-slate-950 shadow-sm focus:border-transparent focus:ring-2 focus:ring-emerald-600 sm:text-sm"
         @else

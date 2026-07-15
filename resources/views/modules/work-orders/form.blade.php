@@ -4,6 +4,15 @@
     action="{{ $editing ? route('work-orders.update', $workOrder) : route('work-orders.store') }}"
     class="space-y-6"
     x-data="{
+        selectedCustomerId: @js((string) old('customer_id', $workOrder->customer_id ?? request('customer_id', ''))),
+        selectedSubscriptionId: @js((string) old('subscription_id', $workOrder->subscription_id ?? '')),
+        subscriptionsByCustomer: @js($customers->mapWithKeys(fn($customer) => [(string) $customer->id => $customer->subscriptions->map(fn($subscription) => ['id' => (string) $subscription->id, 'label' => ($subscription->pppoe_username ?: $subscription->subscription_code).' — '.$customer->full_name])->values()])),
+        get availableSubscriptions() { return this.subscriptionsByCustomer[this.selectedCustomerId] || []; },
+        changeCustomer() {
+            if (!this.availableSubscriptions.some(subscription => subscription.id === this.selectedSubscriptionId)) {
+                this.selectedSubscriptionId = '';
+            }
+        },
         selectedTeamId: @js((string) old('assigned_team_id', $workOrder->assigned_team_id ?? '')),
         selectedUserId: @js((string) old('assigned_user_id', $workOrder->assigned_user_id ?? '')),
         teamMembers: @js($teams->mapWithKeys(fn($team) => [(string) $team->id => $team->users->map(fn($user) => ['id' => (string) $user->id, 'name' => $user->name])->values()])),
@@ -25,8 +34,20 @@
     <section class="border border-slate-900/10 bg-white p-6 shadow-sm">
         <h2 class="text-lg font-bold text-slate-950">Customer and scope</h2>
         <div class="mt-5 grid gap-5 md:grid-cols-2">
-            <x-input.select id="customer_id" name="customer_id" label="Customer" :value="old('customer_id', $workOrder->customer_id ?? request('customer_id'))" :options="$customers->mapWithKeys(fn($customer) => [$customer->id => $customer->full_name])->all()" required />
-            <x-input.select id="subscription_id" name="subscription_id" label="Existing subscription (when applicable)" :value="old('subscription_id', $workOrder->subscription_id ?? null)" :options="$subscriptions->mapWithKeys(fn($subscription) => [$subscription->id => ($subscription->pppoe_username ?: $subscription->subscription_code).' — '.$subscription->customer?->full_name])->all()" />
+            <x-input.select id="customer_id" name="customer_id" label="Customer" x-model="selectedCustomerId" x-change="changeCustomer" :value="old('customer_id', $workOrder->customer_id ?? request('customer_id'))" :options="$customers->mapWithKeys(fn($customer) => [$customer->id => $customer->full_name])->all()" required />
+            <div class="mb-4">
+                <label for="subscription_id" class="block text-sm font-medium text-slate-700">Existing subscription (when applicable)</label>
+                <select id="subscription_id" name="subscription_id" x-model="selectedSubscriptionId" class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-slate-950 shadow-sm focus:border-transparent focus:ring-2 focus:ring-emerald-600 sm:text-sm @error('subscription_id') border-red-500 @enderror">
+                    <option value="">Select a customer first</option>
+                    <template x-if="selectedCustomerId && availableSubscriptions.length === 0">
+                        <option value="">No subscriptions for this customer</option>
+                    </template>
+                    <template x-for="subscription in availableSubscriptions" :key="subscription.id">
+                        <option :value="subscription.id" x-text="subscription.label"></option>
+                    </template>
+                </select>
+                @error('subscription_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
             <x-input.select id="type" name="type" label="Work type" :value="old('type', isset($workOrder) ? $workOrder->type->value : 'new_installation')" :options="collect($types)->mapWithKeys(fn($type) => [$type->value => str($type->value)->replace('_', ' ')->headline()->toString()])->all()" required />
             <x-input.select id="priority" name="priority" label="Priority" :value="old('priority', isset($workOrder) ? $workOrder->priority->value : 'normal')" :options="collect($priorities)->mapWithKeys(fn($priority) => [$priority->value => ucfirst($priority->value)])->all()" required />
             <div class="md:col-span-2"><x-input.text id="title" name="title" label="Title" :value="old('title', $workOrder->title ?? '')" required /></div>
