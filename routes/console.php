@@ -48,5 +48,5 @@ Schedule::command('monitoring:prune-orphans')
 Schedule::command('model:prune', [
     '--model' => [RadiusPostAuthRecord::class],
 ])
-    ->everyMinute()
+    ->everyFiveMinutes()
     ->withoutOverlapping();
