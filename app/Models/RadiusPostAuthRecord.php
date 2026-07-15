@@ -10,7 +10,7 @@ class RadiusPostAuthRecord extends Model
 {
     use MassPrunable;
 
-    public const RETENTION_MINUTES = 20;
+    public const RETENTION_MINUTES = 5;
 
     protected $table = 'radpostauth';
 
