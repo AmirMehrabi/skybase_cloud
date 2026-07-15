@@ -66,6 +66,12 @@
                     @foreach($modules as $moduleKey => $module)
                         <tr>
                             <td class="px-6 py-4">
+                                @foreach(array_diff(array_keys($module['actions']), ['read', 'write', 'delete', 'actions']) as $action)
+                                    @php($permission = "{$moduleKey}.{$action}")
+                                    @if($hasFullAccess || in_array($permission, $selectedPermissions, true))
+                                        <input type="hidden" name="permissions[]" value="{{ $permission }}">
+                                    @endif
+                                @endforeach
                                 <div class="text-sm font-semibold text-gray-900">{{ $module['label'] }}</div>
                                 <div class="mt-1 text-xs text-gray-500">{{ $module['description'] }}</div>
                             </td>
@@ -77,7 +83,7 @@
                                             type="checkbox"
                                             name="permissions[]"
                                             value="{{ $permission }}"
-                                            @checked($hasFullAccess || in_array($permission, $selectedPermissions, true))
+                                            @checked($hasFullAccess || in_array($permission, $selectedPermissions, true) || ($moduleKey === 'work_orders' && $action === 'write' && (in_array('work_orders.create', $selectedPermissions, true) || in_array('work_orders.update', $selectedPermissions, true))) || ($moduleKey === 'work_orders' && $action === 'delete' && in_array('work_orders.manage', $selectedPermissions, true)))
                                             :disabled="fullAccess"
                                             class="h-4 w-4 rounded border-gray-300 text-blue-600 disabled:opacity-40"
                                         >

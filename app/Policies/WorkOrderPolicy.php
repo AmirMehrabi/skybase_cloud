@@ -23,12 +23,12 @@ class WorkOrderPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasPermission('work_orders.create');
+        return $user->hasPermission('work_orders.write');
     }
 
     public function update(User $user, WorkOrder $workOrder): bool
     {
-        return $this->view($user, $workOrder) && $user->hasPermission('work_orders.update');
+        return $this->view($user, $workOrder) && $user->hasPermission('work_orders.write');
     }
 
     public function assign(User $user, WorkOrder $workOrder): bool
@@ -63,7 +63,7 @@ class WorkOrderPolicy
 
     public function delete(User $user, WorkOrder $workOrder): bool
     {
-        return $this->sameTenant($user, $workOrder) && $user->hasPermission('work_orders.manage');
+        return $this->sameTenant($user, $workOrder) && $user->hasPermission('work_orders.delete');
     }
 
     private function sameTenant(User $user, WorkOrder $workOrder): bool

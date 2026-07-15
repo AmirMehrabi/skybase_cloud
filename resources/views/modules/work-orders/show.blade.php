@@ -20,6 +20,12 @@
                 @can('update', $workOrder)
                     @if($workOrder->status === App\Enums\WorkOrderStatus::Draft)<a href="{{ route('work-orders.edit', $workOrder) }}" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700">Edit draft</a>@endif
                 @endcan
+                @can('delete', $workOrder)
+                    <form method="POST" action="{{ route('work-orders.destroy', $workOrder) }}" onsubmit="return confirm('Delete this work order?');">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700">Delete</button>
+                    </form>
+                @endcan
             </div>
         </div>
     </header>

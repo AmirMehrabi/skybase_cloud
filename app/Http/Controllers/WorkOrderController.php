@@ -163,6 +163,14 @@ class WorkOrderController extends Controller
         return redirect()->route('work-orders.show', $workOrder)->with('success', 'Work order updated.');
     }
 
+    public function destroy(WorkOrder $workOrder): RedirectResponse
+    {
+        Gate::authorize('delete', $workOrder);
+        $workOrder->delete();
+
+        return redirect()->route('work-orders.index')->with('success', 'Work order deleted.');
+    }
+
     public function assign(AssignWorkOrderRequest $request, WorkOrder $workOrder, WorkOrderEventService $events): RedirectResponse
     {
         $old = $workOrder->only(['assigned_team_id', 'assigned_user_id']);

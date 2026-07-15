@@ -22,7 +22,7 @@ class PermissionRegistry
             'subscriptions' => ['label' => 'Subscriptions', 'description' => 'Services, connection operations, RADIUS, IP, and subscription billing', 'actions' => self::actions()],
             'support_tickets' => ['label' => 'Support Tickets', 'description' => 'View and respond to support tickets', 'actions' => self::actions(['read', 'write', 'actions'])],
             'support_teams' => ['label' => 'Support Teams', 'description' => 'Manage support teams and their members', 'actions' => self::actions()],
-            'work_orders' => ['label' => 'Work Orders', 'description' => 'Schedule, execute, and provision ISP field work', 'actions' => self::actions(['read', 'create', 'update', 'assign', 'schedule', 'execute', 'provision', 'complete', 'cancel', 'manage'])],
+            'work_orders' => ['label' => 'Work Orders', 'description' => 'Schedule, execute, and provision ISP field work', 'actions' => self::actions(['read', 'write', 'delete', 'create', 'update', 'assign', 'schedule', 'execute', 'provision', 'complete', 'cancel', 'manage'])],
             'plans' => ['label' => 'Plans', 'description' => 'Define and import or export service plans', 'actions' => self::actions()],
             'billing' => ['label' => 'Billing', 'description' => 'Billing dashboard, invoices, payments, credits, and financial reports', 'actions' => self::actions()],
             'ipam' => ['label' => 'IP Management', 'description' => 'IPAM dashboard, pools, IP addresses, and IP release actions', 'actions' => self::actions()],
@@ -69,6 +69,20 @@ class PermissionRegistry
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function equivalentPermissions(string $permission): array
+    {
+        return match ($permission) {
+            'work_orders.write' => ['work_orders.write', 'work_orders.create', 'work_orders.update'],
+            'work_orders.create', 'work_orders.update' => [$permission, 'work_orders.write'],
+            'work_orders.delete' => ['work_orders.delete', 'work_orders.manage'],
+            'work_orders.manage' => ['work_orders.manage', 'work_orders.delete'],
+            default => [$permission],
+        };
     }
 
     public static function routePermission(?string $routeName): ?string
@@ -121,8 +135,7 @@ class PermissionRegistry
                 'support_tickets.actions',
                 'support_teams.read',
                 'work_orders.read',
-                'work_orders.create',
-                'work_orders.update',
+                'work_orders.write',
                 'work_orders.assign',
                 'work_orders.schedule',
                 'work_orders.execute',
@@ -153,7 +166,7 @@ class PermissionRegistry
                 'network.read',
                 'network.actions',
                 'work_orders.read',
-                'work_orders.update',
+                'work_orders.write',
                 'work_orders.assign',
                 'work_orders.schedule',
                 'work_orders.execute',
@@ -252,17 +265,18 @@ class PermissionRegistry
             'work-orders.index' => 'work_orders.read',
             'work-orders.show' => 'work_orders.read',
             'work-orders.attachments.download' => 'work_orders.read',
-            'work-orders.create' => 'work_orders.create',
-            'work-orders.store' => 'work_orders.create',
-            'work-orders.edit' => 'work_orders.update',
-            'work-orders.update' => 'work_orders.update',
+            'work-orders.create' => 'work_orders.write',
+            'work-orders.store' => 'work_orders.write',
+            'work-orders.edit' => 'work_orders.write',
+            'work-orders.update' => 'work_orders.write',
+            'work-orders.destroy' => 'work_orders.delete',
             'work-orders.assign' => 'work_orders.assign',
             'work-orders.schedule' => 'work_orders.schedule',
             'work-orders.transition' => 'work_orders.execute',
             'work-orders.tasks.update' => 'work_orders.execute',
-            'work-orders.notes.store' => 'work_orders.update',
+            'work-orders.notes.store' => 'work_orders.write',
             'work-orders.materials.store' => 'work_orders.execute',
-            'work-orders.attachments.store' => 'work_orders.update',
+            'work-orders.attachments.store' => 'work_orders.write',
             'work-orders.provision' => 'work_orders.provision',
 
             'plans.index' => 'plans.read',

@@ -6,6 +6,7 @@ use App\Enums\WorkOrderStatus;
 use App\Enums\WorkOrderType;
 use App\Models\Customer;
 use App\Models\Plan;
+use App\Models\Role;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\Tenant;
@@ -78,6 +79,41 @@ class WorkOrderTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('work_orders', 0);
+    }
+
+    public function test_non_admin_with_work_order_write_and_delete_permissions_can_create_and_delete(): void
+    {
+        [$tenant, , $customer] = $this->context('alpha');
+        $role = Role::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Work Order Operator',
+            'permissions' => ['work_orders.read', 'work_orders.write', 'work_orders.delete'],
+        ]);
+        $user = User::factory()->create(['tenant_id' => $tenant->id, 'role' => $role->name, 'status' => 'active']);
+        $team = $this->team($tenant);
+        $team->users()->attach($user->id, [
+            'tenant_id' => $tenant->id,
+            'is_active' => true,
+            'accepts_auto_assignment' => false,
+        ]);
+
+        $this->actingAs($user)->get(route('work-orders.create'))->assertOk();
+        $this->actingAs($user)->post(route('work-orders.store'), [
+            'customer_id' => $customer->id,
+            'assigned_team_id' => $team->id,
+            'type' => WorkOrderType::NewInstallation->value,
+            'priority' => 'normal',
+            'title' => 'Install residential fiber',
+            'service_address_line1' => '10 Main Street',
+        ])->assertRedirect();
+
+        $workOrder = WorkOrder::withoutGlobalScopes()->firstOrFail();
+
+        $this->actingAs($user)
+            ->delete(route('work-orders.destroy', $workOrder))
+            ->assertRedirect(route('work-orders.index'));
+
+        $this->assertSoftDeleted('work_orders', ['id' => $workOrder->id]);
     }
 
     public function test_admin_can_render_work_order_queue_and_detail(): void

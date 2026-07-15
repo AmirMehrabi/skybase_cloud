@@ -203,6 +203,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::get('/{work_order}', [WorkOrderController::class, 'show'])->name('show');
         Route::get('/{work_order}/edit', [WorkOrderController::class, 'edit'])->name('edit');
         Route::put('/{work_order}', [WorkOrderController::class, 'update'])->name('update');
+        Route::delete('/{work_order}', [WorkOrderController::class, 'destroy'])->name('destroy');
         Route::patch('/{work_order}/assign', [WorkOrderController::class, 'assign'])->name('assign');
         Route::post('/{work_order}/schedule', [WorkOrderController::class, 'schedule'])->name('schedule');
         Route::patch('/{work_order}/transition', [WorkOrderController::class, 'transition'])->name('transition');

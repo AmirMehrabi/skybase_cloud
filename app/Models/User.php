@@ -140,14 +140,17 @@ class User extends Authenticatable
 
         $role = $this->resolvedRole();
 
+        $permissions = PermissionRegistry::equivalentPermissions($permission);
+
         if (! $role) {
             $permissions = PermissionRegistry::defaultRolePermissions()[$this->normalizedRoleName()] ?? [];
 
             return in_array('*', $permissions, true)
-                || in_array($permission, $permissions, true);
+                || collect(PermissionRegistry::equivalentPermissions($permission))
+                    ->contains(fn (string $candidate): bool => in_array($candidate, $permissions, true));
         }
 
-        return $role->hasPermission($permission);
+        return collect($permissions)->contains(fn (string $candidate): bool => $role->hasPermission($candidate));
     }
 
     public function canAccessRoute(?string $routeName): bool

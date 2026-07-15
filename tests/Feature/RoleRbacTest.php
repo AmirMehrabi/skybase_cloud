@@ -90,6 +90,23 @@ class RoleRbacTest extends TestCase
         $response->assertSee('Role Management');
     }
 
+    public function test_work_order_role_editor_exposes_write_and_delete_permissions(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $admin = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
+        $role = Role::create(['tenant_id' => $tenant->id, 'name' => 'Operator', 'permissions' => ['work_orders.read']]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.tenant.roles.edit', $role))
+            ->assertOk()
+            ->assertSee('value="work_orders.write"', false)
+            ->assertSee('value="work_orders.delete"', false);
+    }
+
     public function test_user_without_dashboard_permission_is_redirected_to_first_accessible_page(): void
     {
         $tenant = $this->createTenant('alpha-net');
