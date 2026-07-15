@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RadiusPostAuthRecord extends Model
 {
@@ -18,7 +17,6 @@ class RadiusPostAuthRecord extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'tenant_id',
         'username',
         'pass',
         'reply',
@@ -32,29 +30,9 @@ class RadiusPostAuthRecord extends Model
         ];
     }
 
-    public function tenant(): BelongsTo
-    {
-        return $this->belongsTo(Tenant::class);
-    }
-
     public function prunable(): Builder
     {
         return static::query()
             ->where('authdate', '<=', now()->subDays(self::RETENTION_DAYS));
-    }
-
-    protected static function booted(): void
-    {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
-            }
-        });
-
-        static::creating(function (RadiusPostAuthRecord $radiusPostAuthRecord): void {
-            if (auth()->check() && empty($radiusPostAuthRecord->tenant_id)) {
-                $radiusPostAuthRecord->tenant_id = auth()->user()->tenant_id;
-            }
-        });
     }
 }

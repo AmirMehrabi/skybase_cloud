@@ -956,8 +956,7 @@ class SubscriptionController extends Controller
         $pageName = 'radpostauth_page';
         $perPage = 10;
 
-        $query = RadiusPostAuthRecord::withoutGlobalScopes()
-            ->where('tenant_id', $subscription->tenant_id)
+        $query = RadiusPostAuthRecord::query()
             ->when(filled($subscription->pppoe_username), function ($query) use ($subscription): void {
                 $query->where('username', $subscription->pppoe_username);
             }, function ($query): void {

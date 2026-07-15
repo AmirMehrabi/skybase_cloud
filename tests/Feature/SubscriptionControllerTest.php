@@ -201,8 +201,7 @@ class SubscriptionControllerTest extends TestCase
         [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
 
         foreach (range(1, 11) as $index) {
-            RadiusPostAuthRecord::withoutGlobalScopes()->create([
-                'tenant_id' => $tenant->id,
+            RadiusPostAuthRecord::create([
                 'username' => $subscription->pppoe_username,
                 'pass' => 'secret-'.$index,
                 'reply' => $index % 2 === 0 ? "Access-Accept\nReply-Message = Welcome back" : "Access-Reject\nReply-Message = Invalid password",
@@ -231,16 +230,14 @@ class SubscriptionControllerTest extends TestCase
     {
         [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
 
-        RadiusPostAuthRecord::withoutGlobalScopes()->create([
-            'tenant_id' => $tenant->id,
+        RadiusPostAuthRecord::create([
             'username' => $subscription->pppoe_username,
             'pass' => 'old-secret',
             'reply' => 'Access-Reject',
             'authdate' => now()->subDays(31),
         ]);
 
-        RadiusPostAuthRecord::withoutGlobalScopes()->create([
-            'tenant_id' => $tenant->id,
+        RadiusPostAuthRecord::create([
             'username' => $subscription->pppoe_username,
             'pass' => 'recent-secret',
             'reply' => 'Access-Accept',
@@ -252,13 +249,11 @@ class SubscriptionControllerTest extends TestCase
         ])->assertExitCode(0);
 
         $this->assertDatabaseMissing('radpostauth', [
-            'tenant_id' => $tenant->id,
             'username' => $subscription->pppoe_username,
             'pass' => 'old-secret',
         ]);
 
         $this->assertDatabaseHas('radpostauth', [
-            'tenant_id' => $tenant->id,
             'username' => $subscription->pppoe_username,
             'pass' => 'recent-secret',
         ]);
@@ -268,8 +263,7 @@ class SubscriptionControllerTest extends TestCase
     {
         [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
 
-        RadiusPostAuthRecord::withoutGlobalScopes()->create([
-            'tenant_id' => $tenant->id,
+        RadiusPostAuthRecord::create([
             'username' => $subscription->pppoe_username,
             'pass' => 'retained-secret',
             'reply' => 'Access-Accept',
