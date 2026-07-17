@@ -11,6 +11,33 @@
 @php
     $releases = [
         [
+            'version' => '0.9.8',
+            'date' => 'July 18, 2026',
+            'title' => 'Work Orders, Smarter Support, and Smoother Operations',
+            'summary' => 'This release gives your team a clearer way to move customer work from request to completion, with a new work order workspace, better support ownership, faster usage reporting, and more reliable subscription management.',
+            'sections' => [
+                'Added' => [
+                    'A complete Work Orders workspace for installations, upgrades, repairs, surveys, and other field-service jobs.',
+                    'Work order checklists, appointments, team and technician assignment, notes, materials, and photo or document evidence in one place.',
+                    'A clear activity history so your team can see what changed, who handled it, and what still needs attention.',
+                    'Direct links between support tickets, customers, subscriptions, and the work needed to resolve an issue.',
+                    'Team and agent assignment for support tickets, with team queues when a ticket is not yet assigned to an individual.',
+                ],
+                'Changed' => [
+                    'Support tickets now offer Team tickets and My tickets views, alongside clearer filtering by status, team, and agent.',
+                    'Ticket pages now make customer, subscription, PPPoE, ownership, priority, SLA timing, replies, and internal notes easier to follow.',
+                    'Usage reporting now loads large histories more efficiently, making daily usage views more responsive as your network grows.',
+                    'Live subscription usage checks now avoid unnecessary repeated collection work, improving responsiveness during monitoring.',
+                ],
+                'Fixed' => [
+                    'Subscription editing now correctly loads the saved IP pool and primary IP address.',
+                    'IP pool subnet information now displays correctly instead of showing undefined values.',
+                    'Authentication attempts on subscription pages now remain visible and are cleaned up reliably over time.',
+                    'Work order and support permissions now better match each team member’s responsibilities.',
+                ],
+            ],
+        ],
+        [
             'version' => '0.9.7',
             'date' => 'July 3, 2026',
             'title' => 'Advanced Traffic Shaping, Customer Portal, and Usage Insights',
