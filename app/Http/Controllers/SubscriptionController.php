@@ -361,8 +361,8 @@ class SubscriptionController extends Controller
             ->with(['router', 'availableAddresses'])
             ->orderBy('name')
             ->get();
-        $currentIpPoolId = old('ip_pool_id', $subscription->ip_pool_id ?? $subscription->ipAddress?->ip_pool_id);
-        $currentIpAddress = old('ip_address', $subscription->ip_address ?? $subscription->ipAddress?->ip_address);
+        $currentIpPoolId = old('ip_pool_id', $subscription->ip_pool_id ?: $subscription->ipAddress?->ip_pool_id);
+        $currentIpAddress = old('ip_address', $subscription->ip_address ?: $subscription->ipAddress?->ip_address);
 
         return view('subscriptions.edit', compact('subscription', 'plans', 'routers', 'ipPools', 'currentIpPoolId', 'currentIpAddress'));
     }

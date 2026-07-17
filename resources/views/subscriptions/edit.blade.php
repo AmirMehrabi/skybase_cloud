@@ -38,7 +38,18 @@
     accessPointId: @js((string) old('access_point_id', $subscription->access_point_id ?? '')),
     ipPoolId: @js((string) $currentIpPoolId),
     ipAddress: @js((string) $currentIpAddress),
-    ipPools: @js($ipPools),
+    ipPools: @js($ipPools->map(fn ($pool) => [
+        'id' => (string) $pool->id,
+        'name' => $pool->name,
+        'router_id' => $pool->router_id ? (string) $pool->router_id : null,
+        'all_devices' => (bool) $pool->all_devices,
+        'cidr_notation' => $pool->cidr_notation,
+        'available_ips' => (int) $pool->available_ips,
+        'available_addresses' => $pool->availableAddresses->map(fn ($address) => [
+            'id' => $address->id,
+            'ip_address' => $address->ip_address,
+        ])->values()->all(),
+    ])->values()->all()),
     ipRoutes: @js($initialIpRoutes),
     billingEnabled: @js((bool) old('billing_enabled', $organizationBilling ? true : $subscription->billing_enabled)),
     autoSuspensionEnabled: @js((bool) old('auto_suspension_enabled', $subscription->auto_suspension_enabled)),
@@ -398,6 +409,13 @@ function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes
                     .then(data => { this.accessPoints = data; })
                     .catch(() => { this.accessPoints = []; });
             }
+
+            if (this.form.ip_pool_id && ! this.selectedIpPool) {
+                this.ipMessage = {
+                    type: 'error',
+                    text: 'The currently assigned IP pool is not available for this router.',
+                };
+            }
         },
         get canSuggestIp() {
             return this.availablePoolAddresses().length > 0;
@@ -407,7 +425,16 @@ function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes
                 return [];
             }
 
-            return this.ipPools.filter(pool => pool.all_devices || String(pool.router_id ?? '') === String(this.form.router_id));
+            const assignedPoolIds = new Set([
+                this.form.ip_pool_id,
+                ...this.ipRoutes.map(route => route.ip_pool_id),
+            ].filter(Boolean).map(poolId => String(poolId)));
+
+            return this.ipPools.filter(pool =>
+                pool.all_devices
+                || String(pool.router_id ?? '') === String(this.form.router_id)
+                || assignedPoolIds.has(String(pool.id))
+            );
         },
         routeIpPool(route) {
             if (! route.ip_pool_id) {

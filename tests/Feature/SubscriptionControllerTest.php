@@ -351,6 +351,9 @@ class SubscriptionControllerTest extends TestCase
         $editResponse->assertSee('Suggest free IP');
         $editResponse->assertSee('IP Pool Assignment');
         $editResponse->assertSee('IP Route');
+        $editResponse->assertSee('cidr_notation');
+        $editResponse->assertSee('10.10.0.0/24', false);
+        $editResponse->assertSee('10.10.0.11', false);
     }
 
     public function test_edit_page_allows_selecting_a_pool_when_no_pool_is_assigned(): void
