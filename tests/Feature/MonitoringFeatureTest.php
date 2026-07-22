@@ -10,6 +10,7 @@ use App\Models\Subscription;
 use App\Models\SubscriptionBandwidthState;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Monitoring\CustomerBandwidthUsageService;
 use App\Services\Monitoring\RouterHealthCollector;
 use App\Services\Monitoring\RrdToolService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -174,6 +175,81 @@ class MonitoringFeatureTest extends TestCase
             ->assertJsonPath('hasData', false)
             ->assertJsonPath('chartData', [])
             ->assertJsonMissing(['error']);
+    }
+
+    public function test_network_bandwidth_page_aggregates_subscription_state_by_router_and_tenant(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha-net');
+        $otherTenant = $this->createTenant('beta-net');
+        $subscription = $this->subscription($tenant);
+        $otherSubscription = $this->subscription($otherTenant);
+
+        SubscriptionBandwidthState::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'router_id' => $subscription->router_id,
+            'interface_name' => 'pppoe-alpha.user',
+            'rx_bps' => 12000000,
+            'tx_bps' => 3000000,
+            'source' => 'routeros',
+            'sampled_at' => now(),
+            'last_success_at' => now(),
+        ]);
+        SubscriptionBandwidthState::withoutGlobalScopes()->create([
+            'tenant_id' => $otherTenant->id,
+            'subscription_id' => $otherSubscription->id,
+            'router_id' => $otherSubscription->router_id,
+            'rx_bps' => 99000000,
+            'tx_bps' => 99000000,
+            'source' => 'routeros',
+            'sampled_at' => now(),
+            'last_success_at' => now(),
+        ]);
+
+        $this->mock(CustomerBandwidthUsageService::class)
+            ->shouldReceive('aggregate')
+            ->once()
+            ->andReturn([
+                'chartData' => [
+                    ['timestamp' => 1710000000, 'time' => '00:00', 'rx_bps' => 12000000, 'tx_bps' => 3000000, 'total_bps' => 15000000],
+                ],
+                'hasData' => true,
+            ]);
+        $this->mock(RrdToolService::class)
+            ->shouldReceive('isAvailable')
+            ->once()
+            ->andReturn(true);
+
+        $response = $this->actingAs($user)->getJson(route('network.bandwidth.data'));
+
+        $response->assertOk()
+            ->assertJsonPath('stats.downloadThroughput', 12000000)
+            ->assertJsonPath('stats.uploadThroughput', 3000000)
+            ->assertJsonPath('hasData', true)
+            ->assertJsonPath('routerBandwidth.0.download', 12000000)
+            ->assertJsonPath('routerBandwidth.0.upload', 3000000)
+            ->assertJsonMissing(['routerBandwidth.1']);
+    }
+
+    public function test_network_bandwidth_page_returns_empty_history_without_failing(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha-net');
+        $this->subscription($tenant);
+
+        $this->mock(CustomerBandwidthUsageService::class)
+            ->shouldReceive('aggregate')
+            ->once()
+            ->andReturn(['chartData' => [], 'hasData' => false]);
+        $this->mock(RrdToolService::class)
+            ->shouldReceive('isAvailable')
+            ->once()
+            ->andReturn(false);
+
+        $this->actingAs($user)
+            ->get(route('network.bandwidth'))
+            ->assertOk()
+            ->assertSee('No bandwidth samples are available')
+            ->assertSee('Historical chart storage is unavailable');
     }
 
     public function test_router_health_collection_command_uses_collector_for_due_monitored_routers(): void

@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\NetworkAlert;
-use App\Models\NetworkBandwidthSample;
 use App\Models\Router;
 use App\Models\RouterMonitoringState;
 use App\Models\Subscription;
+use App\Models\SubscriptionBandwidthState;
+use App\Services\Monitoring\CustomerBandwidthUsageService;
 use App\Services\Monitoring\RrdToolService;
 use App\Services\RadiusAccountingUsageService;
 use Illuminate\Contracts\View\View;
@@ -19,6 +20,7 @@ class NetworkController extends Controller
 {
     public function __construct(
         protected RadiusAccountingUsageService $radiusAccountingUsage,
+        protected CustomerBandwidthUsageService $customerBandwidthUsage,
     ) {}
 
     public function status(): View
@@ -76,35 +78,14 @@ class NetworkController extends Controller
 
     public function bandwidth(): View
     {
-        $tenantId = $this->tenantId();
-        $samples = NetworkBandwidthSample::query()
-            ->where('tenant_id', $tenantId)
-            ->with('router:id,name,ip_address')
-            ->where('sampled_at', '>=', now()->subDay())
-            ->orderBy('sampled_at')
-            ->get();
-
-        $latestByRouter = $samples
-            ->sortByDesc('sampled_at')
-            ->unique('router_id')
-            ->values();
-
-        $peakSample = $samples->sortByDesc(fn (NetworkBandwidthSample $sample): int => $sample->download_bps + $sample->upload_bps)->first();
-
-        $networkBandwidth = [
-            'stats' => [
-                'totalThroughput' => $latestByRouter->sum(fn (NetworkBandwidthSample $sample): int => $sample->download_bps + $sample->upload_bps),
-                'downloadThroughput' => $latestByRouter->sum('download_bps'),
-                'uploadThroughput' => $latestByRouter->sum('upload_bps'),
-                'peakUsage' => $peakSample ? $peakSample->download_bps + $peakSample->upload_bps : 0,
-                'peakTime' => $peakSample?->sampled_at?->format('H:i') ?? '—',
-            ],
-            'chartData' => $this->bandwidthChartData($samples),
-            'routerBandwidth' => $latestByRouter->map(fn (NetworkBandwidthSample $sample): array => $this->routerBandwidthRow($sample))->values(),
-            'interfaces' => $latestByRouter->map(fn (NetworkBandwidthSample $sample): array => $this->interfaceRow($sample))->values(),
-        ];
+        $networkBandwidth = $this->bandwidthPayload();
 
         return view('network.bandwidth', compact('networkBandwidth'));
+    }
+
+    public function bandwidthData(): JsonResponse
+    {
+        return response()->json($this->bandwidthPayload());
     }
 
     public function dataUsage(): View
@@ -269,51 +250,135 @@ class NetworkController extends Controller
         return $router->cpu_usage > 80 || $router->memory_usage > 80 ? 'warning' : 'online';
     }
 
-    private function bandwidthChartData(Collection $samples): Collection
+    /**
+     * @return array<string, mixed>
+     */
+    private function bandwidthPayload(): array
     {
-        return $samples
-            ->groupBy(fn (NetworkBandwidthSample $sample): string => $sample->sampled_at->format('H:00'))
-            ->map(fn (Collection $hourSamples, string $time): array => [
-                'time' => $time,
-                'download' => (int) round($hourSamples->avg('download_bps')),
-                'upload' => (int) round($hourSamples->avg('upload_bps')),
+        $tenantId = $this->tenantId();
+        $subscriptions = Subscription::query()
+            ->where('tenant_id', $tenantId)
+            ->active()
+            ->with('plan')
+            ->orderBy('id')
+            ->get();
+        $states = SubscriptionBandwidthState::query()
+            ->where('tenant_id', $tenantId)
+            ->whereHas('subscription', fn ($query) => $query->where('status', 'active'))
+            ->with([
+                'router:id,name,ip_address',
+                'subscription:id,subscription_code,plan_id',
+                'subscription.plan:id,name,download_speed,upload_speed,bandwidth_unit',
             ])
+            ->get();
+        $routers = Router::query()
+            ->where('tenant_id', $tenantId)
+            ->orderBy('name')
+            ->get(['id', 'name', 'ip_address']);
+        $byRouter = $states->groupBy('router_id');
+        $routerBandwidth = $routers->map(function (Router $router) use ($byRouter): array {
+            $routerStates = $byRouter->get($router->id, collect());
+            $download = (int) $routerStates->sum('rx_bps');
+            $upload = (int) $routerStates->sum('tx_bps');
+            $capacity = (int) $routerStates->sum(fn (SubscriptionBandwidthState $state): int => $this->planCapacity($state));
+            $lastSample = $routerStates->sortByDesc('sampled_at')->first();
+
+            return $this->routerBandwidthRow($router, $download, $upload, $capacity, $lastSample);
+        })->values();
+        $interfaceRows = $states
+            ->map(fn (SubscriptionBandwidthState $state): array => $this->interfaceRow($state))
             ->values();
-    }
-
-    private function routerBandwidthRow(NetworkBandwidthSample $sample): array
-    {
-        $total = $sample->download_bps + $sample->upload_bps;
-        $utilization = $sample->capacity_bps > 0 ? (int) round(($total / $sample->capacity_bps) * 100) : 0;
+        $history = $this->customerBandwidthUsage->aggregate($subscriptions, '24h');
+        $latest = $states->sortByDesc('sampled_at')->first();
+        $download = (int) $routerBandwidth->sum('download');
+        $upload = (int) $routerBandwidth->sum('upload');
+        $peak = collect($history['chartData'])->sortByDesc(fn (array $point): float => (float) ($point['total_bps'] ?? 0))->first();
 
         return [
-            'id' => $sample->router_id,
-            'name' => $sample->router?->name ?? 'Unknown router',
-            'ipAddress' => $sample->router?->ip_address ?? '—',
-            'interface' => $sample->interface_name,
-            'download' => $sample->download_bps,
-            'upload' => $sample->upload_bps,
+            'stats' => [
+                'totalThroughput' => $download + $upload,
+                'downloadThroughput' => $download,
+                'uploadThroughput' => $upload,
+                'peakUsage' => (int) ($peak['total_bps'] ?? 0),
+                'peakTime' => $peak['time'] ?? '—',
+                'lastSampledAt' => $latest?->sampled_at?->diffForHumans() ?? 'No samples yet',
+                'rrdAvailable' => app(RrdToolService::class)->isAvailable(),
+            ],
+            'chartData' => $history['chartData'],
+            'hasData' => $history['hasData'],
+            'routerBandwidth' => $routerBandwidth,
+            'interfaces' => $interfaceRows,
+        ];
+    }
+
+    private function routerBandwidthRow(Router $router, int $download, int $upload, int $capacity, ?SubscriptionBandwidthState $state): array
+    {
+        $total = $download + $upload;
+        $utilization = $capacity > 0 ? (int) round(($total / $capacity) * 100) : null;
+
+        return [
+            'id' => $router->id,
+            'name' => $router->name,
+            'ipAddress' => $router->ip_address ?? '—',
+            'interface' => $state?->interface_name ?? '—',
+            'download' => $download,
+            'upload' => $upload,
             'peak' => $total,
-            'capacity' => $sample->capacity_bps,
-            'utilization' => min($utilization, 100),
-            'status' => $utilization > 80 ? 'critical' : ($utilization > 60 ? 'warning' : 'optimal'),
+            'capacity' => $capacity,
+            'utilization' => $utilization,
+            'sampledAt' => $state?->sampled_at?->diffForHumans(),
+            'status' => $this->bandwidthStatus($state, $utilization),
         ];
     }
 
-    private function interfaceRow(NetworkBandwidthSample $sample): array
+    private function interfaceRow(SubscriptionBandwidthState $state): array
     {
-        $usage = $sample->download_bps + $sample->upload_bps;
-        $usagePercent = $sample->capacity_bps > 0 ? (int) round(($usage / $sample->capacity_bps) * 100) : 0;
+        $usage = (int) $state->rx_bps + (int) $state->tx_bps;
+        $capacity = $this->planCapacity($state);
+        $usagePercent = $capacity > 0 ? (int) round(($usage / $capacity) * 100) : null;
 
         return [
-            'id' => $sample->id,
-            'name' => $sample->interface_name,
-            'router' => $sample->router?->name ?? 'Unknown router',
-            'capacity' => $sample->capacity_bps,
+            'id' => $state->id,
+            'name' => $state->interface_name ?? 'Subscription interface',
+            'subscription' => $state->subscription?->subscription_code ?? '—',
+            'router' => $state->router?->name ?? 'Unknown router',
+            'capacity' => $capacity,
             'usage' => $usage,
-            'usagePercent' => min($usagePercent, 100),
-            'status' => $usagePercent > 80 ? 'error' : ($usagePercent > 60 ? 'warning' : 'active'),
+            'usagePercent' => $usagePercent,
+            'sampledAt' => $state->sampled_at?->diffForHumans(),
+            'status' => $this->bandwidthStatus($state, $usagePercent),
         ];
+    }
+
+    private function planCapacity(SubscriptionBandwidthState $state): int
+    {
+        $plan = $state->subscription?->plan;
+
+        if (! $plan) {
+            return 0;
+        }
+
+        return $this->speedToBps($plan->download_speed, $plan->bandwidth_unit)
+            + $this->speedToBps($plan->upload_speed, $plan->bandwidth_unit);
+    }
+
+    private function speedToBps(int|float|null $speed, ?string $unit): int
+    {
+        return (int) round((float) $speed * match (strtolower((string) $unit)) {
+            'kbps', 'kbit/s' => 1_000,
+            'gbps', 'gbit/s' => 1_000_000_000,
+            'tbps', 'tbit/s' => 1_000_000_000_000,
+            default => 1_000_000,
+        });
+    }
+
+    private function bandwidthStatus(?SubscriptionBandwidthState $state, ?int $utilization): string
+    {
+        if (! $state || $state->error || ! $state->last_success_at || $state->last_success_at->lte(now()->subMinutes(3))) {
+            return 'unavailable';
+        }
+
+        return $utilization !== null && $utilization > 80 ? 'critical' : ($utilization !== null && $utilization > 60 ? 'warning' : 'optimal');
     }
 
     private function usageRow(array $session): array

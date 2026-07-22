@@ -400,6 +400,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
     Route::prefix('network')->name('network.')->group(function () {
         Route::get('/data-usage', [NetworkController::class, 'dataUsage'])->name('data-usage');
         Route::get('/bandwidth', [NetworkController::class, 'bandwidth'])->name('bandwidth');
+        Route::get('/bandwidth/data', [NetworkController::class, 'bandwidthData'])->name('bandwidth.data');
         Route::get('/monitoring', [NetworkController::class, 'monitoring'])->name('monitoring');
         Route::get('/monitoring/data', [NetworkController::class, 'monitoringData'])->name('monitoring.data');
         Route::get('/status', [NetworkController::class, 'status'])->name('status');

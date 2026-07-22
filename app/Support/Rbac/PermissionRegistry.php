@@ -374,6 +374,7 @@ class PermissionRegistry
             'vpn-users.destroy' => 'vpn_users.delete',
 
             'network.bandwidth' => 'network.read',
+            'network.bandwidth.data' => 'network.read',
             'network.data-usage' => 'network.read',
             'network.status' => 'network.read',
             'network.monitoring' => 'network.read',

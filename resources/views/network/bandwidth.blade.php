@@ -57,12 +57,7 @@
                 <div class="flex-1">
                     <p class="text-sm font-medium text-gray-500">Download</p>
                     <p class="text-3xl font-bold text-blue-600 mt-2" x-text="formatSpeed(stats.downloadThroughput)"></p>
-                    <div class="flex items-center gap-1 mt-2">
-                        <svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                        <span class="text-xs text-green-600">+15.3%</span>
-                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Current collected traffic</p>
                 </div>
                 <div class="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,12 +73,7 @@
                 <div class="flex-1">
                     <p class="text-sm font-medium text-gray-500">Upload</p>
                     <p class="text-3xl font-bold text-green-600 mt-2" x-text="formatSpeed(stats.uploadThroughput)"></p>
-                    <div class="flex items-center gap-1 mt-2">
-                        <svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                        <span class="text-xs text-green-600">+8.7%</span>
-                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Current collected traffic</p>
                 </div>
                 <div class="w-14 h-14 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,6 +119,10 @@
             </div>
         </div>
 
+        <div x-show="!stats.rrdAvailable" class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Historical chart storage is unavailable because RRDTool is not installed or configured.
+        </div>
+
         <!-- Chart Area -->
         <div class="h-80 relative bg-gray-50 rounded-xl overflow-hidden">
             <!-- Grid Lines -->
@@ -141,30 +135,33 @@
 
             <!-- Y-axis labels -->
             <div class="absolute left-0 top-0 bottom-0 flex flex-col justify-between py-4 pl-2 text-xs text-gray-400">
-                <span>10 Gbps</span>
-                <span>7.5 Gbps</span>
-                <span>5 Gbps</span>
-                <span>2.5 Gbps</span>
+                <span x-text="formatSpeed(chartMax)"></span>
+                <span x-text="formatSpeed(chartMax * .75)"></span>
+                <span x-text="formatSpeed(chartMax * .5)"></span>
+                <span x-text="formatSpeed(chartMax * .25)"></span>
                 <span>0</span>
             </div>
 
-            <!-- Chart Bars -->
-            <div class="absolute inset-0 flex items-end justify-between px-8 pb-4 pt-4 pl-12">
+            <div x-show="hasData && chartData.length" class="absolute inset-0 flex items-end justify-between gap-1 px-8 pb-4 pt-4 pl-12">
                 <template x-for="(point, index) in chartData" :key="index">
-                    <div class="flex flex-col items-center gap-1 flex-1 max-w-8">
-                        <!-- Download Bar -->
-                        <div class="w-full bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-600"
-                             :style="`height: ${(point.download / 10000) * 100}%`"
-                             :title="`Download: ${formatSpeed(point.download)}`"></div>
-                        <!-- Upload Bar -->
-                        <div class="w-full bg-green-500 rounded-b transition-all duration-300 hover:bg-green-600"
-                             :style="`height: ${(point.upload / 10000) * 100}%`"
-                             :title="`Upload: ${formatSpeed(point.upload)}`"></div>
+                    <div class="flex h-full flex-1 max-w-8 flex-col items-center justify-end gap-1">
+                        <div class="flex h-full w-full items-end gap-px">
+                            <div class="w-1/2 rounded-t bg-blue-500 transition-all duration-300 hover:bg-blue-600"
+                                 :style="`height: ${barHeight(point.rx_bps)}%`"
+                                 :title="`Download: ${formatSpeed(point.rx_bps)}`"></div>
+                            <div class="w-1/2 rounded-t bg-green-500 transition-all duration-300 hover:bg-green-600"
+                                 :style="`height: ${barHeight(point.tx_bps)}%`"
+                                 :title="`Upload: ${formatSpeed(point.tx_bps)}`"></div>
+                        </div>
                         <span class="text-xs text-gray-500 rotate-45 origin-bottom-left mt-1" x-text="point.time"></span>
                     </div>
                 </template>
             </div>
+            <div x-show="!hasData" class="flex h-full items-center justify-center px-6 text-center text-sm text-gray-500">
+                No bandwidth samples are available for the selected history range.
+            </div>
         </div>
+        <p class="mt-3 text-xs text-gray-500">Last sample: <span x-text="stats.lastSampledAt"></span></p>
     </div>
 
     <!-- Router Bandwidth Table -->
@@ -197,7 +194,10 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="text-sm text-gray-700" x-text="router.interface"></span>
+                                <div class="flex flex-col">
+                                    <span class="text-sm text-gray-700" x-text="router.interface"></span>
+                                    <span class="text-xs text-gray-500" x-text="router.sampledAt || 'No sample'"></span>
+                                </div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-2">
@@ -227,18 +227,18 @@
                                         <span class="text-xs text-gray-500">Utilization</span>
                                         <span class="text-xs font-medium"
                                               :class="router.utilization > 80 ? 'text-red-600' : (router.utilization > 60 ? 'text-yellow-600' : 'text-green-600')"
-                                              x-text="router.utilization + '%'"></span>
+                                              x-text="router.utilization === null ? '—' : router.utilization + '%'"></span>
                                     </div>
                                     <div class="w-32 bg-gray-200 rounded-full h-2">
                                         <div class="h-2 rounded-full transition-all duration-300"
                                              :class="router.utilization > 80 ? 'bg-red-500' : (router.utilization > 60 ? 'bg-yellow-500' : 'bg-green-500')"
-                                             :style="`width: ${router.utilization}%`"></div>
+                                             :style="`width: ${Math.min(router.utilization || 0, 100)}%`"></div>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
-                                      :class="router.status === 'optimal' ? 'bg-green-100 text-green-800 border-green-200' : (router.status === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-red-100 text-red-800 border-red-200')"
+                                      :class="statusClass(router.status)"
                                       x-text="router.status.charAt(0).toUpperCase() + router.status.slice(1)"></span>
                             </td>
                         </tr>
@@ -259,6 +259,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Interface Name</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Subscription</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Router</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Capacity</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Current Usage</th>
@@ -277,6 +278,9 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4">
+                                <span class="text-sm text-gray-700" x-text="iface.subscription"></span>
+                            </td>
+                            <td class="px-6 py-4">
                                 <span class="text-sm text-gray-700" x-text="iface.router"></span>
                             </td>
                             <td class="px-6 py-4">
@@ -290,14 +294,14 @@
                                     <div class="w-40 bg-gray-200 rounded-full h-2">
                                         <div class="h-2 rounded-full transition-all duration-300"
                                              :class="iface.usagePercent > 80 ? 'bg-red-500' : (iface.usagePercent > 60 ? 'bg-yellow-500' : 'bg-green-500')"
-                                             :style="`width: ${iface.usagePercent}%`"></div>
+                                             :style="`width: ${Math.min(iface.usagePercent || 0, 100)}%`"></div>
                                     </div>
-                                    <span class="text-xs text-gray-500 mt-1" x-text="iface.usagePercent + '%'"></span>
+                                    <span class="text-xs text-gray-500 mt-1" x-text="iface.usagePercent === null ? '—' : iface.usagePercent + '%'"></span>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
-                                      :class="iface.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' : (iface.status === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-red-100 text-red-800 border-red-200')"
+                                      :class="statusClass(iface.status)"
                                       x-text="iface.status.charAt(0).toUpperCase() + iface.status.slice(1)"></span>
                             </td>
                         </tr>
@@ -313,18 +317,20 @@
 function bandwidthMonitoring() {
     return {
         liveMode: false,
+        interval: null,
+        loading: false,
         stats: @js($networkBandwidth['stats']),
         chartData: @js($networkBandwidth['chartData']),
+        hasData: @js($networkBandwidth['hasData']),
         routerBandwidth: @js($networkBandwidth['routerBandwidth']),
         interfaces: @js($networkBandwidth['interfaces']),
 
         init() {
-            // Auto-refresh in live mode
             this.$watch('liveMode', (value) => {
                 if (value) {
                     this.interval = setInterval(() => {
                         this.refreshData();
-                    }, 2000);
+                    }, 10000);
                 } else {
                     clearInterval(this.interval);
                 }
@@ -332,15 +338,63 @@ function bandwidthMonitoring() {
         },
 
         formatSpeed(bps) {
-            if (bps === 0) return '0 bps';
+            if (bps === null || bps === undefined || Number(bps) === 0) return '0 bps';
             const k = 1000;
             const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
-            const i = Math.floor(Math.log(bps) / Math.log(k));
+            const i = Math.min(sizes.length - 1, Math.floor(Math.log(Math.abs(bps)) / Math.log(k)));
             return parseFloat((bps / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         },
 
-        refreshData() {
-            window.location.reload();
+        get chartMax() {
+            const values = this.chartData.flatMap((point) => [point.rx_bps || 0, point.tx_bps || 0]);
+            return Math.max(1, ...values);
+        },
+
+        barHeight(value) {
+            if (value === null || value === undefined) {
+                return 0;
+            }
+
+            return Math.min(100, (Number(value) / this.chartMax) * 100);
+        },
+
+        statusClass(status) {
+            if (status === 'optimal') {
+                return 'bg-green-100 text-green-800 border-green-200';
+            }
+
+            if (status === 'warning') {
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            }
+
+            if (status === 'critical') {
+                return 'bg-red-100 text-red-800 border-red-200';
+            }
+
+            return 'bg-gray-100 text-gray-600 border-gray-200';
+        },
+
+        async refreshData() {
+            this.loading = true;
+
+            try {
+                const response = await fetch(@js(route('network.bandwidth.data')), {
+                    headers: { 'Accept': 'application/json' },
+                });
+
+                if (! response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+                this.stats = payload.stats || this.stats;
+                this.chartData = payload.chartData || [];
+                this.hasData = Boolean(payload.hasData);
+                this.routerBandwidth = payload.routerBandwidth || [];
+                this.interfaces = payload.interfaces || [];
+            } finally {
+                this.loading = false;
+            }
         }
     };
 }

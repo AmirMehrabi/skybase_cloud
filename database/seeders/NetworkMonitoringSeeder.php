@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Customer;
 use App\Models\NetworkAlert;
-use App\Models\NetworkBandwidthSample;
 use App\Models\NetworkUsageRecord;
 use App\Models\Plan;
 use App\Models\Router;
@@ -68,14 +67,6 @@ class NetworkMonitoringSeeder extends Seeder
             });
 
             $routers->each(function (Router $router): void {
-                foreach (range(0, 23) as $hourOffset) {
-                    NetworkBandwidthSample::factory()->create([
-                        'tenant_id' => $router->tenant_id,
-                        'router_id' => $router->id,
-                        'sampled_at' => now()->subHours(23 - $hourOffset),
-                    ]);
-                }
-
                 if ($router->status === 'offline') {
                     NetworkAlert::factory()->create([
                         'tenant_id' => $router->tenant_id,
