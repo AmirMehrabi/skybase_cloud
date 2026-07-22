@@ -28,7 +28,7 @@
 
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
                     <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full bg-[#f5c542] px-7 py-4 text-base font-bold text-slate-950 shadow-[0_20px_50px_rgba(245,197,66,0.28)] transition hover:-translate-y-0.5 hover:bg-[#ffd95d]">
-                        Start Trial
+                        Start Free
                     </a>
                     <a href="{{ route('pricing') }}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-7 py-4 text-base font-bold text-white backdrop-blur transition hover:bg-white hover:text-slate-950">
                         View Pricing
@@ -169,7 +169,7 @@
             <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">See whether SkyBase is the right fit before you switch.</h2>
             <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-teal-50/80">Share your customer count, routers, Radius setup, and current billing process. We will walk through pricing fit and the practical migration path.</p>
             <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full bg-[#f5c542] px-8 py-4 text-base font-bold text-slate-950 transition hover:bg-[#ffd95d]">Start Trial</a>
+                <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full bg-[#f5c542] px-8 py-4 text-base font-bold text-slate-950 transition hover:bg-[#ffd95d]">Start Free</a>
                 <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 py-4 text-base font-bold text-white transition hover:bg-white hover:text-slate-950">Message WhatsApp</a>
             </div>
         </div>

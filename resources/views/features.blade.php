@@ -22,7 +22,7 @@
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-slate-950 bg-[#f5c542] rounded-full hover:bg-[#ffd95d] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                     <a href="{{ url('/pricing') }}" class="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 border border-white/20 rounded-full hover:bg-white hover:text-slate-950 transition-colors">
                         View Pricing
@@ -601,7 +601,7 @@
                                     <div class="rounded-2xl border border-slate-200 bg-white p-4">
                                         <div class="flex items-center justify-between">
                                             <p class="text-sm font-semibold text-slate-900">Quick actions</p>
-                                            <span class="text-xs text-slate-500">24/7</span>
+                                            <span class="text-xs text-slate-500">Direct founder support</span>
                                         </div>
                                         <div class="mt-3 grid grid-cols-2 gap-3">
                                             <div class="rounded-2xl bg-[#fbf7ed] px-3 py-3 text-center text-sm font-medium text-slate-700">Pay Invoice</div>
@@ -1020,7 +1020,7 @@
 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white bg-[#0d2f35] rounded-2xl hover:bg-[#123f3d] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                     <a href="{{ url('/pricing') }}" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-slate-700 bg-white border border-slate-300 rounded-2xl hover:bg-[#f6f1e8] transition-colors">
                         View Pricing

@@ -15,7 +15,7 @@
     loading: false
 }">
     <div class="text-center mb-8">
-        <h2 class="text-2xl font-bold text-slate-950">Start Your Free Trial</h2>
+        <h2 class="text-2xl font-bold text-slate-950">Create Your Free Account</h2>
         <p class="mt-1 text-slate-600">14-day trial. No credit card required.</p>
     </div>
 
@@ -143,7 +143,7 @@
             :disabled="loading"
             class="mt-6 w-full rounded-full bg-[#f5c542] px-4 py-3 font-bold text-slate-950 transition hover:bg-[#ffd95d] focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-            <span x-show="!loading">Start Free Trial</span>
+            <span x-show="!loading">Create Free Account</span>
             <span x-show="loading" x-cloak>
                 <i class="fas fa-spinner fa-spin mr-2"></i>Creating account...
             </span>

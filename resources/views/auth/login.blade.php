@@ -78,7 +78,7 @@
     <div class="mt-6 text-center">
         <p class="text-slate-600">
             Don't have an ISP account yet?
-            <a href="{{ route('auth.register') }}" class="font-semibold text-teal-700 transition hover:text-teal-800">Start Free Trial</a>
+            <a href="{{ route('auth.register') }}" class="font-semibold text-teal-700 transition hover:text-teal-800">Create Free Account</a>
         </p>
     </div>        
     @endif

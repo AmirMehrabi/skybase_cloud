@@ -77,7 +77,7 @@
 
                 <div class="flex items-center gap-2">
                     <a href="{{ route('auth.login') }}" class="hidden rounded-lg border border-slate-900/10 bg-white/80 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#0d2f35]/25 hover:bg-[#fbf7ed] hover:text-slate-950 lg:inline-flex">Login</a>
-                    <a href="{{ route('auth.register') }}" class="hidden rounded-lg border border-[#f5c542] bg-[#f5c542] px-5 py-2.5 text-sm font-bold text-slate-950 shadow-[0_12px_30px_rgba(245,197,66,0.28)] transition hover:-translate-y-0.5 hover:bg-[#ffd95d] sm:inline-flex">Start Trial</a>
+                    <a href="{{ route('auth.register') }}" class="hidden rounded-lg border border-[#f5c542] bg-[#f5c542] px-5 py-2.5 text-sm font-bold text-slate-950 shadow-[0_12px_30px_rgba(245,197,66,0.28)] transition hover:-translate-y-0.5 hover:bg-[#ffd95d] sm:inline-flex">Start Free</a>
                     <button
                         type="button"
                         class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-900/10 bg-white text-slate-800 shadow-sm transition hover:bg-[#f6f1e8] md:hidden"
@@ -121,7 +121,7 @@
                         <p class="text-sm font-bold">Ready to try SkyBase?</p>
                         <p class="mt-1 text-sm leading-6 text-teal-50/75">Start a tenant, compare pricing, or sign in to your dashboard.</p>
                         <div class="mt-4 grid grid-cols-2 gap-3">
-                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-lg border border-[#f5c542] bg-[#f5c542] px-4 py-3 text-sm font-bold text-slate-950">Start Trial</a>
+                            <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-lg border border-[#f5c542] bg-[#f5c542] px-4 py-3 text-sm font-bold text-slate-950">Start Free</a>
                             <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.login') }}" class="inline-flex items-center justify-center rounded-lg border border-white/20 px-4 py-3 text-sm font-bold text-white">Login</a>
                         </div>
                     </div>

@@ -85,7 +85,7 @@
                     <!-- CTA Button -->
                     <div class="mt-8">
                         <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold text-white bg-[#0d2f35] rounded-2xl hover:bg-[#123f3d] transition-colors">
-                            Start Free Trial
+                            Start Free
                         </a>
                         <p class="text-sm text-slate-500 mt-3">No contracts • Cancel anytime • No setup fees</p>
                     </div>
@@ -178,7 +178,7 @@
                         </li>
                     </ul>
                     <a href="{{ route('auth.register') }}" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-[#0d2f35] rounded-2xl hover:bg-[#123f3d] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                 </div>
 
@@ -221,7 +221,7 @@
                         </li>
                     </ul>
                     <a href="{{ route('auth.register') }}" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-[#0d2f35] rounded-2xl hover:bg-[#123f3d] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                 </div>
 
@@ -261,7 +261,7 @@
                         </li>
                     </ul>
                     <a href="{{ route('auth.register') }}" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-[#0d2f35] rounded-2xl hover:bg-[#123f3d] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                 </div>
 
@@ -301,7 +301,7 @@
                         </li>
                     </ul>
                     <a href="{{ route('auth.register') }}" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-[#0d2f35] rounded-2xl hover:bg-[#123f3d] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                 </div>
 
@@ -331,7 +331,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>24/7 priority support</span>
+                            <span>Direct founder support</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -341,7 +341,7 @@
                         </li>
                     </ul>
                     <a href="{{ route('auth.register') }}" class="block w-full text-center px-6 py-3 text-lg font-semibold text-white bg-[#0d2f35] rounded-2xl hover:bg-[#123f3d] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                 </div>
             </div>
@@ -660,7 +660,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>24/7 support</span>
+                            <span>Direct founder support</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -817,7 +817,7 @@
                         </svg>
                     </button>
                     <div x-show="openFaq === 2" x-transition class="px-6 pb-4 text-slate-600">
-                        No. SkyBase does not charge setup fees. You can start your free trial immediately without any upfront costs.
+                        No. SkyBase does not charge setup fees. You can start the free plan immediately without any upfront costs.
                     </div>
                 </div>
 
@@ -867,7 +867,7 @@
 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-slate-950 bg-white rounded-2xl hover:bg-[#f6f1e8] transition-colors">
-                        Start Free Trial
+                        Start Free
                     </a>
                     <a href="mailto:sales@skybase.app" class="inline-flex items-center justify-center px-10 py-4 text-base font-semibold text-white border-2 border-white rounded-2xl hover:bg-white hover:text-teal-700 transition-colors">
                         Contact Sales
