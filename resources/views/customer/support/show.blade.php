@@ -4,26 +4,26 @@
 @section('page_title', $ticket->ticket_number)
 
 @section('content')
-<div class="grid gap-6 xl:grid-cols-[1fr_320px]">
+<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
     <section class="space-y-6">
-        <div class="rounded-xl border border-slate-900/10 bg-white p-6 shadow-sm">
+        <div class="rounded-2xl border border-slate-900/10 bg-white p-6 shadow-sm">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div class="text-sm font-semibold text-slate-500">{{ $ticket->team?->name }}</div>
                     <h1 class="mt-1 text-2xl font-bold text-slate-950">{{ $ticket->subject }}</h1>
-                    <p class="mt-2 text-sm text-slate-600">{{ $ticket->subscription?->subscription_code ? 'Service '.$ticket->subscription->subscription_code : 'No related service selected' }}</p>
+                    <p class="mt-2 text-sm text-slate-600">{{ $ticket->subscription?->pppoe_username ?: ($ticket->subscription?->subscription_code ? 'Service '.$ticket->subscription->subscription_code : 'No related service selected') }}</p>
                 </div>
                 <span class="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{{ str($ticket->status)->replace('_', ' ')->headline() }}</span>
             </div>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3" aria-label="Ticket conversation">
             @foreach($messages as $message)
-                <article class="rounded-xl border border-slate-900/10 bg-white p-5 shadow-sm">
+                <article class="rounded-2xl border {{ $message->author_type === 'customer' ? 'border-sky-200 bg-sky-50/50' : 'border-slate-900/10 bg-white' }} p-5 shadow-sm">
                     <div class="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                            <div class="text-sm font-semibold text-slate-900">{{ $message->authorName() }}</div>
-                            <div class="text-xs text-slate-500">{{ $message->created_at?->format('Y-m-d H:i') }}</div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-full {{ $message->author_type === 'customer' ? 'bg-sky-200 text-sky-900' : 'bg-[#0d2f35] text-white' }} text-xs font-bold">{{ strtoupper(substr($message->authorName(), 0, 2)) }}</div>
+                            <div><div class="text-sm font-semibold text-slate-900">{{ $message->authorName() }}</div><div class="text-xs text-slate-500">{{ $message->author_type === 'customer' ? 'Your message' : 'Support reply' }} · {{ $message->created_at?->format('M j, Y · H:i') }}</div></div>
                         </div>
                     </div>
                     <x-tickets.message-body :message="$message" />
@@ -39,10 +39,10 @@
         </div>
 
         @unless($ticket->isClosed())
-            <form method="POST" action="{{ route('customer.support.reply', $ticket) }}" enctype="multipart/form-data" class="rounded-xl border border-slate-900/10 bg-white p-6 shadow-sm">
+            <form method="POST" action="{{ route('customer.support.reply', $ticket) }}" enctype="multipart/form-data" class="rounded-2xl border border-slate-900/10 bg-white p-6 shadow-sm">
                 @csrf
                 <h2 class="mb-4 text-lg font-semibold text-slate-950">Add reply</h2>
-                <x-tickets.markdown-composer id="body" name="body" label="Message" rows="6" required />
+                <x-tickets.markdown-composer id="body" name="body" label="Message" hint="Replies are visible to the support team and stay attached to this ticket." rows="6" required />
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-slate-700" for="attachments">Attachments</label>
                     <input id="attachments" name="attachments[]" type="file" multiple class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">

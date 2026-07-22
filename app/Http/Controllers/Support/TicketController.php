@@ -91,6 +91,7 @@ class TicketController extends Controller
                     'customer_name' => trim($subscription->customer?->first_name.' '.$subscription->customer?->last_name)
                         ?: $subscription->customer?->name,
                     'pppoe_username' => $subscription->pppoe_username,
+                    'plan_name' => $subscription->plan?->name,
                     'label' => $subscription->pppoe_username
                         ?: trim($subscription->subscription_code.' - '.($subscription->plan?->name ?? ucfirst($subscription->status))),
                 ])

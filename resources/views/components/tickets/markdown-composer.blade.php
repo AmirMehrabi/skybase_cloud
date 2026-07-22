@@ -5,6 +5,7 @@
     'value' => null,
     'rows' => 6,
     'required' => false,
+    'hint' => 'Use the toolbar to format your message. It will be shown as Markdown when rendered.',
 ])
 
 @php
@@ -33,7 +34,7 @@
         class="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm @error($name) border-red-500 @enderror"
     ></div>
 
-    <p class="mt-1 text-xs text-slate-500">Use the toolbar for rich text. Content is stored as Markdown for clean rendering.</p>
+    <p class="mt-1 text-xs text-slate-500">{{ $hint }}</p>
 
     @error($name)
         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
