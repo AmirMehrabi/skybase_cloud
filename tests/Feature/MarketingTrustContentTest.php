@@ -12,15 +12,18 @@ class MarketingTrustContentTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Book a guided setup');
-        $response->assertSee('Free forever up to 40 subscribers');
-        $response->assertSee('Illustrative SkyBase workspace');
+        $response->assertSee('Free forever');
+        $response->assertSee('Illustrative workspace');
         $response->assertSee('A letter from the founder');
         $response->assertSee('Abbie Barlowe');
         $response->assertSee('What customers say');
         $response->assertSee('Sample testimonial');
         $response->assertSee('Sample customer');
-        $response->assertSee('A product shaped by customer feedback');
+        $response->assertSee('What becomes easier');
+        $response->assertSee('Book a guided setup');
         $response->assertDontSee('Early customer proof');
+        $response->assertDontSee('Founding Operator Programme');
+        $response->assertDontSee('Compare Splynx');
         $response->assertDontSee('Founder story and photograph coming next');
         $response->assertDontSee('Start Trial');
         $response->assertDontSee('24/7');
