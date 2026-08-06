@@ -20,16 +20,32 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TicketController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $customer = auth('customer')->user();
+        $ticketView = $request->input('view') === 'closed' ? 'closed' : 'active';
 
         return view('customer.support.index', [
             'tickets' => Ticket::query()
                 ->with(['team', 'assignedUser', 'subscription'])
                 ->where('customer_id', $customer->id)
+                ->when(
+                    $ticketView === 'closed',
+                    fn ($query) => $query->where('status', Ticket::STATUS_CLOSED),
+                    fn ($query) => $query->where('status', '!=', Ticket::STATUS_CLOSED),
+                )
+                ->when($request->filled('search'), function ($query) use ($request): void {
+                    $search = $request->string('search')->toString();
+                    $query->where(function ($query) use ($search): void {
+                        $query->where('ticket_number', 'like', "%{$search}%")
+                            ->orWhere('subject', 'like', "%{$search}%")
+                            ->orWhereHas('subscription', fn ($query) => $query->where('subscription_code', 'like', "%{$search}%")->orWhere('pppoe_username', 'like', "%{$search}%"));
+                    });
+                })
                 ->latest('last_activity_at')
-                ->paginate(12),
+                ->paginate(12)
+                ->withQueryString(),
+            'ticketView' => $ticketView,
         ]);
     }
 

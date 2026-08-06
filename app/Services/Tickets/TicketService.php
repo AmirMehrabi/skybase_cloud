@@ -136,6 +136,10 @@ class TicketService
     public function addStaffMessage(Ticket $ticket, User $user, string $body, string $visibility, array $attachments = []): TicketMessage
     {
         return DB::transaction(function () use ($ticket, $user, $body, $visibility, $attachments): TicketMessage {
+            if ($visibility === TicketMessage::VISIBILITY_PUBLIC && in_array($ticket->status, [Ticket::STATUS_RESOLVED, Ticket::STATUS_CLOSED], true)) {
+                $this->changeStatus($ticket, Ticket::STATUS_OPEN, 'ticket.reopened', 'user', $user->id);
+            }
+
             $message = $this->addMessage($ticket, $body, $visibility, 'user', $user->id, $attachments);
 
             if ($visibility === TicketMessage::VISIBILITY_PUBLIC) {

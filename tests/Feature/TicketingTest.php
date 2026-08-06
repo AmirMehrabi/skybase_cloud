@@ -346,6 +346,117 @@ class TicketingTest extends TestCase
             ->assertDontSee($teamTicket->ticket_number);
     }
 
+    public function test_staff_ticket_views_separate_closed_tickets_and_keep_resolved_tickets_active(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $otherTenant = $this->createTenant('beta-net');
+        $customer = $this->createCustomer($tenant);
+        $otherCustomer = $this->createCustomer($otherTenant, ['email' => 'other@example.com']);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $team = $this->createTeam($tenant);
+        $otherTeam = $this->createTeam($otherTenant, 'Other Support', 'other-support');
+        $activeTicket = $this->createTicket($tenant, $customer, $team, [
+            'ticket_number' => 'TCK-ACTIVE-0001',
+            'subject' => 'Active connection issue',
+        ]);
+        $resolvedTicket = $this->createTicket($tenant, $customer, $team, [
+            'ticket_number' => 'TCK-RESOLVED-0001',
+            'subject' => 'Resolved connection issue',
+            'status' => Ticket::STATUS_RESOLVED,
+            'resolved_at' => now(),
+        ]);
+        $closedTicket = $this->createTicket($tenant, $customer, $team, [
+            'ticket_number' => 'TCK-CLOSED-0001',
+            'subject' => 'Archived router issue',
+            'status' => Ticket::STATUS_CLOSED,
+            'closed_at' => now(),
+        ]);
+        $otherTenantTicket = $this->createTicket($otherTenant, $otherCustomer, $otherTeam, [
+            'ticket_number' => 'TCK-CLOSED-OTHER',
+            'subject' => 'Other tenant archive',
+            'status' => Ticket::STATUS_CLOSED,
+            'closed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('support.tickets.index'))
+            ->assertOk()
+            ->assertSee($activeTicket->ticket_number)
+            ->assertSee($resolvedTicket->ticket_number)
+            ->assertDontSee($closedTicket->ticket_number);
+
+        $this->actingAs($admin)
+            ->get(route('support.tickets.index', ['view' => 'closed', 'search' => 'Archived router']))
+            ->assertOk()
+            ->assertSee($closedTicket->ticket_number)
+            ->assertDontSee($activeTicket->ticket_number)
+            ->assertDontSee($resolvedTicket->ticket_number)
+            ->assertDontSee($otherTenantTicket->ticket_number);
+    }
+
+    public function test_customer_closing_a_ticket_moves_it_to_their_searchable_closed_view(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant);
+        $otherCustomer = $this->createCustomer($tenant, ['email' => 'other@example.com']);
+        $team = $this->createTeam($tenant);
+        $ticket = $this->createTicket($tenant, $customer, $team, [
+            'ticket_number' => 'TCK-CUSTOMER-CLOSED',
+            'subject' => 'Router replacement request',
+        ]);
+        $otherCustomerTicket = $this->createTicket($tenant, $otherCustomer, $team, [
+            'ticket_number' => 'TCK-OTHER-CLOSED',
+            'subject' => 'Router replacement request for another customer',
+            'status' => Ticket::STATUS_CLOSED,
+            'closed_at' => now(),
+        ]);
+
+        $this->actingAs($customer, 'customer')
+            ->post(route('customer.support.close', $ticket))
+            ->assertRedirect(route('customer.support.show', $ticket));
+
+        $this->actingAs($customer, 'customer')
+            ->get(route('customer.support.index'))
+            ->assertOk()
+            ->assertDontSee($ticket->ticket_number);
+
+        $this->actingAs($customer, 'customer')
+            ->get(route('customer.support.index', ['view' => 'closed', 'search' => 'Router replacement']))
+            ->assertOk()
+            ->assertSee($ticket->ticket_number)
+            ->assertDontSee($otherCustomerTicket->ticket_number);
+    }
+
+    public function test_public_staff_reply_reopens_a_closed_ticket_and_clears_closure_timestamps(): void
+    {
+        $tenant = $this->createTenant('alpha-net');
+        $customer = $this->createCustomer($tenant);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin', 'status' => 'active']);
+        $team = $this->createTeam($tenant);
+        $ticket = $this->createTicket($tenant, $customer, $team, [
+            'status' => Ticket::STATUS_CLOSED,
+            'resolved_at' => now(),
+            'closed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('support.tickets.reply', $ticket), [
+                'visibility' => TicketMessage::VISIBILITY_PUBLIC,
+                'body' => 'We need one more detail before this can remain closed.',
+            ])
+            ->assertRedirect();
+
+        $ticket->refresh();
+
+        $this->assertSame(Ticket::STATUS_PENDING_CUSTOMER, $ticket->status);
+        $this->assertNull($ticket->resolved_at);
+        $this->assertNull($ticket->closed_at);
+        $this->assertDatabaseHas('ticket_events', [
+            'ticket_id' => $ticket->id,
+            'event_type' => 'ticket.reopened',
+        ]);
+    }
+
     private function createTenant(string $slug): Tenant
     {
         return Tenant::create([

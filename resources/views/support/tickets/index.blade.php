@@ -13,6 +13,10 @@
     </div>
 
     <form method="GET" class="space-y-4 rounded-2xl border border-slate-900/10 bg-white p-4 shadow-sm">
+        <nav aria-label="Ticket views" class="flex w-fit gap-1 rounded-lg bg-slate-100 p-1">
+            <a href="{{ route('support.tickets.index', array_merge(request()->except(['page', 'view', 'status']), ['view' => 'active'])) }}" @if($ticketView === 'active') aria-current="page" @endif class="rounded-md px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d2f35] {{ $ticketView === 'active' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">Active tickets</a>
+            <a href="{{ route('support.tickets.index', array_merge(request()->except(['page', 'view', 'status']), ['view' => 'closed'])) }}" @if($ticketView === 'closed') aria-current="page" @endif class="rounded-md px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d2f35] {{ $ticketView === 'closed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">Closed tickets</a>
+        </nav>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex gap-1 rounded-lg bg-slate-100 p-1">
                 <a href="{{ route('support.tickets.index', array_merge(request()->except(['page', 'scope']), ['scope' => 'team'])) }}" class="rounded-md px-4 py-1.5 text-sm font-semibold transition {{ $viewScope === 'team' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">Team tickets</a>
@@ -21,16 +25,21 @@
             <p class="text-xs text-slate-500">Sorted by most recent activity</p>
         </div>
         <input type="hidden" name="scope" value="{{ $viewScope }}">
+        <input type="hidden" name="view" value="{{ $ticketView }}">
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,1fr))_auto]">
             <label class="sr-only" for="ticket-search">Search tickets</label>
             <input id="ticket-search" name="search" value="{{ request('search') }}" placeholder="Search ticket, customer, PPPoE, or subscription" class="min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20">
-            <label class="sr-only" for="ticket-status">Status</label>
-            <select id="ticket-status" name="status" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20">
-                <option value="">All statuses</option>
-                @foreach(['new', 'open', 'pending_customer', 'pending_staff', 'resolved', 'closed'] as $status)
-                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->replace('_', ' ')->headline() }}</option>
-                @endforeach
-            </select>
+            @if($ticketView === 'active')
+                <label class="sr-only" for="ticket-status">Status</label>
+                <select id="ticket-status" name="status" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20">
+                    <option value="">All active statuses</option>
+                    @foreach(['new', 'open', 'pending_customer', 'pending_staff', 'resolved'] as $status)
+                        <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->replace('_', ' ')->headline() }}</option>
+                    @endforeach
+                </select>
+            @else
+                <div class="hidden xl:block" aria-hidden="true"></div>
+            @endif
             <label class="sr-only" for="ticket-priority">Priority</label>
             <select id="ticket-priority" name="priority" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20">
                 <option value="">All priorities</option>
@@ -101,7 +110,14 @@
                             <td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ $ticket->last_activity_at?->diffForHumans() }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-4 py-12 text-center text-slate-500">No tickets match the current filters.</td></tr>
+                        <tr>
+                            <td colspan="8" class="px-4 py-12 text-center text-slate-500">
+                                <p class="font-medium text-slate-700">{{ request()->filled('search') ? 'No tickets match your search.' : ($ticketView === 'closed' ? 'No closed tickets yet.' : 'No active tickets match the current filters.') }}</p>
+                                @if(request()->filled('search'))
+                                    <a href="{{ route('support.tickets.index', request()->except(['page', 'search'])) }}" class="mt-3 inline-flex font-semibold text-[#0d2f35] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d2f35]">Clear search</a>
+                                @endif
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -116,7 +132,12 @@
                 <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs"><span class="font-semibold {{ $ticket->priority === 'urgent' ? 'text-red-700' : 'text-slate-600' }}">{{ ucfirst($ticket->priority) }} priority</span><span class="rounded-full px-2.5 py-1 font-semibold {{ ['breached' => 'bg-red-100 text-red-700', 'at_risk' => 'bg-amber-100 text-amber-700'][$ticket->sla_state] ?? 'bg-emerald-100 text-emerald-700' }}">{{ str($ticket->sla_state)->replace('_', ' ')->headline() }}</span></div>
             </a>
         @empty
-            <div class="rounded-xl border border-slate-900/10 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">No tickets match the current filters.</div>
+            <div class="rounded-xl border border-slate-900/10 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
+                <p class="font-medium text-slate-700">{{ request()->filled('search') ? 'No tickets match your search.' : ($ticketView === 'closed' ? 'No closed tickets yet.' : 'No active tickets match the current filters.') }}</p>
+                @if(request()->filled('search'))
+                    <a href="{{ route('support.tickets.index', request()->except(['page', 'search'])) }}" class="mt-3 inline-flex font-semibold text-[#0d2f35] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d2f35]">Clear search</a>
+                @endif
+            </div>
         @endforelse
     </div>
 

@@ -31,10 +31,19 @@ class TicketController extends Controller
 
         $user = $request->user();
         $viewScope = $request->input('scope') ?? $user->getSetting('ticket_view_scope', 'team');
+        $ticketView = $request->input('view') === 'closed' ? 'closed' : 'active';
 
         $tickets = $this->visibleTickets($user, $viewScope)
             ->with(['customer', 'team', 'assignedUser', 'subscription'])
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')))
+            ->when(
+                $ticketView === 'closed',
+                fn ($query) => $query->where('status', Ticket::STATUS_CLOSED),
+                fn ($query) => $query->where('status', '!=', Ticket::STATUS_CLOSED),
+            )
+            ->when(
+                $ticketView === 'active' && $request->filled('status') && $request->input('status') !== Ticket::STATUS_CLOSED,
+                fn ($query) => $query->where('status', $request->input('status')),
+            )
             ->when($request->filled('priority'), fn ($query) => $query->where('priority', $request->input('priority')))
             ->when($request->filled('team'), fn ($query) => $query->where('ticket_team_id', $request->integer('team')))
             ->when($request->filled('assigned'), function ($query) use ($request): void {
@@ -60,6 +69,7 @@ class TicketController extends Controller
             'teams' => $this->visibleTeams($user),
             'agents' => $this->visibleAgents($user),
             'viewScope' => $viewScope,
+            'ticketView' => $ticketView,
         ]);
     }
 
