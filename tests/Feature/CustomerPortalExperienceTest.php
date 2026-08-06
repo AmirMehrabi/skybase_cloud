@@ -42,6 +42,47 @@ class CustomerPortalExperienceTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_customer_portal_does_not_expose_the_assigned_subscription_ip_address(): void
+    {
+        $tenant = $this->createTenant();
+        $customer = $this->createCustomer($tenant, 'owner@example.com');
+        $assignedIpAddress = '203.0.113.47';
+        $subscription = $this->createSubscription($tenant, $customer, 'SUB-PRIVATE-IP', [
+            'ip_address' => $assignedIpAddress,
+        ]);
+        $subscription->plan()->update([
+            'download_speed' => 100,
+            'upload_speed' => 25,
+            'bandwidth_unit' => 'Mbps',
+        ]);
+
+        $this->actingAs($customer, 'customer')
+            ->get(route('customer.dashboard'))
+            ->assertOk()
+            ->assertDontSee($assignedIpAddress);
+
+        $this->get(route('customer.subscriptions.index'))
+            ->assertOk()
+            ->assertDontSee($assignedIpAddress);
+
+        $this->get(route('customer.subscriptions.show', $subscription))
+            ->assertOk()
+            ->assertDontSee($assignedIpAddress)
+            ->assertDontSee('IP address')
+            ->assertSee('Plan speed')
+            ->assertSee('100 Mbps download / 25 Mbps upload');
+
+        $this->getJson(route('customer.dashboard.usage'))
+            ->assertOk()
+            ->assertDontSee($assignedIpAddress)
+            ->assertJsonStructure(['chartData', 'hasData', 'range']);
+
+        $this->getJson(route('customer.subscriptions.bandwidth.history', $subscription))
+            ->assertOk()
+            ->assertDontSee($assignedIpAddress)
+            ->assertJsonStructure(['chartData', 'hasData', 'range']);
+    }
+
     public function test_customer_profile_changes_password_with_the_current_password(): void
     {
         $tenant = $this->createTenant();

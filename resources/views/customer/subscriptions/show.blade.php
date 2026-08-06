@@ -47,8 +47,14 @@
                     <dd class="mt-1 font-semibold text-slate-900">{{ $subscription->site ?: 'Not assigned' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm text-slate-500">IP address</dt>
-                    <dd class="mt-1 font-mono text-sm font-semibold text-slate-900">{{ $subscription->ip_address ?: 'Dynamically assigned' }}</dd>
+                    <dt class="text-sm text-slate-500">Plan speed</dt>
+                    <dd class="mt-1 font-semibold text-slate-900">
+                        @if($subscription->plan && filled($subscription->plan->download_speed) && filled($subscription->plan->upload_speed) && filled($subscription->plan->bandwidth_unit))
+                            {{ $subscription->plan->download_speed }} {{ $subscription->plan->bandwidth_unit }} download / {{ $subscription->plan->upload_speed }} {{ $subscription->plan->bandwidth_unit }} upload
+                        @else
+                            Not specified
+                        @endif
+                    </dd>
                 </div>
                 @if($subscription->isPppoe())
                     <div>
