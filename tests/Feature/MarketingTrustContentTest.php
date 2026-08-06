@@ -34,7 +34,7 @@ class MarketingTrustContentTest extends TestCase
         $response = $this->get(route('changelog'));
 
         $response->assertOk();
-        $response->assertSee('Current version 0.9.8');
-        $response->assertDontSee('Current version 0.9.6');
+        $response->assertSee('Current version 0.9.9');
+        $response->assertDontSee('Current version 0.9.8');
     }
 }

@@ -11,6 +11,33 @@
 @php
     $releases = [
         [
+            'version' => '0.9.9',
+            'date' => 'August 6, 2026',
+            'title' => 'Live Bandwidth Insights, Clearer Support, and a Simpler Experience',
+            'summary' => 'This release makes daily operations easier with live network traffic visibility, a clearer support workspace, searchable closed tickets, a more focused Customer Portal, and a simpler way for new customers to explore SkyBase.',
+            'sections' => [
+                'Added' => [
+                    'A live network bandwidth view with current download and upload traffic, 24-hour history, peak usage, and the time of the latest sample.',
+                    'Router and service-interface bandwidth breakdowns so your team can quickly see where network capacity is being used.',
+                    'A searchable Closed tickets view for both staff and customers, while Active tickets remain focused on work that still needs attention.',
+                    'A guided setup path on the public website for businesses that want to review their workflow and requirements before getting started.',
+                ],
+                'Changed' => [
+                    'Support conversations now make customer replies, staff replies, internal notes, attachments, ownership, priority, and SLA timing easier to follow.',
+                    'Ticket lists now provide clearer search and filtering, active filter summaries, priority controls, and a mobile-friendly layout.',
+                    'The public website now presents pricing, product outcomes, founder context, and the next steps in a shorter and clearer journey.',
+                    'Customer subscription pages now focus on useful service, plan, usage, billing, and support information without exposing internal operational details.',
+                    'Bandwidth monitoring now refreshes in place and reports current router and interface activity without requiring a full page reload.',
+                ],
+                'Fixed' => [
+                    'Closed tickets no longer remain mixed into active support queues and can still be found whenever their history is needed.',
+                    'Replying publicly to a closed ticket now reopens it correctly and returns it to active support work.',
+                    'Bandwidth pages now handle missing, delayed, or unavailable historical samples without showing misleading values or interrupting the page.',
+                    'Ticket reply forms now stay in the normal page flow instead of covering the conversation on smaller screens.',
+                ],
+            ],
+        ],
+        [
             'version' => '0.9.8',
             'date' => 'July 18, 2026',
             'title' => 'Work Orders, Smarter Support, and Smoother Operations',
@@ -447,8 +474,8 @@
                     Product updates for ISP operators using SkyBase to manage MikroTik routers, subscribers, billing, IPAM, VPN users, and tenant operations.
                 </p>
                 <div class="mt-8 flex flex-wrap gap-3">
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.9.8</span>
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated July 18, 2026</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version 0.9.9</span>
+                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated August 6, 2026</span>
                 </div>
             </div>
         </div>
