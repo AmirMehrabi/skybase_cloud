@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,14 +17,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $tenant = Tenant::query()->firstOrCreate(
+            ['slug' => 'test-tenant'],
+            [
+                'id' => (string) Str::uuid(),
+                'name' => 'Test Tenant',
+                'company_name' => 'Test Tenant',
+                'email' => 'test@example.com',
+                'timezone' => 'UTC',
+                'status' => 'active',
+            ],
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        User::query()->updateOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'tenant_id' => $tenant->id,
+                'name' => 'Test User',
+                'password' => 'password1@1@',
+                'role' => 'admin',
+                'status' => 'active',
+            ],
+        );
 
-        // Call other seeders
         $this->call([
             SiteSeeder::class,
             IpPoolSeeder::class,
