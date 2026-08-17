@@ -15,6 +15,7 @@ use App\Models\Customer;
 use App\Models\Organization;
 use App\Services\ActivityLogFormatter;
 use App\Services\NotificationPreferenceService;
+use App\Services\UserGroupAssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -192,6 +193,8 @@ class CustomerController extends Controller
             unset($validated['password']);
         }
 
+        $validated['user_group_id'] = $this->customerGroupId($validated['organization_id'] ?? null);
+
         $customer = Customer::create($validated);
 
         if ($request->expectsJson()) {
@@ -290,7 +293,7 @@ class CustomerController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCustomerRequest $request, Customer $customer): JsonResponse|RedirectResponse
+    public function update(UpdateCustomerRequest $request, Customer $customer, UserGroupAssignmentService $groups): JsonResponse|RedirectResponse
     {
         $this->authorizeTenantAccess($customer);
 
@@ -313,7 +316,13 @@ class CustomerController extends Controller
             unset($validated['password']);
         }
 
+        $validated['user_group_id'] = $this->customerGroupId($validated['organization_id'] ?? null, $customer);
+
         $customer->update($validated);
+
+        if ($customer->wasChanged('user_group_id')) {
+            $groups->cascadeCustomer($customer->id, (string) $customer->tenant_id, $customer->user_group_id);
+        }
 
         if (! $request->expectsJson()) {
             return redirect()
@@ -325,6 +334,19 @@ class CustomerController extends Controller
             'message' => 'Customer updated successfully.',
             'customer' => $customer->fresh(),
         ]);
+    }
+
+    private function customerGroupId(mixed $organizationId, ?Customer $customer = null): ?int
+    {
+        if (! auth()->user()?->isOwner()) {
+            return $customer?->user_group_id ?? auth()->user()?->user_group_id;
+        }
+
+        if (blank($organizationId)) {
+            return null;
+        }
+
+        return Organization::query()->findOrFail($organizationId)->user_group_id;
     }
 
     public function updateNotifications(NotificationPreferenceRequest $request, Customer $customer, NotificationPreferenceService $preferences): RedirectResponse

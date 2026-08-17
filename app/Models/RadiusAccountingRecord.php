@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class RadiusAccountingRecord extends Model
 {
+    use BelongsToUserGroup;
+
     protected $table = 'radacct';
 
     public $timestamps = false;

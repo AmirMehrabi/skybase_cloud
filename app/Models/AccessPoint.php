@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Database\Factories\AccessPointFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AccessPoint extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<AccessPointFactory> */
     use HasFactory;
 

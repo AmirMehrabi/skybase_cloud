@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Database\Factories\TicketMessageFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TicketMessage extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<TicketMessageFactory> */
     use HasFactory;
 

@@ -35,6 +35,10 @@ class UpdateUserRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$this->route('user')->id],
             'role' => ['required', Rule::in($roleNames)],
             'status' => ['required', 'in:active,inactive'],
+            'user_group_id' => [
+                'nullable',
+                Rule::exists('user_groups', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+            ],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ];
     }

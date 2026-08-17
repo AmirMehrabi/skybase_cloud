@@ -9,6 +9,7 @@ use App\Http\Requests\NotificationPreferenceRequest;
 use App\Models\ActivityLog;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserGroup;
 use App\Services\ActivityLogFormatter;
 use App\Services\NotificationPreferenceService;
 use Illuminate\Http\RedirectResponse;
@@ -64,7 +65,9 @@ class UserController extends Controller
                 ];
             });
 
-        return view('admin.tenant.users.create', compact('roles'));
+        $userGroups = UserGroup::query()->orderBy('name')->pluck('name', 'id');
+
+        return view('admin.tenant.users.create', compact('roles', 'userGroups'));
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
@@ -80,6 +83,9 @@ class UserController extends Controller
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
             'status' => $validated['status'],
+            'user_group_id' => $request->user()->isOwner()
+                ? ($validated['user_group_id'] ?? null)
+                : $request->user()->user_group_id,
         ]);
 
         // Log activity
@@ -125,7 +131,9 @@ class UserController extends Controller
             ->orderBy('name')
             ->pluck('description', 'name');
 
-        return view('admin.tenant.users.edit', compact('user', 'roles'));
+        $userGroups = UserGroup::query()->orderBy('name')->pluck('name', 'id');
+
+        return view('admin.tenant.users.edit', compact('user', 'roles', 'userGroups'));
     }
 
     public function updateNotifications(NotificationPreferenceRequest $request, User $user, NotificationPreferenceService $preferences): RedirectResponse
@@ -149,6 +157,9 @@ class UserController extends Controller
             'email' => $validated['email'],
             'role' => $validated['role'],
             'status' => $validated['status'],
+            'user_group_id' => $request->user()->isOwner()
+                ? ($validated['user_group_id'] ?? null)
+                : $user->user_group_id,
         ];
 
         if ($request->filled('password')) {

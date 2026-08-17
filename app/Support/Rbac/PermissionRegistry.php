@@ -33,6 +33,7 @@ class PermissionRegistry
             'network' => ['label' => 'Network', 'description' => 'Bandwidth, data usage, network status, and monitoring', 'actions' => self::actions(['read', 'actions'])],
             'reports' => ['label' => 'Reports', 'description' => 'Usage and financial reports', 'actions' => self::actions(['read'])],
             'users' => ['label' => 'Users', 'description' => 'Manage tenant users and their notification settings', 'actions' => self::actions()],
+            'user_groups' => ['label' => 'User Groups', 'description' => 'Partition tenant users and operational data', 'actions' => self::actions(['read', 'write', 'delete'])],
             'roles' => ['label' => 'Roles', 'description' => 'Manage roles and system access permissions', 'actions' => self::actions()],
             'settings' => ['label' => 'Settings', 'description' => 'General settings, branding, email, notifications, and LDAP', 'actions' => self::actions(['read', 'write', 'delete', 'actions'])],
         ];
@@ -392,6 +393,14 @@ class PermissionRegistry
             'admin.tenant.users.notifications.update' => 'users.write',
             'admin.tenant.users.destroy' => 'users.delete',
 
+            'admin.tenant.user-groups.index' => 'user_groups.read',
+            'admin.tenant.user-groups.show' => 'user_groups.read',
+            'admin.tenant.user-groups.create' => 'user_groups.write',
+            'admin.tenant.user-groups.store' => 'user_groups.write',
+            'admin.tenant.user-groups.edit' => 'user_groups.write',
+            'admin.tenant.user-groups.update' => 'user_groups.write',
+            'admin.tenant.user-groups.destroy' => 'user_groups.delete',
+
             'admin.tenant.roles.index' => 'roles.read',
             'admin.tenant.roles.show' => 'roles.read',
             'admin.tenant.roles.create' => 'roles.write',
@@ -433,6 +442,7 @@ class PermissionRegistry
             'network.bandwidth',
             'reports.usage',
             'admin.tenant.users.index',
+            'admin.tenant.user-groups.index',
             'admin.tenant.roles.index',
             'settings.index',
         ];

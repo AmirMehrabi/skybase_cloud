@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,11 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Site extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<SiteFactory> */
     use HasFactory;
 
     protected $fillable = [
         'tenant_id',
+        'user_group_id',
         'code',
         'name',
         'description',

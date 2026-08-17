@@ -41,6 +41,7 @@ class UpdateSiteRequest extends FormRequest
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
+            'user_group_id' => ['nullable', Rule::exists('user_groups', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
         ];
     }
 

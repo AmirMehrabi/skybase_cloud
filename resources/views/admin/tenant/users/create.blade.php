@@ -130,6 +130,15 @@
             </div>
         </div>
 
+        <div class="mb-6">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900">Data Access</h3>
+            @if(auth()->user()?->isOwner())
+                <x-input.select name="user_group_id" label="User Group" :options="$userGroups" placeholder="Ungrouped records only" :value="old('user_group_id')" />
+            @else
+                <p class="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">This user will inherit your User Group.</p>
+            @endif
+        </div>
+
         <!-- Status -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Account Status</h3>

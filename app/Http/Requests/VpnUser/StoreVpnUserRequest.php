@@ -35,6 +35,7 @@ class StoreVpnUserRequest extends FormRequest
             ],
             'password' => ['required', 'string', 'min:8', 'max:72', 'confirmed'],
             'active' => ['nullable', 'boolean'],
+            'user_group_id' => ['nullable', Rule::exists('user_groups', 'id')->where('tenant_id', $tenantId)],
         ];
     }
 

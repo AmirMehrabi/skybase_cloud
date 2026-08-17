@@ -35,6 +35,7 @@ class StoreOrganizationRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
+            'user_group_id' => ['nullable', Rule::exists('user_groups', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
             'billing_enabled' => ['boolean'],
             'default_plan_id' => [Rule::requiredIf($this->boolean('billing_enabled')), 'nullable', 'exists:plans,id'],
             'default_billing_cycle' => [Rule::requiredIf($this->boolean('billing_enabled')), 'nullable', Rule::in(['monthly', 'quarterly', 'yearly'])],

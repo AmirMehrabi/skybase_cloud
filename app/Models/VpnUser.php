@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Database\Factories\VpnUserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VpnUser extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<VpnUserFactory> */
     use HasFactory;
 
@@ -17,6 +20,7 @@ class VpnUser extends Model
 
     protected $fillable = [
         'tenant_id',
+        'user_group_id',
         'username',
         'password_hash',
         'active',

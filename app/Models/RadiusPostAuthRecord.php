@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 
 class RadiusPostAuthRecord extends Model
 {
+    use BelongsToUserGroup;
     use MassPrunable;
 
     public const RETENTION_MINUTES = 5;

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SubscriptionBandwidthState extends Model
 {
+    use BelongsToUserGroup;
+
     protected $fillable = [
         'tenant_id',
         'subscription_id',

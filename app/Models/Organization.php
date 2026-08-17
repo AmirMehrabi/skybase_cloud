@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,11 +13,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Organization extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<OrganizationFactory> */
     use HasFactory, LogsTenantActivity, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
+        'user_group_id',
         'code',
         'name',
         'description',

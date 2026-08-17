@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Illuminate\Notifications\DatabaseNotification;
 
 class TenantNotification extends DatabaseNotification
 {
+    use BelongsToUserGroup;
+
     protected $table = 'notifications';
 
     protected $fillable = [

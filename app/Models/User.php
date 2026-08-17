@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Support\Rbac\PermissionRegistry;
 use Database\Factories\UserFactory;
@@ -16,11 +17,14 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, LogsTenantActivity, Notifiable;
 
     protected $fillable = [
         'tenant_id',
+        'user_group_id',
         'name',
         'email',
         'password',

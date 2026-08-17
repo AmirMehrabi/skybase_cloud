@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Database\Factories\SubscriptionIpRouteFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SubscriptionIpRoute extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<SubscriptionIpRouteFactory> */
     use HasFactory;
 

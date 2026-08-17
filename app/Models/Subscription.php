@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionIpRouteSyncService;
@@ -17,6 +18,7 @@ use LdapRecord\Laravel\LdapImportable;
 
 class Subscription extends Model implements LdapImportable
 {
+    use BelongsToUserGroup;
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
     protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'auto_suspension_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];

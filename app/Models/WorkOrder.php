@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\WorkOrderPriority;
 use App\Enums\WorkOrderStatus;
 use App\Enums\WorkOrderType;
+use App\Models\Concerns\BelongsToUserGroup;
 use Database\Factories\WorkOrderFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WorkOrder extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<WorkOrderFactory> */
     use HasFactory, SoftDeletes;
 

@@ -16,6 +16,7 @@
             <h3 class="mb-4 text-lg font-semibold text-gray-900">Account Details</h3>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <x-ui.input.text label="Username" name="username" placeholder="vpn_user_01" :required="true" :value="old('username')" :error="$errors->first('username')" />
+                @if(auth()->user()?->isOwner())<x-ui.input.select label="User Group" name="user_group_id" :options="$userGroups" :value="old('user_group_id')" placeholder="Ungrouped records only" :error="$errors->first('user_group_id')" />@endif
                 <div class="flex items-center pt-6">
                     <x-ui.input.checkbox label="Active" name="active" :checked="old('active', true)" :error="$errors->first('active')" />
                 </div>

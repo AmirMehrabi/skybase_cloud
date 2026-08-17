@@ -31,6 +31,10 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['required', Rule::in($roleNames)],
             'status' => ['required', 'in:active,inactive'],
+            'user_group_id' => [
+                'nullable',
+                Rule::exists('user_groups', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
+            ],
             'send_invite' => ['nullable', 'boolean'],
         ];
     }

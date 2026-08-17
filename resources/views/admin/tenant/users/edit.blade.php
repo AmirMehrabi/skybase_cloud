@@ -144,6 +144,15 @@
             </div>
         </div>
 
+        <div class="mb-6">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900">Data Access</h3>
+            @if(auth()->user()?->isOwner() && ! $user->isOwner())
+                <x-input.select name="user_group_id" label="User Group" :options="$userGroups" placeholder="Ungrouped records only" :value="$user->user_group_id" />
+            @else
+                <p class="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">{{ $user->userGroup?->name ?? 'Ungrouped records only' }}</p>
+            @endif
+        </div>
+
         <!-- User Info -->
         <div class="p-4 bg-gray-50 rounded-lg mb-6">
             <h4 class="text-sm font-medium text-gray-900 mb-2">Account Information</h4>

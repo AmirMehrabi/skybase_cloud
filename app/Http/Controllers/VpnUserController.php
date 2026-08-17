@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\VpnUser\StoreVpnUserRequest;
 use App\Http\Requests\VpnUser\UpdateVpnUserRequest;
+use App\Models\UserGroup;
 use App\Models\VpnUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -66,7 +67,7 @@ class VpnUserController extends Controller
 
     public function create(): View
     {
-        return view('vpn-users.create');
+        return view('vpn-users.create', ['userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id')]);
     }
 
     public function store(StoreVpnUserRequest $request): RedirectResponse
@@ -78,6 +79,9 @@ class VpnUserController extends Controller
             'username' => $validated['username'],
             'password_hash' => Hash::make($validated['password']),
             'active' => $request->boolean('active'),
+            'user_group_id' => $request->user()->isOwner()
+                ? ($validated['user_group_id'] ?? null)
+                : $request->user()->user_group_id,
         ]);
 
         return redirect()
@@ -96,7 +100,10 @@ class VpnUserController extends Controller
     {
         $this->authorizeTenantAccess($vpnUser);
 
-        return view('vpn-users.edit', compact('vpnUser'));
+        return view('vpn-users.edit', [
+            'vpnUser' => $vpnUser,
+            'userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id'),
+        ]);
     }
 
     public function update(UpdateVpnUserRequest $request, VpnUser $vpnUser): RedirectResponse
@@ -107,6 +114,9 @@ class VpnUserController extends Controller
         $updates = [
             'username' => $validated['username'],
             'active' => $request->boolean('active'),
+            'user_group_id' => $request->user()->isOwner()
+                ? ($validated['user_group_id'] ?? null)
+                : $vpnUser->user_group_id,
         ];
 
         if (! empty($validated['password'])) {

@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RadiusGroupReply extends Model
 {
+    use BelongsToUserGroup;
+
     protected $table = 'radgroupreply';
 
     protected $fillable = [

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use Database\Factories\TicketAttachmentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 
 class TicketAttachment extends Model
 {
+    use BelongsToUserGroup;
+
     /** @use HasFactory<TicketAttachmentFactory> */
     use HasFactory;
 

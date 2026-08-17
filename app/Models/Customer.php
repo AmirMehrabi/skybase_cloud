@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionDeletionService;
@@ -18,10 +19,12 @@ use LdapRecord\Laravel\LdapImportable;
 
 class Customer extends Authenticatable implements LdapImportable
 {
+    use BelongsToUserGroup;
     use HasFactory, ImportableFromLdap, LogsTenantActivity, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
+        'user_group_id',
         'organization_id',
         'customer_code',
         'customer_type',

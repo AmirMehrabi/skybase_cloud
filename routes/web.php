@@ -4,6 +4,7 @@ use App\Http\Controllers\AccessPointController;
 use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\Admin\Tenant\RoleController;
 use App\Http\Controllers\Admin\Tenant\UserController;
+use App\Http\Controllers\Admin\Tenant\UserGroupController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
 use App\Http\Controllers\Billing\CreditController;
@@ -156,6 +157,16 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::get('/{role}/edit', [RoleController::class, 'edit'])->name('edit');
         Route::put('/{role}', [RoleController::class, 'update'])->name('update');
         Route::delete('/{role}', [RoleController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('settings/user-groups')->name('admin.tenant.user-groups.')->group(function () {
+        Route::get('/', [UserGroupController::class, 'index'])->name('index');
+        Route::get('/create', [UserGroupController::class, 'create'])->name('create');
+        Route::post('/', [UserGroupController::class, 'store'])->name('store');
+        Route::get('/{user_group}', [UserGroupController::class, 'show'])->name('show');
+        Route::get('/{user_group}/edit', [UserGroupController::class, 'edit'])->name('edit');
+        Route::put('/{user_group}', [UserGroupController::class, 'update'])->name('update');
+        Route::delete('/{user_group}', [UserGroupController::class, 'destroy'])->name('destroy');
     });
 
     // Settings Routes

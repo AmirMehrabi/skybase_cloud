@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Site\StoreSiteRequest;
 use App\Http\Requests\Site\UpdateSiteRequest;
 use App\Models\Site;
+use App\Models\UserGroup;
+use App\Services\UserGroupAssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,13 +74,16 @@ class SiteController extends Controller
 
     public function create(): View
     {
-        return view('sites.create');
+        return view('sites.create', ['userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id')]);
     }
 
     public function store(StoreSiteRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
         $validated['tenant_id'] = auth()->user()?->tenant_id;
+        $validated['user_group_id'] = auth()->user()?->isOwner()
+            ? ($validated['user_group_id'] ?? null)
+            : auth()->user()?->user_group_id;
 
         $site = Site::query()->create($validated);
 
@@ -112,14 +117,26 @@ class SiteController extends Controller
     {
         $this->authorizeTenantAccess($site);
 
-        return view('sites.edit', ['site' => $site]);
+        return view('sites.edit', [
+            'site' => $site,
+            'userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id'),
+        ]);
     }
 
-    public function update(UpdateSiteRequest $request, Site $site): JsonResponse|RedirectResponse
+    public function update(UpdateSiteRequest $request, Site $site, UserGroupAssignmentService $groups): JsonResponse|RedirectResponse
     {
         $this->authorizeTenantAccess($site);
 
-        $site->update($request->validated());
+        $validated = $request->validated();
+        $validated['user_group_id'] = auth()->user()?->isOwner()
+            ? (isset($validated['user_group_id']) ? (int) $validated['user_group_id'] : null)
+            : $site->user_group_id;
+
+        if ($site->user_group_id !== $validated['user_group_id']) {
+            $groups->cascadeSite($site->id, (string) $site->tenant_id, $validated['user_group_id']);
+        }
+
+        $site->update($validated);
 
         if ($request->expectsJson()) {
             return response()->json([

@@ -28,6 +28,10 @@
             :error="$errors->first('status')"
         />
 
+        @if(auth()->user()?->isOwner())
+            <x-ui.input.select label="User Group" name="user_group_id" :options="$userGroups" :value="old('user_group_id', $site->user_group_id ?? '')" placeholder="Ungrouped records only" :error="$errors->first('user_group_id')" />
+        @endif
+
         <x-ui.input.text
             label="Address"
             name="address"

@@ -6,8 +6,10 @@ use App\Http\Requests\Organization\StoreOrganizationRequest;
 use App\Http\Requests\Organization\UpdateOrganizationRequest;
 use App\Models\Organization;
 use App\Models\Plan;
+use App\Models\UserGroup;
 use App\Services\ActivityLogFormatter;
 use App\Services\OrganizationBillingService;
+use App\Services\UserGroupAssignmentService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -65,6 +67,7 @@ class OrganizationController extends Controller
     {
         return view('organizations.create', [
             'plans' => $this->activePlans(),
+            'userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id'),
         ]);
     }
 
@@ -101,12 +104,18 @@ class OrganizationController extends Controller
         return view('organizations.edit', [
             'organization' => $organization,
             'plans' => $this->activePlans(),
+            'userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id'),
         ]);
     }
 
-    public function update(UpdateOrganizationRequest $request, Organization $organization, OrganizationBillingService $billing): RedirectResponse
+    public function update(UpdateOrganizationRequest $request, Organization $organization, OrganizationBillingService $billing, UserGroupAssignmentService $groups): RedirectResponse
     {
         $organization->update($this->normalizedPayload($request->validated(), $organization));
+
+        if ($organization->wasChanged('user_group_id')) {
+            $groups->cascadeOrganization($organization->id, (string) $organization->tenant_id, $organization->user_group_id);
+        }
+
         $billing->syncOrganizationSubscriptions($organization->fresh('defaultPlan'));
 
         return redirect()
@@ -155,6 +164,9 @@ class OrganizationController extends Controller
     protected function normalizedPayload(array $validated, ?Organization $organization = null): array
     {
         $billingEnabled = (bool) ($validated['billing_enabled'] ?? false);
+        $validated['user_group_id'] = auth()->user()?->isOwner()
+            ? ($validated['user_group_id'] ?? null)
+            : ($organization?->user_group_id ?? auth()->user()?->user_group_id);
 
         return [
             ...$validated,
