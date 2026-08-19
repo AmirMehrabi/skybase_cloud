@@ -66,6 +66,11 @@ class Organization extends Model
         return $this->hasMany(Customer::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     public function scopeActive($query)
     {
         $query->where('status', 'active');

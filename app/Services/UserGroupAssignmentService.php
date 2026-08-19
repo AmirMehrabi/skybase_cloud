@@ -43,28 +43,66 @@ class UserGroupAssignmentService
         DB::transaction(function () use ($customerId, $tenantId, $groupId): void {
             DB::table('customers')->where('tenant_id', $tenantId)->where('id', $customerId)->update(['user_group_id' => $groupId]);
 
-            $subscriptionIds = DB::table('subscriptions')->where('tenant_id', $tenantId)->where('customer_id', $customerId)->pluck('id');
+            $subscriptionIds = DB::table('subscriptions')
+                ->where('tenant_id', $tenantId)
+                ->where('customer_id', $customerId)
+                ->whereNull('organization_id')
+                ->pluck('id');
             DB::table('subscriptions')->whereIn('id', $subscriptionIds)->update(['user_group_id' => $groupId]);
 
             foreach (['subscription_items', 'subscription_ip_routes', 'subscription_bandwidth_states'] as $table) {
                 DB::table($table)->whereIn('subscription_id', $subscriptionIds)->update(['user_group_id' => $groupId]);
             }
 
-            $invoiceIds = DB::table('invoices')->where('tenant_id', $tenantId)->where('customer_id', $customerId)->pluck('id');
+            $invoiceIds = DB::table('invoices')
+                ->where('tenant_id', $tenantId)
+                ->where('customer_id', $customerId)
+                ->where(function ($query) use ($subscriptionIds): void {
+                    $query->whereNull('subscription_id')->orWhereIn('subscription_id', $subscriptionIds);
+                })
+                ->pluck('id');
             DB::table('invoices')->whereIn('id', $invoiceIds)->update(['user_group_id' => $groupId]);
             DB::table('invoice_items')->whereIn('invoice_id', $invoiceIds)->update(['user_group_id' => $groupId]);
-            DB::table('payments')->where('tenant_id', $tenantId)->where('customer_id', $customerId)->update(['user_group_id' => $groupId]);
+            DB::table('payments')
+                ->where('tenant_id', $tenantId)
+                ->where('customer_id', $customerId)
+                ->where(function ($query) use ($invoiceIds): void {
+                    $query->whereNull('invoice_id')->orWhereIn('invoice_id', $invoiceIds);
+                })
+                ->update(['user_group_id' => $groupId]);
 
-            foreach (['customer_credits', 'customer_notes', 'tickets', 'work_orders'] as $table) {
+            foreach (['customer_credits', 'customer_notes'] as $table) {
                 DB::table($table)->where('tenant_id', $tenantId)->where('customer_id', $customerId)->update(['user_group_id' => $groupId]);
             }
 
-            $ticketIds = DB::table('tickets')->where('tenant_id', $tenantId)->where('customer_id', $customerId)->pluck('id');
+            foreach (['tickets', 'work_orders'] as $table) {
+                DB::table($table)
+                    ->where('tenant_id', $tenantId)
+                    ->where('customer_id', $customerId)
+                    ->where(function ($query) use ($subscriptionIds): void {
+                        $query->whereNull('subscription_id')->orWhereIn('subscription_id', $subscriptionIds);
+                    })
+                    ->update(['user_group_id' => $groupId]);
+            }
+
+            $ticketIds = DB::table('tickets')
+                ->where('tenant_id', $tenantId)
+                ->where('customer_id', $customerId)
+                ->where(function ($query) use ($subscriptionIds): void {
+                    $query->whereNull('subscription_id')->orWhereIn('subscription_id', $subscriptionIds);
+                })
+                ->pluck('id');
             foreach (['ticket_attachments', 'ticket_events', 'ticket_messages'] as $table) {
                 DB::table($table)->whereIn('ticket_id', $ticketIds)->update(['user_group_id' => $groupId]);
             }
 
-            $workOrderIds = DB::table('work_orders')->where('tenant_id', $tenantId)->where('customer_id', $customerId)->pluck('id');
+            $workOrderIds = DB::table('work_orders')
+                ->where('tenant_id', $tenantId)
+                ->where('customer_id', $customerId)
+                ->where(function ($query) use ($subscriptionIds): void {
+                    $query->whereNull('subscription_id')->orWhereIn('subscription_id', $subscriptionIds);
+                })
+                ->pluck('id');
             foreach (['work_order_appointments', 'work_order_attachments', 'work_order_events', 'work_order_materials', 'work_order_notes', 'work_order_tasks'] as $table) {
                 DB::table($table)->whereIn('work_order_id', $workOrderIds)->update(['user_group_id' => $groupId]);
             }
@@ -76,11 +114,57 @@ class UserGroupAssignmentService
         DB::transaction(function () use ($organizationId, $tenantId, $groupId): void {
             DB::table('organizations')->where('tenant_id', $tenantId)->where('id', $organizationId)->update(['user_group_id' => $groupId]);
 
+            DB::table('subscriptions')
+                ->where('tenant_id', $tenantId)
+                ->where('organization_id', $organizationId)
+                ->pluck('id')
+                ->each(fn (int $subscriptionId) => $this->assignSubscriptionOrganization($subscriptionId, $tenantId, $organizationId, $groupId));
+
             DB::table('customers')
                 ->where('tenant_id', $tenantId)
                 ->where('organization_id', $organizationId)
                 ->pluck('id')
                 ->each(fn (int $customerId) => $this->cascadeCustomer($customerId, $tenantId, $groupId));
+        });
+    }
+
+    public function assignSubscriptionOrganization(int $subscriptionId, string $tenantId, int $organizationId, ?int $groupId): void
+    {
+        DB::transaction(function () use ($subscriptionId, $tenantId, $organizationId, $groupId): void {
+            DB::table('subscriptions')
+                ->where('tenant_id', $tenantId)
+                ->where('id', $subscriptionId)
+                ->update([
+                    'organization_id' => $organizationId,
+                    'user_group_id' => $groupId,
+                    'updated_at' => now(),
+                ]);
+
+            foreach (['subscription_items', 'subscription_ip_routes', 'subscription_bandwidth_states'] as $table) {
+                DB::table($table)->where('subscription_id', $subscriptionId)->update(['user_group_id' => $groupId]);
+            }
+
+            $invoiceIds = DB::table('invoices')
+                ->where('tenant_id', $tenantId)
+                ->where('subscription_id', $subscriptionId)
+                ->pluck('id');
+            DB::table('invoices')->whereIn('id', $invoiceIds)->update(['user_group_id' => $groupId]);
+            DB::table('invoice_items')->whereIn('invoice_id', $invoiceIds)->update(['user_group_id' => $groupId]);
+            DB::table('payments')->whereIn('invoice_id', $invoiceIds)->update(['user_group_id' => $groupId]);
+
+            foreach (['tickets', 'work_orders', 'network_usage_records'] as $table) {
+                DB::table($table)->where('tenant_id', $tenantId)->where('subscription_id', $subscriptionId)->update(['user_group_id' => $groupId]);
+            }
+
+            $ticketIds = DB::table('tickets')->where('tenant_id', $tenantId)->where('subscription_id', $subscriptionId)->pluck('id');
+            foreach (['ticket_attachments', 'ticket_events', 'ticket_messages'] as $table) {
+                DB::table($table)->whereIn('ticket_id', $ticketIds)->update(['user_group_id' => $groupId]);
+            }
+
+            $workOrderIds = DB::table('work_orders')->where('tenant_id', $tenantId)->where('subscription_id', $subscriptionId)->pluck('id');
+            foreach (['work_order_appointments', 'work_order_attachments', 'work_order_events', 'work_order_materials', 'work_order_notes', 'work_order_tasks'] as $table) {
+                DB::table($table)->whereIn('work_order_id', $workOrderIds)->update(['user_group_id' => $groupId]);
+            }
         });
     }
 
@@ -129,7 +213,7 @@ class UserGroupAssignmentService
     {
         return [
             'customers' => [['organization_id', 'organizations']],
-            'subscriptions' => [['customer_id', 'customers']],
+            'subscriptions' => [['organization_id', 'organizations'], ['customer_id', 'customers']],
             'subscription_items' => [['subscription_id', 'subscriptions']],
             'subscription_ip_routes' => [['subscription_id', 'subscriptions']],
             'subscription_bandwidth_states' => [['subscription_id', 'subscriptions']],

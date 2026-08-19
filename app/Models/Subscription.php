@@ -6,6 +6,8 @@ use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionIpRouteSyncService;
+use App\Services\UserGroupAssignmentService;
+use App\Support\UserGroups\UserGroupContext;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,7 +23,7 @@ class Subscription extends Model implements LdapImportable
     use BelongsToUserGroup;
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'customer_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'auto_suspension_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
+    protected $fillable = ['tenant_id', 'user_group_id', 'customer_id', 'organization_id', 'subscription_code', 'name', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'auto_suspension_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
 
     protected function activityLogExcept(): array
     {
@@ -61,7 +63,21 @@ class Subscription extends Model implements LdapImportable
             }
         });
 
+        static::addGlobalScope('organization-membership', function ($query): void {
+            if (app(UserGroupContext::class)->shouldScope()) {
+                $query->whereNotNull($query->getModel()->qualifyColumn('organization_id'));
+            }
+        });
+
         static::saving(function (Subscription $subscription): void {
+            if (filled($subscription->organization_id)) {
+                $inherited = app(UserGroupAssignmentService::class)->inheritedGroup($subscription);
+
+                if ($inherited['resolved']) {
+                    $subscription->user_group_id = $inherited['group_id'];
+                }
+            }
+
             if (array_key_exists('billing_enabled', $subscription->getAttributes()) && ! $subscription->billing_enabled) {
                 $subscription->auto_suspension_enabled = false;
             }
@@ -74,6 +90,21 @@ class Subscription extends Model implements LdapImportable
 
             if (empty($subscription->tenant_id)) {
                 $subscription->tenant_id = tenant_id() ?? auth()->user()?->tenant_id;
+            }
+
+            if (blank($subscription->organization_id) && filled($subscription->customer_id)) {
+                $subscription->organization_id = Customer::withoutGlobalScopes()
+                    ->where('tenant_id', $subscription->tenant_id)
+                    ->whereKey($subscription->customer_id)
+                    ->value('organization_id');
+            }
+
+            if (filled($subscription->organization_id)) {
+                $inherited = app(UserGroupAssignmentService::class)->inheritedGroup($subscription);
+
+                if ($inherited['resolved']) {
+                    $subscription->user_group_id = $inherited['group_id'];
+                }
             }
 
             if (empty($subscription->name) && $subscription->customer_id) {
@@ -139,6 +170,11 @@ class Subscription extends Model implements LdapImportable
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     public function plan(): BelongsTo
