@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\Plan;
 use App\Models\RadiusCheck;
+use App\Models\RadiusGroupReply;
 use App\Models\RadiusReply;
 use App\Models\RadiusUserGroup;
 use App\Models\Setting;
@@ -22,7 +23,7 @@ class RadiusProvisioningService
 
     public function syncSubscription(Subscription $subscription, ?string $previousUsername = null): void
     {
-        $subscription->loadMissing(['customer.organization', 'plan']);
+        $subscription->loadMissing(['customer.organization', 'plan', 'restrictions']);
 
         DB::transaction(function () use ($subscription, $previousUsername): void {
             if ($previousUsername && $previousUsername !== $subscription->pppoe_username) {
@@ -51,7 +52,13 @@ class RadiusProvisioningService
             $tenantId = (string) $subscription->tenant_id;
             $username = (string) $subscription->pppoe_username;
             $plan = $subscription->plan;
-            $groupName = $this->groupNameForPlan($plan);
+            $groupName = $subscription->restrictions->whereNull('cleared_at')->isNotEmpty()
+                ? 'skybase-restricted'
+                : $this->groupNameForPlan($plan);
+
+            if ($groupName === 'skybase-restricted') {
+                $this->ensureRestrictedGroup($tenantId);
+            }
 
             $this->removeReject($tenantId, $username);
 
@@ -277,6 +284,20 @@ class RadiusProvisioningService
         $name = $plan->router_profile ?: $plan->internal_name ?: 'plan-'.$plan->id;
 
         return 'skybase-plan-'.Str::slug($name);
+    }
+
+    private function ensureRestrictedGroup(string $tenantId): void
+    {
+        foreach ([
+            'Mikrotik-Address-List' => 'skybase-restricted',
+            'Mikrotik-Rate-Limit' => '1M/1M',
+            'Acct-Interim-Interval' => '300',
+        ] as $attribute => $value) {
+            RadiusGroupReply::withoutGlobalScopes()->updateOrCreate(
+                ['tenant_id' => $tenantId, 'groupname' => 'skybase-restricted', 'attribute' => $attribute],
+                ['op' => ':=', 'value' => $value],
+            );
+        }
     }
 
     private function usesLdapRadiusAuthentication(string $tenantId): bool

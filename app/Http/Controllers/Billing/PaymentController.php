@@ -7,6 +7,7 @@ use App\Http\Requests\Billing\StorePaymentRequest;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\BillingService;
 use App\Services\TenantNotificationService;
 use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Http\JsonResponse;
@@ -67,7 +68,7 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function store(StorePaymentRequest $request, TenantNotificationService $notifications): JsonResponse|RedirectResponse
+    public function store(StorePaymentRequest $request, TenantNotificationService $notifications, BillingService $billing): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
 
@@ -99,6 +100,9 @@ class PaymentController extends Controller
         $invoice->increment('paid_amount', $payment->amount);
         $invoice = $invoice->fresh(['customer']);
         $invoice->recalculateTotals();
+        if ($invoice->subscription) {
+            $billing->reconcileSubscriptionAfterPayment($invoice->subscription);
+        }
         $payment = $payment->fresh(['customer', 'invoice']);
 
         if ($payment->customer) {
@@ -127,9 +131,9 @@ class PaymentController extends Controller
     public function storeForInvoice(
         Invoice $invoice,
         StorePaymentRequest $request,
-        TenantNotificationService $notifications
+        TenantNotificationService $notifications, BillingService $billing
     ): JsonResponse|RedirectResponse {
-        return $this->store($request, $notifications);
+        return $this->store($request, $notifications, $billing);
     }
 
     protected function transformPayment(Payment $payment): array

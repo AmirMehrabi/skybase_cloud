@@ -69,7 +69,8 @@ class BillingService
                     'billing_period_start' => $periodStart->toDateString(),
                     'billing_period_end' => $periodEnd->toDateString(),
                     'issue_date' => now()->toDateString(),
-                    'due_date' => now()->addDays($lockedSubscription->effectiveGracePeriodDays())->toDateString(),
+                    'due_date' => now()->toDateString(),
+                    'grace_ends_at' => now()->addDays($lockedSubscription->effectiveGracePeriodDays())->toDateString(),
                     'status' => 'issued',
                 ]);
             } catch (QueryException $exception) {
@@ -193,16 +194,36 @@ class BillingService
             ->whereHas('invoices', function ($query) use ($asOf) {
                 $query->withoutGlobalScopes()
                     ->outstanding()
-                    ->whereDate('due_date', '<', $asOf);
+                    ->where(function ($query) use ($asOf): void {
+                        $query->whereDate('grace_ends_at', '<', $asOf)
+                            ->orWhere(function ($query) use ($asOf): void {
+                                $query->whereNull('grace_ends_at')->whereDate('due_date', '<', $asOf);
+                            });
+                    });
             })
             ->chunkById(100, function ($subscriptions) use (&$suspended) {
                 foreach ($subscriptions as $subscription) {
-                    $subscription->suspend('Automatic suspension for overdue invoices.');
-                    $suspended++;
+                    if (app(SubscriptionRestrictionService::class)->restrict($subscription, 'billing', 'Automatic restriction for invoices beyond grace.')) {
+                        $suspended++;
+                    }
                 }
             });
 
         return $suspended;
+    }
+
+    public function reconcileSubscriptionAfterPayment(Subscription $subscription, ?CarbonInterface $asOf = null): void
+    {
+        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
+        $hasDelinquentInvoice = $subscription->invoices()->withoutGlobalScopes()->outstanding()
+            ->where(function ($query) use ($asOf): void {
+                $query->whereDate('grace_ends_at', '<', $asOf)
+                    ->orWhere(fn ($query) => $query->whereNull('grace_ends_at')->whereDate('due_date', '<', $asOf));
+            })->exists();
+
+        if (! $hasDelinquentInvoice) {
+            app(SubscriptionRestrictionService::class)->clear($subscription, 'billing', 'All delinquent invoices were paid.');
+        }
     }
 
     public function run(?CarbonInterface $asOf = null): array

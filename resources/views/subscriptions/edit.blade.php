@@ -303,22 +303,13 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                     <label for="billing_cycle" class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle</label>
-                    <select name="billing_cycle" id="billing_cycle" @disabled($organizationBilling) class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50">
-                        @foreach(['monthly' => 'Monthly', 'quarterly' => 'Quarterly', 'yearly' => 'Yearly'] as $value => $label)
-                            <option value="{{ $value }}" @selected(old('billing_cycle', $organizationBilling ? $organization->default_billing_cycle : $subscription->billing_cycle) === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @if($organizationBilling)
-                        <input type="hidden" name="billing_cycle" value="{{ $organization->default_billing_cycle }}">
-                    @endif
+                    <input type="text" value="{{ ucfirst($subscription->plan?->billing_cycle ?? $subscription->billing_cycle) }}" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 shadow-sm sm:text-sm py-2 px-3 border">
+                    <p class="mt-1 text-xs text-gray-500">Inherited from the selected Plan.</p>
                     @error('billing_cycle')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label for="grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Grace Period</label>
-                    <input type="number" min="0" max="365" name="grace_period_days" id="grace_period_days" value="{{ old('grace_period_days', $organizationBilling ? $organization->default_grace_period_days : $subscription->grace_period_days) }}" @disabled($organizationBilling) class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border disabled:bg-gray-50">
-                    @if($organizationBilling)
-                        <input type="hidden" name="grace_period_days" value="{{ $organization->default_grace_period_days }}">
-                    @endif
+                    <input type="number" value="{{ $subscription->plan?->grace_period_days ?? $subscription->grace_period_days }}" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 shadow-sm sm:text-sm py-2 px-3 border">
                     @error('grace_period_days')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>

@@ -51,7 +51,7 @@ class StoreSubscriptionRequest extends FormRequest
             'ip_routes.*.ip_pool_id' => 'nullable|integer|exists:ip_pools,id',
             'ip_routes.*.ip_address' => 'nullable|ip|max:255',
             'ip_routes.*.cidr' => 'nullable|integer|min:1|max:32',
-            'billing_cycle' => 'required|in:monthly,quarterly,yearly',
+            'billing_cycle' => 'nullable|in:daily,weekly,monthly,quarterly,yearly',
             'billing_enabled' => 'boolean',
             'auto_suspension_enabled' => 'boolean',
             'grace_period_days' => 'nullable|integer|min:0|max:365',
@@ -69,7 +69,7 @@ class StoreSubscriptionRequest extends FormRequest
             'items.*.discount_type' => 'nullable|in:none,fixed,percentage',
             'items.*.tax_percentage' => 'nullable|numeric|min:0|max:100',
             'items.*.recurring' => 'required|boolean',
-            'items.*.billing_cycle' => 'nullable|in:monthly,quarterly,yearly,onetime',
+            'items.*.billing_cycle' => 'nullable|in:daily,weekly,monthly,quarterly,yearly,onetime',
         ];
     }
 

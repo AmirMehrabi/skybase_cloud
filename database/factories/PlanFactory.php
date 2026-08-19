@@ -20,6 +20,7 @@ class PlanFactory extends Factory
         $name = fake()->words(3, true);
 
         return [
+            'tenant_id' => tenant_id() ?? auth()->user()?->tenant_id,
             'name' => ucwords($name),
             'internal_name' => strtolower(str_replace(' ', '_', $name)).'_'.fake()->unique()->numberBetween(1, 9999),
             'description' => fake()->sentence(),
@@ -43,7 +44,7 @@ class PlanFactory extends Factory
             'queue_type' => null,
             'data_limit' => fake()->boolean() ? fake()->numberBetween(10, 5000) : null,
             'data_unit' => fake()->randomElement(['MB', 'GB', 'TB']),
-            'data_cap_action' => 'none',
+            'data_cap_action' => 'suspend',
             'throttle_download_speed' => null,
             'throttle_upload_speed' => null,
             'unlimited' => fake()->boolean(),

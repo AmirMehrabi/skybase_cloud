@@ -29,7 +29,7 @@ class PlanController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $plan = Plan::create($this->validatedData($request));
+        $plan = Plan::create([...$this->validatedData($request), 'tenant_id' => tenant_id() ?? $request->user()->tenant_id]);
 
         return redirect()->route('plans.show', $plan)->with('success', 'Plan created successfully.');
     }
@@ -65,7 +65,7 @@ class PlanController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'internal_name' => ['required', 'string', 'max:255', Rule::unique('plans', 'internal_name')->ignore($plan?->id)],
+            'internal_name' => ['required', 'string', 'max:255', Rule::unique('plans', 'internal_name')->where('tenant_id', tenant_id() ?? $request->user()?->tenant_id)->ignore($plan?->id)],
             'description' => ['nullable', 'string'],
             'status' => ['required', Rule::in(['active', 'inactive', 'archived'])],
             'visibility' => ['required', Rule::in(['public', 'private', 'hidden'])],

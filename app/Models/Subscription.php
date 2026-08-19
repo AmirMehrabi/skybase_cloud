@@ -186,6 +186,21 @@ class Subscription extends Model implements LdapImportable
         return $this->hasMany(Invoice::class);
     }
 
+    public function restrictions(): HasMany
+    {
+        return $this->hasMany(SubscriptionRestriction::class);
+    }
+
+    public function usageCycles(): HasMany
+    {
+        return $this->hasMany(SubscriptionUsageCycle::class);
+    }
+
+    public function hasActiveRestriction(?string $type = null): bool
+    {
+        return $this->restrictions()->active()->when($type, fn ($query) => $query->where('type', $type))->exists();
+    }
+
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
@@ -317,10 +332,17 @@ class Subscription extends Model implements LdapImportable
     public function billingPeriodEndFor(CarbonInterface $periodStart): CarbonInterface
     {
         return match ($this->billing_cycle) {
+            'daily' => $periodStart->copy(),
+            'weekly' => $periodStart->copy()->addWeek()->subDay(),
             'quarterly' => $periodStart->copy()->addMonthsNoOverflow(3)->subDay(),
             'yearly' => $periodStart->copy()->addYearNoOverflow()->subDay(),
             default => $periodStart->copy()->addMonthNoOverflow()->subDay(),
         };
+    }
+
+    public function nextBillingBoundaryFor(CarbonInterface $periodStart): CarbonInterface
+    {
+        return $this->billingPeriodEndFor($periodStart)->copy()->addDay();
     }
 
     /**

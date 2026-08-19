@@ -576,6 +576,65 @@
             </div>
         </div>
 
+        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Cycle data allowance</h2>
+                    @if($currentUsageCycle)
+                        @php
+                            $effectiveAllowance = $currentUsageCycle->effectiveAllowanceBytes();
+                            $cycleUsed = $currentUsageCycle->usedBytes();
+                            $cyclePercent = $effectiveAllowance ? min(100, round(($cycleUsed / $effectiveAllowance) * 100, 1)) : 0;
+                        @endphp
+                        <p class="mt-1 text-sm text-gray-500">
+                            {{ $currentUsageCycle->starts_at->toDateString() }} through {{ $currentUsageCycle->ends_at->toDateString() }}
+                        </p>
+                        <p class="mt-3 text-sm font-medium text-gray-800">
+                            {{ number_format($cycleUsed / 1073741824, 2) }} GB used
+                            @if($effectiveAllowance !== null)
+                                of {{ number_format($effectiveAllowance / 1073741824, 2) }} GB
+                            @else
+                                · Unlimited
+                            @endif
+                        </p>
+                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-100">
+                            <div class="h-full rounded-full {{ $cyclePercent >= 100 ? 'bg-red-600' : 'bg-blue-600' }}" style="width: {{ $cyclePercent }}%"></div>
+                        </div>
+                    @else
+                        <p class="mt-1 text-sm text-gray-500">Usage will appear after the next RADIUS reconciliation.</p>
+                    @endif
+                    @if($subscriptionModel->restrictions->whereNull('cleared_at')->isNotEmpty())
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            @foreach($subscriptionModel->restrictions->whereNull('cleared_at') as $restriction)
+                                <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">{{ ucfirst($restriction->type) }} restricted</span>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <form method="POST" action="{{ route('subscriptions.usage.bonus', $subscriptionModel) }}" class="space-y-2 rounded-xl border border-gray-200 p-3">
+                        @csrf
+                        <x-input.number name="amount" label="Bonus data" min="1" required />
+                        <x-input.select name="unit" label="Unit" :options="['MB' => 'MB', 'GB' => 'GB', 'TB' => 'TB']" />
+                        <x-input.text name="reason" label="Reason" required />
+                        <x-ui.button type="submit" size="sm">Grant bonus</x-ui.button>
+                    </form>
+                    <form method="POST" action="{{ route('subscriptions.usage.reset', $subscriptionModel) }}" class="space-y-2 rounded-xl border border-gray-200 p-3">
+                        @csrf
+                        <x-input.text name="reason" label="Reset reason" required />
+                        <x-ui.button type="submit" size="sm">Reset usage</x-ui.button>
+                    </form>
+                    <form method="POST" action="{{ route('subscriptions.usage.exempt', $subscriptionModel) }}" class="space-y-2 rounded-xl border border-gray-200 p-3">
+                        @csrf
+                        <x-input.text name="exempt_until" type="datetime-local" label="Exempt until" required />
+                        <x-input.text name="reason" label="Reason" required />
+                        <x-ui.button type="submit" size="sm">Apply exemption</x-ui.button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Key Metrics -->
         <div class="grid grid-cols-2 gap-6 lg:grid-cols-4">
             <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">

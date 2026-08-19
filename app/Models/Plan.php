@@ -5,8 +5,10 @@ namespace App\Models;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
 use App\Services\TrafficShaping\PlanTrafficShapingService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Plan extends Model
@@ -15,6 +17,7 @@ class Plan extends Model
 
     protected $fillable = [
         'name',
+        'tenant_id',
         'internal_name',
         'description',
         'status',
@@ -79,9 +82,9 @@ class Plan extends Model
         ];
     }
 
-    public function tenants(): HasMany
+    public function tenant(): BelongsTo
     {
-        return $this->hasMany(Tenant::class);
+        return $this->belongsTo(Tenant::class);
     }
 
     public function subscriptions(): HasMany
@@ -157,8 +160,31 @@ class Plan extends Model
         return $this->data_cap_action === 'throttle';
     }
 
+    public function dataLimitBytes(): ?int
+    {
+        if ($this->unlimited || ! $this->data_limit) {
+            return null;
+        }
+
+        return match ($this->data_unit) {
+            'MB' => (int) $this->data_limit * 1048576,
+            'TB' => (int) $this->data_limit * 1099511627776,
+            default => (int) $this->data_limit * 1073741824,
+        };
+    }
+
     protected static function booted(): void
     {
+        static::addGlobalScope('tenant', function (Builder $query): void {
+            if ($tenantId = tenant_id() ?? auth()->user()?->tenant_id) {
+                $query->where('tenant_id', $tenantId);
+            }
+        });
+
+        static::creating(function (Plan $plan): void {
+            $plan->tenant_id ??= tenant_id() ?? auth()->user()?->tenant_id;
+        });
+
         static::saved(function (Plan $plan): void {
             if (! $plan->wasRecentlyCreated && ! $plan->wasChanged([
                 'status',
@@ -176,12 +202,23 @@ class Plan extends Model
                 'min_upload_speed',
                 'shaping_priority',
                 'internal_name',
-                'router_profile',
+                'router_profile', 'billing_cycle', 'grace_period_days', 'data_limit', 'data_unit', 'unlimited', 'data_cap_action',
             ])) {
                 return;
             }
 
             app(RadiusProvisioningService::class)->syncSubscriptionsForPlan($plan);
+
+            $plan->subscriptions()->each(function (Subscription $subscription) use ($plan): void {
+                $subscription->update([
+                    'billing_cycle' => $plan->billing_cycle,
+                    'grace_period_days' => $plan->grace_period_days,
+                ]);
+                $subscription->usageCycles()->whereNull('closed_at')->update([
+                    'plan_id' => $plan->id,
+                    'allowance_bytes' => $plan->dataLimitBytes(),
+                ]);
+            });
         });
     }
 }

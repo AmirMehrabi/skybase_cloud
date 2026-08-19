@@ -37,6 +37,14 @@ Schedule::command('subscriptions:kick-suspended-online')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
+Schedule::command('usage:reconcile')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::command('usage:rollover')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 Schedule::command('horizon:snapshot')
     ->everyFiveMinutes()
     ->withoutOverlapping();

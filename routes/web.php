@@ -38,6 +38,7 @@ use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SubscriptionUsageController;
 use App\Http\Controllers\Support\TicketController as SupportTicketController;
 use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamController;
 use App\Http\Controllers\VpnUserController;
@@ -285,6 +286,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::post('/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('activate');
         Route::post('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
         Route::post('/{subscription}/generate-invoice', [SubscriptionController::class, 'generateInvoice'])->name('generate-invoice');
+        Route::post('/{subscription}/usage/bonus', [SubscriptionUsageController::class, 'bonus'])->name('usage.bonus');
+        Route::post('/{subscription}/usage/reset', [SubscriptionUsageController::class, 'reset'])->name('usage.reset');
+        Route::post('/{subscription}/usage/exempt', [SubscriptionUsageController::class, 'exempt'])->name('usage.exempt');
     });
 
     // Plan Management Routes

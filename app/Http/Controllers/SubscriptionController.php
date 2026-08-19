@@ -30,6 +30,7 @@ use App\Services\RadiusAccountingUsageService;
 use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\SubscriptionUsageService;
 use App\Services\TaxResolverService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -52,6 +53,7 @@ class SubscriptionController extends Controller
         protected OrganizationBillingService $organizationBilling,
         protected RadiusAccountingUsageService $radiusAccountingUsage,
         protected SubscriptionSessionDisconnectService $disconnectService,
+        protected SubscriptionUsageService $subscriptionUsage,
         protected TaxResolverService $taxResolver,
     ) {}
 
@@ -159,7 +161,9 @@ class SubscriptionController extends Controller
         $validated['service_type'] = $validated['service_type'] ?? 'hotspot';
 
         // Set base price from plan
-        $plan = Plan::find($validated['plan_id']);
+        $plan = Plan::query()->findOrFail($validated['plan_id']);
+        $validated['billing_cycle'] = $plan->billing_cycle;
+        $validated['grace_period_days'] = $plan->grace_period_days;
         $validated['base_price'] = $plan->price;
 
         // Handle activation
@@ -214,7 +218,7 @@ class SubscriptionController extends Controller
                     'discount_amount' => $itemData['discount_amount'] ?? 0,
                     'discount_type' => $itemData['discount_type'] ?? 'none',
                     'recurring' => $itemData['recurring'],
-                    'billing_cycle' => $itemData['billing_cycle'] ?? $validated['billing_cycle'],
+                    'billing_cycle' => $itemData['recurring'] ? $validated['billing_cycle'] : 'onetime',
                 ]);
 
                 if ($item->item_type === 'plan' && $subscription->customer?->organization?->billing_enabled) {
@@ -269,7 +273,8 @@ class SubscriptionController extends Controller
     public function show(ShowSubscriptionRequest $request, Subscription $subscription): View
     {
         $filters = $request->validated();
-        $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments']);
+        $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments', 'restrictions']);
+        $currentUsageCycle = $subscription->usageCycles()->whereNull('closed_at')->with('adjustments')->first();
         $plans = Plan::query()
             ->where(function ($query) use ($subscription): void {
                 $query->where('status', 'active');
@@ -311,6 +316,7 @@ class SubscriptionController extends Controller
             'usageSessions',
             'usageChart',
             'usageChartRange',
+            'currentUsageCycle',
             'authAttempts',
         ));
     }
@@ -396,7 +402,7 @@ class SubscriptionController extends Controller
             'ip_address' => 'nullable|ip|max:255',
             'pppoe_username' => 'nullable|string|max:255',
             'pppoe_password' => 'nullable|string|max:255',
-            'billing_cycle' => 'nullable|in:monthly,quarterly,yearly',
+            'billing_cycle' => 'nullable|in:daily,weekly,monthly,quarterly,yearly',
             'billing_enabled' => 'nullable|boolean',
             'auto_suspension_enabled' => 'nullable|boolean',
             'grace_period_days' => 'nullable|integer|min:0|max:365',
@@ -453,6 +459,10 @@ class SubscriptionController extends Controller
                 ...$validated,
             ]);
 
+            $authoritativePlan = Plan::query()->findOrFail($validated['plan_id']);
+            $validated['billing_cycle'] = $authoritativePlan->billing_cycle;
+            $validated['grace_period_days'] = $authoritativePlan->grace_period_days;
+
             $subscription->update($validated);
             $subscription->refresh();
 
@@ -493,6 +503,17 @@ class SubscriptionController extends Controller
             || (string) $subscription->billing_cycle !== $originalBillingCycle
             || (string) $subscription->grace_period_days !== $originalGracePeriodDays
             || (bool) $subscription->billing_enabled !== $originalBillingEnabled;
+
+        if ((string) $subscription->plan_id !== $originalPlanId) {
+            $currentCycle = $subscription->usageCycles()->whereNull('closed_at')->first();
+            if ($currentCycle) {
+                $currentCycle->update([
+                    'plan_id' => $subscription->plan_id,
+                    'allowance_bytes' => $subscription->plan?->dataLimitBytes(),
+                ]);
+                $this->subscriptionUsage->reconcile($subscription->fresh(['plan']));
+            }
+        }
 
         if ($planOrBillingChanged && $subscription->isPppoe() && $subscription->router && filled($subscription->pppoe_username)) {
             $disconnectResult = $this->disconnectService->disconnect($subscription->fresh(['router']));

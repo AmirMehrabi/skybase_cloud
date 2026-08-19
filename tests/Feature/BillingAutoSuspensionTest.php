@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\BillingService;
+use App\Services\SubscriptionRestrictionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -26,7 +27,8 @@ class BillingAutoSuspensionTest extends TestCase
         $this->assertSame(1, $results['marked_overdue']);
         $this->assertSame(1, $results['suspended_subscriptions']);
         $this->assertSame('overdue', $invoice->fresh()->status);
-        $this->assertSame('suspended', $subscription->fresh()->status);
+        $this->assertSame('active', $subscription->fresh()->status);
+        $this->assertTrue($subscription->restrictions()->active()->where('type', 'billing')->exists());
     }
 
     public function test_overdue_invoice_is_marked_without_suspending_when_auto_suspension_is_disabled(): void
@@ -55,6 +57,22 @@ class BillingAutoSuspensionTest extends TestCase
 
         $this->assertFalse($subscription->fresh()->billing_enabled);
         $this->assertFalse($subscription->fresh()->auto_suspension_enabled);
+    }
+
+    public function test_full_payment_immediately_clears_only_the_billing_restriction(): void
+    {
+        [$tenant, $customer] = $this->createTenantContext('payment-restoration');
+        $subscription = $this->createSubscription($tenant, $customer, true);
+        $invoice = $this->createOverdueInvoice($tenant, $customer, $subscription);
+        $restrictions = app(SubscriptionRestrictionService::class);
+        $restrictions->restrict($subscription, 'billing', 'Past grace');
+        $restrictions->restrict($subscription, 'manual', 'Operator hold');
+
+        $invoice->update(['paid_amount' => 100, 'balance_due' => 0, 'status' => 'paid']);
+        app(BillingService::class)->reconcileSubscriptionAfterPayment($subscription);
+
+        $this->assertFalse($subscription->restrictions()->active()->where('type', 'billing')->exists());
+        $this->assertTrue($subscription->restrictions()->active()->where('type', 'manual')->exists());
     }
 
     public function test_new_subscription_defaults_to_auto_suspension_enabled(): void

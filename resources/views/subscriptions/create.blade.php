@@ -140,7 +140,7 @@
                     <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('plan_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
                         <option value="">Select a plan</option>
                         @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}" data-price="{{ $plan->price }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
+                            <option value="{{ $plan->id }}" data-price="{{ $plan->price }}" data-billing-cycle="{{ $plan->billing_cycle }}" data-grace-period="{{ $plan->grace_period_days }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
                         @endforeach
                     </select>
                     @error('plan_id')
@@ -709,11 +709,15 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                     <label for="billing_cycle" class="block text-sm font-medium text-gray-700 mb-1">Billing Cycle <span class="text-red-500">*</span></label>
-                    <select name="billing_cycle" id="billing_cycle" x-model="form.billing_cycle" @change="updateBillingCycle()" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('billing_cycle') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
+                    <select name="billing_cycle" id="billing_cycle" x-model="form.billing_cycle" disabled class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border border-gray-300 bg-gray-50" required>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly (3 months)</option>
                         <option value="yearly">Yearly (12 months)</option>
                     </select>
+                    <input type="hidden" name="billing_cycle" :value="form.billing_cycle">
+                    <p class="mt-1 text-xs text-gray-500">Inherited from the selected Plan.</p>
                     @error('billing_cycle')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -724,7 +728,7 @@
                 <div>
                     <label for="grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Grace Period</label>
                     <div class="flex gap-2">
-                        <input type="number" min="0" max="365" step="1" name="grace_period_days" id="grace_period_days" x-model="form.grace_period_days" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('grace_period_days') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border disabled:bg-gray-50" placeholder="Plan default">
+                        <input type="number" min="0" max="365" step="1" name="grace_period_days" id="grace_period_days" x-model="form.grace_period_days" readonly class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border border-gray-300 bg-gray-50" placeholder="Plan default">
                         <span class="inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">days</span>
                     </div>
                     @error('grace_period_days')
@@ -997,6 +1001,10 @@ function subscriptionCreateForm() {
             const planSelect = document.getElementById('plan_id');
             const selectedOption = planSelect.options[planSelect.selectedIndex];
             const price = parseFloat(selectedOption?.dataset.price || 0);
+
+            this.form.billing_cycle = selectedOption?.dataset.billingCycle || 'monthly';
+            this.form.grace_period_days = selectedOption?.dataset.gracePeriod || 0;
+            this.updateBillingCycle();
 
             this.items[0].unit_price = price;
             this.items[0].description = selectedOption?.text.split(' - ')[0] || '';
