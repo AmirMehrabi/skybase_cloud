@@ -63,4 +63,30 @@ class MarketingLeadSubmissionTest extends TestCase
             'source_page' => 'pricing',
         ]);
     }
+
+    public function test_homepage_guided_setup_request_returns_to_the_form(): void
+    {
+        Http::fake();
+
+        $response = $this->post(route('demo-requests.store'), [
+            'requested_plan' => 'Guided setup from homepage',
+            'business_name' => 'Clear Sky Fiber',
+            'contact_name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+            'country' => 'France',
+            'customer_count' => 120,
+            'message' => 'We want to simplify customer and router follow-up.',
+            'source_page' => 'home',
+        ]);
+
+        $response->assertRedirect(route('home').'#guided-setup');
+        $response->assertSessionHas('demo_request_success');
+
+        $this->assertDatabaseHas('demo_requests', [
+            'requested_plan' => 'Guided setup from homepage',
+            'business_name' => 'Clear Sky Fiber',
+            'customer_count' => 120,
+            'source_page' => 'home',
+        ]);
+    }
 }

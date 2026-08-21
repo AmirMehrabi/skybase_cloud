@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/": {
+      "targetKind": "existing-ui",
+      "projectId": "350b6f7f-b63c-4739-9fe6-1729fac02c24",
+      "activeDraftId": "4a622f70-f72e-47d1-a42f-7ab9b47447dd",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [
+        "public-assets-images-logo-logo-black.png"
+      ],
+      "brandAssets": {
+        "logo": {
+          "assetKey": "public-assets-images-logo-logo-black.png",
+          "url": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/350b6f7f-b63c-4739-9fe6-1729fac02c24/brand-assets/public-assets-images-logo-logo-black.png/logo-black.png",
+          "sourcePath": "public/assets/images/logo/logo-black.png"
+        }
+      },
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "resources/views/home.blade.php",
+        "resources/views/layouts/layout.blade.php",
+        "resources/views/dashboard.blade.php",
+        "resources/views/components/ui/input/text.blade.php",
+        "resources/views/components/ui/input/textarea.blade.php",
+        "resources/css/app.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "a3b2924de5d2033ab0168aa0e23197f6c6d89cdadbc50f8b8e04d429c384f52c",
+        "resources/views/home.blade.php": "659e31a209373e2fe77cfa7c16ea9c8d14f79a0586870b9f918f3b94a6c9e869",
+        "resources/views/layouts/layout.blade.php": "163bc5dd9424cf7260d27580c8642db61ccb0a436a53e7ea3822784cd2e53331",
+        "resources/views/dashboard.blade.php": "53a3d068e75203108fc9fd63669b2f02561a56cefa72364fdd91772cdf67140f",
+        "resources/views/components/ui/input/text.blade.php": "6ee6651975bf6e6a08a81294496cd6445e3b9c04489dd0021006d1ceaf216854",
+        "resources/views/components/ui/input/textarea.blade.php": "c70d4aeed724bbe29a6be648877580d1b7f092e0b8514ff383e34bf3e54c8a32",
+        "resources/css/app.css": "c34c0ac7566bc6ff14e30364614711b60cae033d49e284c5d0429dd3b8a61f8c"
+      },
+      "components": [],
+      "drafts": {
+        "4a622f70-f72e-47d1-a42f-7ab9b47447dd": {
+          "title": "SkyBase — Calm ISP Operations",
+          "visualDirection": "37signals-inspired calm editorial landing page",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-08-20T22:25:12.681Z"
+    }
+  }
+}

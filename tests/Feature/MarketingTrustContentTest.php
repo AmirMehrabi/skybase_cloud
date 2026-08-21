@@ -6,25 +6,25 @@ use Tests\TestCase;
 
 class MarketingTrustContentTest extends TestCase
 {
-    public function test_homepage_uses_guided_setup_as_the_primary_conversion_path(): void
+    public function test_homepage_presents_a_focused_founder_led_conversion_path(): void
     {
         $response = $this->get(route('home'));
 
         $response->assertOk();
-        $response->assertSee('Book a guided setup');
+        $response->assertSee('Run your ISP.');
+        $response->assertSee('Not your software.');
+        $response->assertSee('For small and growing MikroTik ISPs');
         $response->assertSee('Free forever');
-        $response->assertSee('Illustrative workspace');
-        $response->assertSee('A letter from the founder');
+        $response->assertSee('Representative SkyBase dashboard');
+        $response->assertSee('A note from the founder');
         $response->assertSee('Abbie Barlowe');
-        $response->assertSee('What customers say');
-        $response->assertSee('Sample testimonial');
-        $response->assertSee('Sample customer');
-        $response->assertSee('What becomes easier');
+        $response->assertSee('Ultech Solutions');
+        $response->assertSee('Capable where it matters. Quiet everywhere else.');
         $response->assertSee('Book a guided setup');
-        $response->assertDontSee('Early customer proof');
-        $response->assertDontSee('Founding Operator Programme');
+        $response->assertSee('Book my guided setup');
+        $response->assertDontSee('Illustrative workspace');
+        $response->assertDontSee('Frequently Asked Questions');
         $response->assertDontSee('Compare Splynx');
-        $response->assertDontSee('Founder story and photograph coming next');
         $response->assertDontSee('Start Trial');
         $response->assertDontSee('24/7');
     }

@@ -1,3 +1,12 @@
+# Shared Marketing Layout
+
+## Public Marketing Shell
+
+Path: `resources/views/layouts/layout.blade.php`
+
+Renders the document head, responsive Alpine.js navigation, page content slot, and shared footer for all public marketing pages.
+
+```blade
 @php
     $isHomePage = request()->is('/');
     $isFeaturesPage = request()->is('features');
@@ -190,3 +199,4 @@
     @stack('scripts')
 </body>
 </html>
+```

@@ -28,3 +28,4 @@ storage/imports/
 .bob/notes/
 .bob/notes/pending-notes.txt
 .mimocode/
+.superdesign/tmp/

@@ -15,7 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('tenant_id');
             $table->foreignId('subscription_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('subscription_usage_cycle_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('subscription_usage_cycle_id')
+                ->constrained(indexName: 'sub_data_adj_usage_cycle_fk')
+                ->cascadeOnDelete();
             $table->string('type');
             $table->bigInteger('bytes');
             $table->decimal('amount', 10, 2)->nullable();
@@ -26,7 +28,10 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-            $table->index(['subscription_usage_cycle_id', 'status', 'expires_at']);
+            $table->index(
+                ['subscription_usage_cycle_id', 'status', 'expires_at'],
+                'sub_data_adj_cycle_status_exp_idx'
+            );
         });
     }
 

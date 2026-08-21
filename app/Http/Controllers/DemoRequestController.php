@@ -24,7 +24,7 @@ class DemoRequestController extends Controller
         $telegramLeadNotifier->notifyDemoRequest($demoRequest);
 
         $redirect = $sourcePage === 'home'
-            ? redirect(url()->previous().'#demo')
+            ? redirect()->to(route('home').'#guided-setup')
             : redirect()->route('pricing');
 
         return $redirect
