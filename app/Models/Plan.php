@@ -173,6 +173,11 @@ class Plan extends Model
         };
     }
 
+    public function hasFiniteDataAllowance(): bool
+    {
+        return ($this->dataLimitBytes() ?? 0) > 0;
+    }
+
     protected static function booted(): void
     {
         static::addGlobalScope('tenant', function (Builder $query): void {

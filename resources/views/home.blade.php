@@ -66,7 +66,7 @@
                         </a>
                     </div>
 
-                    <p class="mt-4 text-sm font-medium text-[#52605d]">Free for up to 40 subscribers. Direct help from the founder.</p>
+                    <p class="mt-4 text-sm font-medium text-[#52605d]">Free for up to 40 subscribers.</p>
                 </div>
 
                 <div class="overflow-hidden rounded-2xl border border-[#17211f]/15 bg-white shadow-[0_24px_70px_rgba(23,33,31,0.12)]">

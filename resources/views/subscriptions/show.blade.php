@@ -70,6 +70,18 @@
     $usagePercent = $usageSummary['usage_percent'] ?? 0;
     $quotaLabel = $usageSummary['quota_label'] ?? 'Unlimited';
     $billingInvoices = collect($billingInvoices ?? []);
+    $formatDataBytes = static function (int $bytes): string {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        $value = max(0, $bytes);
+        $unitIndex = 0;
+
+        while ($value >= 1024 && $unitIndex < count($units) - 1) {
+            $value /= 1024;
+            $unitIndex++;
+        }
+
+        return number_format($value, $unitIndex === 0 ? 0 : 2).' '.$units[$unitIndex];
+    };
 
     if (!function_exists('getStatusBadgeClass')) {
         function getStatusBadgeClass($status)
@@ -95,6 +107,10 @@
         usageChart: @js($usageChart),
         usageChartTooltip: { show: false, x: 0, label: '', download: 0, upload: 0 },
         copiedField: null,
+        allowance: {
+            action: @js(old('allowance_action')),
+            menuOpen: false,
+        },
         credentials: {
             open: {{ $errors->has('pppoe_username') || $errors->has('pppoe_password') ? 'true' : 'false' }},
             form: {
@@ -201,6 +217,13 @@
         },
         closePlanModal() {
             this.planChange.open = false;
+        },
+        openAllowanceAction(action) {
+            this.allowance.action = action;
+            this.allowance.menuOpen = false;
+        },
+        closeAllowanceAction() {
+            this.allowance.action = null;
         },
         async suggestIpAddress() {
             if (!@js((bool) $canSuggestIp)) {
@@ -484,6 +507,15 @@
                             <span>&bull;</span>
                             <span>${{ number_format($subscription['monthly_price'], 2) }}/mo</span>
                         </div>
+                        @if ($subscriptionModel->restrictions->whereNull('cleared_at')->isNotEmpty())
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                @foreach ($subscriptionModel->restrictions->whereNull('cleared_at') as $restriction)
+                                    <span class="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                                        {{ ucfirst($restriction->type) }} restricted
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -573,65 +605,6 @@
                         Create Invoice
                     </button>
                 </form>
-            </div>
-        </div>
-
-        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">Cycle data allowance</h2>
-                    @if($currentUsageCycle)
-                        @php
-                            $effectiveAllowance = $currentUsageCycle->effectiveAllowanceBytes();
-                            $cycleUsed = $currentUsageCycle->usedBytes();
-                            $cyclePercent = $effectiveAllowance ? min(100, round(($cycleUsed / $effectiveAllowance) * 100, 1)) : 0;
-                        @endphp
-                        <p class="mt-1 text-sm text-gray-500">
-                            {{ $currentUsageCycle->starts_at->toDateString() }} through {{ $currentUsageCycle->ends_at->toDateString() }}
-                        </p>
-                        <p class="mt-3 text-sm font-medium text-gray-800">
-                            {{ number_format($cycleUsed / 1073741824, 2) }} GB used
-                            @if($effectiveAllowance !== null)
-                                of {{ number_format($effectiveAllowance / 1073741824, 2) }} GB
-                            @else
-                                · Unlimited
-                            @endif
-                        </p>
-                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-100">
-                            <div class="h-full rounded-full {{ $cyclePercent >= 100 ? 'bg-red-600' : 'bg-blue-600' }}" style="width: {{ $cyclePercent }}%"></div>
-                        </div>
-                    @else
-                        <p class="mt-1 text-sm text-gray-500">Usage will appear after the next RADIUS reconciliation.</p>
-                    @endif
-                    @if($subscriptionModel->restrictions->whereNull('cleared_at')->isNotEmpty())
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            @foreach($subscriptionModel->restrictions->whereNull('cleared_at') as $restriction)
-                                <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">{{ ucfirst($restriction->type) }} restricted</span>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-3">
-                    <form method="POST" action="{{ route('subscriptions.usage.bonus', $subscriptionModel) }}" class="space-y-2 rounded-xl border border-gray-200 p-3">
-                        @csrf
-                        <x-input.number name="amount" label="Bonus data" min="1" required />
-                        <x-input.select name="unit" label="Unit" :options="['MB' => 'MB', 'GB' => 'GB', 'TB' => 'TB']" />
-                        <x-input.text name="reason" label="Reason" required />
-                        <x-ui.button type="submit" size="sm">Grant bonus</x-ui.button>
-                    </form>
-                    <form method="POST" action="{{ route('subscriptions.usage.reset', $subscriptionModel) }}" class="space-y-2 rounded-xl border border-gray-200 p-3">
-                        @csrf
-                        <x-input.text name="reason" label="Reset reason" required />
-                        <x-ui.button type="submit" size="sm">Reset usage</x-ui.button>
-                    </form>
-                    <form method="POST" action="{{ route('subscriptions.usage.exempt', $subscriptionModel) }}" class="space-y-2 rounded-xl border border-gray-200 p-3">
-                        @csrf
-                        <x-input.text name="exempt_until" type="datetime-local" label="Exempt until" required />
-                        <x-input.text name="reason" label="Reason" required />
-                        <x-ui.button type="submit" size="sm">Apply exemption</x-ui.button>
-                    </form>
-                </div>
             </div>
         </div>
 
@@ -1163,28 +1136,107 @@
                             </dl>
                         </div>
 
-                        <!-- Data Quota Summary -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                            <div class="mb-4">
-                                <h3 class="text-lg font-semibold text-gray-900">Data Quota Summary</h3>
-                                <p class="text-sm text-gray-500 mt-1">Current usage information</p>
-                            </div>
-                            <div class="space-y-4">
+                        <!-- Data Allowance Summary -->
+                        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="mb-4 flex items-start justify-between gap-4">
                                 <div>
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span
-                                            class="text-sm text-gray-600">{{ number_format($subscription['data_used'], 2) }}
-                                            GB used</span>
-                                        <span class="text-sm text-gray-500">of {{ $quotaLabel }}</span>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h3 class="text-lg font-semibold text-gray-900">Data Allowance</h3>
+                                        @if ($allowanceSummary['state'] === 'capped')
+                                            <span class="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">Capped</span>
+                                        @elseif ($allowanceSummary['state'] === 'unlimited')
+                                            <span class="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">Unlimited data</span>
+                                        @elseif ($allowanceSummary['state'] === 'unconfigured')
+                                            <span class="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">Not configured</span>
+                                        @endif
                                     </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-3">
-                                        <div class="{{ $usagePercent > 90 ? 'bg-red-500' : ($usagePercent > 70 ? 'bg-yellow-500' : 'bg-green-500') }} h-3 rounded-full transition-all duration-500"
-                                            style="width: {{ $usagePercent }}%"></div>
-                                    </div>
-                                    <p class="text-xs text-gray-500 mt-2">
-                                        {{ $usageSummary['quota_gb'] > 0 ? number_format($usagePercent, 1) . '%' : 'Unlimited plan' }}
+                                    <p class="mt-1 text-sm text-gray-500">
+                                        @if ($allowanceSummary['starts_at'] && $allowanceSummary['ends_at'])
+                                            {{ $allowanceSummary['starts_at']->format('M d, Y') }} – {{ $allowanceSummary['ends_at']->format('M d, Y') }}
+                                        @elseif ($allowanceSummary['state'] === 'capped' || $allowanceSummary['state'] === 'unlimited')
+                                            Awaiting first usage reconciliation
+                                        @else
+                                            Plan allowance status
+                                        @endif
                                     </p>
                                 </div>
+
+                                @if ($allowanceSummary['can_manage'])
+                                    <div class="relative" @click.outside="allowance.menuOpen = false">
+                                        <button type="button" @click="allowance.menuOpen = ! allowance.menuOpen"
+                                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                            aria-label="Manage data allowance actions">
+                                            Manage
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                        <div x-show="allowance.menuOpen" x-cloak x-transition
+                                            class="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg">
+                                            <button type="button" @click="openAllowanceAction('bonus')"
+                                                class="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Grant bonus data</button>
+                                            @if ($allowanceSummary['can_reset'])
+                                                <button type="button" @click="openAllowanceAction('reset')"
+                                                    class="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">Reset cycle usage</button>
+                                            @endif
+                                            <button type="button" @click="openAllowanceAction('exempt')"
+                                                class="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                                                {{ $allowanceSummary['is_exempt'] ? 'Extend exemption' : 'Apply exemption' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="space-y-4">
+                                @if ($allowanceSummary['state'] === 'capped')
+                                    <div>
+                                        <div class="mb-2 flex items-center justify-between gap-3 text-sm">
+                                            <span class="font-medium text-gray-800">
+                                                {{ $formatDataBytes($allowanceSummary['used_bytes']) }} used
+                                            </span>
+                                            <span class="text-gray-500">
+                                                {{ $formatDataBytes($allowanceSummary['remaining_bytes']) }} remaining
+                                            </span>
+                                        </div>
+                                        <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+                                            <div class="h-full rounded-full transition-all duration-500 {{ $allowanceSummary['usage_percent'] >= 100 ? 'bg-red-600' : ($allowanceSummary['usage_percent'] >= 80 ? 'bg-amber-500' : 'bg-blue-600') }}"
+                                                style="width: {{ $allowanceSummary['usage_percent'] }}%"></div>
+                                        </div>
+                                        <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+                                            <span>{{ number_format($allowanceSummary['usage_percent'], 1) }}% of {{ $formatDataBytes($allowanceSummary['effective_allowance_bytes']) }}</span>
+                                            @if ($allowanceSummary['bonus_bytes'] > 0)
+                                                <span>Includes {{ $formatDataBytes($allowanceSummary['bonus_bytes']) }} bonus data</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @elseif ($allowanceSummary['state'] === 'unlimited')
+                                    <div class="rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+                                        <p class="text-sm font-medium text-green-900">{{ $formatDataBytes($allowanceSummary['used_bytes']) }} used this cycle</p>
+                                        <p class="mt-1 text-xs text-green-700">This plan has no cycle data cap.</p>
+                                    </div>
+                                @elseif ($allowanceSummary['state'] === 'unconfigured')
+                                    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                        This plan does not have a data allowance configured. Update the plan before managing quota actions.
+                                    </div>
+                                @else
+                                    <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                                        Assign a plan to define this subscription's data allowance.
+                                    </div>
+                                @endif
+
+                                @if ($allowanceSummary['is_quota_restricted'] || $allowanceSummary['is_exempt'])
+                                    <div class="flex flex-wrap gap-2">
+                                        @if ($allowanceSummary['is_quota_restricted'])
+                                            <span class="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">Quota restricted</span>
+                                        @endif
+                                        @if ($allowanceSummary['is_exempt'])
+                                            <span class="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
+                                                Exempt until {{ $allowanceSummary['exempt_until']->format('M d, Y H:i') }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                @endif
 
                                 <div class="pt-4 border-t border-gray-200 space-y-3">
                                     <div class="flex items-center justify-between">
@@ -1955,6 +2007,77 @@
                 </div>
             </div>
         </div>
+
+        @if ($allowanceSummary['can_manage'])
+        <div x-show="allowance.action" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+            @keydown.escape.window="closeAllowanceAction()">
+            <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" @click="closeAllowanceAction()"></div>
+            <div class="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5">
+                <div class="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Data allowance</p>
+                        <h3 class="mt-1 text-lg font-semibold text-gray-900"
+                            x-text="allowance.action === 'bonus' ? 'Grant bonus data' : (allowance.action === 'reset' ? 'Reset cycle usage' : @js($allowanceSummary['is_exempt'] ? 'Extend exemption' : 'Apply exemption'))"></h3>
+                        <p class="mt-1 text-sm text-gray-500">Changes apply to the current billing cycle only.</p>
+                    </div>
+                    <button type="button" @click="closeAllowanceAction()"
+                        class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                        aria-label="Close data allowance dialog">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                @error('data_allowance')
+                    <div class="mx-6 mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $message }}</div>
+                @enderror
+
+                <form x-show="allowance.action === 'bonus'" method="POST"
+                    action="{{ route('subscriptions.usage.bonus', $subscriptionModel) }}" class="px-6 py-5">
+                    @csrf
+                    <input type="hidden" name="allowance_action" value="bonus">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <x-input.number id="bonus_amount" name="amount" label="Bonus data" min="1" required />
+                        <x-input.select id="bonus_unit" name="unit" label="Unit" :options="['MB' => 'MB', 'GB' => 'GB', 'TB' => 'TB']" required />
+                    </div>
+                    <x-input.text id="bonus_reason" name="reason" label="Reason" required />
+                    <div class="flex justify-end gap-3">
+                        <x-ui.button type="button" variant="secondary" @click="closeAllowanceAction()">Cancel</x-ui.button>
+                        <x-ui.button type="submit">Grant bonus</x-ui.button>
+                    </div>
+                </form>
+
+                @if ($allowanceSummary['can_reset'])
+                    <form x-show="allowance.action === 'reset'" method="POST"
+                        action="{{ route('subscriptions.usage.reset', $subscriptionModel) }}" class="px-6 py-5">
+                        @csrf
+                        <input type="hidden" name="allowance_action" value="reset">
+                        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            Resetting adds an adjustment equal to the usage recorded in this cycle.
+                        </div>
+                        <x-input.text id="reset_reason" name="reason" label="Reset reason" required />
+                        <div class="flex justify-end gap-3">
+                            <x-ui.button type="button" variant="secondary" @click="closeAllowanceAction()">Cancel</x-ui.button>
+                            <x-ui.button type="submit">Reset usage</x-ui.button>
+                        </div>
+                    </form>
+                @endif
+
+                <form x-show="allowance.action === 'exempt'" method="POST"
+                    action="{{ route('subscriptions.usage.exempt', $subscriptionModel) }}" class="px-6 py-5">
+                    @csrf
+                    <input type="hidden" name="allowance_action" value="exempt">
+                    <x-input.text id="allowance_exempt_until" name="exempt_until" type="datetime-local" label="Exempt until" required />
+                    <x-input.text id="exemption_reason" name="reason" label="Reason" required />
+                    <div class="flex justify-end gap-3">
+                        <x-ui.button type="button" variant="secondary" @click="closeAllowanceAction()">Cancel</x-ui.button>
+                        <x-ui.button type="submit">{{ $allowanceSummary['is_exempt'] ? 'Extend exemption' : 'Apply exemption' }}</x-ui.button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        @endif
 
         <div x-show="credentials.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
             @keydown.escape.window="closeCredentialsModal()">

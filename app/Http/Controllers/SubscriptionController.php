@@ -21,6 +21,7 @@ use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
 use App\Models\SubscriptionItem;
+use App\Models\SubscriptionUsageCycle;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
 use App\Services\Monitoring\RrdToolService;
@@ -275,6 +276,7 @@ class SubscriptionController extends Controller
         $filters = $request->validated();
         $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments', 'restrictions']);
         $currentUsageCycle = $subscription->usageCycles()->whereNull('closed_at')->with('adjustments')->first();
+        $allowanceSummary = $this->allowanceSummary($subscription, $currentUsageCycle);
         $plans = Plan::query()
             ->where(function ($query) use ($subscription): void {
                 $query->where('status', 'active');
@@ -316,7 +318,7 @@ class SubscriptionController extends Controller
             'usageSessions',
             'usageChart',
             'usageChartRange',
-            'currentUsageCycle',
+            'allowanceSummary',
             'authAttempts',
         ));
     }
@@ -1307,5 +1309,48 @@ class SubscriptionController extends Controller
             'TB' => (int) round((float) $plan->data_limit * 1099511627776),
             default => (int) round((float) $plan->data_limit * 1073741824),
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function allowanceSummary(Subscription $subscription, ?SubscriptionUsageCycle $currentUsageCycle): array
+    {
+        $plan = $subscription->plan;
+        $state = match (true) {
+            ! $plan => 'no_plan',
+            $plan->unlimited => 'unlimited',
+            $plan->hasFiniteDataAllowance() => 'capped',
+            default => 'unconfigured',
+        };
+        $baseAllowanceBytes = $currentUsageCycle?->allowance_bytes ?? $plan?->dataLimitBytes();
+        $effectiveAllowanceBytes = $currentUsageCycle?->effectiveAllowanceBytes() ?? $baseAllowanceBytes;
+        $usedBytes = $currentUsageCycle?->usedBytes() ?? 0;
+        $bonusBytes = $baseAllowanceBytes === null || $effectiveAllowanceBytes === null
+            ? 0
+            : max(0, $effectiveAllowanceBytes - $baseAllowanceBytes);
+        $usagePercent = $effectiveAllowanceBytes
+            ? min(100, round(($usedBytes / $effectiveAllowanceBytes) * 100, 1))
+            : 0;
+
+        return [
+            'state' => $state,
+            'can_manage' => $state === 'capped',
+            'can_reset' => $state === 'capped' && $usedBytes > 0,
+            'used_bytes' => $usedBytes,
+            'base_allowance_bytes' => $baseAllowanceBytes,
+            'bonus_bytes' => $bonusBytes,
+            'effective_allowance_bytes' => $effectiveAllowanceBytes,
+            'remaining_bytes' => $effectiveAllowanceBytes === null ? null : max(0, $effectiveAllowanceBytes - $usedBytes),
+            'usage_percent' => $usagePercent,
+            'starts_at' => $currentUsageCycle?->starts_at,
+            'ends_at' => $currentUsageCycle?->ends_at,
+            'is_exempt' => $currentUsageCycle?->isExempt() ?? false,
+            'exempt_until' => $currentUsageCycle?->exempt_until,
+            'is_quota_restricted' => $subscription->restrictions
+                ->whereNull('cleared_at')
+                ->where('type', 'quota')
+                ->isNotEmpty(),
+        ];
     }
 }
