@@ -37,6 +37,7 @@ use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SubscriptionUsageController;
 use App\Http\Controllers\Support\TicketController as SupportTicketController;
@@ -92,6 +93,14 @@ Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 
 // Features page
 Route::get('/features', [PagesController::class, 'features'])->name('features');
+
+// Search landing pages
+Route::get('/wisp-management-software', [PagesController::class, 'wispManagementSoftware'])->name('seo.wisp-management-software');
+Route::get('/wisp-crm', [PagesController::class, 'wispCrm'])->name('seo.wisp-crm');
+Route::get('/mikrotik-isp-software', [PagesController::class, 'mikrotikIspSoftware'])->name('seo.mikrotik-isp-software');
+
+// Search engine discovery
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Comparison pages
 Route::get('/alternatives/splynx', [PagesController::class, 'splynxAlternative'])->name('alternatives.splynx');

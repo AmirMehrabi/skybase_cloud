@@ -1,7 +1,7 @@
 @extends('layouts.layout')
 
-@section('title', 'SkyBase Cloud - Straightforward ISP Management for MikroTik Operators')
-@section('meta_description', 'Run customers, subscriptions, MikroTik routers, billing, and support from one straightforward cloud workspace built for small and growing ISPs.')
+@section('title', 'SkyBase Cloud | WISP & ISP Management for MikroTik Operators')
+@section('meta_description', 'Straightforward WISP and ISP management software for customers, subscriptions, MikroTik routers, RADIUS, billing, and support. Free for up to 40 subscribers.')
 @section('meta_keywords', 'ISP management software, MikroTik management, RADIUS server, WISP software, ISP billing, PPPoE management')
 @section('og_title', 'SkyBase Cloud - Run Your ISP, Not Your Software')
 @section('og_description', 'Straightforward cloud operations for small and growing MikroTik ISPs, with a free plan and direct founder support.')

@@ -28,6 +28,9 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="@yield('og_url', url()->current())">
     <meta property="og:image" content="{{ asset('images/og-image.png') }}">
+    <meta property="og:site_name" content="SkyBase Cloud">
+
+    <link rel="canonical" href="@yield('canonical_url', url()->current())">
 
     <title>@yield('title', 'SkyBase Cloud')</title>
 
@@ -168,6 +171,9 @@
             <div class="space-y-2 text-sm">
                 <p class="font-semibold text-white">Product</p>
                 <a href="{{ route('features') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Features</a>
+                <a href="{{ route('seo.wisp-management-software') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">WISP management software</a>
+                <a href="{{ route('seo.wisp-crm') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">WISP CRM</a>
+                <a href="{{ route('seo.mikrotik-isp-software') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">MikroTik ISP software</a>
                 <a href="{{ route('pricing') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Pricing</a>
                 <a href="{{ route('changelog') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Changelog</a>
                 <a href="{{ route('auth.register') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Start free</a>
