@@ -50,6 +50,12 @@ class SubscriptionSessionDisconnectService
             $router->name,
         );
 
+        $coaResult = $this->disconnectViaCoa($subscription, $username, $radiusSession);
+
+        if ($coaResult->wasSuccessful()) {
+            return $coaResult;
+        }
+
         $apiResult = $this->disconnectViaRouterOsApi($subscription, $username);
 
         if ($apiResult->wasSuccessful()) {
@@ -59,29 +65,7 @@ class SubscriptionSessionDisconnectService
         $sshResult = $this->disconnectViaRouterOsSsh($subscription, $username);
 
         if ($sshResult->wasSuccessful()) {
-            $message = 'Disconnected 1 active PPP session(s) via SSH after RouterOS API: '.$apiResult->message;
-
-            return SubscriptionSessionDisconnectResult::success(
-                $message,
-                'routeros-ssh',
-                $router->id,
-                $router->name,
-                $sshResult->sessionsRemoved,
-            );
-        }
-
-        $coaResult = $this->disconnectViaCoa($subscription, $username, $radiusSession);
-
-        if ($coaResult->wasSuccessful()) {
-            $message = 'Disconnected 1 active PPP session(s) via CoA after RouterOS API: '.$apiResult->message;
-
-            return SubscriptionSessionDisconnectResult::success(
-                $message,
-                'routeros-coa',
-                $router->id,
-                $router->name,
-                $coaResult->sessionsRemoved,
-            );
+            return $sshResult;
         }
 
         $message = $this->composeFailureMessage($apiResult, $coaResult);
@@ -373,7 +357,7 @@ class SubscriptionSessionDisconnectService
         SubscriptionSessionDisconnectResult $apiResult,
         SubscriptionSessionDisconnectResult $coaResult,
     ): string {
-        return collect([$apiResult, $coaResult])
+        return collect([$coaResult, $apiResult])
             ->filter(fn (SubscriptionSessionDisconnectResult $result): bool => $result->status !== 'success')
             ->map(fn (SubscriptionSessionDisconnectResult $result): string => $result->message)
             ->implode(' ');

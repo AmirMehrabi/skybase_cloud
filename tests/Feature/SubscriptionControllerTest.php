@@ -510,7 +510,7 @@ class SubscriptionControllerTest extends TestCase
         ]);
     }
 
-    public function test_kill_session_route_falls_back_to_coa_when_api_disconnect_fails(): void
+    public function test_kill_session_route_disconnects_via_coa_before_api(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
         $subscription->forceFill([
@@ -526,14 +526,6 @@ class SubscriptionControllerTest extends TestCase
             'connection_status' => 'online',
             'connection_status_checked_at' => now()->subMinutes(5),
         ])->saveQuietly();
-
-        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
-        {
-            public function execute(Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
-            {
-                throw new \RuntimeException('API is unavailable.');
-            }
-        });
 
         $this->app->instance(RouterOsCoaClient::class, new class extends RouterOsCoaClient
         {
@@ -553,7 +545,7 @@ class SubscriptionControllerTest extends TestCase
 
         $response
             ->assertRedirect(route('subscriptions.show', $subscription))
-            ->assertSessionHas('success', 'Disconnected 1 active PPP session(s) via CoA after RouterOS API: RouterOS API disconnect failed: API is unavailable.');
+            ->assertSessionHas('success', 'Disconnected 1 active PPP session(s) via CoA.');
 
         $subscription->refresh();
 
