@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Activity;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -23,6 +24,44 @@ class ActivityLogFormatter
                 ->limit($limit)
                 ->get()
         );
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    public function paginateForSubject(
+        Model $subject,
+        ?string $tenantId,
+        ?string $event = null,
+        int $perPage = 10,
+        string $pageName = 'activity_page',
+    ): LengthAwarePaginator {
+        $paginator = Activity::query()
+            ->forSubject($subject)
+            ->forTenant($tenantId)
+            ->when(filled($event), fn ($query) => $query->where('event', $event))
+            ->with('causer')
+            ->latest()
+            ->paginate($perPage, ['*'], $pageName);
+
+        $paginator->setCollection($this->formatCollection($paginator->getCollection()));
+
+        return $paginator;
+    }
+
+    /**
+     * @return Collection<string, string>
+     */
+    public function eventsForSubject(Model $subject, ?string $tenantId): Collection
+    {
+        return Activity::query()
+            ->forSubject($subject)
+            ->forTenant($tenantId)
+            ->whereNotNull('event')
+            ->distinct()
+            ->orderBy('event')
+            ->pluck('event')
+            ->mapWithKeys(fn (string $event): array => [$event => Str::headline($event)]);
     }
 
     /**

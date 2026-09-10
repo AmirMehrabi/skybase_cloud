@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\BulkDeleteModelsJob;
 use App\Jobs\Subscriptions\ActivateSubscriptionJob;
 use App\Jobs\Subscriptions\SuspendSubscriptionJob;
+use App\Models\Activity;
 use App\Models\BulkDeletionRun;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -223,6 +224,79 @@ class SubscriptionControllerTest extends TestCase
                 && $authAttempts->perPage() === 10
                 && $authAttempts->currentPage() === 2
                 && $authAttempts->count() === 1;
+        });
+    }
+
+    public function test_show_page_paginates_subscription_activity(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+
+        Activity::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subject_type', $subscription->getMorphClass())
+            ->where('subject_id', $subscription->getKey())
+            ->delete();
+
+        foreach (range(1, 11) as $index) {
+            activity()
+                ->performedOn($subscription)
+                ->causedBy($user)
+                ->event('updated')
+                ->log('Subscription activity '.$index);
+        }
+
+        $response = $this->actingAs($user)->get(route('subscriptions.show', [
+            'subscription' => $subscription,
+            'tab' => 'activity',
+            'activity_page' => 2,
+        ]));
+
+        $response->assertOk();
+        $response->assertViewHas('activityLog', function (mixed $activityLog): bool {
+            return $activityLog instanceof LengthAwarePaginator
+                && $activityLog->total() === 11
+                && $activityLog->perPage() === 10
+                && $activityLog->currentPage() === 2
+                && $activityLog->count() === 1;
+        });
+    }
+
+    public function test_show_page_filters_subscription_activity_by_action(): void
+    {
+        [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
+
+        Activity::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('subject_type', $subscription->getMorphClass())
+            ->where('subject_id', $subscription->getKey())
+            ->delete();
+
+        foreach (['created', 'updated', 'updated'] as $event) {
+            activity()
+                ->performedOn($subscription)
+                ->causedBy($user)
+                ->event($event)
+                ->log('Subscription '.$event);
+        }
+
+        $response = $this->actingAs($user)->get(route('subscriptions.show', [
+            'subscription' => $subscription,
+            'tab' => 'activity',
+            'activity_action' => 'updated',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('All actions');
+        $response->assertViewHas('activityActions', fn (mixed $activityActions): bool => $activityActions->all() === [
+            'created' => 'Created',
+            'updated' => 'Updated',
+        ]);
+        $response->assertViewHas('activityLog', function (mixed $activityLog): bool {
+            return $activityLog instanceof LengthAwarePaginator
+                && $activityLog->total() === 2
+                && $activityLog->getCollection()->every(
+                    fn (array $activity): bool => $activity['event'] === 'updated',
+                );
         });
     }
 

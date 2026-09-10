@@ -38,6 +38,8 @@ class ShowSubscriptionRequest extends FormRequest
             'usage_chart_from' => ['nullable', 'required_if:usage_chart_range,custom', 'date'],
             'usage_chart_to' => ['nullable', 'required_if:usage_chart_range,custom', 'date', 'after_or_equal:usage_chart_from'],
             'radpostauth_page' => ['nullable', 'integer', 'min:1'],
+            'activity_action' => ['nullable', 'string', 'max:255'],
+            'activity_page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 

@@ -287,7 +287,16 @@ class SubscriptionController extends Controller
             })
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle', 'grace_period_days', 'download_speed', 'upload_speed', 'bandwidth_unit', 'router_profile', 'ip_pool', 'description', 'status']);
-        $activityLog = app(ActivityLogFormatter::class)->forSubject($subscription, $subscription->tenant_id);
+        $activityLogFormatter = app(ActivityLogFormatter::class);
+        $activityLog = $activityLogFormatter->paginateForSubject(
+            $subscription,
+            $subscription->tenant_id,
+            $filters['activity_action'] ?? null,
+        )->appends([
+            ...$request->except('activity_page'),
+            'tab' => 'activity',
+        ]);
+        $activityActions = $activityLogFormatter->eventsForSubject($subscription, $subscription->tenant_id);
         $billingInvoices = $this->billingInvoicesForSubscription($subscription);
         $usageSummary = $this->usageSummaryForSubscription($subscription);
         $usageSessions = $this->radiusAccountingUsage->paginatedSessionsForSubscription(
@@ -313,6 +322,7 @@ class SubscriptionController extends Controller
             'subscription',
             'plans',
             'activityLog',
+            'activityActions',
             'billingInvoices',
             'usageSummary',
             'usageSessions',
