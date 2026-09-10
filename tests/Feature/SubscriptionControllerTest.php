@@ -582,6 +582,13 @@ class SubscriptionControllerTest extends TestCase
             'subject_id' => $subscription->id,
             'event' => 'session_disconnect_succeeded',
         ]);
+        $this->assertDatabaseHas('activity_log', [
+            'tenant_id' => $tenant->id,
+            'subject_type' => Subscription::class,
+            'subject_id' => $subscription->id,
+            'causer_id' => $user->id,
+            'event' => 'session_kill',
+        ]);
     }
 
     public function test_kill_session_route_disconnects_via_coa_before_api(): void
@@ -729,6 +736,13 @@ class SubscriptionControllerTest extends TestCase
 
         $this->assertSame('suspended', $subscription->status);
         $this->assertNotNull($subscription->suspended_at);
+        $this->assertDatabaseHas('activity_log', [
+            'tenant_id' => $tenant->id,
+            'subject_type' => Subscription::class,
+            'subject_id' => $subscription->id,
+            'causer_id' => $user->id,
+            'event' => 'suspended',
+        ]);
     }
 
     public function test_activate_route_queues_background_processing_and_saves_status_quietly(): void
@@ -753,6 +767,13 @@ class SubscriptionControllerTest extends TestCase
 
         $this->assertSame('active', $subscription->status);
         $this->assertNotNull($subscription->activation_date);
+        $this->assertDatabaseHas('activity_log', [
+            'tenant_id' => $tenant->id,
+            'subject_type' => Subscription::class,
+            'subject_id' => $subscription->id,
+            'causer_id' => $user->id,
+            'event' => 'activated',
+        ]);
         $this->assertDatabaseMissing('radcheck', [
             'tenant_id' => $tenant->id,
             'username' => 'jane.doe',

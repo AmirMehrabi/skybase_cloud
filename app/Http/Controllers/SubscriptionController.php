@@ -725,6 +725,8 @@ class SubscriptionController extends Controller
             'suspended_by' => auth()->id(),
         ])->saveQuietly();
 
+        $this->recordSubscriptionActivity($request, $subscription, 'suspended');
+
         SuspendSubscriptionJob::dispatch(
             $subscription->id,
             (string) $subscription->tenant_id,
@@ -753,12 +755,14 @@ class SubscriptionController extends Controller
 
         $result = $this->disconnectService->disconnect($subscription->fresh(['router']));
         $this->disconnectService->recordActivity($subscription, $result, $request->user());
+        $this->recordSubscriptionActivity($request, $subscription, 'session_kill', $result->context());
 
         if ($result->wasSuccessful()) {
             $subscription->forceFill([
                 'connection_status' => 'offline',
                 'connection_status_checked_at' => now(),
             ])->saveQuietly();
+
         }
 
         if ($request->expectsJson()) {
@@ -784,6 +788,8 @@ class SubscriptionController extends Controller
             'suspended_at' => null,
             'activated_by' => auth()->id(),
         ])->saveQuietly();
+
+        $this->recordSubscriptionActivity($request, $subscription, 'activated');
 
         ActivateSubscriptionJob::dispatch(
             $subscription->id,
@@ -1008,6 +1014,24 @@ class SubscriptionController extends Controller
             ...$request->except($pageName),
             'tab' => 'auth',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $properties
+     */
+    private function recordSubscriptionActivity(
+        Request $request,
+        Subscription $subscription,
+        string $event,
+        array $properties = [],
+    ): void {
+        activity()
+            ->useLog('subscription')
+            ->event($event)
+            ->performedOn($subscription)
+            ->causedBy($request->user())
+            ->withProperties($properties)
+            ->log(Str::headline($event));
     }
 
     /**
