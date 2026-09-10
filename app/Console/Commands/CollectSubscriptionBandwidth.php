@@ -25,6 +25,7 @@ class CollectSubscriptionBandwidth extends Command
             ->orderBy('id')
             ->each(function (Tenant $tenant) use ($collector, &$checked, &$failed): void {
                 Subscription::withoutGlobalScopes()
+                    ->withoutTrashed()
                     ->where('tenant_id', $tenant->id)
                     ->where('status', 'active')
                     ->when($this->option('subscription'), fn ($query, string $subscriptionId) => $query->whereKey($subscriptionId))

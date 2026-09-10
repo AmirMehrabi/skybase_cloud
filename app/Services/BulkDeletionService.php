@@ -136,6 +136,7 @@ class BulkDeletionService
         $excludedIds = collect($run->excluded_ids ?? [])->filter()->map(fn (mixed $id): int => (int) $id)->values();
 
         $query = Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('tenant_id', $run->tenant_id)
             ->with(['customer.organization', 'router']);
 

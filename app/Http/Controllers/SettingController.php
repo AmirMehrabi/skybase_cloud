@@ -101,6 +101,7 @@ class SettingController extends Controller
     private function syncSubscriptionItemsTax(string $tenantId, TaxResolverService $taxResolver): void
     {
         Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('tenant_id', $tenantId)
             ->where('billing_enabled', true)
             ->whereIn('status', ['pending', 'active'])

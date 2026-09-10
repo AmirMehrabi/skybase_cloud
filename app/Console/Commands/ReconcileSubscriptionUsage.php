@@ -19,6 +19,7 @@ class ReconcileSubscriptionUsage extends Command
     {
         $reconciled = 0;
         Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('status', 'active')
             ->where('connection_type', 'pppoe')
             ->whereNotNull('pppoe_username')

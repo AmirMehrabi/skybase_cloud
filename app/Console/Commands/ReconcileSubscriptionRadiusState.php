@@ -26,7 +26,7 @@ class ReconcileSubscriptionRadiusState extends Command
         Log::info('Subscription RADIUS reconciliation started.');
 
         Subscription::withoutGlobalScopes()
-            ->whereNull('deleted_at')
+            ->withoutTrashed()
             ->whereIn('status', ['active', 'suspended'])
             ->with(['customer.organization', 'plan', 'ipRoutes'])
             ->orderBy('id')

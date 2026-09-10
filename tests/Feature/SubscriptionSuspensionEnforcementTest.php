@@ -68,6 +68,50 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
         ]);
     }
 
+    public function test_deleted_duplicate_username_cannot_overwrite_active_radius_authorization(): void
+    {
+        [$tenant, $activeSubscription] = $this->createPppoeSubscription();
+
+        $deletedSubscription = Subscription::create([
+            ...$activeSubscription->only([
+                'tenant_id',
+                'customer_id',
+                'plan_id',
+                'router_id',
+                'connection_type',
+                'pppoe_username',
+                'pppoe_password',
+                'base_price',
+                'total_price',
+                'billing_cycle',
+                'billing_enabled',
+                'start_date',
+            ]),
+            'subscription_code' => 'SUB-'.Str::upper(Str::random(6)),
+            'connection_status' => 'online',
+            'status' => 'suspended',
+        ]);
+
+        $deletedSubscription->delete();
+        app(RadiusProvisioningService::class)->syncSubscription($activeSubscription->fresh());
+
+        app(RadiusProvisioningService::class)->syncSubscription($deletedSubscription);
+        app(RadiusProvisioningService::class)->syncSubscriptionsForTenant($tenant->id);
+
+        $this->assertDatabaseMissing('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'alpha.user',
+            'attribute' => 'Auth-Type',
+            'value' => 'Reject',
+        ]);
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => 'alpha.user',
+            'attribute' => 'Cleartext-Password',
+            'value' => 'secret-pass',
+        ]);
+    }
+
     public function test_suspend_logs_activity_when_router_disconnect_fails(): void
     {
         [$tenant, $subscription] = $this->createPppoeSubscription([

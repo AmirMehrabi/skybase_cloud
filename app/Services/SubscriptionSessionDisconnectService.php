@@ -27,6 +27,10 @@ class SubscriptionSessionDisconnectService
 
     public function disconnectForUsername(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
     {
+        if ($subscription->trashed()) {
+            return SubscriptionSessionDisconnectResult::skipped('Subscription has been deleted.');
+        }
+
         $subscription->loadMissing('router');
         $router = $subscription->router;
         $radiusSession = $this->activeRadiusSession($subscription);

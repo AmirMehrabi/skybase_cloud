@@ -14,7 +14,7 @@ class BulkDeleteModelsJob implements ShouldQueue
 
     public int $timeout = 3600;
 
-    public int $tries = 1;
+    public int $tries = 5;
 
     public function __construct(public int $runId) {}
 

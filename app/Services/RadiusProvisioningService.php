@@ -23,6 +23,10 @@ class RadiusProvisioningService
 
     public function syncSubscription(Subscription $subscription, ?string $previousUsername = null): void
     {
+        if ($subscription->trashed()) {
+            return;
+        }
+
         $subscription->loadMissing(['customer.organization', 'plan', 'restrictions']);
 
         DB::transaction(function () use ($subscription, $previousUsername): void {
@@ -157,6 +161,7 @@ class RadiusProvisioningService
     public function syncSubscriptionsForPlan(Plan $plan): void
     {
         Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('plan_id', $plan->id)
             ->with(['customer.organization', 'plan'])
             ->chunkById(100, function ($subscriptions): void {
@@ -169,6 +174,7 @@ class RadiusProvisioningService
     public function syncSubscriptionsForCustomer(Customer $customer): void
     {
         Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('tenant_id', $customer->tenant_id)
             ->where('customer_id', $customer->id)
             ->with(['customer.organization', 'plan'])
@@ -182,6 +188,7 @@ class RadiusProvisioningService
     public function syncSubscriptionsForTenant(string $tenantId): void
     {
         Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('tenant_id', $tenantId)
             ->with(['customer.organization', 'plan'])
             ->chunkById(100, function ($subscriptions): void {

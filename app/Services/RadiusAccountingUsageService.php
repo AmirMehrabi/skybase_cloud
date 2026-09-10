@@ -337,6 +337,7 @@ class RadiusAccountingUsageService
     private function pppoeSubscriptionsForTenant(string $tenantId): Collection
     {
         return Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('tenant_id', $tenantId)
             ->where('connection_type', 'pppoe')
             ->whereNotNull('pppoe_username')

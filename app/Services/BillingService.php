@@ -22,6 +22,7 @@ class BillingService
 
         return DB::transaction(function () use ($subscription, $periodStart, $includeOneTimeItems) {
             $lockedSubscription = Subscription::withoutGlobalScopes()
+                ->withoutTrashed()
                 ->with(['customer.organization', 'plan', 'items'])
                 ->lockForUpdate()
                 ->findOrFail($subscription->id);
@@ -130,6 +131,7 @@ class BillingService
         $created = 0;
 
         Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->with(['customer.organization', 'plan', 'items'])
             ->where('billing_enabled', true)
             ->whereIn('status', ['pending', 'active'])
@@ -176,6 +178,7 @@ class BillingService
         $suspended = 0;
 
         Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('status', 'active')
             ->where('billing_enabled', true)
             ->where('auto_suspension_enabled', true)

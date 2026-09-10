@@ -844,6 +844,7 @@ class LdapSyncService
         }
 
         $query = Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('tenant_id', $tenantId)
             ->whereNotNull('ldap_guid')
             ->when($syncedGuids !== [], fn ($query) => $query->whereNotIn('ldap_guid', $syncedGuids));

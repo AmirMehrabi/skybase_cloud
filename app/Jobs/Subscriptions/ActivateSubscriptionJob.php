@@ -30,6 +30,7 @@ class ActivateSubscriptionJob implements ShouldQueue
         TenantNotificationService $notifications,
     ): void {
         $subscription = Subscription::withoutGlobalScopes()
+            ->withoutTrashed()
             ->where('tenant_id', $this->tenantId)
             ->with(['customer.organization', 'plan'])
             ->find($this->subscriptionId);
