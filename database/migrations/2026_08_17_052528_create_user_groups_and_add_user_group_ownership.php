@@ -11,18 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_groups', function (Blueprint $table) {
-            $table->id();
-            $table->string('tenant_id');
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('user_groups')) {
+            Schema::create('user_groups', function (Blueprint $table): void {
+                $table->id();
+                $table->string('tenant_id');
+                $table->string('name');
+                $table->text('description')->nullable();
+                $table->timestamps();
 
-            $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-            $table->unique(['tenant_id', 'name']);
-        });
+                $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
+                $table->unique(['tenant_id', 'name']);
+            });
+        }
 
         foreach ($this->groupOwnedTables() as $tableName) {
+            if (! Schema::hasTable($tableName) || Schema::hasColumn($tableName, 'user_group_id')) {
+                continue;
+            }
+
             Schema::table($tableName, function (Blueprint $table): void {
                 $table->foreignId('user_group_id')
                     ->nullable()
