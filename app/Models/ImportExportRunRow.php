@@ -13,6 +13,7 @@ class ImportExportRunRow extends Model
     use HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'import_export_run_id',
         'row_number',
         'status',

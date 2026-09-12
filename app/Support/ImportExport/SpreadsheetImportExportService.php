@@ -907,6 +907,7 @@ class SpreadsheetImportExportService
     protected function recordRow(ImportExportRun $run, int $rowNumber, array $result, array $payload): void
     {
         ImportExportRunRow::query()->create([
+            'tenant_id' => $run->tenant_id,
             'import_export_run_id' => $run->id,
             'row_number' => $rowNumber,
             'status' => $result['status'],

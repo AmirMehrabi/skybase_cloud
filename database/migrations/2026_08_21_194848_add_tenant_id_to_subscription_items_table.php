@@ -30,6 +30,7 @@ return new class extends Migration
 
         if (Schema::hasTable('subscriptions') && Schema::hasColumn('subscriptions', 'tenant_id')) {
             DB::table('subscription_items')
+                ->whereNull('subscription_items.tenant_id')
                 ->select('subscription_items.id', 'subscriptions.tenant_id')
                 ->join('subscriptions', 'subscriptions.id', '=', 'subscription_items.subscription_id')
                 ->orderBy('subscription_items.id')
@@ -37,6 +38,7 @@ return new class extends Migration
                     foreach ($items as $item) {
                         DB::table('subscription_items')
                             ->where('id', $item->id)
+                            ->whereNull('tenant_id')
                             ->update(['tenant_id' => $item->tenant_id]);
                     }
                 }, 'subscription_items.id', 'id');

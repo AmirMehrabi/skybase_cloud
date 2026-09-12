@@ -762,7 +762,6 @@ class SubscriptionController extends Controller
                 'connection_status' => 'offline',
                 'connection_status_checked_at' => now(),
             ])->saveQuietly();
-
         }
 
         if ($request->expectsJson()) {
