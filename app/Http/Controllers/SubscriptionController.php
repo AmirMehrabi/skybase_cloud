@@ -15,6 +15,7 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\IpAddress;
 use App\Models\IpPool;
+use App\Models\Organization;
 use App\Models\Plan;
 use App\Models\RadiusPostAuthRecord;
 use App\Models\Router;
@@ -135,6 +136,16 @@ class SubscriptionController extends Controller
         $customerId = $request->query('customer_id');
         $customer = $customerId ? Customer::with('organization.defaultPlan')->findOrFail($customerId) : null;
         $customers = Customer::with('organization.defaultPlan')->orderBy('name')->get();
+        $organizations = Organization::query()
+            ->where(function ($query) use ($customer): void {
+                $query->where('status', 'active');
+
+                if ($customer?->organization_id) {
+                    $query->orWhereKey($customer->organization_id);
+                }
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
         $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
@@ -143,7 +154,7 @@ class SubscriptionController extends Controller
             ->get(['id', 'name', 'site', 'vendor', 'model', 'status']);
         $ipPools = IpPool::active()->with(['router', 'availableAddresses'])->get();
 
-        return view('subscriptions.create', compact('customer', 'customers', 'plans', 'routers', 'ipPools'));
+        return view('subscriptions.create', compact('customer', 'customers', 'organizations', 'plans', 'routers', 'ipPools'));
     }
 
     /**
@@ -152,6 +163,14 @@ class SubscriptionController extends Controller
     public function store(StoreSubscriptionRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
+        $customer = Customer::query()->findOrFail($validated['customer_id']);
+        $organizationIds = collect($validated['organization_ids'] ?? [$customer->organization_id])
+            ->filter()
+            ->map(fn (mixed $organizationId): int => (int) $organizationId)
+            ->unique()
+            ->values();
+        unset($validated['organization_ids']);
+        $validated['organization_id'] = $customer->organization_id;
         $ipRoutes = $this->normalizedIpRouteRows($validated['ip_routes'] ?? []);
         unset($validated['ip_routes']);
 
@@ -185,8 +204,11 @@ class SubscriptionController extends Controller
             unset($validated['ip_address']);
         }
 
-        [$subscription, $invoice] = DB::transaction(function () use ($validated, $items, $primaryIpAddress, $ipRoutes, $plan): array {
+        [$subscription, $invoice] = DB::transaction(function () use ($validated, $organizationIds, $items, $primaryIpAddress, $ipRoutes, $plan): array {
             $subscription = Subscription::create($validated);
+            $subscription->organizations()->syncWithPivotValues($organizationIds, [
+                'tenant_id' => $subscription->tenant_id,
+            ]);
 
             if ($subscription->isSystemManagedIp()) {
                 $assignedPrimaryIp = $subscription->assignIpAddress($primaryIpAddress);
@@ -254,7 +276,7 @@ class SubscriptionController extends Controller
                     'message' => $invoice
                         ? 'Subscription created successfully and invoice generated.'
                         : 'Subscription created successfully.',
-                    'subscription' => $subscription->load('customer', 'plan', 'router'),
+                    'subscription' => $subscription->load('customer', 'organizations', 'plan', 'router'),
                     'invoice' => $invoice,
                 ],
                 201,

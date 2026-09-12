@@ -59,20 +59,49 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Customer & Service Assignment</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Organizations -->
+                <fieldset class="lg:col-span-3">
+                    <legend class="block text-sm font-medium text-gray-700 mb-2">Organizations <span class="text-red-500">*</span></legend>
+                    <p class="mb-3 text-xs text-gray-500">Select one or more organizations to make their customers available below.</p>
+                    <div :class="hasValidationError('organization_ids') ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'" class="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto rounded-xl border bg-gray-50 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                        @forelse($organizations as $organization)
+                            <label for="organization_{{ $organization->id }}" class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 transition hover:border-blue-300 hover:bg-blue-50">
+                                <input
+                                    type="checkbox"
+                                    id="organization_{{ $organization->id }}"
+                                    name="organization_ids[]"
+                                    value="{{ $organization->id }}"
+                                    x-model="selectedOrganizationIds"
+                                    @change="handleOrganizationsChange()"
+                                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                >
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm font-medium text-gray-900">{{ $organization->name }}</span>
+                                    <span class="block truncate text-xs text-gray-500">{{ $organization->code }}</span>
+                                </span>
+                            </label>
+                        @empty
+                            <p class="col-span-full py-3 text-center text-sm text-gray-500">No active organizations are available.</p>
+                        @endforelse
+                    </div>
+                    @error('organization_ids')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <template x-if="validationError('organization_ids') && !{{ $errors->has('organization_ids') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('organization_ids')"></p>
+                    </template>
+                </fieldset>
+
                 <!-- Customer -->
                 <div class="lg:col-span-1">
                     <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">Customer <span class="text-red-500">*</span></label>
-                    @if($customer)
-                        <input type="text" :value="'{{ $customer->full_name }} ({{ $customer->customer_code }})'" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
-                        <input type="hidden" name="customer_id" value="{{ $customer->id }}">
-                    @else
-                        <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="handleCustomerChange($event)" :class="hasValidationError('customer_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
-                            <option value="">Select a customer</option>
-                            @foreach($customers ?? [] as $cust)
-                                <option value="{{ $cust->id }}" data-name="{{ $cust->full_name }}">{{ $cust->full_name }} ({{ $cust->customer_code }})</option>
-                            @endforeach
-                        </select>
-                    @endif
+                    <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="handleCustomerChange()" :disabled="selectedOrganizationIds.length === 0" :class="hasValidationError('customer_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:cursor-not-allowed disabled:bg-gray-100" required>
+                        <option value="" x-text="selectedOrganizationIds.length ? 'Select a customer' : 'Select organizations first'"></option>
+                        <template x-for="customer in filteredCustomers" :key="customer.id">
+                            <option :value="String(customer.id)" x-text="`${customer.name} (${customer.code})`"></option>
+                        </template>
+                    </select>
+                    <p x-show="selectedOrganizationIds.length && filteredCustomers.length === 0" class="mt-1 text-xs text-amber-600">No customers belong to the selected organizations.</p>
                     @error('customer_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
@@ -838,6 +867,16 @@
         ->mapWithKeys(fn ($customer) => [(string) $customer->id => $customer->full_name])
         ->all();
 
+    $customerProfiles = $customers
+        ->map(fn ($customer) => [
+            'id' => (string) $customer->id,
+            'organization_id' => $customer->organization_id === null ? null : (string) $customer->organization_id,
+            'name' => $customer->full_name,
+            'code' => $customer->customer_code,
+        ])
+        ->values()
+        ->all();
+
     $customerBillingProfiles = $customers
         ->mapWithKeys(function ($customer) {
             if (! $customer->organization?->billing_enabled) {
@@ -861,9 +900,11 @@
 <script>
 function subscriptionCreateForm() {
     return {
+        selectedOrganizationIds: @js(collect(old('organization_ids', $customer?->organization_id ? [(string) $customer->organization_id] : []))->map(fn ($id) => (string) $id)->values()->all()),
+
         // Basic form data
         form: {
-            customer_id: '{{ $customer?->id ?? '' }}',
+            customer_id: @js((string) old('customer_id', $customer?->id ?? '')),
             name: @js(old('name', $customer?->full_name ?? '')),
             service_type: @js(old('service_type', 'hotspot')),
             plan_id: '',
@@ -895,6 +936,7 @@ function subscriptionCreateForm() {
         ipPools: @json( $ipPools ),
         accessPoints: [],
         customerNames: @json($customerNames),
+        customerProfiles: @json($customerProfiles),
         customerBillingProfiles: @json($customerBillingProfiles),
 
         // Plan line item (always present)
@@ -968,6 +1010,10 @@ function subscriptionCreateForm() {
             return this.customerBillingProfiles[String(this.form.customer_id)] || null;
         },
 
+        get filteredCustomers() {
+            return this.customerProfiles.filter(customer => this.selectedOrganizationIds.includes(String(customer.organization_id)));
+        },
+
         init() {
             // Pre-fill customer if provided
             @if($customer)
@@ -976,9 +1022,20 @@ function subscriptionCreateForm() {
             this.applyOrganizationDefaults();
         },
 
-        handleCustomerChange(event) {
-            const selectedOption = event.target.options[event.target.selectedIndex];
-            this.updateCustomerInfo(selectedOption?.dataset.name || '', this.form.customer_id);
+        handleCustomerChange() {
+            this.updateCustomerInfo(this.customerNames[String(this.form.customer_id)] || '', this.form.customer_id);
+        },
+
+        handleOrganizationsChange() {
+            const customerIsAvailable = this.filteredCustomers.some(customer => String(customer.id) === String(this.form.customer_id));
+
+            if (!customerIsAvailable) {
+                this.form.customer_id = '';
+                this.form.name = '';
+            }
+
+            delete this.validationErrors.organization_ids;
+            delete this.validationErrors.customer_id;
         },
 
         async handleRouterChange() {
@@ -1353,6 +1410,16 @@ function subscriptionCreateForm() {
         },
 
         async submit() {
+            if (this.selectedOrganizationIds.length === 0) {
+                this.setValidationErrors({ organization_ids: ['Please select at least one organization.'] });
+                return;
+            }
+
+            if (!this.form.customer_id) {
+                this.setValidationErrors({ customer_id: ['Please select a customer.'] });
+                return;
+            }
+
             this.submitting = true;
 
             const form = document.querySelector('form');
@@ -1361,6 +1428,7 @@ function subscriptionCreateForm() {
             const formData = new FormData();
 
             // Add basic fields
+            this.selectedOrganizationIds.forEach(organizationId => formData.append('organization_ids[]', organizationId));
             if (this.form.customer_id) formData.append('customer_id', this.form.customer_id);
             if (this.form.name) formData.append('name', this.form.name);
             formData.append('service_type', this.form.service_type || 'hotspot');

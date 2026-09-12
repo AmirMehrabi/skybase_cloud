@@ -12,6 +12,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -133,6 +134,12 @@ class Subscription extends Model implements LdapImportable
         });
 
         static::saved(function (Subscription $subscription): void {
+            if (filled($subscription->organization_id)) {
+                $subscription->organizations()->syncWithoutDetaching([
+                    $subscription->organization_id => ['tenant_id' => $subscription->tenant_id],
+                ]);
+            }
+
             app(RadiusProvisioningService::class)->syncSubscription(
                 $subscription,
                 $subscription->wasChanged('pppoe_username') ? $subscription->getOriginal('pppoe_username') : null,
@@ -175,6 +182,14 @@ class Subscription extends Model implements LdapImportable
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class)
+            ->wherePivot('tenant_id', $this->tenant_id)
+            ->withPivot('tenant_id')
+            ->withTimestamps();
     }
 
     public function plan(): BelongsTo

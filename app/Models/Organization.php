@@ -8,6 +8,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -66,7 +67,15 @@ class Organization extends Model
         return $this->hasMany(Customer::class);
     }
 
-    public function subscriptions(): HasMany
+    public function subscriptions(): BelongsToMany
+    {
+        return $this->belongsToMany(Subscription::class)
+            ->wherePivot('tenant_id', $this->tenant_id)
+            ->withPivot('tenant_id')
+            ->withTimestamps();
+    }
+
+    public function primarySubscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
     }

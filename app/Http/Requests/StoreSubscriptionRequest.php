@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Customer;
 use App\Models\IpAddress;
+use App\Models\Organization;
 use App\Models\Subscription;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreSubscriptionRequest extends FormRequest
@@ -27,9 +30,19 @@ class StoreSubscriptionRequest extends FormRequest
     {
         $connectionType = $this->input('connection_type', 'pppoe');
         $ipManagement = $this->input('ip_management');
+        $tenantId = tenant_id() ?? $this->user()?->tenant_id;
 
         return [
-            'customer_id' => 'required|exists:customers,id',
+            'organization_ids' => ['nullable', 'array', 'min:1'],
+            'organization_ids.*' => [
+                'integer',
+                'distinct',
+                Rule::exists(Organization::class, 'id')->where('tenant_id', $tenantId),
+            ],
+            'customer_id' => [
+                'required',
+                Rule::exists('customers', 'id')->where('tenant_id', $tenantId),
+            ],
             'name' => 'required|string|max:255',
             'service_type' => 'required|in:hotspot,pppoe,vpn',
             'plan_id' => 'required|exists:plans,id',
@@ -76,6 +89,21 @@ class StoreSubscriptionRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $organizationIds = collect($this->input('organization_ids', []))
+                ->filter(fn (mixed $organizationId): bool => filled($organizationId))
+                ->map(fn (mixed $organizationId): int => (int) $organizationId)
+                ->unique()
+                ->values();
+            $tenantId = tenant_id() ?? $this->user()?->tenant_id;
+
+            if ($organizationIds->isNotEmpty() && ! Customer::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($this->input('customer_id'))
+                ->whereIn('organization_id', $organizationIds)
+                ->exists()) {
+                $validator->errors()->add('customer_id', 'The selected customer must belong to one of the selected organizations.');
+            }
+
             $routes = collect($this->input('ip_routes', []))
                 ->filter(fn (mixed $route): bool => is_array($route) && (filled($route['ip_pool_id'] ?? null) || filled($route['ip_address'] ?? null)))
                 ->values();
@@ -90,7 +118,6 @@ class StoreSubscriptionRequest extends FormRequest
                 return;
             }
 
-            $tenantId = tenant_id() ?? $this->user()?->tenant_id;
             $destinations = [];
 
             foreach ($routes as $index => $route) {
@@ -143,6 +170,9 @@ class StoreSubscriptionRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'organization_ids.array' => 'Please select valid organizations.',
+            'organization_ids.min' => 'Please select at least one organization.',
+            'organization_ids.*.exists' => 'One of the selected organizations is invalid.',
             'customer_id.required' => 'Please select a customer.',
             'customer_id.exists' => 'The selected customer is invalid.',
             'name.required' => 'Please enter a subscription name.',
