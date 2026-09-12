@@ -12,6 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        /**
+         * MySQL may leave this table behind when an earlier attempt fails while
+         * adding an index because schema changes are implicitly committed.
+         */
+        Schema::dropIfExists('organization_subscription');
+
         Schema::create('organization_subscription', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id');
@@ -20,8 +26,11 @@ return new class extends Migration
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
 
-            $table->unique(['tenant_id', 'subscription_id', 'organization_id']);
-            $table->index(['tenant_id', 'organization_id']);
+            $table->unique(
+                ['tenant_id', 'subscription_id', 'organization_id'],
+                'org_sub_tenant_subscription_org_unique',
+            );
+            $table->index(['tenant_id', 'organization_id'], 'org_sub_tenant_org_index');
         });
 
         DB::table('organization_subscription')->insertUsing(
