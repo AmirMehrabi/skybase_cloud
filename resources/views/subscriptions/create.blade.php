@@ -114,10 +114,8 @@
                         :value="old('phone')"
                         placeholder="Phone number"
                         x-model="form.phone"
+                        compact
                     />
-                    @error('phone')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
                     <template x-if="validationError('phone') && !{{ $errors->has('phone') ? 'true' : 'false' }}">
                         <p class="mt-1 text-sm text-red-600" x-text="validationError('phone')"></p>
                     </template>

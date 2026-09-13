@@ -97,8 +97,8 @@
                         label="Phone Number"
                         :value="$subscription->phone"
                         placeholder="Phone number"
+                        compact
                     />
-                    @error('phone')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label for="service_type" class="block text-sm font-medium text-gray-700 mb-1">Subscription Type</label>
