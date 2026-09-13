@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
 use App\Services\TrafficShaping\PlanTrafficShapingService;
+use App\Support\UserGroups\UserGroupContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -92,6 +93,11 @@ class Plan extends Model
         return $this->hasMany(Subscription::class);
     }
 
+    public function organizations(): HasMany
+    {
+        return $this->hasMany(Organization::class, 'default_plan_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
@@ -100,6 +106,30 @@ class Plan extends Model
     public function scopeOrdered($query)
     {
         return $query->orderByDesc('priority')->orderBy('name');
+    }
+
+    public function scopeForCurrentUserGroup(Builder $query): Builder
+    {
+        $context = app(UserGroupContext::class);
+
+        if (! $context->shouldScope()) {
+            return $query;
+        }
+
+        $tenantId = $context->tenantId();
+
+        if ($tenantId === null) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereHas('organizations', function (Builder $query) use ($context, $tenantId): void {
+            $query->where('organizations.tenant_id', $tenantId)
+                ->when(
+                    $context->groupId() === null,
+                    fn (Builder $query) => $query->whereNull('organizations.user_group_id'),
+                    fn (Builder $query) => $query->where('organizations.user_group_id', $context->groupId()),
+                );
+        });
     }
 
     public function scopeFilter($query, array $filters)

@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\Organization;
+use App\Models\Plan;
+use App\Models\Router;
+use App\Models\Site;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
@@ -124,6 +127,126 @@ class UserGroupTest extends TestCase
         );
 
         $this->assertTrue(Subscription::query()->whereKey($subscription)->exists());
+    }
+
+    public function test_subscription_form_only_shows_group_plans_and_routers(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha', 'admin');
+        $visibleGroup = $this->group($tenant, 'Visible');
+        $hiddenGroup = $this->group($tenant, 'Hidden');
+        $user->forceFill(['user_group_id' => $visibleGroup->id])->save();
+        $visiblePlan = Plan::factory()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Visible Plan',
+            'status' => 'active',
+        ]);
+        $hiddenPlan = Plan::factory()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Hidden Plan',
+            'status' => 'active',
+        ]);
+        $visibleOrganization = Organization::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $visibleGroup->id,
+            'name' => 'Visible Organization',
+            'code' => 'ORG-PLAN-VISIBLE',
+            'status' => 'active',
+            'billing_enabled' => true,
+            'default_plan_id' => $visiblePlan->id,
+        ]);
+        Organization::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $hiddenGroup->id,
+            'name' => 'Hidden Organization',
+            'code' => 'ORG-PLAN-HIDDEN',
+            'status' => 'active',
+            'billing_enabled' => true,
+            'default_plan_id' => $hiddenPlan->id,
+        ]);
+        $visibleSite = Site::factory()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $visibleGroup->id,
+            'code' => 'SITE-VISIBLE',
+            'name' => 'Visible Site',
+            'status' => 'active',
+        ]);
+        $hiddenSite = Site::factory()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $hiddenGroup->id,
+            'code' => 'SITE-HIDDEN',
+            'name' => 'Hidden Site',
+            'status' => 'active',
+        ]);
+        $visibleRouter = Router::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'site_id' => $visibleSite->id,
+            'name' => 'Visible Router',
+            'ip_address' => '192.0.2.10',
+            'status' => 'online',
+        ]);
+        $visibleRouter->forceFill(['user_group_id' => null])->saveQuietly();
+        $hiddenRouter = Router::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'site_id' => $hiddenSite->id,
+            'name' => 'Hidden Router',
+            'ip_address' => '192.0.2.20',
+            'status' => 'online',
+        ]);
+        $hiddenRouter->forceFill(['user_group_id' => null])->saveQuietly();
+        $customer = Customer::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $visibleGroup->id,
+            'organization_id' => $visibleOrganization->id,
+            'customer_code' => 'CUST-GROUP-SERVICE',
+            'customer_type' => 'individual',
+            'first_name' => 'Group',
+            'last_name' => 'Service',
+            'name' => 'Group Service Customer',
+            'email' => 'group-service@example.com',
+            'status' => 'active',
+            'billing_enabled' => true,
+        ]);
+        $customer->organizations()->syncWithPivotValues(
+            [$visibleOrganization->id],
+            ['tenant_id' => $tenant->id],
+        );
+
+        $this->actingAs($user);
+
+        $this->assertTrue(Plan::query()->forCurrentUserGroup()->whereKey($visiblePlan)->exists());
+        $this->assertFalse(Plan::query()->forCurrentUserGroup()->whereKey($hiddenPlan)->exists());
+        $this->assertTrue(Router::query()->whereKey($visibleRouter)->exists());
+        $this->assertFalse(Router::query()->whereKey($hiddenRouter)->exists());
+
+        $this->get(route('subscriptions.create'))
+            ->assertOk()
+            ->assertViewHas('plans', fn ($plans): bool => $plans->contains('id', $visiblePlan->id)
+                && ! $plans->contains('id', $hiddenPlan->id))
+            ->assertViewHas('routers', fn ($routers): bool => $routers->contains('id', $visibleRouter->id)
+                && ! $routers->contains('id', $hiddenRouter->id));
+
+        $this->postJson(route('subscriptions.store'), [
+            'organization_ids' => [$visibleOrganization->id],
+            'customer_id' => $customer->id,
+            'name' => 'Unauthorized Resources',
+            'service_type' => 'hotspot',
+            'plan_id' => $hiddenPlan->id,
+            'router_id' => $hiddenRouter->id,
+            'connection_type' => 'static',
+            'billing_enabled' => true,
+            'status' => 'active',
+            'items' => [[
+                'item_type' => 'plan',
+                'description' => $hiddenPlan->name,
+                'quantity' => 1,
+                'unit_price' => 50,
+                'discount_amount' => 0,
+                'discount_type' => 'none',
+                'tax_percentage' => 0,
+                'recurring' => true,
+                'billing_cycle' => 'monthly',
+            ]],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['plan_id', 'router_id']);
     }
 
     public function test_owner_bypasses_group_scope_but_not_tenant_scope(): void

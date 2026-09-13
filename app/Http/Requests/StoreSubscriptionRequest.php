@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Models\Customer;
 use App\Models\IpAddress;
 use App\Models\Organization;
+use App\Models\Plan;
+use App\Models\Router;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -45,8 +47,8 @@ class StoreSubscriptionRequest extends FormRequest
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:255',
             'service_type' => 'required|in:hotspot,pppoe,vpn',
-            'plan_id' => 'required|exists:plans,id',
-            'router_id' => 'required|exists:routers,id',
+            'plan_id' => ['required', Rule::exists('plans', 'id')->where('tenant_id', $tenantId)],
+            'router_id' => ['required', Rule::exists('routers', 'id')->where('tenant_id', $tenantId)],
             'access_point_id' => 'nullable|exists:access_points,id',
             'site' => 'nullable|string|max:255',
             'connection_type' => 'required|in:pppoe,dhcp,static',
@@ -95,6 +97,14 @@ class StoreSubscriptionRequest extends FormRequest
                 ->unique()
                 ->values();
             $tenantId = tenant_id() ?? $this->user()?->tenant_id;
+
+            if (! $validator->errors()->has('plan_id') && ! Plan::query()->forCurrentUserGroup()->whereKey($this->input('plan_id'))->exists()) {
+                $validator->errors()->add('plan_id', 'The selected plan is not available to your User Group.');
+            }
+
+            if (! $validator->errors()->has('router_id') && ! Router::query()->whereKey($this->input('router_id'))->exists()) {
+                $validator->errors()->add('router_id', 'The selected router is not available to your User Group.');
+            }
 
             if ($organizationIds->isNotEmpty() && ! Customer::query()
                 ->where('tenant_id', $tenantId)

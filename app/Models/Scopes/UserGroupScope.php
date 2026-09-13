@@ -45,6 +45,12 @@ class UserGroupScope implements Scope
             return;
         }
 
+        if ($model->getTable() === 'routers') {
+            $this->applyRouterSiteScope($builder, $model, $context->tenantId(), $context->groupId());
+
+            return;
+        }
+
         if ($context->groupId() === null) {
             $builder->whereNull($column);
 
@@ -52,6 +58,31 @@ class UserGroupScope implements Scope
         }
 
         $builder->where($column, $context->groupId());
+    }
+
+    private function applyRouterSiteScope(Builder $builder, Model $model, string $tenantId, ?int $groupId): void
+    {
+        $builder->where(function (Builder $query) use ($model, $tenantId, $groupId): void {
+            $groupColumn = $model->qualifyColumn('user_group_id');
+
+            if ($groupId === null) {
+                $query->whereNull($groupColumn);
+            } else {
+                $query->where($groupColumn, $groupId);
+            }
+
+            $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId): void {
+                $query->selectRaw('1')
+                    ->from('sites')
+                    ->whereColumn('sites.id', $model->qualifyColumn('site_id'))
+                    ->where('sites.tenant_id', $tenantId)
+                    ->when(
+                        $groupId === null,
+                        fn ($query) => $query->whereNull('sites.user_group_id'),
+                        fn ($query) => $query->where('sites.user_group_id', $groupId),
+                    );
+            });
+        });
     }
 
     private function applyOrganizationMembershipScope(
