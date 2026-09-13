@@ -28,7 +28,7 @@
             <tr class="hover:bg-gray-50">
                 <td class="px-6 py-4"><div class="font-semibold text-gray-900">{{ $group->name }}</div><div class="mt-1 text-sm text-gray-500">{{ $group->description ?: 'No description' }}</div></td>
                 <td class="px-6 py-4 text-sm text-gray-600">{{ $group->users_count }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ $group->customers_count + $group->organizations_count + $group->subscriptions_count + $group->sites_count }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">{{ $group->customers_count + $group->organizations_count + $group->subscriptions_count + $group->plans_count + $group->sites_count }}</td>
                 <td class="px-6 py-4"><div class="flex justify-end gap-2"><x-ui.action-icon href="{{ route('admin.tenant.user-groups.show', $group) }}" icon="view" label="View" />@if(auth()->user()?->hasPermission('user_groups.write'))<x-ui.action-icon href="{{ route('admin.tenant.user-groups.edit', $group) }}" icon="edit" label="Edit" />@endif</div></td>
             </tr>
         @empty

@@ -58,6 +58,11 @@ class UserGroup extends Model
         return $this->hasMany(Subscription::class);
     }
 
+    public function plans(): HasMany
+    {
+        return $this->hasMany(Plan::class);
+    }
+
     public function sites(): HasMany
     {
         return $this->hasMany(Site::class);

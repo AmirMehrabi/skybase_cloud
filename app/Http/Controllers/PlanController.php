@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Plan\SavePlanRequest;
 use App\Models\Plan;
+use App\Models\UserGroup;
 use App\Services\ActivityLogFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class PlanController extends Controller
@@ -24,12 +25,20 @@ class PlanController extends Controller
 
     public function create(): View
     {
-        return view('plans.create', ['plan' => new Plan]);
+        return view('plans.create', [
+            'plan' => new Plan,
+            'userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id'),
+        ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(SavePlanRequest $request): RedirectResponse
     {
-        $plan = Plan::create([...$this->validatedData($request), 'tenant_id' => tenant_id() ?? $request->user()->tenant_id]);
+        $validated = $this->normalizedData($request);
+        $validated['tenant_id'] = tenant_id() ?? $request->user()->tenant_id;
+        $validated['user_group_id'] = $request->user()?->isOwner()
+            ? ($validated['user_group_id'] ?? null)
+            : $request->user()?->user_group_id;
+        $plan = Plan::create($validated);
 
         return redirect()->route('plans.show', $plan)->with('success', 'Plan created successfully.');
     }
@@ -44,12 +53,19 @@ class PlanController extends Controller
 
     public function edit(Plan $plan): View
     {
-        return view('plans.edit', compact('plan'));
+        return view('plans.edit', [
+            'plan' => $plan,
+            'userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id'),
+        ]);
     }
 
-    public function update(Request $request, Plan $plan): RedirectResponse
+    public function update(SavePlanRequest $request, Plan $plan): RedirectResponse
     {
-        $plan->update($this->validatedData($request, $plan));
+        $validated = $this->normalizedData($request);
+        $validated['user_group_id'] = $request->user()?->isOwner()
+            ? ($validated['user_group_id'] ?? null)
+            : $plan->user_group_id;
+        $plan->update($validated);
 
         return redirect()->route('plans.show', $plan)->with('success', 'Plan updated successfully.');
     }
@@ -61,51 +77,10 @@ class PlanController extends Controller
         return redirect()->route('plans.index')->with('success', 'Plan deleted successfully.');
     }
 
-    protected function validatedData(Request $request, ?Plan $plan = null): array
+    /** @return array<string, mixed> */
+    protected function normalizedData(SavePlanRequest $request): array
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'internal_name' => ['required', 'string', 'max:255', Rule::unique('plans', 'internal_name')->where('tenant_id', tenant_id() ?? $request->user()?->tenant_id)->ignore($plan?->id)],
-            'description' => ['nullable', 'string'],
-            'status' => ['required', Rule::in(['active', 'inactive', 'archived'])],
-            'visibility' => ['required', Rule::in(['public', 'private', 'hidden'])],
-            'type' => ['required', Rule::in(['pppoe', 'hotspot', 'static', 'dhcp', 'fiber', 'wireless'])],
-            'category' => ['nullable', 'string', 'max:255'],
-            'download_speed' => ['required', 'integer', 'min:0'],
-            'upload_speed' => ['required', 'integer', 'min:0'],
-            'burst_download' => ['nullable', 'integer', 'min:0'],
-            'burst_upload' => ['nullable', 'integer', 'min:0'],
-            'bandwidth_unit' => ['required', Rule::in(['Kbps', 'Mbps', 'Gbps'])],
-            'shaping_mode' => ['nullable', Rule::in(['basic', 'advanced', 'disabled'])],
-            'burst_threshold_download' => ['nullable', 'integer', 'min:0'],
-            'burst_threshold_upload' => ['nullable', 'integer', 'min:0'],
-            'burst_time_download' => ['nullable', 'integer', 'min:1', 'max:86400'],
-            'burst_time_upload' => ['nullable', 'integer', 'min:1', 'max:86400'],
-            'min_download_speed' => ['nullable', 'integer', 'min:0', 'lte:download_speed'],
-            'min_upload_speed' => ['nullable', 'integer', 'min:0', 'lte:upload_speed'],
-            'shaping_priority' => ['nullable', 'integer', 'min:1', 'max:8'],
-            'queue_type' => ['nullable', 'string', 'max:255'],
-            'data_limit' => ['nullable', 'integer', 'min:0'],
-            'data_unit' => ['required', Rule::in(['MB', 'GB', 'TB'])],
-            'data_cap_action' => ['nullable', Rule::in(['none', 'notify', 'throttle', 'suspend'])],
-            'throttle_download_speed' => ['nullable', 'integer', 'min:0'],
-            'throttle_upload_speed' => ['nullable', 'integer', 'min:0'],
-            'unlimited' => ['nullable', 'boolean'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'currency' => ['required', 'string', 'max:10'],
-            'billing_cycle' => ['required', Rule::in(['daily', 'weekly', 'monthly', 'quarterly', 'yearly'])],
-            'grace_period_days' => ['required', 'integer', 'min:0', 'max:365'],
-            'setup_fee' => ['nullable', 'numeric', 'min:0'],
-            'tax_profile' => ['nullable', 'string', 'max:255'],
-            'router_profile' => ['nullable', 'string', 'max:255'],
-            'ip_pool' => ['nullable', 'string', 'max:255'],
-            'priority' => ['nullable', 'integer', 'min:1', 'max:10'],
-            'contract_required' => ['nullable', 'boolean'],
-            'contract_duration' => ['nullable', 'integer', 'min:1'],
-            'available_from' => ['nullable', 'date'],
-            'available_to' => ['nullable', 'date', 'after_or_equal:available_from'],
-            'notes' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $validated['unlimited'] = $request->boolean('unlimited');
         $validated['contract_required'] = $request->boolean('contract_required');

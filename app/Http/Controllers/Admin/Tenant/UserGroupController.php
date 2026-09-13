@@ -26,7 +26,7 @@ class UserGroupController extends Controller
                         ->orWhere('description', 'like', "%{$search}%");
                 });
             })
-            ->withCount(['users', 'customers', 'organizations', 'subscriptions', 'sites'])
+            ->withCount(['users', 'customers', 'organizations', 'subscriptions', 'plans', 'sites'])
             ->orderBy('name')
             ->paginate(25)
             ->withQueryString();
@@ -62,7 +62,7 @@ class UserGroupController extends Controller
     public function show(UserGroup $userGroup): View
     {
         $this->authorizeTenantGroup($userGroup);
-        $userGroup->loadCount(['users', 'customers', 'organizations', 'subscriptions', 'sites']);
+        $userGroup->loadCount(['users', 'customers', 'organizations', 'subscriptions', 'plans', 'sites']);
 
         return view('admin.tenant.user-groups.show', compact('userGroup'));
     }
@@ -97,7 +97,7 @@ class UserGroupController extends Controller
         $this->authorizeTenantGroup($userGroup);
 
         $associations = collect($this->associationTables())
-            ->mapWithKeys(fn (string $table, string $label): array => [
+            ->mapWithKeys(fn (string $label, string $table): array => [
                 $label => DB::table($table)
                     ->where('tenant_id', $userGroup->tenant_id)
                     ->where('user_group_id', $userGroup->id)
@@ -139,6 +139,7 @@ class UserGroupController extends Controller
             'organizations' => 'organizations',
             'customers' => 'customers',
             'subscriptions' => 'subscriptions',
+            'plans' => 'plans',
             'sites' => 'sites',
             'routers' => 'routers',
             'access_points' => 'access points',

@@ -35,6 +35,46 @@ class UserGroupTest extends TestCase
         $this->assertSame('Reseller North', $group->name);
     }
 
+    public function test_owner_can_assign_a_plan_to_a_user_group(): void
+    {
+        [$tenant, $owner] = $this->tenantUser('alpha', 'owner');
+        $group = $this->group($tenant, 'Plan Group');
+
+        $this->actingAs($owner)
+            ->get(route('plans.create'))
+            ->assertOk()
+            ->assertSee('name="user_group_id"', false)
+            ->assertSee('Plan Group');
+
+        $this->actingAs($owner)
+            ->post(route('plans.store'), $this->planPayload($group->id))
+            ->assertSessionHasNoErrors();
+
+        $plan = Plan::withoutGlobalScopes()->where('internal_name', 'group_plan')->firstOrFail();
+
+        $this->assertSame($tenant->id, $plan->tenant_id);
+        $this->assertSame($group->id, $plan->user_group_id);
+
+        $this->actingAs($owner)
+            ->get(route('plans.edit', $plan))
+            ->assertOk()
+            ->assertSee('name="user_group_id"', false);
+    }
+
+    public function test_plan_cannot_be_assigned_to_another_tenants_user_group(): void
+    {
+        [, $owner] = $this->tenantUser('alpha', 'owner');
+        $otherTenant = $this->tenant('beta');
+        $otherGroup = $this->group($otherTenant, 'Other Tenant Group');
+
+        $this->actingAs($owner)
+            ->postJson(route('plans.store'), $this->planPayload($otherGroup->id))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['user_group_id']);
+
+        $this->assertDatabaseMissing('plans', ['internal_name' => 'group_plan']);
+    }
+
     public function test_user_group_names_are_unique_per_tenant(): void
     {
         [$tenant, $owner] = $this->tenantUser('alpha', 'owner');
@@ -137,11 +177,13 @@ class UserGroupTest extends TestCase
         $user->forceFill(['user_group_id' => $visibleGroup->id])->save();
         $visiblePlan = Plan::factory()->create([
             'tenant_id' => $tenant->id,
+            'user_group_id' => $visibleGroup->id,
             'name' => 'Visible Plan',
             'status' => 'active',
         ]);
         $hiddenPlan = Plan::factory()->create([
             'tenant_id' => $tenant->id,
+            'user_group_id' => $hiddenGroup->id,
             'name' => 'Hidden Plan',
             'status' => 'active',
         ]);
@@ -213,8 +255,8 @@ class UserGroupTest extends TestCase
 
         $this->actingAs($user);
 
-        $this->assertTrue(Plan::query()->forCurrentUserGroup()->whereKey($visiblePlan)->exists());
-        $this->assertFalse(Plan::query()->forCurrentUserGroup()->whereKey($hiddenPlan)->exists());
+        $this->assertTrue(Plan::query()->whereKey($visiblePlan)->exists());
+        $this->assertFalse(Plan::query()->whereKey($hiddenPlan)->exists());
         $this->assertTrue(Router::query()->whereKey($visibleRouter)->exists());
         $this->assertFalse(Router::query()->whereKey($hiddenRouter)->exists());
 
@@ -357,5 +399,35 @@ class UserGroupTest extends TestCase
             'status' => 'active',
             'billing_enabled' => true,
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function planPayload(int $userGroupId): array
+    {
+        return [
+            'user_group_id' => $userGroupId,
+            'name' => 'Group Plan',
+            'internal_name' => 'group_plan',
+            'status' => 'active',
+            'visibility' => 'public',
+            'type' => 'pppoe',
+            'download_speed' => 100,
+            'upload_speed' => 20,
+            'burst_download' => 0,
+            'burst_upload' => 0,
+            'bandwidth_unit' => 'Mbps',
+            'shaping_mode' => 'basic',
+            'data_limit' => 100,
+            'data_unit' => 'GB',
+            'data_cap_action' => 'none',
+            'unlimited' => false,
+            'price' => 50,
+            'currency' => 'USD',
+            'billing_cycle' => 'monthly',
+            'grace_period_days' => 7,
+            'setup_fee' => 0,
+            'priority' => 5,
+            'contract_required' => false,
+        ];
     }
 }

@@ -52,6 +52,17 @@
                     </template>
                 </div>
 
+                @if(auth()->user()?->isOwner())
+                    <x-ui.input.select
+                        label="User Group"
+                        name="user_group_id"
+                        :options="$userGroups"
+                        :value="old('user_group_id', $plan->user_group_id)"
+                        placeholder="Ungrouped records only"
+                        :error="$errors->first('user_group_id')"
+                    />
+                @endif
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
                     <select name="category" x-model="form.category" class="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">

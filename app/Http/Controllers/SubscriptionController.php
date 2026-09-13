@@ -146,9 +146,7 @@ class SubscriptionController extends Controller
             })
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
-        $plans = Plan::query()
-            ->forCurrentUserGroup()
-            ->active()
+        $plans = Plan::active()
             ->ordered()
             ->get(['id', 'name', 'price', 'billing_cycle']);
         $routers = Router::query()

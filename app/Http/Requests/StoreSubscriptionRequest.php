@@ -98,7 +98,7 @@ class StoreSubscriptionRequest extends FormRequest
                 ->values();
             $tenantId = tenant_id() ?? $this->user()?->tenant_id;
 
-            if (! $validator->errors()->has('plan_id') && ! Plan::query()->forCurrentUserGroup()->whereKey($this->input('plan_id'))->exists()) {
+            if (! $validator->errors()->has('plan_id') && ! Plan::query()->whereKey($this->input('plan_id'))->exists()) {
                 $validator->errors()->add('plan_id', 'The selected plan is not available to your User Group.');
             }
 
