@@ -91,6 +91,16 @@
                     @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
+                    <x-input.tel
+                        id="phone"
+                        name="phone"
+                        label="Phone Number"
+                        :value="$subscription->phone"
+                        placeholder="Phone number"
+                    />
+                    @error('phone')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div>
                     <label for="service_type" class="block text-sm font-medium text-gray-700 mb-1">Subscription Type</label>
                     <select name="service_type" id="service_type" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                         @foreach(['hotspot' => 'Hotspot', 'pppoe' => 'PPPoE', 'vpn' => 'VPN'] as $value => $label)

@@ -61,6 +61,7 @@ class SubscriptionMultipleOrganizationsTest extends TestCase
         $subscription = Subscription::query()->where('customer_id', $customer->id)->firstOrFail();
 
         $this->assertSame($firstOrganization->id, $subscription->organization_id);
+        $this->assertSame('+1 555 0100', $subscription->phone);
         $this->assertEqualsCanonicalizing(
             [$firstOrganization->id, $secondOrganization->id],
             $subscription->organizations()->pluck('organizations.id')->all(),
@@ -117,6 +118,58 @@ class SubscriptionMultipleOrganizationsTest extends TestCase
             'tenant_id' => $tenant->id,
             'organization_id' => $secondOrganization->id,
         ]);
+    }
+
+    public function test_selecting_a_customer_does_not_suggest_a_subscription_name(): void
+    {
+        [$tenant, $user, $firstOrganization, , $customer] = $this->createOrganizationDependencies();
+        [$plan, $router] = $this->createServiceDependencies($tenant);
+
+        $this->actingAs($user)
+            ->get(route('subscriptions.create', ['customer_id' => $customer->id]))
+            ->assertOk()
+            ->assertDontSee('subscriptionNameTouched', false)
+            ->assertDontSee('customerNames', false)
+            ->assertSee('name="phone"', false);
+
+        $this->actingAs($user)
+            ->postJson(route('subscriptions.store'), [
+                ...$this->subscriptionPayload($customer, $plan, $router, [$firstOrganization->id]),
+                'name' => '',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['name']);
+
+        $this->assertDatabaseCount('subscriptions', 0);
+    }
+
+    public function test_subscription_phone_can_be_updated(): void
+    {
+        [$tenant, $user, $firstOrganization, $secondOrganization, $customer] = $this->createOrganizationDependencies();
+        [$plan, $router] = $this->createServiceDependencies($tenant);
+
+        $this->actingAs($user)
+            ->postJson(route('subscriptions.store'), $this->subscriptionPayload(
+                $customer,
+                $plan,
+                $router,
+                [$firstOrganization->id, $secondOrganization->id],
+            ))
+            ->assertCreated();
+
+        $subscription = Subscription::query()->where('customer_id', $customer->id)->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('subscriptions.edit', $subscription))
+            ->assertOk()
+            ->assertSee('name="phone"', false)
+            ->assertSee('value="+1 555 0100"', false);
+
+        $this->actingAs($user)
+            ->putJson(route('subscriptions.update', $subscription), ['phone' => '+1 555 0199'])
+            ->assertOk();
+
+        $this->assertSame('+1 555 0199', $subscription->fresh()->phone);
     }
 
     /**
@@ -194,6 +247,7 @@ class SubscriptionMultipleOrganizationsTest extends TestCase
             'organization_ids' => $organizationIds,
             'customer_id' => $customer->id,
             'name' => 'Shared Organization Service',
+            'phone' => '+1 555 0100',
             'service_type' => 'hotspot',
             'plan_id' => $plan->id,
             'router_id' => $router->id,

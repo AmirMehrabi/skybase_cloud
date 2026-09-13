@@ -97,12 +97,29 @@
                 <!-- Subscription Name -->
                 <div class="lg:col-span-1">
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" id="name" x-model="form.name" @input="subscriptionNameTouched = true" placeholder="Subscription name" :class="hasValidationError('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border" required>
+                    <input type="text" name="name" id="name" x-model="form.name" placeholder="Subscription name" :class="hasValidationError('name') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border" required>
                     @error('name')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                     <template x-if="validationError('name') && !{{ $errors->has('name') ? 'true' : 'false' }}">
                         <p class="mt-1 text-sm text-red-600" x-text="validationError('name')"></p>
+                    </template>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <x-input.tel
+                        id="phone"
+                        name="phone"
+                        label="Phone Number"
+                        :value="old('phone')"
+                        placeholder="Phone number"
+                        x-model="form.phone"
+                    />
+                    @error('phone')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <template x-if="validationError('phone') && !{{ $errors->has('phone') ? 'true' : 'false' }}">
+                        <p class="mt-1 text-sm text-red-600" x-text="validationError('phone')"></p>
                     </template>
                 </div>
 
@@ -847,10 +864,6 @@
 
 @push('scripts')
 @php
-    $customerNames = $customers
-        ->mapWithKeys(fn ($customer) => [(string) $customer->id => $customer->full_name])
-        ->all();
-
     $customerProfiles = $customers
         ->map(fn ($customer) => [
             'id' => (string) $customer->id,
@@ -892,7 +905,8 @@ function subscriptionCreateForm() {
         // Basic form data
         form: {
             customer_id: @js((string) old('customer_id', $customer?->id ?? '')),
-            name: @js(old('name', $customer?->full_name ?? '')),
+            name: @js(old('name', '')),
+            phone: @js(old('phone', '')),
             service_type: @js(old('service_type', 'hotspot')),
             plan_id: '',
             router_id: '',
@@ -922,7 +936,6 @@ function subscriptionCreateForm() {
         // IP pools data
         ipPools: @json( $ipPools ),
         accessPoints: [],
-        customerNames: @json($customerNames),
         customerProfiles: @json($customerProfiles),
         customerBillingProfiles: @json($customerBillingProfiles),
 
@@ -946,8 +959,6 @@ function subscriptionCreateForm() {
         nextIpRouteKey: 1,
 
         submitting: false,
-        subscriptionNameTouched: @js(filled(old('name'))),
-
         // IP validation state
         ipValidation: {
             isValid: false,
@@ -1004,13 +1015,13 @@ function subscriptionCreateForm() {
         init() {
             // Pre-fill customer if provided
             @if($customer)
-            this.updateCustomerInfo('{{ $customer->full_name }}', '{{ $customer->id }}');
+            this.updateCustomerInfo('{{ $customer->id }}');
             @endif
             this.applyOrganizationDefaults();
         },
 
         handleCustomerChange() {
-            this.updateCustomerInfo(this.customerNames[String(this.form.customer_id)] || '', this.form.customer_id);
+            this.updateCustomerInfo(this.form.customer_id);
         },
 
         handleOrganizationsChange() {
@@ -1018,7 +1029,6 @@ function subscriptionCreateForm() {
 
             if (!customerIsAvailable) {
                 this.form.customer_id = '';
-                this.form.name = '';
             }
 
             delete this.validationErrors.organization_ids;
@@ -1056,11 +1066,8 @@ function subscriptionCreateForm() {
             this.calculateFormTotal();
         },
 
-        updateCustomerInfo(name, id) {
+        updateCustomerInfo(id) {
             this.form.customer_id = id;
-            if (!this.subscriptionNameTouched || !this.form.name) {
-                this.form.name = name || this.customerNames[String(id)] || '';
-            }
             this.applyOrganizationDefaults();
         },
 
@@ -1418,6 +1425,7 @@ function subscriptionCreateForm() {
             this.selectedOrganizationIds.forEach(organizationId => formData.append('organization_ids[]', organizationId));
             if (this.form.customer_id) formData.append('customer_id', this.form.customer_id);
             if (this.form.name) formData.append('name', this.form.name);
+            if (this.form.phone) formData.append('phone', this.form.phone);
             formData.append('service_type', this.form.service_type || 'hotspot');
             if (this.form.plan_id) formData.append('plan_id', this.form.plan_id);
             if (this.form.router_id) formData.append('router_id', this.form.router_id);

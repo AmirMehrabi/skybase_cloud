@@ -5,7 +5,6 @@ namespace App\Http\Requests;
 use App\Models\Customer;
 use App\Models\IpAddress;
 use App\Models\Organization;
-use App\Models\Subscription;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -44,6 +43,7 @@ class StoreSubscriptionRequest extends FormRequest
                 Rule::exists('customers', 'id')->where('tenant_id', $tenantId),
             ],
             'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:255',
             'service_type' => 'required|in:hotspot,pppoe,vpn',
             'plan_id' => 'required|exists:plans,id',
             'router_id' => 'required|exists:routers,id',
@@ -199,11 +199,9 @@ class StoreSubscriptionRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $customerId = $this->input('customer_id');
-
         $this->merge([
             'items' => $this->input('items', []),
-            'name' => $this->filled('name') ? $this->input('name') : ($customerId ? Subscription::defaultNameForCustomer((int) $customerId) : null),
+            'name' => $this->input('name'),
             'service_type' => $this->input('service_type', 'hotspot'),
             'billing_enabled' => $this->boolean('billing_enabled', true),
             'auto_suspension_enabled' => $this->boolean('billing_enabled', true)

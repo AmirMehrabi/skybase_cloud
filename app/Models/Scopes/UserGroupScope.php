@@ -26,6 +26,25 @@ class UserGroupScope implements Scope
 
         $column = $model->qualifyColumn('user_group_id');
 
+        $organizationPivot = match ($model->getTable()) {
+            'customers' => ['customer_organization', 'customer_id'],
+            'subscriptions' => ['organization_subscription', 'subscription_id'],
+            default => null,
+        };
+
+        if ($organizationPivot !== null) {
+            $this->applyOrganizationMembershipScope(
+                $builder,
+                $model,
+                $context->tenantId(),
+                $context->groupId(),
+                $organizationPivot[0],
+                $organizationPivot[1],
+            );
+
+            return;
+        }
+
         if ($context->groupId() === null) {
             $builder->whereNull($column);
 
@@ -33,5 +52,39 @@ class UserGroupScope implements Scope
         }
 
         $builder->where($column, $context->groupId());
+    }
+
+    private function applyOrganizationMembershipScope(
+        Builder $builder,
+        Model $model,
+        string $tenantId,
+        ?int $groupId,
+        string $pivotTable,
+        string $pivotParentColumn,
+    ): void {
+        $builder->where(function (Builder $query) use ($model, $tenantId, $groupId, $pivotTable, $pivotParentColumn): void {
+            $groupColumn = $model->qualifyColumn('user_group_id');
+
+            if ($groupId === null) {
+                $query->whereNull($groupColumn);
+            } else {
+                $query->where($groupColumn, $groupId);
+            }
+
+            $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId, $pivotTable, $pivotParentColumn): void {
+                $query->selectRaw('1')
+                    ->from($pivotTable)
+                    ->join('organizations', 'organizations.id', '=', $pivotTable.'.organization_id')
+                    ->whereColumn($pivotTable.'.'.$pivotParentColumn, $model->qualifyColumn('id'))
+                    ->where($pivotTable.'.tenant_id', $tenantId)
+                    ->where('organizations.tenant_id', $tenantId)
+                    ->whereNull('organizations.deleted_at')
+                    ->when(
+                        $groupId === null,
+                        fn ($query) => $query->whereNull('organizations.user_group_id'),
+                        fn ($query) => $query->where('organizations.user_group_id', $groupId),
+                    );
+            });
+        });
     }
 }

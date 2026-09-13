@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
+use App\Models\Organization;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
@@ -58,6 +59,71 @@ class UserGroupTest extends TestCase
         $this->assertTrue(Customer::query()->whereKey($visible)->exists());
         $this->assertFalse(Customer::query()->whereKey($hidden)->exists());
         $this->get(route('customers.show', $hidden))->assertNotFound();
+    }
+
+    public function test_non_owner_sees_customer_through_a_secondary_organization_in_their_group(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha', 'admin');
+        $visibleGroup = $this->group($tenant, 'Visible');
+        $hiddenGroup = $this->group($tenant, 'Hidden');
+        $user->forceFill(['user_group_id' => $visibleGroup->id])->save();
+        $visibleOrganization = Organization::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $visibleGroup->id,
+            'name' => 'Visible Organization',
+            'code' => 'ORG-VISIBLE',
+            'status' => 'active',
+            'billing_enabled' => false,
+        ]);
+        $hiddenOrganization = Organization::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $hiddenGroup->id,
+            'name' => 'Hidden Organization',
+            'code' => 'ORG-HIDDEN',
+            'status' => 'active',
+            'billing_enabled' => false,
+        ]);
+        $customer = Customer::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $hiddenGroup->id,
+            'organization_id' => $hiddenOrganization->id,
+            'customer_code' => 'CUST-SECONDARY-ORG',
+            'customer_type' => 'individual',
+            'first_name' => 'Shared',
+            'last_name' => 'Customer',
+            'name' => 'Shared Customer',
+            'email' => 'shared-customer@example.com',
+            'status' => 'active',
+            'billing_enabled' => true,
+        ]);
+        $customer->organizations()->syncWithPivotValues(
+            [$visibleOrganization->id, $hiddenOrganization->id],
+            ['tenant_id' => $tenant->id],
+        );
+
+        $this->actingAs($user);
+
+        $this->assertTrue(Customer::query()->whereKey($customer)->exists());
+        $this->get(route('subscriptions.create'))
+            ->assertOk()
+            ->assertViewHas('customers', fn ($customers): bool => $customers->contains('id', $customer->id));
+
+        $subscription = Subscription::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $hiddenGroup->id,
+            'customer_id' => $customer->id,
+            'organization_id' => $hiddenOrganization->id,
+            'subscription_code' => 'SUB-SECONDARY-ORG',
+            'name' => 'Shared Subscription',
+            'service_type' => 'hotspot',
+            'status' => 'pending',
+        ]);
+        $subscription->organizations()->syncWithPivotValues(
+            [$visibleOrganization->id, $hiddenOrganization->id],
+            ['tenant_id' => $tenant->id],
+        );
+
+        $this->assertTrue(Subscription::query()->whereKey($subscription)->exists());
     }
 
     public function test_owner_bypasses_group_scope_but_not_tenant_scope(): void
