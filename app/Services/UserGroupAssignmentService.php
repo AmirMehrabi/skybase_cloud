@@ -168,43 +168,87 @@ class UserGroupAssignmentService
         });
     }
 
-    public function cascadeSite(int $siteId, string $tenantId, ?int $groupId): void
+    /** @param  array<int, int|string>  $userGroupIds */
+    public function syncSiteUserGroups(int $siteId, string $tenantId, array $userGroupIds): void
     {
-        DB::transaction(function () use ($siteId, $tenantId, $groupId): void {
+        $groupIds = collect($userGroupIds)
+            ->filter(fn (mixed $groupId): bool => filled($groupId))
+            ->map(fn (mixed $groupId): int => (int) $groupId)
+            ->unique()
+            ->values();
+        $primaryGroupId = $groupIds->first();
+
+        DB::transaction(function () use ($siteId, $tenantId, $groupIds, $primaryGroupId): void {
             $routerIds = DB::table('routers')->where('tenant_id', $tenantId)->where('site_id', $siteId)->pluck('id');
-            $accessPointIds = DB::table('access_points')->where('tenant_id', $tenantId)->where('site_id', $siteId)->pluck('id');
+            $accessPointIds = DB::table('access_points')
+                ->where('tenant_id', $tenantId)
+                ->where(function ($query) use ($siteId, $routerIds): void {
+                    $query->where('site_id', $siteId)->orWhereIn('router_id', $routerIds);
+                })
+                ->pluck('id');
 
             $linkedSubscriptions = DB::table('subscriptions')
                 ->where('tenant_id', $tenantId)
                 ->where(function ($query) use ($routerIds, $accessPointIds): void {
                     $query->whereIn('router_id', $routerIds)->orWhereIn('access_point_id', $accessPointIds);
                 })
-                ->where(function ($query) use ($groupId): void {
-                    if ($groupId === null) {
+                ->where(function ($query) use ($groupIds): void {
+                    if ($groupIds->isEmpty()) {
                         $query->whereNotNull('user_group_id');
                     } else {
-                        $query->whereNull('user_group_id')->orWhere('user_group_id', '!=', $groupId);
+                        $query->where(function ($query) use ($groupIds): void {
+                            $query->whereNull('user_group_id')->orWhereNotIn('user_group_id', $groupIds);
+                        });
                     }
                 })
                 ->exists();
 
             if ($linkedSubscriptions) {
                 throw ValidationException::withMessages([
-                    'user_group_id' => 'This site has subscriptions owned by another User Group. Reassign those customer accounts first.',
+                    'user_group_ids' => 'This site has subscriptions owned by another User Group. Reassign those customer accounts first.',
                 ]);
             }
 
-            DB::table('sites')->where('tenant_id', $tenantId)->where('id', $siteId)->update(['user_group_id' => $groupId]);
-            DB::table('routers')->whereIn('id', $routerIds)->update(['user_group_id' => $groupId]);
-            DB::table('access_points')->whereIn('id', $accessPointIds)->update(['user_group_id' => $groupId]);
-
-            foreach (['router_monitoring_states', 'netflow_flows', 'network_alerts', 'network_bandwidth_samples'] as $table) {
-                DB::table($table)->whereIn('router_id', $routerIds)->update(['user_group_id' => $groupId]);
+            DB::table('site_user_group')->where('tenant_id', $tenantId)->where('site_id', $siteId)->delete();
+            if ($groupIds->isNotEmpty()) {
+                DB::table('site_user_group')->insert($groupIds->map(fn (int $groupId): array => [
+                    'tenant_id' => $tenantId,
+                    'site_id' => $siteId,
+                    'user_group_id' => $groupId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])->all());
             }
 
-            $poolIds = DB::table('ip_pool_router')->whereIn('router_id', $routerIds)->pluck('ip_pool_id');
-            DB::table('ip_pools')->whereIn('id', $poolIds)->update(['user_group_id' => $groupId]);
-            DB::table('ip_addresses')->whereIn('ip_pool_id', $poolIds)->update(['user_group_id' => $groupId]);
+            DB::table('sites')->where('tenant_id', $tenantId)->where('id', $siteId)->update(['user_group_id' => $primaryGroupId]);
+            DB::table('routers')->where('tenant_id', $tenantId)->whereIn('id', $routerIds)->update(['user_group_id' => $primaryGroupId]);
+            DB::table('access_points')->where('tenant_id', $tenantId)->whereIn('id', $accessPointIds)->update(['user_group_id' => $primaryGroupId]);
+
+            foreach (['router_monitoring_states', 'netflow_flows', 'network_alerts', 'network_bandwidth_samples'] as $table) {
+                DB::table($table)->where('tenant_id', $tenantId)->whereIn('router_id', $routerIds)->update(['user_group_id' => $primaryGroupId]);
+            }
+
+            DB::table('network_usage_records')
+                ->where('tenant_id', $tenantId)
+                ->whereIn('router_id', $routerIds)
+                ->update(['user_group_id' => $primaryGroupId]);
+
+            $poolIds = DB::table('ip_pools')
+                ->where('tenant_id', $tenantId)
+                ->where(function ($query) use ($siteId, $routerIds, $tenantId): void {
+                    $query->where('site_id', $siteId)
+                        ->orWhereIn('router_id', $routerIds)
+                        ->orWhereExists(function ($query) use ($routerIds, $tenantId): void {
+                            $query->selectRaw('1')
+                                ->from('ip_pool_router')
+                                ->whereColumn('ip_pool_router.ip_pool_id', 'ip_pools.id')
+                                ->where('ip_pool_router.tenant_id', $tenantId)
+                                ->whereIn('ip_pool_router.router_id', $routerIds);
+                        });
+                })
+                ->pluck('id');
+            DB::table('ip_pools')->where('tenant_id', $tenantId)->whereIn('id', $poolIds)->update(['user_group_id' => $primaryGroupId]);
+            DB::table('ip_addresses')->where('tenant_id', $tenantId)->whereIn('ip_pool_id', $poolIds)->update(['user_group_id' => $primaryGroupId]);
         });
     }
 

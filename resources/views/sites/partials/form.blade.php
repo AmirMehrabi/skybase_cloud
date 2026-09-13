@@ -29,7 +29,17 @@
         />
 
         @if(auth()->user()?->isOwner())
-            <x-ui.input.select label="User Group" name="user_group_id" :options="$userGroups" :value="old('user_group_id', $site->user_group_id ?? '')" placeholder="Ungrouped records only" :error="$errors->first('user_group_id')" />
+            <x-input.searchable-multi-select
+                name="user_group_ids"
+                label="User Groups"
+                :options="$userGroups"
+                :selected="old('user_group_ids', $site->userGroups->modelKeys())"
+                placeholder="Select one or more User Groups"
+                search-placeholder="Search User Groups..."
+            />
+            @error('user_group_ids.*')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
         @endif
 
         <x-ui.input.text

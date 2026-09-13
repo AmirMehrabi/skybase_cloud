@@ -291,6 +291,63 @@ class UserGroupTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors(['plan_id', 'router_id']);
     }
 
+    public function test_secondary_site_group_membership_scopes_site_router_and_subscription_options(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha', 'admin');
+        $primaryGroup = $this->group($tenant, 'Primary Site Group');
+        $secondaryGroup = $this->group($tenant, 'Secondary Site Group');
+        $hiddenGroup = $this->group($tenant, 'Hidden Site Group');
+        $user->forceFill(['user_group_id' => $secondaryGroup->id])->save();
+
+        $site = Site::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $primaryGroup->id,
+            'code' => 'SHARED-SITE',
+            'name' => 'Shared Site',
+            'latitude' => 35.6892,
+            'longitude' => 51.3890,
+            'status' => 'active',
+        ]);
+        $site->userGroups()->syncWithPivotValues(
+            [$primaryGroup->id, $secondaryGroup->id],
+            ['tenant_id' => $tenant->id],
+        );
+        $router = Router::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $primaryGroup->id,
+            'site_id' => $site->id,
+            'name' => 'Shared Site Router',
+            'ip_address' => '192.0.2.50',
+            'status' => 'online',
+        ]);
+        $visiblePlan = Plan::withoutGlobalScopes()->create([
+            ...Plan::factory()->raw(),
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $secondaryGroup->id,
+            'name' => 'Secondary Group Plan',
+            'internal_name' => 'secondary_group_plan',
+            'status' => 'active',
+        ]);
+        $hiddenPlan = Plan::withoutGlobalScopes()->create([
+            ...Plan::factory()->raw(),
+            'tenant_id' => $tenant->id,
+            'user_group_id' => $hiddenGroup->id,
+            'name' => 'Hidden Site Plan',
+            'internal_name' => 'hidden_site_plan',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user);
+
+        $this->assertTrue(Site::query()->whereKey($site)->exists());
+        $this->assertTrue(Router::query()->whereKey($router)->exists());
+        $this->get(route('subscriptions.create'))
+            ->assertOk()
+            ->assertViewHas('plans', fn ($plans): bool => $plans->contains('id', $visiblePlan->id)
+                && ! $plans->contains('id', $hiddenPlan->id))
+            ->assertViewHas('routers', fn ($routers): bool => $routers->contains('id', $router->id));
+    }
+
     public function test_owner_bypasses_group_scope_but_not_tenant_scope(): void
     {
         [$tenant, $owner] = $this->tenantUser('alpha', 'owner');

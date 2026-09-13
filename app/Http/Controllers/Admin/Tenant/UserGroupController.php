@@ -140,6 +140,7 @@ class UserGroupController extends Controller
             'customers' => 'customers',
             'subscriptions' => 'subscriptions',
             'plans' => 'plans',
+            'site_user_group' => 'site assignments',
             'sites' => 'sites',
             'routers' => 'routers',
             'access_points' => 'access points',

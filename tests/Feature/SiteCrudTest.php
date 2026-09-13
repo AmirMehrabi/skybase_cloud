@@ -6,6 +6,7 @@ use App\Models\Router;
 use App\Models\Site;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserGroup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -99,6 +100,82 @@ class SiteCrudTest extends TestCase
         $response->assertSessionHasErrors(['code', 'latitude', 'longitude']);
     }
 
+    public function test_owner_can_assign_multiple_user_groups_to_a_site(): void
+    {
+        [$tenant, $owner] = $this->tenantUser('owner-net', 'owner');
+        $firstGroup = UserGroup::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'North Team',
+        ]);
+        $secondGroup = UserGroup::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'South Team',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('sites.create'))
+            ->assertOk()
+            ->assertSee('User Groups')
+            ->assertSee('name="user_group_ids[]"', false);
+
+        $this->actingAs($owner)
+            ->post(route('sites.store'), [
+                ...$this->sitePayload('MULTI', 'Multi Group Site'),
+                'user_group_ids' => [$firstGroup->id, $secondGroup->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $site = Site::withoutGlobalScopes()->where('code', 'MULTI')->firstOrFail();
+        $this->assertSame($firstGroup->id, $site->user_group_id);
+        $this->assertDatabaseHas('site_user_group', [
+            'tenant_id' => $tenant->id,
+            'site_id' => $site->id,
+            'user_group_id' => $firstGroup->id,
+        ]);
+        $this->assertDatabaseHas('site_user_group', [
+            'tenant_id' => $tenant->id,
+            'site_id' => $site->id,
+            'user_group_id' => $secondGroup->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->put(route('sites.update', $site), [
+                ...$this->sitePayload('MULTI', 'Updated Multi Group Site'),
+                'user_group_ids' => [$secondGroup->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('site_user_group', [
+            'site_id' => $site->id,
+            'user_group_id' => $firstGroup->id,
+        ]);
+        $this->assertDatabaseHas('site_user_group', [
+            'tenant_id' => $tenant->id,
+            'site_id' => $site->id,
+            'user_group_id' => $secondGroup->id,
+        ]);
+        $this->assertSame($secondGroup->id, $site->fresh()->user_group_id);
+    }
+
+    public function test_site_rejects_a_user_group_from_another_tenant(): void
+    {
+        [, $owner] = $this->tenantUser('owner-net', 'owner');
+        $otherTenant = $this->createTenant('other-net');
+        $otherGroup = UserGroup::withoutGlobalScopes()->create([
+            'tenant_id' => $otherTenant->id,
+            'name' => 'Other Tenant Team',
+        ]);
+
+        $this->actingAs($owner)
+            ->post(route('sites.store'), [
+                ...$this->sitePayload('INVALID-GROUP', 'Invalid Group Site'),
+                'user_group_ids' => [$otherGroup->id],
+            ])
+            ->assertSessionHasErrors('user_group_ids.0');
+
+        $this->assertDatabaseMissing('sites', ['code' => 'INVALID-GROUP']);
+    }
+
     public function test_map_data_is_tenant_scoped_and_contains_router_health(): void
     {
         [$tenant, $user] = $this->tenantUser();
@@ -185,12 +262,12 @@ class SiteCrudTest extends TestCase
     /**
      * @return array{0: Tenant, 1: User}
      */
-    private function tenantUser(): array
+    private function tenantUser(string $slug = 'alpha-net', string $role = 'admin'): array
     {
-        $tenant = $this->createTenant('alpha-net');
+        $tenant = $this->createTenant($slug);
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
-            'role' => 'admin',
+            'role' => $role,
             'status' => 'active',
         ]);
 
@@ -208,5 +285,19 @@ class SiteCrudTest extends TestCase
             'timezone' => 'UTC',
             'status' => 'active',
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function sitePayload(string $code, string $name): array
+    {
+        return [
+            'name' => $name,
+            'code' => $code,
+            'address' => 'Main Office',
+            'latitude' => 35.6892,
+            'longitude' => 51.3890,
+            'status' => 'active',
+            'description' => null,
+        ];
     }
 }

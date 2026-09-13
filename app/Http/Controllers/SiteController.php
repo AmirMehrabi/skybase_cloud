@@ -10,6 +10,7 @@ use App\Services\UserGroupAssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SiteController extends Controller
@@ -74,18 +75,28 @@ class SiteController extends Controller
 
     public function create(): View
     {
-        return view('sites.create', ['userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id')]);
+        return view('sites.create', [
+            'site' => new Site,
+            'userGroups' => UserGroup::query()->orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
-    public function store(StoreSiteRequest $request): JsonResponse|RedirectResponse
+    public function store(StoreSiteRequest $request, UserGroupAssignmentService $groups): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
         $validated['tenant_id'] = auth()->user()?->tenant_id;
-        $validated['user_group_id'] = auth()->user()?->isOwner()
-            ? ($validated['user_group_id'] ?? null)
-            : auth()->user()?->user_group_id;
+        $userGroupIds = auth()->user()?->isOwner()
+            ? ($validated['user_group_ids'] ?? [])
+            : array_filter([auth()->user()?->user_group_id]);
+        unset($validated['user_group_ids']);
+        $validated['user_group_id'] = collect($userGroupIds)->first();
 
-        $site = Site::query()->create($validated);
+        $site = DB::transaction(function () use ($validated, $groups, $userGroupIds): Site {
+            $site = Site::query()->create($validated);
+            $groups->syncSiteUserGroups($site->id, (string) $site->tenant_id, $userGroupIds);
+
+            return $site->refresh();
+        });
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -118,8 +129,8 @@ class SiteController extends Controller
         $this->authorizeTenantAccess($site);
 
         return view('sites.edit', [
-            'site' => $site,
-            'userGroups' => UserGroup::query()->orderBy('name')->pluck('name', 'id'),
+            'site' => $site->load('userGroups'),
+            'userGroups' => UserGroup::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -128,15 +139,20 @@ class SiteController extends Controller
         $this->authorizeTenantAccess($site);
 
         $validated = $request->validated();
-        $validated['user_group_id'] = auth()->user()?->isOwner()
-            ? (isset($validated['user_group_id']) ? (int) $validated['user_group_id'] : null)
-            : $site->user_group_id;
-
-        if ($site->user_group_id !== $validated['user_group_id']) {
-            $groups->cascadeSite($site->id, (string) $site->tenant_id, $validated['user_group_id']);
+        $existingUserGroupIds = $site->userGroups()->pluck('user_groups.id')->all();
+        if ($existingUserGroupIds === [] && $site->user_group_id !== null) {
+            $existingUserGroupIds = [(int) $site->user_group_id];
         }
 
-        $site->update($validated);
+        $userGroupIds = auth()->user()?->isOwner()
+            ? ($validated['user_group_ids'] ?? [])
+            : $existingUserGroupIds;
+        unset($validated['user_group_ids']);
+
+        DB::transaction(function () use ($site, $validated, $groups, $userGroupIds): void {
+            $site->update($validated);
+            $groups->syncSiteUserGroups($site->id, (string) $site->tenant_id, $userGroupIds);
+        });
 
         if ($request->expectsJson()) {
             return response()->json([

@@ -45,8 +45,8 @@ class UserGroupScope implements Scope
             return;
         }
 
-        if ($model->getTable() === 'routers') {
-            $this->applyRouterSiteScope($builder, $model, $context->tenantId(), $context->groupId());
+        if ($this->usesSiteMembership($model->getTable())) {
+            $this->applySiteMembershipScope($builder, $model, $context->tenantId(), $context->groupId());
 
             return;
         }
@@ -60,28 +60,165 @@ class UserGroupScope implements Scope
         $builder->where($column, $context->groupId());
     }
 
-    private function applyRouterSiteScope(Builder $builder, Model $model, string $tenantId, ?int $groupId): void
+    private function usesSiteMembership(string $table): bool
+    {
+        return in_array($table, [
+            'sites',
+            'routers',
+            'access_points',
+            'ip_pools',
+            'ip_addresses',
+            'router_monitoring_states',
+            'netflow_flows',
+            'network_alerts',
+            'network_bandwidth_samples',
+            'network_usage_records',
+        ], true);
+    }
+
+    private function applySiteMembershipScope(Builder $builder, Model $model, string $tenantId, ?int $groupId): void
     {
         $builder->where(function (Builder $query) use ($model, $tenantId, $groupId): void {
-            $groupColumn = $model->qualifyColumn('user_group_id');
+            $this->applyDirectGroupCondition($query, $model, $groupId);
 
             if ($groupId === null) {
-                $query->whereNull($groupColumn);
-            } else {
-                $query->where($groupColumn, $groupId);
+                return;
             }
 
-            $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId): void {
-                $query->selectRaw('1')
-                    ->from('sites')
-                    ->whereColumn('sites.id', $model->qualifyColumn('site_id'))
-                    ->where('sites.tenant_id', $tenantId)
-                    ->when(
-                        $groupId === null,
-                        fn ($query) => $query->whereNull('sites.user_group_id'),
-                        fn ($query) => $query->where('sites.user_group_id', $groupId),
-                    );
-            });
+            match ($model->getTable()) {
+                'sites' => $this->orWhereSitePivotMembership($query, $model, $tenantId, $groupId, 'id'),
+                'routers' => $this->orWhereSitePivotMembership($query, $model, $tenantId, $groupId, 'site_id'),
+                'access_points' => $this->applyAccessPointSiteMembership($query, $model, $tenantId, $groupId),
+                'ip_pools' => $this->applyIpPoolSiteMembership($query, $model, $tenantId, $groupId),
+                'ip_addresses' => $this->applyIpAddressSiteMembership($query, $model, $tenantId, $groupId),
+                default => $this->orWhereRouterSiteMembership($query, $model, $tenantId, $groupId, 'router_id'),
+            };
+        });
+    }
+
+    private function applyDirectGroupCondition(Builder $query, Model $model, ?int $groupId): void
+    {
+        $groupColumn = $model->qualifyColumn('user_group_id');
+
+        if ($groupId === null) {
+            $query->whereNull($groupColumn);
+
+            return;
+        }
+
+        $query->where($groupColumn, $groupId);
+    }
+
+    private function applyAccessPointSiteMembership(Builder $query, Model $model, string $tenantId, int $groupId): void
+    {
+        $this->orWhereSitePivotMembership($query, $model, $tenantId, $groupId, 'site_id');
+        $this->orWhereRouterSiteMembership($query, $model, $tenantId, $groupId, 'router_id');
+    }
+
+    private function applyIpPoolSiteMembership(Builder $query, Model $model, string $tenantId, int $groupId): void
+    {
+        $this->orWhereSitePivotMembership($query, $model, $tenantId, $groupId, 'site_id');
+        $this->orWhereRouterSiteMembership($query, $model, $tenantId, $groupId, 'router_id');
+
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId): void {
+            $query->selectRaw('1')
+                ->from('ip_pool_router')
+                ->join('routers', 'routers.id', '=', 'ip_pool_router.router_id')
+                ->join('site_user_group', 'site_user_group.site_id', '=', 'routers.site_id')
+                ->whereColumn('ip_pool_router.ip_pool_id', $model->qualifyColumn('id'))
+                ->where('ip_pool_router.tenant_id', $tenantId)
+                ->where('routers.tenant_id', $tenantId)
+                ->where('site_user_group.tenant_id', $tenantId)
+                ->where('site_user_group.user_group_id', $groupId);
+        });
+    }
+
+    private function applyIpAddressSiteMembership(Builder $query, Model $model, string $tenantId, int $groupId): void
+    {
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId): void {
+            $query->selectRaw('1')
+                ->from('ip_pools')
+                ->join('site_user_group', 'site_user_group.site_id', '=', 'ip_pools.site_id')
+                ->whereColumn('ip_pools.id', $model->qualifyColumn('ip_pool_id'))
+                ->where('ip_pools.tenant_id', $tenantId)
+                ->where('site_user_group.tenant_id', $tenantId)
+                ->where('site_user_group.user_group_id', $groupId);
+        });
+
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId): void {
+            $query->selectRaw('1')
+                ->from('ip_pools')
+                ->join('routers', 'routers.id', '=', 'ip_pools.router_id')
+                ->join('site_user_group', 'site_user_group.site_id', '=', 'routers.site_id')
+                ->whereColumn('ip_pools.id', $model->qualifyColumn('ip_pool_id'))
+                ->where('ip_pools.tenant_id', $tenantId)
+                ->where('routers.tenant_id', $tenantId)
+                ->where('site_user_group.tenant_id', $tenantId)
+                ->where('site_user_group.user_group_id', $groupId);
+        });
+
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId): void {
+            $query->selectRaw('1')
+                ->from('ip_pool_router')
+                ->join('routers', 'routers.id', '=', 'ip_pool_router.router_id')
+                ->join('site_user_group', 'site_user_group.site_id', '=', 'routers.site_id')
+                ->whereColumn('ip_pool_router.ip_pool_id', $model->qualifyColumn('ip_pool_id'))
+                ->where('ip_pool_router.tenant_id', $tenantId)
+                ->where('routers.tenant_id', $tenantId)
+                ->where('site_user_group.tenant_id', $tenantId)
+                ->where('site_user_group.user_group_id', $groupId);
+        });
+    }
+
+    private function orWhereSitePivotMembership(
+        Builder $query,
+        Model $model,
+        string $tenantId,
+        int $groupId,
+        string $siteColumn,
+    ): void {
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId, $siteColumn): void {
+            $query->selectRaw('1')
+                ->from('site_user_group')
+                ->whereColumn('site_user_group.site_id', $model->qualifyColumn($siteColumn))
+                ->where('site_user_group.tenant_id', $tenantId)
+                ->where('site_user_group.user_group_id', $groupId);
+        });
+
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId, $siteColumn): void {
+            $query->selectRaw('1')
+                ->from('sites')
+                ->whereColumn('sites.id', $model->qualifyColumn($siteColumn))
+                ->where('sites.tenant_id', $tenantId)
+                ->where('sites.user_group_id', $groupId);
+        });
+    }
+
+    private function orWhereRouterSiteMembership(
+        Builder $query,
+        Model $model,
+        string $tenantId,
+        int $groupId,
+        string $routerColumn,
+    ): void {
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId, $routerColumn): void {
+            $query->selectRaw('1')
+                ->from('routers')
+                ->join('site_user_group', 'site_user_group.site_id', '=', 'routers.site_id')
+                ->whereColumn('routers.id', $model->qualifyColumn($routerColumn))
+                ->where('routers.tenant_id', $tenantId)
+                ->where('site_user_group.tenant_id', $tenantId)
+                ->where('site_user_group.user_group_id', $groupId);
+        });
+
+        $query->orWhereExists(function ($query) use ($model, $tenantId, $groupId, $routerColumn): void {
+            $query->selectRaw('1')
+                ->from('routers')
+                ->join('sites', 'sites.id', '=', 'routers.site_id')
+                ->whereColumn('routers.id', $model->qualifyColumn($routerColumn))
+                ->where('routers.tenant_id', $tenantId)
+                ->where('sites.tenant_id', $tenantId)
+                ->where('sites.user_group_id', $groupId);
         });
     }
 

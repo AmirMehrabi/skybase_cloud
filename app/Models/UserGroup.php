@@ -7,6 +7,7 @@ use Database\Factories\UserGroupFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UserGroup extends Model
@@ -63,8 +64,11 @@ class UserGroup extends Model
         return $this->hasMany(Plan::class);
     }
 
-    public function sites(): HasMany
+    public function sites(): BelongsToMany
     {
-        return $this->hasMany(Site::class);
+        return $this->belongsToMany(Site::class)
+            ->wherePivot('tenant_id', $this->tenant_id ?? tenant_id() ?? auth()->user()?->tenant_id)
+            ->withPivot('tenant_id')
+            ->withTimestamps();
     }
 }

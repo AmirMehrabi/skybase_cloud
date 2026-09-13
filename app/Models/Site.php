@@ -7,6 +7,7 @@ use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Site extends Model
@@ -49,6 +50,14 @@ class Site extends Model
     public function accessPoints(): HasMany
     {
         return $this->hasMany(AccessPoint::class);
+    }
+
+    public function userGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(UserGroup::class)
+            ->wherePivot('tenant_id', $this->tenant_id ?? tenant_id() ?? auth()->user()?->tenant_id)
+            ->withPivot('tenant_id')
+            ->withTimestamps();
     }
 
     public function scopeActive($query)
