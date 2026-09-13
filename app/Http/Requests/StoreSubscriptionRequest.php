@@ -99,7 +99,7 @@ class StoreSubscriptionRequest extends FormRequest
             if ($organizationIds->isNotEmpty() && ! Customer::query()
                 ->where('tenant_id', $tenantId)
                 ->whereKey($this->input('customer_id'))
-                ->whereIn('organization_id', $organizationIds)
+                ->whereHas('organizations', fn ($query) => $query->whereIn('organizations.id', $organizationIds))
                 ->exists()) {
                 $validator->errors()->add('customer_id', 'The selected customer must belong to one of the selected organizations.');
             }

@@ -40,10 +40,16 @@ class UpdateCustomerRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $organizationIds = $this->input('organization_ids');
+
+        if (! is_array($organizationIds)) {
+            $organizationIds = filled($this->input('organization_id')) ? [$this->input('organization_id')] : [];
+        }
+
         $this->merge([
             'tax_exempt' => $this->boolean('tax_exempt'),
             'billing_enabled' => $this->boolean('billing_enabled', true),
-            'organization_id' => $this->input('organization_id') ?: null,
+            'organization_ids' => $organizationIds,
         ]);
     }
 }

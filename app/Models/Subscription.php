@@ -187,7 +187,7 @@ class Subscription extends Model implements LdapImportable
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class)
-            ->wherePivot('tenant_id', $this->tenant_id)
+            ->wherePivot('tenant_id', $this->tenant_id ?? tenant_id() ?? auth()->user()?->tenant_id)
             ->withPivot('tenant_id')
             ->withTimestamps();
     }

@@ -9,6 +9,7 @@ use App\Services\SubscriptionDeletionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -102,6 +103,14 @@ class Customer extends Authenticatable implements LdapImportable
         return $this->belongsTo(Organization::class);
     }
 
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class)
+            ->wherePivot('tenant_id', $this->tenant_id ?? tenant_id() ?? auth()->user()?->tenant_id)
+            ->withPivot('tenant_id')
+            ->withTimestamps();
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
@@ -163,7 +172,7 @@ class Customer extends Authenticatable implements LdapImportable
         })->when($filters['status'] ?? null, function ($query, $status) {
             $query->where('status', $status);
         })->when($filters['organization'] ?? null, function ($query, $organization) {
-            $query->where('organization_id', $organization);
+            $query->whereHas('organizations', fn ($query) => $query->whereKey($organization));
         });
     }
 
@@ -253,6 +262,12 @@ class Customer extends Authenticatable implements LdapImportable
         });
 
         static::saved(function (Customer $customer): void {
+            if (filled($customer->organization_id)) {
+                $customer->organizations()->syncWithoutDetaching([
+                    $customer->organization_id => ['tenant_id' => $customer->tenant_id],
+                ]);
+            }
+
             if (! $customer->wasChanged('billing_enabled') && ! $customer->wasChanged('organization_id')) {
                 return;
             }

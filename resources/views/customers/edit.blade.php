@@ -78,16 +78,15 @@
                     <input type="text" id="customer_code" value="{{ $customer->customer_code }}" readonly class="block w-full rounded-lg border-gray-300 bg-gray-50 sm:text-sm py-2 px-3 border">
                 </div>
 
-                <div>
-                    <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">Organization</label>
-                    <select name="organization_id" id="organization_id" x-model="form.organization_id" @change="validator.clear('organization_id')" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
-                        <option value="">Unassigned</option>
-                        @foreach($organizations as $organization)
-                            <option value="{{ $organization->id }}">{{ $organization->name }}</option>
-                        @endforeach
-                    </select>
-                    <p x-show="validator.error('organization_id')" x-text="validator.error('organization_id')" class="mt-1 text-sm text-red-600"></p>
-                </div>
+                <x-input.searchable-multi-select
+                    name="organization_ids"
+                    label="Organizations"
+                    :options="$organizations"
+                    :selected="old('organization_ids', collect([$customer->organization_id])->merge($customer->organizations->modelKeys())->filter()->unique()->values()->all())"
+                    placeholder="Unassigned"
+                    search-placeholder="Search organizations..."
+                    hint="The first selected organization is primary for billing and user-group ownership."
+                />
 
                 <template x-if="form.customer_type === 'individual'">
                     <div>
@@ -220,7 +219,6 @@ function customerEditForm() {
         ),
         form: {
             customer_type: @js(old('customer_type', $customer->customer_type ?? 'individual')),
-            organization_id: @js(old('organization_id', $customer->organization_id)),
             first_name: @js(old('first_name', $customer->first_name)),
             last_name: @js(old('last_name', $customer->last_name)),
             company_name: @js(old('company_name', $customer->company_name)),

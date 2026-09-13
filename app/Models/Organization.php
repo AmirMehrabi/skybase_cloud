@@ -62,7 +62,15 @@ class Organization extends Model
         return $this->belongsTo(Plan::class, 'default_plan_id');
     }
 
-    public function customers(): HasMany
+    public function customers(): BelongsToMany
+    {
+        return $this->belongsToMany(Customer::class)
+            ->wherePivot('tenant_id', $this->tenant_id ?? tenant_id() ?? auth()->user()?->tenant_id)
+            ->withPivot('tenant_id')
+            ->withTimestamps();
+    }
+
+    public function primaryCustomers(): HasMany
     {
         return $this->hasMany(Customer::class);
     }
@@ -70,7 +78,7 @@ class Organization extends Model
     public function subscriptions(): BelongsToMany
     {
         return $this->belongsToMany(Subscription::class)
-            ->wherePivot('tenant_id', $this->tenant_id)
+            ->wherePivot('tenant_id', $this->tenant_id ?? tenant_id() ?? auth()->user()?->tenant_id)
             ->withPivot('tenant_id')
             ->withTimestamps();
     }

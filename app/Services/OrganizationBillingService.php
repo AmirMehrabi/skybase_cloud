@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Customer;
 use App\Models\Organization;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
@@ -47,7 +48,7 @@ class OrganizationBillingService
             $organization->loadMissing('defaultPlan');
 
             Subscription::query()
-                ->whereIn('customer_id', $organization->customers()->select('id'))
+                ->whereIn('customer_id', $organization->primaryCustomers()->select('id'))
                 ->where('status', '!=', 'cancelled')
                 ->with('items')
                 ->chunkById(100, function ($subscriptions) use ($organization): void {
@@ -106,10 +107,10 @@ class OrganizationBillingService
 
     public function organizationForCustomerId(int $customerId): ?Organization
     {
-        return Organization::query()
-            ->whereHas('customers', fn ($query) => $query->whereKey($customerId))
-            ->with('defaultPlan')
-            ->first();
+        return Customer::query()
+            ->with('organization.defaultPlan')
+            ->find($customerId)
+            ?->organization;
     }
 
     public function assertPlanAllowedForCustomer(int $customerId, ?int $planId): void

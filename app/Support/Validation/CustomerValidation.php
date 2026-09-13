@@ -22,8 +22,10 @@ class CustomerValidation
 
         $rules = [
             'customer_type' => ['required', 'in:individual,business'],
-            'organization_id' => [
-                'nullable',
+            'organization_ids' => ['nullable', 'array'],
+            'organization_ids.*' => [
+                'integer',
+                'distinct',
                 Rule::exists('organizations', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId)),
             ],
             'first_name' => ['exclude_unless:customer_type,individual', 'required', 'string', 'max:255'],
@@ -64,6 +66,8 @@ class CustomerValidation
             'first_name.required' => 'The first name field is required for individuals.',
             'last_name.required' => 'The last name field is required for individuals.',
             'company_name.required' => 'The company name field is required for businesses.',
+            'organization_ids.array' => 'Please select valid organizations.',
+            'organization_ids.*.exists' => 'One of the selected organizations is invalid.',
             'mobile.required' => 'The mobile number field is required.',
             'address_line1.required' => 'The address field is required.',
             'city.required' => 'The city field is required.',

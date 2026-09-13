@@ -95,6 +95,30 @@ class SubscriptionMultipleOrganizationsTest extends TestCase
         ]);
     }
 
+    public function test_store_accepts_a_customer_through_a_secondary_organization(): void
+    {
+        [$tenant, $user, $firstOrganization, $secondOrganization, $customer] = $this->createOrganizationDependencies();
+        [$plan, $router] = $this->createServiceDependencies($tenant);
+        $customer->organizations()->syncWithPivotValues(
+            [$firstOrganization->id, $secondOrganization->id],
+            ['tenant_id' => $tenant->id],
+        );
+
+        $this->actingAs($user)
+            ->postJson(route('subscriptions.store'), $this->subscriptionPayload(
+                $customer,
+                $plan,
+                $router,
+                [$secondOrganization->id],
+            ))
+            ->assertCreated();
+
+        $this->assertDatabaseHas('organization_subscription', [
+            'tenant_id' => $tenant->id,
+            'organization_id' => $secondOrganization->id,
+        ]);
+    }
+
     /**
      * @return array{Tenant, User, Organization, Organization, Customer}
      */

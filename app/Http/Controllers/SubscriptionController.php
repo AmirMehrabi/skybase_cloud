@@ -134,14 +134,14 @@ class SubscriptionController extends Controller
     public function create(Request $request): View
     {
         $customerId = $request->query('customer_id');
-        $customer = $customerId ? Customer::with('organization.defaultPlan')->findOrFail($customerId) : null;
-        $customers = Customer::with('organization.defaultPlan')->orderBy('name')->get();
+        $customer = $customerId ? Customer::with(['organization.defaultPlan', 'organizations'])->findOrFail($customerId) : null;
+        $customers = Customer::with(['organization.defaultPlan', 'organizations'])->orderBy('name')->get();
         $organizations = Organization::query()
             ->where(function ($query) use ($customer): void {
                 $query->where('status', 'active');
 
-                if ($customer?->organization_id) {
-                    $query->orWhereKey($customer->organization_id);
+                if ($customer?->organizations->isNotEmpty()) {
+                    $query->orWhereIn('id', $customer->organizations->modelKeys());
                 }
             })
             ->orderBy('name')
@@ -164,7 +164,7 @@ class SubscriptionController extends Controller
     {
         $validated = $request->validated();
         $customer = Customer::query()->findOrFail($validated['customer_id']);
-        $organizationIds = collect($validated['organization_ids'] ?? [$customer->organization_id])
+        $organizationIds = collect($validated['organization_ids'] ?? $customer->organizations()->pluck('organizations.id'))
             ->filter()
             ->map(fn (mixed $organizationId): int => (int) $organizationId)
             ->unique()

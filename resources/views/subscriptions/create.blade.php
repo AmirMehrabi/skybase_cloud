@@ -59,38 +59,22 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Customer & Service Assignment</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Organizations -->
-                <fieldset class="lg:col-span-3">
-                    <legend class="block text-sm font-medium text-gray-700 mb-2">Organizations <span class="text-red-500">*</span></legend>
-                    <p class="mb-3 text-xs text-gray-500">Select one or more organizations to make their customers available below.</p>
-                    <div :class="hasValidationError('organization_ids') ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'" class="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto rounded-xl border bg-gray-50 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                        @forelse($organizations as $organization)
-                            <label for="organization_{{ $organization->id }}" class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 transition hover:border-blue-300 hover:bg-blue-50">
-                                <input
-                                    type="checkbox"
-                                    id="organization_{{ $organization->id }}"
-                                    name="organization_ids[]"
-                                    value="{{ $organization->id }}"
-                                    x-model="selectedOrganizationIds"
-                                    @change="handleOrganizationsChange()"
-                                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                >
-                                <span class="min-w-0">
-                                    <span class="block truncate text-sm font-medium text-gray-900">{{ $organization->name }}</span>
-                                    <span class="block truncate text-xs text-gray-500">{{ $organization->code }}</span>
-                                </span>
-                            </label>
-                        @empty
-                            <p class="col-span-full py-3 text-center text-sm text-gray-500">No active organizations are available.</p>
-                        @endforelse
-                    </div>
-                    @error('organization_ids')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                <div class="lg:col-span-2">
+                    <x-input.searchable-multi-select
+                        name="organization_ids"
+                        label="Organizations"
+                        :options="$organizations"
+                        :selected="old('organization_ids', $customer?->organizations->modelKeys() ?? [])"
+                        placeholder="Select one or more organizations"
+                        search-placeholder="Search organizations..."
+                        required
+                        x-model="selectedOrganizationIds"
+                        x-on:selection-changed="selectedOrganizationIds = $event.detail.selected; handleOrganizationsChange()"
+                    />
                     <template x-if="validationError('organization_ids') && !{{ $errors->has('organization_ids') ? 'true' : 'false' }}">
                         <p class="mt-1 text-sm text-red-600" x-text="validationError('organization_ids')"></p>
                     </template>
-                </fieldset>
+                </div>
 
                 <!-- Customer -->
                 <div class="lg:col-span-1">
@@ -870,7 +854,10 @@
     $customerProfiles = $customers
         ->map(fn ($customer) => [
             'id' => (string) $customer->id,
-            'organization_id' => $customer->organization_id === null ? null : (string) $customer->organization_id,
+            'organization_ids' => collect($customer->organizations->modelKeys())
+                ->map(fn ($organizationId) => (string) $organizationId)
+                ->values()
+                ->all(),
             'name' => $customer->full_name,
             'code' => $customer->customer_code,
         ])
@@ -900,7 +887,7 @@
 <script>
 function subscriptionCreateForm() {
     return {
-        selectedOrganizationIds: @js(collect(old('organization_ids', $customer?->organization_id ? [(string) $customer->organization_id] : []))->map(fn ($id) => (string) $id)->values()->all()),
+        selectedOrganizationIds: @js(collect(old('organization_ids', $customer?->organizations->modelKeys() ?? []))->map(fn ($id) => (string) $id)->values()->all()),
 
         // Basic form data
         form: {
@@ -1011,7 +998,7 @@ function subscriptionCreateForm() {
         },
 
         get filteredCustomers() {
-            return this.customerProfiles.filter(customer => this.selectedOrganizationIds.includes(String(customer.organization_id)));
+            return this.customerProfiles.filter(customer => customer.organization_ids.some(organizationId => this.selectedOrganizationIds.includes(String(organizationId))));
         },
 
         init() {

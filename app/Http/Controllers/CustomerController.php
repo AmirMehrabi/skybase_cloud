@@ -19,6 +19,7 @@ use App\Services\UserGroupAssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -41,6 +42,7 @@ class CustomerController extends Controller
         $customers = Customer::filter($filters)
             ->with([
                 'organization:id,name',
+                'organizations:id,name',
                 'subscriptions' => function ($query): void {
                     $query->select([
                         'id',
@@ -122,8 +124,9 @@ class CustomerController extends Controller
             'name' => $customer->full_name,
             'customer_code' => $customer->customer_code,
             'email' => $customer->email,
-            'organization' => $customer->organization?->name ?? 'Unassigned',
+            'organization' => $customer->organizations->pluck('name')->join(', ') ?: 'Unassigned',
             'organization_id' => $customer->organization_id,
+            'organization_ids' => $customer->organizations->modelKeys(),
             'plan' => $planNames->first() ?? 'N/A',
             'plans' => $planNames->all(),
             'site' => $siteRouterValues->first() ?? 'N/A',
@@ -160,7 +163,7 @@ class CustomerController extends Controller
     public function create(): View
     {
         return view('customers.create', [
-            'organizations' => Organization::query()->active()->orderBy('name')->get(['id', 'name']),
+            'organizations' => Organization::query()->active()->orderBy('name')->get(['id', 'name', 'code']),
         ]);
     }
 
@@ -170,6 +173,12 @@ class CustomerController extends Controller
     public function store(StoreCustomerRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
+        $organizationIds = collect($validated['organization_ids'] ?? [])
+            ->map(fn (mixed $organizationId): int => (int) $organizationId)
+            ->unique()
+            ->values();
+        unset($validated['organization_ids']);
+        $validated['organization_id'] = $organizationIds->first();
 
         // Generate name from first/last name or company name
         if ($validated['customer_type'] === 'individual') {
@@ -195,13 +204,20 @@ class CustomerController extends Controller
 
         $validated['user_group_id'] = $this->customerGroupId($validated['organization_id'] ?? null);
 
-        $customer = Customer::create($validated);
+        $customer = DB::transaction(function () use ($validated, $organizationIds): Customer {
+            $customer = Customer::create($validated);
+            $customer->organizations()->syncWithPivotValues($organizationIds, [
+                'tenant_id' => $customer->tenant_id,
+            ]);
+
+            return $customer;
+        });
 
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Customer created successfully.',
                 'redirect_to' => route('subscriptions.create', ['customer_id' => $customer->id]),
-                'customer' => $customer,
+                'customer' => $customer->load('organizations'),
             ], 201);
         }
 
@@ -228,6 +244,7 @@ class CustomerController extends Controller
             'tickets.subscription',
             'notes.author',
             'organization',
+            'organizations',
         ]);
 
         $activitySubjects = collect([$customer])
@@ -283,10 +300,17 @@ class CustomerController extends Controller
     public function edit(Customer $customer): View
     {
         $this->authorizeTenantAccess($customer);
+        $customer->load('organizations');
 
         return view('customers.edit', [
             'customer' => $customer,
-            'organizations' => Organization::query()->active()->orderBy('name')->get(['id', 'name']),
+            'organizations' => Organization::query()
+                ->where(function ($query) use ($customer): void {
+                    $query->where('status', 'active')
+                        ->orWhereIn('id', $customer->organizations->modelKeys());
+                })
+                ->orderBy('name')
+                ->get(['id', 'name', 'code']),
         ]);
     }
 
@@ -298,6 +322,12 @@ class CustomerController extends Controller
         $this->authorizeTenantAccess($customer);
 
         $validated = $request->validated();
+        $organizationIds = collect($validated['organization_ids'] ?? [])
+            ->map(fn (mixed $organizationId): int => (int) $organizationId)
+            ->unique()
+            ->values();
+        unset($validated['organization_ids']);
+        $validated['organization_id'] = $organizationIds->first();
 
         // Update name based on customer type
         if ($validated['customer_type'] === 'individual') {
@@ -318,7 +348,12 @@ class CustomerController extends Controller
 
         $validated['user_group_id'] = $this->customerGroupId($validated['organization_id'] ?? null, $customer);
 
-        $customer->update($validated);
+        DB::transaction(function () use ($customer, $validated, $organizationIds): void {
+            $customer->update($validated);
+            $customer->organizations()->syncWithPivotValues($organizationIds, [
+                'tenant_id' => $customer->tenant_id,
+            ]);
+        });
 
         if ($customer->wasChanged('user_group_id')) {
             $groups->cascadeCustomer($customer->id, (string) $customer->tenant_id, $customer->user_group_id);
@@ -332,7 +367,7 @@ class CustomerController extends Controller
 
         return response()->json([
             'message' => 'Customer updated successfully.',
-            'customer' => $customer->fresh(),
+            'customer' => $customer->fresh('organizations'),
         ]);
     }
 

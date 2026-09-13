@@ -12,7 +12,7 @@
         'name' => $customer->full_name,
         'customer_code' => $customer->customer_code,
         'customer_type' => $customer->customer_type,
-        'organization' => $customer->organization?->name ?? 'Unassigned',
+        'organization' => $customer->organizations->pluck('name')->join(', ') ?: 'Unassigned',
         'national_id' => $customer->national_id,
         'email' => $customer->email,
         'phone' => $customer->phone,
