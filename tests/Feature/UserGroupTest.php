@@ -393,6 +393,7 @@ class UserGroupTest extends TestCase
         ]);
 
         $this->assertSame($group->id, $subscription->user_group_id);
+        $this->assertTrue(Subscription::query()->whereKey($subscription)->exists());
     }
 
     public function test_assigned_group_cannot_be_deleted(): void
