@@ -36,11 +36,13 @@ class PaymentController extends Controller
             ]);
 
         $invoices = Invoice::query()
+            ->outstanding()
             ->with('customer')
             ->latest()
             ->get()
             ->map(fn (Invoice $invoice): array => [
                 'id' => $invoice->id,
+                'customer_id' => $invoice->customer_id,
                 'invoice_number' => $invoice->invoice_number,
                 'customer_name' => $invoice->customer?->full_name ?? 'N/A',
                 'balance_due' => (float) $invoice->balance_due,
@@ -74,9 +76,15 @@ class PaymentController extends Controller
 
         $invoice = Invoice::query()->findOrFail($validated['invoice_id']);
 
-        if ($invoice->status === 'void') {
+        if (filled($validated['customer_id'] ?? null) && (string) $invoice->customer_id !== (string) $validated['customer_id']) {
             throw ValidationException::withMessages([
-                'invoice_id' => 'A payment cannot be recorded for a cancelled invoice.',
+                'invoice_id' => 'The selected invoice does not belong to the selected customer.',
+            ]);
+        }
+
+        if (! in_array($invoice->status, ['issued', 'partially_paid', 'overdue'], true) || (float) $invoice->balance_due <= 0) {
+            throw ValidationException::withMessages([
+                'invoice_id' => 'A payment can only be recorded for an outstanding invoice.',
             ]);
         }
 

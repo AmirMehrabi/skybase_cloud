@@ -17,7 +17,7 @@ class InvoiceController extends Controller
     public function index(): View
     {
         $invoices = Invoice::query()
-            ->with(['customer', 'subscription'])
+            ->with(['tenant', 'customer', 'subscription'])
             ->latest()
             ->get()
             ->map(fn (Invoice $invoice): array => $this->transformInvoice($invoice));
@@ -62,6 +62,7 @@ class InvoiceController extends Controller
         $data = [
             'id' => $invoice->id,
             'invoice_number' => $invoice->invoice_number,
+            'currency' => $invoice->tenant?->currency ?? 'USD',
             'customer_name' => $invoice->customer?->full_name ?? 'N/A',
             'subscription_code' => $invoice->subscription?->subscription_code ?? 'N/A',
             'issue_date' => $invoice->issue_date?->toDateString(),

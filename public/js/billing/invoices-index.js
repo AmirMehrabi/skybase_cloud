@@ -109,10 +109,10 @@ function invoicesIndex() {
             return this.filteredInvoices.reduce((sum, inv) => sum + inv.balance_due, 0);
         },
 
-        formatCurrency(value) {
+        formatCurrency(value, currency = null) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: 'USD'
+                currency: currency || this.selectedInvoice?.currency || this.invoices[0]?.currency || 'USD'
             }).format(value);
         },
 

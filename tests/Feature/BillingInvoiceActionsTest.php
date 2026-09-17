@@ -39,6 +39,55 @@ class BillingInvoiceActionsTest extends TestCase
         ]);
     }
 
+    public function test_payments_page_only_provides_outstanding_invoices_with_their_customer(): void
+    {
+        [$tenant, $user, $customer] = $this->createTenantContext('payment-invoices');
+        $outstandingInvoice = $this->createInvoice($tenant, $customer);
+        $paidInvoice = $this->createInvoice($tenant, $customer, [
+            'paid_amount' => 100,
+            'balance_due' => 0,
+            'status' => 'paid',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('billing.payments.index'));
+
+        $response
+            ->assertOk()
+            ->assertViewHas('invoices', function ($invoices) use ($outstandingInvoice, $paidInvoice, $customer): bool {
+                return $invoices->count() === 1
+                    && $invoices->first()['id'] === $outstandingInvoice->id
+                    && $invoices->first()['customer_id'] === $customer->id
+                    && ! $invoices->contains(fn (array $invoice): bool => $invoice['id'] === $paidInvoice->id);
+            });
+    }
+
+    public function test_payment_cannot_be_recorded_against_a_different_selected_customer(): void
+    {
+        [$tenant, $user, $customer] = $this->createTenantContext('payment-customer');
+        $anotherCustomer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'customer_code' => 'CUS-'.Str::upper(Str::random(8)),
+            'customer_type' => 'individual',
+            'name' => 'Another Customer',
+            'billing_type' => 'postpaid',
+            'billing_enabled' => true,
+            'balance' => 0,
+            'credit_limit' => 0,
+            'tax_exempt' => false,
+            'status' => 'active',
+        ]);
+        $invoice = $this->createInvoice($tenant, $customer);
+
+        $this->actingAs($user)
+            ->postJson(route('billing.payments.store'), [
+                'customer_id' => $anotherCustomer->id,
+                'invoice_id' => $invoice->id,
+                'amount' => 40,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['invoice_id']);
+    }
+
     public function test_invoice_without_payments_can_be_cancelled(): void
     {
         [$tenant, $user, $customer] = $this->createTenantContext('cancel');

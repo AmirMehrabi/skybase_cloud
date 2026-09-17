@@ -139,7 +139,24 @@
                             <span x-text="field.label"></span>
                             <span x-show="field.required" class="text-red-500">*</span>
                         </label>
-                        <input type="text" :name="field.name" :id="field.name" x-model="form[field.name]" @input="validator.clear(field.name)" :class="'block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border ' + validator.fieldClass(field.name)" :required="field.required">
+                        <template x-if="field.name === 'country'">
+                            <select :name="field.name" :id="field.name" x-model="form[field.name]" @change="validator.clear(field.name)" :class="'block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white ' + validator.fieldClass(field.name)" :required="field.required">
+                                <template x-if="!['United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Australia', 'South Africa', 'Sierra Leone'].includes(form.country)">
+                                    <option :value="form.country" x-text="form.country"></option>
+                                </template>
+                                <option value="United States">United States</option>
+                                <option value="Canada">Canada</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                                <option value="Germany">Germany</option>
+                                <option value="France">France</option>
+                                <option value="Australia">Australia</option>
+                                <option value="South Africa">South Africa</option>
+                                <option value="Sierra Leone">Sierra Leone</option>
+                            </select>
+                        </template>
+                        <template x-if="field.name !== 'country'">
+                            <input type="text" :name="field.name" :id="field.name" x-model="form[field.name]" @input="validator.clear(field.name)" :class="'block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border ' + validator.fieldClass(field.name)" :required="field.required">
+                        </template>
                         <p x-show="validator.error(field.name)" x-text="validator.error(field.name)" class="mt-1 text-sm text-red-600"></p>
                     </div>
                 </template>

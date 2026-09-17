@@ -239,7 +239,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Customer</label>
-                        <select x-model="newPayment.customer_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                        <select x-model="newPayment.customer_id" @change="newPayment.invoice_id = ''" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                             <option value="">Select customer</option>
                             <template x-for="customer in customers" :key="customer.id">
                                 <option :value="customer.id" x-text="customer.name + ' (' + customer.customer_code + ')'"></option>
@@ -248,10 +248,10 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Invoice</label>
-                        <select x-model="newPayment.invoice_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
-                            <option value="">Select invoice</option>
-                            <template x-for="invoice in invoices" :key="invoice.id">
-                                <option :value="invoice.id" x-text="invoice.invoice_number + ' - ' + invoice.customer_name + ' (' + formatCurrency(invoice.balance_due) + ')'"></option>
+                        <select x-model="newPayment.invoice_id" :disabled="!newPayment.customer_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:cursor-not-allowed disabled:bg-gray-100">
+                            <option value="" x-text="newPayment.customer_id ? 'Select outstanding invoice' : 'Select customer first'"></option>
+                            <template x-for="invoice in selectableInvoices" :key="invoice.id">
+                                <option :value="invoice.id" x-text="invoice.invoice_number + ' (' + formatCurrency(invoice.balance_due) + ')'"></option>
                             </template>
                         </select>
                     </div>

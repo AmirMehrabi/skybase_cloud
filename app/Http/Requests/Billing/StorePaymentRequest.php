@@ -25,6 +25,11 @@ class StorePaymentRequest extends FormRequest
                 Rule::exists('invoices', 'id')
                     ->where('tenant_id', tenant_id() ?? auth()->user()?->tenant_id),
             ],
+            'customer_id' => [
+                'nullable',
+                Rule::exists('customers', 'id')
+                    ->where('tenant_id', tenant_id() ?? auth()->user()?->tenant_id),
+            ],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'payment_method' => ['nullable', 'string', 'max:255'],
             'paid_at' => ['nullable', 'date'],

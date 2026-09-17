@@ -72,6 +72,10 @@ function paymentsIndex() {
             return this.search || this.method || this.status || this.date;
         },
 
+        get selectableInvoices() {
+            return this.invoices.filter(invoice => String(invoice.customer_id) === String(this.newPayment.customer_id));
+        },
+
         formatCurrency(value) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
@@ -124,8 +128,13 @@ function paymentsIndex() {
         },
 
         recordPayment() {
+            if (!this.newPayment.customer_id) {
+                alert('Please select a customer.');
+                return;
+            }
+
             if (!this.newPayment.invoice_id) {
-                alert('Please select an invoice.');
+                alert('Please select an outstanding invoice.');
                 return;
             }
 

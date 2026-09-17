@@ -207,6 +207,7 @@
                         <option value="Germany">Germany</option>
                         <option value="France">France</option>
                         <option value="Australia">Australia</option>
+                        <option value="South Africa">South Africa</option>
                         <option value="Sierra Leone">Sierra Leone</option>
                     </select>
                     @error('country')
