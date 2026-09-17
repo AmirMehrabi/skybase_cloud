@@ -305,39 +305,36 @@ function getIpRowBg($status)
     <div class="fixed inset-0 z-10 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
             <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-                <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                <form method="POST" class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                    @csrf
                     <h3 class="text-base font-semibold leading-6 text-gray-900">Assign IP Address</h3>
                     <p class="text-sm text-gray-500 mt-1">Assign IP: <span class="font-mono font-semibold" x-text="ip"></span></p>
 
                     <div class="mt-4 space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                            <select class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <select name="customer_id" id="ip-customer" required class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">Select Customer</option>
-                                <option value="1">Acme Corporation</option>
-                                <option value="2">Smith Residence</option>
-                                <option value="3">Tech Startup Inc</option>
+                                @foreach($customers as $customer)<option value="{{ $customer->id }}">{{ $customer->name }}</option>@endforeach
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Subscription</label>
-                            <select class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <select name="subscription_id" id="ip-subscription" required class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">Select Subscription</option>
-                                <option value="1">SUB-2024-001</option>
-                                <option value="2">SUB-2024-002</option>
-                                <option value="3">SUB-2024-003</option>
+                                @foreach($subscriptions as $subscription)<option value="{{ $subscription->id }}" data-customer="{{ $subscription->customer_id }}" data-mac="{{ $subscription->mac_address }}">{{ $subscription->subscription_code }}</option>@endforeach
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">MAC Address</label>
-                            <input type="text" placeholder="AA:BB:CC:DD:EE:FF" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-mono">
+                            <input name="mac_address" id="ip-mac-address" type="text" placeholder="AA:BB:CC:DD:EE:FF" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-mono">
                         </div>
                     </div>
-                </div>
-                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                    <button type="button" @click="show = false" class="inline-flex w-full justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto">Assign IP</button>
+                    <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <button type="submit" class="inline-flex w-full justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto">Assign IP</button>
                     <button type="button" @click="show = false" class="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">Cancel</button>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -354,19 +351,21 @@ function poolShow() {
             this.$dispatch('open-assign-modal', { ip: ip });
         },
         reserveIp(ip) {
-            if (confirm(`Reserve IP ${ip}?`)) {
-                alert(`IP ${ip} has been reserved`);
-            }
+            this.updateStatus(ip, 'reserved');
         },
         blockIp(ip) {
-            if (confirm(`Block IP ${ip}?`)) {
-                alert(`IP ${ip} has been blocked`);
-            }
+            this.updateStatus(ip, 'blocked');
         },
         unblockIp(ip) {
-            if (confirm(`Unblock IP ${ip}?`)) {
-                alert(`IP ${ip} has been unblocked`);
-            }
+            this.updateStatus(ip, 'available');
+        },
+        updateStatus(ip, status) {
+            if (!confirm(`${status.charAt(0).toUpperCase() + status.slice(1)} IP ${ip}?`)) return;
+            const address = @json(route('ipam.pools.ip-addresses.status', [$pool, '__IP__', '__STATUS__'])).replace('__IP__', this.findIpId(ip)).replace('__STATUS__', status);
+            fetch(address, { method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'X-HTTP-Method-Override': 'PATCH'}, body: JSON.stringify({}) }).then(() => window.location.reload());
+        },
+        findIpId(ip) {
+            return @json($ipAddresses->pluck('id', 'ip_address')->all())[ip];
         }
     }
 }
@@ -377,7 +376,15 @@ document.addEventListener('open-assign-modal', (e) => {
     if (modal && modal._x_dataStack) {
         modal._x_dataStack[0].ip = e.detail.ip;
         modal._x_dataStack[0].show = true;
+        const form = modal.querySelector('form');
+        form.action = @json(route('ipam.pools.ip-addresses.assign', [$pool, '__IP__'])).replace('__IP__', @json($ipAddresses->pluck('id', 'ip_address')->all())[e.detail.ip]);
     }
+});
+document.addEventListener('change', (e) => {
+    if (e.target.id !== 'ip-subscription') return;
+    const option = e.target.selectedOptions[0];
+    document.getElementById('ip-customer').value = option.dataset.customer || '';
+    document.getElementById('ip-mac-address').value = option.dataset.mac || '';
 });
 </script>
 @endpush

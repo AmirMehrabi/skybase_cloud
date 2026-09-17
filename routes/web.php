@@ -384,13 +384,15 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
             Route::post('/', [IpamController::class, 'store'])->name('store');
             Route::get('/{pool}', [IpamController::class, 'show'])->name('show');
             Route::patch('/{pool}/ip-addresses/{ipAddress}/release', [IpamController::class, 'releasePoolIpAddress'])->name('ip-addresses.release');
+            Route::post('/{pool}/ip-addresses/{ipAddress}/assign', [IpamController::class, 'assignIpAddress'])->name('ip-addresses.assign');
+            Route::patch('/{pool}/ip-addresses/{ipAddress}/status/{status}', [IpamController::class, 'updateIpAddressStatus'])->name('ip-addresses.status');
             Route::get('/{pool}/edit', [IpamController::class, 'edit'])->name('edit');
             Route::put('/{pool}', [IpamController::class, 'update'])->name('update');
             Route::delete('/{pool}', [IpamController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('ips')->name('ips.')->group(function () {
-            Route::get('/', fn () => view('ipam.ips.index'))->name('index');
+            Route::get('/', [IpamController::class, 'ipAddresses'])->name('index');
             Route::get('/{ip}', fn ($ip) => view('ipam.ips.show', compact('ip')))->name('show');
         });
     });

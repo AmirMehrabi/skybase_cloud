@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Ipam\AssignIpAddressRequest;
+use App\Http\Requests\Ipam\UpdateIpAddressStatusRequest;
 use App\Http\Requests\StoreIpPoolRequest;
 use App\Http\Requests\UpdateIpPoolRequest;
+use App\Models\Customer;
 use App\Models\IpAddress;
 use App\Models\IpPool;
 use App\Models\Router;
@@ -39,10 +42,14 @@ class IpamController extends Controller
         $totalPools = (clone $poolsQuery)->count();
         $allPools = (clone $poolsQuery)->get();
 
-        $totalIPs = $allPools->sum('total_ips');
-        $usedIPs = $allPools->sum('used_ips');
-        $availableIPs = $allPools->sum('available_ips');
-        $reservedIPs = $allPools->sum('reserved_ips');
+        $addressStatistics = IpAddress::query()
+            ->where('tenant_id', $tenantId)
+            ->selectRaw('count(*) as total, sum(status = ?) as used, sum(status = ?) as available, sum(status = ?) as reserved', ['assigned', 'available', 'reserved'])
+            ->first();
+        $totalIPs = (int) $addressStatistics->total;
+        $usedIPs = (int) $addressStatistics->used;
+        $availableIPs = (int) $addressStatistics->available;
+        $reservedIPs = (int) $addressStatistics->reserved;
 
         $exhaustedPools = (clone $poolsQuery)
             ->where('status', 'exhausted')
@@ -200,7 +207,67 @@ class IpamController extends Controller
             ->orderBy('ip_address')
             ->paginate(50);
 
-        return view('ipam.pools.show', compact('pool', 'ipAddresses'));
+        $customers = Customer::query()->where('tenant_id', auth()->user()->tenant_id)->orderBy('name')->get(['id', 'name']);
+        $subscriptions = Subscription::query()->where('tenant_id', auth()->user()->tenant_id)->orderBy('subscription_code')->get(['id', 'customer_id', 'subscription_code', 'mac_address']);
+
+        return view('ipam.pools.show', compact('pool', 'ipAddresses', 'customers', 'subscriptions'));
+    }
+
+    /** Display tenant-scoped IP addresses with server-side filters. */
+    public function ipAddresses(Request $request): View
+    {
+        $tenantId = auth()->user()?->tenant_id;
+        abort_unless($tenantId, 403);
+        $filters = $request->validate([
+            'pool_id' => ['nullable', 'integer'], 'router_id' => ['nullable', 'integer'], 'status' => ['nullable', 'in:available,assigned,reserved,blocked'], 'customer' => ['nullable', 'string', 'max:255'], 'ip' => ['nullable', 'string', 'max:45'],
+        ]);
+        $query = IpAddress::query()->where('tenant_id', $tenantId)->with(['ipPool.router', 'customer']);
+        $query->when($filters['pool_id'] ?? null, fn ($q, $id) => $q->where('ip_pool_id', $id));
+        $query->when($filters['router_id'] ?? null, fn ($q, $id) => $q->whereHas('ipPool', fn ($pool) => $pool->where('router_id', $id)));
+        $query->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status));
+        $query->when($filters['ip'] ?? null, fn ($q, $ip) => $q->where('ip_address', 'like', '%'.$ip.'%'));
+        $query->when($filters['customer'] ?? null, fn ($q, $customer) => $q->whereHas('customer', fn ($customers) => $customers->where('name', 'like', '%'.$customer.'%')));
+        $ipAddresses = $query->orderByRaw('INET_ATON(ip_address)')->paginate(50)->withQueryString();
+        $pools = IpPool::query()->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
+        $routers = Router::query()->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
+        $statistics = (clone $query)->selectRaw('count(*) as total, sum(status = ?) as assigned, sum(status = ?) as available, sum(status = ?) as reserved', ['assigned', 'available', 'reserved'])->first();
+
+        return view('ipam.ips.index', compact('ipAddresses', 'pools', 'routers', 'statistics'));
+    }
+
+    public function assignIpAddress(AssignIpAddressRequest $request, IpPool $pool, IpAddress $ipAddress): RedirectResponse
+    {
+        $this->authorizeTenantAccess($pool);
+        abort_unless($ipAddress->tenant_id === auth()->user()->tenant_id && $ipAddress->ip_pool_id === $pool->id, 404);
+        abort_unless(in_array($ipAddress->status, ['available', 'reserved'], true), 422, 'This IP address is not assignable.');
+        $subscription = Subscription::query()->where('tenant_id', auth()->user()->tenant_id)->whereKey($request->integer('subscription_id'))->where('customer_id', $request->integer('customer_id'))->firstOrFail();
+        DB::transaction(function () use ($ipAddress, $pool, $subscription, $request): void {
+            $ipAddress->assignTo($subscription->customer, $request->validated('mac_address') ?? $subscription->mac_address, $subscription->subscription_code);
+            $subscription->update(['ip_address' => $ipAddress->ip_address, 'ip_pool_id' => $pool->id, 'ip_management' => 'system']);
+            $pool->updateStatistics();
+        });
+
+        return back()->with('success', "IP {$ipAddress->ip_address} has been assigned.");
+    }
+
+    public function updateIpAddressStatus(UpdateIpAddressStatusRequest $request, IpPool $pool, IpAddress $ipAddress, string $status): RedirectResponse
+    {
+        $this->authorizeTenantAccess($pool);
+        abort_unless($ipAddress->tenant_id === auth()->user()->tenant_id && $ipAddress->ip_pool_id === $pool->id, 404);
+        abort_unless(in_array($status, ['reserved', 'blocked', 'available'], true), 404);
+        abort_if($ipAddress->isAssigned(), 422, 'Release an assigned IP address before changing its status.');
+        DB::transaction(function () use ($ipAddress, $pool, $status, $request): void {
+            if ($status === 'reserved') {
+                $ipAddress->reserve($request->validated('notes'));
+            } elseif ($status === 'blocked') {
+                $ipAddress->block($request->validated('notes'));
+            } else {
+                $ipAddress->release();
+            }
+            $pool->updateStatistics();
+        });
+
+        return back()->with('success', "IP {$ipAddress->ip_address} is now {$status}.");
     }
 
     /**
