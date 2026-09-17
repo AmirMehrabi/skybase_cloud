@@ -7,7 +7,6 @@ use App\Models\Concerns\LogsTenantActivity;
 use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\UserGroupAssignmentService;
-use App\Support\UserGroups\UserGroupContext;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -61,12 +60,6 @@ class Subscription extends Model implements LdapImportable
 
             if ($tenantId) {
                 $query->where('tenant_id', $tenantId);
-            }
-        });
-
-        static::addGlobalScope('organization-membership', function ($query): void {
-            if (app(UserGroupContext::class)->shouldScope()) {
-                $query->whereNotNull($query->getModel()->qualifyColumn('organization_id'));
             }
         });
 
