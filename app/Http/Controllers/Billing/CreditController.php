@@ -8,6 +8,7 @@ use App\Models\CustomerCredit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CreditController extends Controller
@@ -44,7 +45,11 @@ class CreditController extends Controller
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
-            'customer_id' => ['required', 'exists:customers,id'],
+            'customer_id' => [
+                'required',
+                Rule::exists('customers', 'id')
+                    ->where('tenant_id', tenant_id() ?? auth()->user()?->tenant_id),
+            ],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'reason' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],

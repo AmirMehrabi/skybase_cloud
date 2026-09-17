@@ -159,16 +159,61 @@ function invoicesIndex() {
             this.paymentModalOpen = true;
         },
 
-        recordPayment() {
-            // In a real app, this would make an API call
-            console.log('Recording payment:', {
-                invoice: this.selectedInvoice?.invoice_number,
-                amount: this.paymentAmount,
-                method: this.paymentMethod,
-                date: this.paymentDate
+        async recordPayment() {
+            if (!this.selectedInvoice) {
+                alert('Please select an invoice.');
+                return;
+            }
+
+            const response = await fetch(window.billingPaymentStoreUrl || '/billing/payments', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': window.billingCsrfToken || ''
+                },
+                body: JSON.stringify({
+                    invoice_id: this.selectedInvoice.id,
+                    amount: this.paymentAmount,
+                    payment_method: this.paymentMethod,
+                    paid_at: this.paymentDate
+                })
             });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.message || 'Could not record payment.');
+                return;
+            }
+
+            Object.assign(this.selectedInvoice, data.invoice);
             this.paymentModalOpen = false;
-            alert('Payment recorded successfully!');
+        },
+
+        async cancelInvoice(invoice) {
+            if (!confirm(`Cancel invoice ${invoice.invoice_number}? This action cannot be undone.`)) {
+                return;
+            }
+
+            const url = (window.billingInvoiceCancelUrlTemplate || '/billing/invoices/__invoice__/cancel')
+                .replace('__invoice__', invoice.id);
+            const response = await fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': window.billingCsrfToken || ''
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.message || 'Could not cancel invoice.');
+                return;
+            }
+
+            Object.assign(invoice, data.invoice);
         }
     }
 }

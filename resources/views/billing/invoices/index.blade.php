@@ -162,7 +162,7 @@
                                         <div x-show="open" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50" style="display: none;">
                                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Send Reminder</a>
                                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Mark as Sent</a>
-                                            <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Cancel Invoice</a>
+                                            <button type="button" @click="cancelInvoice(invoice); open = false" class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">Cancel Invoice</button>
                                         </div>
                                     </div>
                                 </div>
@@ -259,6 +259,9 @@
 @push('scripts')
 <script>
     window.billingInvoices = @json($invoices ?? []);
+    window.billingPaymentStoreUrl = @json(route('billing.payments.store'));
+    window.billingInvoiceCancelUrlTemplate = @json(route('billing.invoices.cancel', '__invoice__'));
+    window.billingCsrfToken = @json(csrf_token());
 </script>
 <script src="{{ asset('js/billing/invoices-index.js') }}"></script>
 @endpush

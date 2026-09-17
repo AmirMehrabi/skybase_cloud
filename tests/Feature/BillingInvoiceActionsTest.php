@@ -88,6 +88,28 @@ class BillingInvoiceActionsTest extends TestCase
             ->assertJsonValidationErrors(['invoice_id']);
     }
 
+    public function test_credit_note_is_persisted_for_the_selected_tenant_customer(): void
+    {
+        [$tenant, $user, $customer] = $this->createTenantContext('credit-note');
+
+        $this->actingAs($user)
+            ->postJson(route('billing.credits.store'), [
+                'customer_id' => $customer->id,
+                'amount' => 25,
+                'reason' => 'adjustment',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('credit.total_credits', 25);
+
+        $this->assertDatabaseHas('customer_credits', [
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'amount' => 25,
+            'status' => 'applied',
+        ]);
+        $this->assertSame(-25.0, (float) $customer->fresh()->balance);
+    }
+
     public function test_invoice_without_payments_can_be_cancelled(): void
     {
         [$tenant, $user, $customer] = $this->createTenantContext('cancel');
