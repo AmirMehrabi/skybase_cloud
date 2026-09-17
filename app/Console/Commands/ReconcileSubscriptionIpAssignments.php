@@ -67,7 +67,11 @@ class ReconcileSubscriptionIpAssignments extends Command
 
         IpPool::withoutGlobalScopes()
             ->when($tenantId, fn ($query) => $query->where('tenant_id', $tenantId))
-            ->each->updateStatistics();
+            ->chunkById(100, function ($pools): void {
+                $pools->each(function (IpPool $pool): void {
+                    $pool->updateStatistics();
+                });
+            });
 
         $this->components->info("IPAM reconciliation complete. Assigned: {$assigned}; conflicts: {$conflicts}; not in a pool: {$missing}.");
 
