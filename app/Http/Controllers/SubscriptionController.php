@@ -164,7 +164,7 @@ class SubscriptionController extends Controller
     {
         $validated = $request->validated();
         $customer = Customer::query()->findOrFail($validated['customer_id']);
-        $organizationIds = collect($validated['organization_ids'] ?? $customer->organizations()->pluck('organizations.id'))
+        $organizationIds = collect($validated['organization_ids'] ?? [])
             ->filter()
             ->map(fn (mixed $organizationId): int => (int) $organizationId)
             ->unique()

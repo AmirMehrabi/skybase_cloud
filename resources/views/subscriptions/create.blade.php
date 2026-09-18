@@ -64,10 +64,9 @@
                         name="organization_ids"
                         label="Organizations"
                         :options="$organizations"
-                        :selected="old('organization_ids', $customer?->organizations->modelKeys() ?? [])"
-                        placeholder="Select one or more organizations"
+                        :selected="old('organization_ids', [])"
+                        placeholder="Optionally select organizations"
                         search-placeholder="Search organizations..."
-                        required
                         x-model="selectedOrganizationIds"
                         x-on:selection-changed="selectedOrganizationIds = $event.detail.selected; handleOrganizationsChange()"
                     />
@@ -79,8 +78,8 @@
                 <!-- Customer -->
                 <div class="lg:col-span-1">
                     <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">Customer <span class="text-red-500">*</span></label>
-                    <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="handleCustomerChange()" :disabled="selectedOrganizationIds.length === 0" :class="hasValidationError('customer_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:cursor-not-allowed disabled:bg-gray-100" required>
-                        <option value="" x-text="selectedOrganizationIds.length ? 'Select a customer' : 'Select organizations first'"></option>
+                    <select name="customer_id" id="customer_id" x-model="form.customer_id" @change="handleCustomerChange()" :class="hasValidationError('customer_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white" required>
+                        <option value="">Select a customer</option>
                         <template x-for="customer in filteredCustomers" :key="customer.id">
                             <option :value="String(customer.id)" x-text="`${customer.name} (${customer.code})`"></option>
                         </template>
@@ -898,7 +897,7 @@
 <script>
 function subscriptionCreateForm() {
     return {
-        selectedOrganizationIds: @js(collect(old('organization_ids', $customer?->organizations->modelKeys() ?? []))->map(fn ($id) => (string) $id)->values()->all()),
+        selectedOrganizationIds: @js(collect(old('organization_ids', []))->map(fn ($id) => (string) $id)->values()->all()),
 
         // Basic form data
         form: {
@@ -1007,6 +1006,10 @@ function subscriptionCreateForm() {
         },
 
         get filteredCustomers() {
+            if (this.selectedOrganizationIds.length === 0) {
+                return this.customerProfiles;
+            }
+
             return this.customerProfiles.filter(customer => customer.organization_ids.some(organizationId => this.selectedOrganizationIds.includes(String(organizationId))));
         },
 
@@ -1402,11 +1405,6 @@ function subscriptionCreateForm() {
         },
 
         async submit() {
-            if (this.selectedOrganizationIds.length === 0) {
-                this.setValidationErrors({ organization_ids: ['Please select at least one organization.'] });
-                return;
-            }
-
             if (!this.form.customer_id) {
                 this.setValidationErrors({ customer_id: ['Please select a customer.'] });
                 return;

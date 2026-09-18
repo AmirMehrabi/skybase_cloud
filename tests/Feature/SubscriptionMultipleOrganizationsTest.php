@@ -40,7 +40,7 @@ class SubscriptionMultipleOrganizationsTest extends TestCase
                 && $organizations->pluck('id')->contains($secondOrganization->id))
             ->assertViewHas('customers', fn ($customers): bool => $customers->pluck('id')->contains($customer->id)
                 && $customers->pluck('id')->contains($secondCustomer->id))
-            ->assertSee('Select one or more organizations')
+            ->assertSee('Optionally select organizations')
             ->assertSee('filteredCustomers');
     }
 
@@ -70,6 +70,25 @@ class SubscriptionMultipleOrganizationsTest extends TestCase
             'tenant_id' => $tenant->id,
             'subscription_id' => $subscription->id,
             'organization_id' => $secondOrganization->id,
+        ]);
+    }
+
+    public function test_store_allows_a_subscription_without_selecting_organizations(): void
+    {
+        [$tenant, $user, $firstOrganization, , $customer] = $this->createOrganizationDependencies();
+        [$plan, $router] = $this->createServiceDependencies($tenant);
+
+        $payload = $this->subscriptionPayload($customer, $plan, $router, []);
+        unset($payload['organization_ids']);
+
+        $this->actingAs($user)
+            ->postJson(route('subscriptions.store'), $payload)
+            ->assertCreated();
+
+        $this->assertDatabaseHas('subscriptions', [
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'organization_id' => $firstOrganization->id,
         ]);
     }
 
