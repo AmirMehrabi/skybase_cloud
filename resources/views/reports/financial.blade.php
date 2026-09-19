@@ -17,20 +17,29 @@
             <p class="text-sm text-gray-500 mt-1">Revenue analytics and financial performance</p>
         </div>
         <div class="flex items-center gap-3">
-            <button @click="exportPDF()" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <a href="{{ route('reports.financial.pdf', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                 </svg>
                 Export PDF
-            </button>
-            <button @click="exportCSV()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </a>
+            <a href="{{ route('reports.financial.csv', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 Export CSV
-            </button>
+            </a>
         </div>
     </div>
+
+    <form method="GET" action="{{ route('reports.financial') }}" class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <x-input.select name="period" label="Reporting period" :value="request('period', 'this_month')" :options="['this_month' => 'This month', 'last_month' => 'Last month', 'quarter' => 'This quarter', 'year' => 'This year', 'custom' => 'Custom']" />
+            <x-input.text type="date" name="from" label="Start date" :value="request('from')" />
+            <x-input.text type="date" name="to" label="End date" :value="request('to')" />
+            <div class="flex items-end pb-4"><button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700">Apply filters</button></div>
+        </div>
+    </form>
 
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
@@ -139,6 +148,9 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
+                    <tr x-show="revenueRecords.length === 0">
+                        <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">No invoices or completed payments were found for this reporting period.</td>
+                    </tr>
                     <template x-for="record in revenueRecords" :key="record.id">
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="px-6 py-4">
@@ -323,6 +335,7 @@
 <script>
 function financialReports() {
     const reportData = @json($financialReports ?? []);
+    const currency = reportData.currency ?? 'USD';
 
     return {
         summary: reportData.summary ?? {
@@ -351,7 +364,7 @@ function financialReports() {
         formatCurrency(amount) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: 'USD',
+                currency,
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).format(amount);
@@ -360,7 +373,7 @@ function financialReports() {
         formatCompactCurrency(amount) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: 'USD',
+                currency,
                 notation: 'compact',
                 maximumFractionDigits: 1
             }).format(amount);
@@ -370,14 +383,6 @@ function financialReports() {
             const prefix = value > 0 ? '+' : '';
 
             return prefix + value + '%';
-        },
-
-        exportPDF() {
-            alert('Exporting financial report as PDF...');
-        },
-
-        exportCSV() {
-            alert('Exporting financial data as CSV...');
         }
     };
 }

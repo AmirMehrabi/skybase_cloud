@@ -428,6 +428,10 @@ class SubscriptionControllerTest extends TestCase
         $editResponse->assertSee('cidr_notation');
         $editResponse->assertSee('10.10.0.0/24', false);
         $editResponse->assertSee('10.10.0.11', false);
+        $editResponse->assertSee(':selected="String(pool.id) === String(form.ip_pool_id)"', false);
+        $editResponse->assertSee(':selected="address.ip_address === form.ip_address"', false);
+        $editResponse->assertSee('=== String(route.ip_pool_id)', false);
+        $editResponse->assertSee(':selected="address.ip_address === route.ip_address"', false);
     }
 
     public function test_edit_page_allows_selecting_a_pool_when_no_pool_is_assigned(): void

@@ -435,7 +435,11 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
     // Reports Routes
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('/usage', [GeneralReportController::class, 'usage'])->name('usage');
+        Route::get('/usage/export/csv', [GeneralReportController::class, 'usageCsv'])->name('usage.csv');
+        Route::get('/usage/export/pdf', [GeneralReportController::class, 'usagePdf'])->name('usage.pdf');
         Route::get('/financial', [GeneralReportController::class, 'financial'])->name('financial');
+        Route::get('/financial/export/csv', [GeneralReportController::class, 'financialCsv'])->name('financial.csv');
+        Route::get('/financial/export/pdf', [GeneralReportController::class, 'financialPdf'])->name('financial.pdf');
     });
 });
 

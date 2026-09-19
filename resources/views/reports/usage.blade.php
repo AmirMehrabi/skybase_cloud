@@ -17,83 +17,83 @@
             <p class="text-sm text-gray-500 mt-1">Historical usage analytics and trends</p>
         </div>
         <div class="flex items-center gap-3">
-            <button @click="exportPDF()" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <a href="{{ route('reports.usage.pdf', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                 </svg>
                 Export PDF
-            </button>
-            <button @click="exportCSV()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </a>
+            <a href="{{ route('reports.usage.csv', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 Export CSV
-            </button>
+            </a>
         </div>
     </div>
 
     <!-- Filter Section -->
-    <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+    <form method="GET" action="{{ route('reports.usage') }}" class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-semibold text-gray-900">Report Filters</h3>
-            <button x-show="hasActiveFilters()" @click="clearFilters()" class="text-sm text-blue-600 hover:text-blue-700 font-medium" style="display: none;">
-                Clear All
-            </button>
+            <a href="{{ route('reports.usage') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Clear All</a>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Date Range</label>
-                <select x-model="filters.dateRange" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
-                    <option value="today">Today</option>
-                    <option value="week">Last 7 Days</option>
-                    <option value="month" selected>This Month</option>
-                    <option value="quarter">This Quarter</option>
-                    <option value="year">This Year</option>
+                <select name="range" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                    @foreach(['today' => 'Today', 'week' => 'Last 7 Days', 'month' => 'This Month', 'quarter' => 'This Quarter', 'year' => 'This Year', 'custom' => 'Custom'] as $value => $label)
+                        <option value="{{ $value }}" @selected(request('range', 'month') === $value)>{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Customer</label>
-                <select x-model="filters.customer" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                <select name="customer_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                     <option value="">All Customers</option>
                     <template x-for="customer in customerOptions" :key="customer.value">
-                        <option :value="customer.value" x-text="customer.label"></option>
+                        <option :value="customer.value" x-text="customer.label" :selected="customer.value === '{{ request('customer_id') }}'"></option>
                     </template>
                 </select>
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Plan</label>
-                <select x-model="filters.plan" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                <select name="plan_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                     <option value="">All Plans</option>
                     <template x-for="plan in planOptions" :key="plan.value">
-                        <option :value="plan.value" x-text="plan.label"></option>
+                        <option :value="plan.value" x-text="plan.label" :selected="plan.value === '{{ request('plan_id') }}'"></option>
                     </template>
                 </select>
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Router</label>
-                <select x-model="filters.router" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                <select name="router_id" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                     <option value="">All Routers</option>
                     <template x-for="router in routerOptions" :key="router.value">
-                        <option :value="router.value" x-text="router.label"></option>
+                        <option :value="router.value" x-text="router.label" :selected="router.value === '{{ request('router_id') }}'"></option>
                     </template>
                 </select>
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Group By</label>
-                <select x-model="filters.groupBy" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
-                    <option value="day">Day</option>
-                    <option value="week">Week</option>
-                    <option value="month" selected>Month</option>
-                    <option value="quarter">Quarter</option>
+                <select name="group_by" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
+                    @foreach(['day' => 'Day', 'week' => 'Week', 'month' => 'Month', 'quarter' => 'Quarter'] as $value => $label)
+                        <option value="{{ $value }}" @selected(request('group_by', 'day') === $value)>{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
         </div>
-    </div>
+        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <x-input.text type="date" name="from" label="Start date" :value="request('from')" />
+            <x-input.text type="date" name="to" label="End date" :value="request('to')" />
+            <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Apply filters</button>
+        </div>
+    </form>
 
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -181,6 +181,9 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
+                    <tr x-show="filteredRecords.length === 0">
+                        <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">No RADIUS usage was recorded for the selected tenant, period, and filters. Confirm PPPoE usernames match the accounting records.</td>
+                    </tr>
                     <template x-for="record in filteredRecords" :key="record.id">
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="px-6 py-4">
@@ -275,11 +278,11 @@ function usageReports() {
 
     return {
         filters: {
-            dateRange: 'month',
-            customer: '',
-            plan: '',
-            router: '',
-            groupBy: 'month'
+            dateRange: reportData.filters?.range ?? 'month',
+            customer: String(reportData.filters?.customer_id ?? ''),
+            plan: String(reportData.filters?.plan_id ?? ''),
+            router: String(reportData.filters?.router_id ?? ''),
+            groupBy: reportData.filters?.group_by ?? 'day'
         },
         customerOptions: reportData.customerOptions ?? [],
         planOptions: reportData.planOptions ?? [],
@@ -295,14 +298,7 @@ function usageReports() {
         initialChartData: reportData.chartData ?? [],
 
         get baseFilteredRecords() {
-            return this.records.filter(record => {
-                if (this.filters.customer && record.customerId !== this.filters.customer) return false;
-                if (this.filters.plan && record.planId !== this.filters.plan) return false;
-                if (this.filters.router && record.routerId !== this.filters.router) return false;
-                if (!this.recordInDateRange(record)) return false;
-
-                return true;
-            });
+            return this.records;
         },
 
         get filteredRecords() {

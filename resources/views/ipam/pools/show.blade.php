@@ -340,6 +340,12 @@ function getIpRowBg($status)
     </div>
 </div>
 
+@php
+    $ipAddressStatusUrlTemplate = route('ipam.pools.ip-addresses.status', [$pool, '__IP__', '__STATUS__']);
+    $ipAddressAssignUrlTemplate = route('ipam.pools.ip-addresses.assign', [$pool, '__IP__']);
+    $ipAddressIds = $ipAddresses->pluck('id', 'ip_address')->all();
+@endphp
+
 @push('scripts')
 <script>
 function poolShow() {
@@ -361,11 +367,11 @@ function poolShow() {
         },
         updateStatus(ip, status) {
             if (!confirm(`${status.charAt(0).toUpperCase() + status.slice(1)} IP ${ip}?`)) return;
-            const address = @json(route('ipam.pools.ip-addresses.status', [$pool, '__IP__', '__STATUS__'])).replace('__IP__', this.findIpId(ip)).replace('__STATUS__', status);
+            const address = @js($ipAddressStatusUrlTemplate).replace('__IP__', this.findIpId(ip)).replace('__STATUS__', status);
             fetch(address, { method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'X-HTTP-Method-Override': 'PATCH'}, body: JSON.stringify({}) }).then(() => window.location.reload());
         },
         findIpId(ip) {
-            return @json($ipAddresses->pluck('id', 'ip_address')->all())[ip];
+            return @js($ipAddressIds)[ip];
         }
     }
 }
@@ -377,7 +383,7 @@ document.addEventListener('open-assign-modal', (e) => {
         modal._x_dataStack[0].ip = e.detail.ip;
         modal._x_dataStack[0].show = true;
         const form = modal.querySelector('form');
-        form.action = @json(route('ipam.pools.ip-addresses.assign', [$pool, '__IP__'])).replace('__IP__', @json($ipAddresses->pluck('id', 'ip_address')->all())[e.detail.ip]);
+        form.action = @js($ipAddressAssignUrlTemplate).replace('__IP__', @js($ipAddressIds)[e.detail.ip]);
     }
 });
 document.addEventListener('change', (e) => {

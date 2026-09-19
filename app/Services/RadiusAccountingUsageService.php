@@ -233,6 +233,7 @@ class RadiusAccountingUsageService
                     'subscription' => $subscription->subscription_code,
                     'subscription_id' => $subscription->id,
                     'plan' => $plan?->name ?? 'Unassigned plan',
+                    'plan_id' => $plan?->id,
                     'router' => $router?->name ?? ($row->nasipaddress ?: 'Unknown NAS'),
                     'router_id' => $router?->id,
                     'ip_address' => $row->framedipaddress ?: ($subscription->ip_address ?? '-'),

@@ -166,7 +166,7 @@
                                         <select name="ip_pool_id" id="ip_pool_id" x-model="form.ip_pool_id" @change="handleIpPoolChange()" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                             <option value="">Select IP Pool</option>
                                             <template x-for="pool in availableIpPools()" :key="pool.id">
-                                                <option :value="String(pool.id)" x-text="`${pool.name} (${pool.cidr_notation}) - ${pool.available_ips} available`"></option>
+                                                <option :value="String(pool.id)" :selected="String(pool.id) === String(form.ip_pool_id)" x-text="`${pool.name} (${pool.cidr_notation}) - ${pool.available_ips} available`"></option>
                                             </template>
                                         </select>
                                         @error('ip_pool_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -190,7 +190,7 @@
                                         <select name="ip_address" id="ip_address" x-model="form.ip_address" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                             <option value="">Release primary IP</option>
                                             <template x-for="address in availablePrimaryAddresses()" :key="address.id">
-                                                <option :value="address.ip_address" x-text="address.ip_address"></option>
+                                                <option :value="address.ip_address" :selected="address.ip_address === form.ip_address" x-text="address.ip_address"></option>
                                             </template>
                                         </select>
                                     </div>
@@ -240,7 +240,7 @@
                                             <select :name="'ip_routes[' + index + '][ip_pool_id]'" x-model="route.ip_pool_id" @change="route.ip_address = ''" class="block w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 <option value="">Select IPAM</option>
                                                 @foreach($ipPools ?? [] as $pool)
-                                                    <option value="{{ $pool->id }}">{{ $pool->name }} ({{ $pool->cidr_notation }})</option>
+                                                    <option value="{{ $pool->id }}" :selected="'{{ $pool->id }}' === String(route.ip_pool_id)">{{ $pool->name }} ({{ $pool->cidr_notation }})</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -249,7 +249,7 @@
                                             <select :name="'ip_routes[' + index + '][ip_address]'" x-model="route.ip_address" class="block w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 <option value="">Select IP address</option>
                                                 <template x-for="address in availableRouteAddresses(route, index)" :key="address.id">
-                                                    <option :value="address.ip_address" x-text="address.ip_address"></option>
+                                                    <option :value="address.ip_address" :selected="address.ip_address === route.ip_address" x-text="address.ip_address"></option>
                                                 </template>
                                             </select>
                                         </div>

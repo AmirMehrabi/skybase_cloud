@@ -25,6 +25,7 @@ class ReportsControllerTest extends TestCase
         $otherTenant = $this->createTenant();
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
+            'role' => 'owner',
             'status' => 'active',
         ]);
 
@@ -91,6 +92,15 @@ class ReportsControllerTest extends TestCase
                 && $usageReports['records']->first()['total'] === 1536
                 && $usageReports['routerOptions']->first()['label'] === 'Core Alpha';
         });
+
+        $csv = $this->actingAs($user)->get(route('reports.usage.csv'));
+        $csv->assertOk()->assertDownload('usage-report.csv');
+        $this->assertStringContainsString('Acme Networks', $csv->streamedContent());
+        $this->assertStringNotContainsString('Hidden Customer', $csv->streamedContent());
+
+        $pdf = $this->actingAs($user)->get(route('reports.usage.pdf'));
+        $pdf->assertOk()->assertDownload('usage-report.pdf');
+        $this->assertStringStartsWith('%PDF-1.4', $pdf->getContent());
     }
 
     public function test_financial_report_uses_real_tenant_scoped_billing_data(): void
@@ -99,6 +109,7 @@ class ReportsControllerTest extends TestCase
         $otherTenant = $this->createTenant();
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
+            'role' => 'owner',
             'status' => 'active',
         ]);
 
@@ -194,20 +205,35 @@ class ReportsControllerTest extends TestCase
         $response->assertSee('Revenue Customer');
         $response->assertDontSee('Hidden Revenue');
         $response->assertViewHas('financialReports', function (array $financialReports): bool {
-            return $financialReports['summary']['revenueThisMonth'] === 100.0
-                && $financialReports['summary']['outstandingBalance'] === 50.0
-                && $financialReports['summary']['overdueAmount'] === 50.0
-                && $financialReports['summary']['arpu'] === 100.0
-                && $financialReports['topCustomers']->first()['name'] === 'Revenue Customer'
-                && $financialReports['paymentMethods']->first()['amount'] === 100.0;
+            $this->assertSame(100.0, $financialReports['summary']['revenueThisMonth']);
+            $this->assertSame(50.0, $financialReports['summary']['outstandingBalance']);
+            $this->assertSame(50.0, $financialReports['summary']['overdueAmount']);
+            $this->assertSame(100.0, $financialReports['summary']['arpu']);
+            $this->assertSame('Revenue Customer', $financialReports['topCustomers']->first()['name']);
+            $this->assertSame(100.0, $financialReports['paymentMethods']->first()['amount']);
+
+            return true;
         });
+
+        $csv = $this->actingAs($user)->get(route('reports.financial.csv'));
+        $csv->assertOk()->assertDownload('financial-report.csv');
+        $this->assertStringContainsString('100', $csv->streamedContent());
+        $this->assertStringNotContainsString('900', $csv->streamedContent());
+
+        $pdf = $this->actingAs($user)->get(route('reports.financial.pdf'));
+        $pdf->assertOk()->assertDownload('financial-report.pdf');
+        $this->assertStringStartsWith('%PDF-1.4', $pdf->getContent());
     }
 
     private function createTenant(): Tenant
     {
         return Tenant::create([
             'id' => (string) Str::uuid(),
-            'data' => [],
+            'name' => fake()->unique()->company(),
+            'slug' => fake()->unique()->slug(),
+            'company_name' => fake()->company(),
+            'email' => fake()->unique()->safeEmail(),
+            'status' => 'active',
         ]);
     }
 }

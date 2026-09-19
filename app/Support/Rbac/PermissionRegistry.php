@@ -385,7 +385,11 @@ class PermissionRegistry
             'network.monitoring.data' => 'network.read',
 
             'reports.usage' => 'reports.read',
+            'reports.usage.csv' => 'reports.read',
+            'reports.usage.pdf' => 'reports.read',
             'reports.financial' => 'reports.read',
+            'reports.financial.csv' => 'reports.read',
+            'reports.financial.pdf' => 'reports.read',
 
             'admin.tenant.users.index' => 'users.read',
             'admin.tenant.users.show' => 'users.read',
