@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
         );
 
         User::query()->updateOrCreate(
-            ['email' => 'test@example.com'],
+            ['tenant_id' => $tenant->id, 'email' => 'test@example.com'],
             [
                 'tenant_id' => $tenant->id,
                 'name' => 'Test User',

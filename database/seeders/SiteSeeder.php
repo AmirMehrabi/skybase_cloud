@@ -21,9 +21,15 @@ class SiteSeeder extends Seeder
                 ->get();
 
             if ($sites->isEmpty()) {
-                $sites = Site::factory()
-                    ->count(3)
-                    ->create(['tenant_id' => $tenant->id]);
+                $sites = collect([
+                    ['code' => 'SITE-001', 'name' => 'Main POP', 'latitude' => 35.6892, 'longitude' => 51.3890],
+                    ['code' => 'SITE-002', 'name' => 'North Tower', 'latitude' => 35.7500, 'longitude' => 51.4000],
+                    ['code' => 'SITE-003', 'name' => 'South Tower', 'latitude' => 35.6000, 'longitude' => 51.4000],
+                ])->map(fn (array $site): Site => Site::query()->create([
+                    'tenant_id' => $tenant->id,
+                    'status' => 'active',
+                    ...$site,
+                ]));
             }
 
             Router::query()
