@@ -238,6 +238,8 @@ class RrdToolService
             'RRA:MAX:0.5:5:2016',
             'RRA:MIN:0.5:5:2016',
         ]);
+
+        File::chmod($path, 0664);
     }
 
     private function ensureSubscriptionBandwidthArchive(string $path): void
@@ -271,6 +273,8 @@ class RrdToolService
             'RRA:MAX:0.5:1:8640',
             'RRA:MAX:0.5:12:8760',
         ]);
+
+        File::chmod($path, 0664);
     }
 
     /**
@@ -359,7 +363,12 @@ class RrdToolService
         $directory = dirname($path);
 
         try {
-            File::ensureDirectoryExists($directory);
+            $directoryExists = File::isDirectory($directory);
+            File::ensureDirectoryExists($directory, 02775);
+
+            if (! $directoryExists) {
+                File::chmod($directory, 02775);
+            }
         } catch (Throwable $exception) {
             throw new MonitoringStorageUnavailable("Unable to create monitoring RRD directory {$directory}: {$exception->getMessage()}", previous: $exception);
         }

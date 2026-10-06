@@ -8,12 +8,44 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\RouterOs\RouterOsTrafficFlowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Js;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class NetflowRouterTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_router_details_keep_the_complete_alpine_binding_in_the_html_attribute(): void
+    {
+        [$tenant, $user] = $this->tenantUser();
+        $user->update(['role' => 'owner']);
+        $router = Router::factory()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'North "Tower" <&> Office',
+            'cpu_usage' => 23,
+            'memory_usage' => 41,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('routers.show', $router));
+        $response->assertOk();
+
+        $document = new \DOMDocument;
+        $previousErrors = libxml_use_internal_errors(true);
+
+        try {
+            $document->loadHTML($response->getContent());
+            $nodes = (new \DOMXPath($document))->query('//*[@x-init="loadHealth()"]');
+            $this->assertSame(1, $nodes->length);
+            $this->assertSame(
+                'routerShow('.Js::from($response->viewData('router')).', '.Js::from($response->viewData('netflowSummary')).')',
+                $nodes->item(0)->getAttribute('x-data'),
+            );
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousErrors);
+        }
+    }
 
     public function test_mikrotik_router_netflow_can_be_configured(): void
     {

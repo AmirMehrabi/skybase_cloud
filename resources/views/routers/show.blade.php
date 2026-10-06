@@ -9,7 +9,7 @@
 @endpush
 
 @section('content')
-<div class="space-y-6" x-data="routerShow(@json($router), @json($netflowSummary))" x-init="loadHealth()" x-cloak>
+<div class="space-y-6" x-data="routerShow({{ Js::from($router) }}, {{ Js::from($netflowSummary) }})" x-init="loadHealth()" x-cloak>
     <!-- Top Header -->
     <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
