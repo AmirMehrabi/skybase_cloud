@@ -496,6 +496,7 @@ class SubscriptionControllerTest extends TestCase
         $nextPlan = Plan::factory()->create([
             'status' => 'active',
             'name' => 'Fiber 300',
+            'tenant_id' => $tenant->id,
             'price' => 149.99,
             'billing_cycle' => 'quarterly',
             'grace_period_days' => 14,
