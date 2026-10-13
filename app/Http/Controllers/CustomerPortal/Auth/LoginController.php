@@ -41,7 +41,7 @@ class LoginController extends Controller
                 ->oldest()
                 ->first();
 
-        if (! $tenant || $tenant->isSuspended()) {
+        if (! $tenant || (config('security.enforce_active_accounts') && $tenant->status !== 'active')) {
             return back()
                 ->withInput($request->safe()->except('password'))
                 ->withErrors(['tenant' => 'These credentials do not match our records.']);
@@ -58,10 +58,10 @@ class LoginController extends Controller
                 ->withErrors(['email' => 'These credentials do not match our records.']);
         }
 
-        if ($customer->status !== 'active') {
+        if (config('security.enforce_active_accounts') && $customer->status !== 'active') {
             return back()
                 ->withInput($request->safe()->except('password'))
-                ->withErrors(['email' => 'Your customer account is not active. Please contact support.']);
+                ->withErrors(['email' => 'These credentials do not match our records.']);
         }
 
         Auth::guard('customer')->login($customer, $request->boolean('remember'));

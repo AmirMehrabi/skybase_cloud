@@ -47,7 +47,7 @@ class NotificationModuleTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('notifications.read', ['notification' => $notification->id]))
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_customer_can_only_view_own_notifications(): void
@@ -85,7 +85,7 @@ class NotificationModuleTest extends TestCase
             'title' => 'New ticket',
         ]);
 
-        $this->assertSame(0, TenantNotification::query()->count());
+        $this->assertSame(0, TenantNotification::query()->where('tenant_id', $tenant->id)->count());
     }
 
     public function test_critical_admin_notifications_bypass_recipient_opt_out(): void
@@ -107,7 +107,7 @@ class NotificationModuleTest extends TestCase
             'title' => 'Router disconnect failed',
         ]);
 
-        $this->assertSame(1, TenantNotification::query()->count());
+        $this->assertSame(1, TenantNotification::query()->where('tenant_id', $tenant->id)->count());
     }
 
     private function createTenant(string $slug): Tenant

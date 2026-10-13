@@ -282,7 +282,7 @@ class SubscriptionRadiusReconciliationTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'internal_name' => 'fiber_100',
             'router_profile' => 'fiber_100',

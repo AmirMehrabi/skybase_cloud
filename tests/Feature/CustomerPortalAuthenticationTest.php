@@ -120,7 +120,7 @@ class CustomerPortalAuthenticationTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $plan = Plan::factory()->create(['name' => 'Fiber 100']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'name' => 'Fiber 100']);
 
         $ownSubscription = Subscription::create([
             'tenant_id' => $tenant->id,

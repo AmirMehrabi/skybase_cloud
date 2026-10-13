@@ -19,7 +19,7 @@ class LdapOrganizationSyncTest extends TestCase
     public function test_it_syncs_organizations_links_customers_and_applies_organization_billing_to_subscriptions(): void
     {
         $tenant = $this->createTenant('alpha-net');
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Enterprise Fiber',
             'price' => 100,

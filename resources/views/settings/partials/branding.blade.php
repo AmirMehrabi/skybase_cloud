@@ -321,7 +321,7 @@
     </form>
 @endforeach
 
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     // Update color text inputs when color picker changes
     document.querySelectorAll('input[type="color"]').forEach(picker => {
         picker.addEventListener('input', function() {

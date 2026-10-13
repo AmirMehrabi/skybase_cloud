@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
+use App\Models\Scopes\TenantScope;
 use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionDeletionService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -20,6 +21,7 @@ use LdapRecord\Laravel\LdapImportable;
 
 class Customer extends Authenticatable implements LdapImportable
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
     use HasFactory, ImportableFromLdap, LogsTenantActivity, Notifiable, SoftDeletes;
 
@@ -212,13 +214,7 @@ class Customer extends Authenticatable implements LdapImportable
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
-
-            if ($tenantId) {
-                $query->where($query->qualifyColumn('tenant_id'), $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::deleting(function (Customer $customer): void {
             DB::transaction(function () use ($customer): void {

@@ -257,12 +257,12 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     window.billingInvoices = @json($invoices ?? []);
     window.billingPaymentStoreUrl = @json(route('billing.payments.store'));
     window.billingInvoiceCancelUrlTemplate = @json(route('billing.invoices.cancel', '__invoice__'));
     window.billingCsrfToken = @json(csrf_token());
 </script>
-<script src="{{ asset('js/billing/invoices-index.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/invoices-index.js') }}"></script>
 @endpush
 @endsection

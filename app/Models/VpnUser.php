@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\VpnUserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VpnUser extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<VpnUserFactory> */
@@ -87,11 +90,7 @@ class VpnUser extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where('tenant_id', auth()->user()->tenant_id);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (VpnUser $vpnUser): void {
             if (auth()->check() && empty($vpnUser->tenant_id)) {

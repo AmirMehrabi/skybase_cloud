@@ -153,7 +153,8 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
 
         $activity = Activity::query()->where('event', 'session_disconnect_failed')->latest()->firstOrFail();
 
-        $this->assertSame('RouterOS API credentials are missing. RouterOS CoA secret is missing.', $activity->properties->get('message'));
+        $this->assertStringContainsString('RouterOS API credentials are missing.', $activity->properties->get('message'));
+        $this->assertStringContainsString('RouterOS CoA secret is missing.', $activity->properties->get('message'));
     }
 
     public function test_command_kicks_suspended_online_subscription_with_routeros_api(): void
@@ -248,7 +249,7 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'internal_name' => 'fiber_100',
             'router_profile' => 'fiber_100',

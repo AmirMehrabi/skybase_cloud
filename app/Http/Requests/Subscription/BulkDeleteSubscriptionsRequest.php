@@ -4,6 +4,7 @@ namespace App\Http\Requests\Subscription;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class BulkDeleteSubscriptionsRequest extends FormRequest
 {
@@ -25,9 +26,9 @@ class BulkDeleteSubscriptionsRequest extends FormRequest
         return [
             'selection_mode' => ['required', 'in:selected,all'],
             'ids' => ['required_if:selection_mode,selected', 'nullable', 'array'],
-            'ids.*' => ['integer', 'exists:subscriptions,id'],
+            'ids.*' => ['integer', Rule::exists('subscriptions', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'excluded_ids' => ['nullable', 'array'],
-            'excluded_ids.*' => ['integer', 'exists:subscriptions,id'],
+            'excluded_ids.*' => ['integer', Rule::exists('subscriptions', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'search' => ['nullable', 'string'],
             'status' => ['nullable', 'string'],
             'plan' => ['nullable', 'string'],

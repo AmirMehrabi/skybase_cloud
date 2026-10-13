@@ -332,7 +332,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function financialReports() {
     const reportData = @json($financialReports ?? []);
     const currency = reportData.currency ?? 'USD';

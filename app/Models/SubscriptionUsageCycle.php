@@ -2,18 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\Concerns\BelongsToTenant;
+use App\Models\Scopes\TenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SubscriptionUsageCycle extends Model
 {
-    protected $fillable = ['tenant_id', 'subscription_id', 'plan_id', 'starts_at', 'ends_at', 'allowance_bytes', 'used_upload_bytes', 'used_download_bytes', 'last_accounted_bytes', 'quota_reached_at', 'exempt_until', 'closed_at'];
+    use BelongsToTenant;
+
+    protected $fillable = ['tenant_id', 'subscription_id', 'plan_id', 'starts_at', 'ends_at', 'allowance_bytes', 'used_upload_bytes', 'used_download_bytes', 'last_accounted_bytes', 'quota_reached_at', 'exempt_until', 'closed_at', 'accounting_baselines'];
 
     protected function casts(): array
     {
         return [
+            'accounting_baselines' => 'array',
             'allowance_bytes' => 'integer', 'used_upload_bytes' => 'integer', 'used_download_bytes' => 'integer',
             'last_accounted_bytes' => 'integer', 'starts_at' => 'datetime', 'ends_at' => 'datetime',
             'quota_reached_at' => 'datetime', 'exempt_until' => 'datetime', 'closed_at' => 'datetime',
@@ -52,10 +56,6 @@ class SubscriptionUsageCycle extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            if ($tenantId = tenant_id() ?? auth()->user()?->tenant_id) {
-                $query->where('tenant_id', $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
     }
 }

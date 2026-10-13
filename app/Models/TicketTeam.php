@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\TicketTeamFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +15,8 @@ use Illuminate\Support\Str;
 
 class TicketTeam extends Model
 {
+    use BelongsToTenant;
+
     /** @use HasFactory<TicketTeamFactory> */
     use HasFactory;
 
@@ -46,13 +50,7 @@ class TicketTeam extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
-
-            if ($tenantId) {
-                $query->where($query->qualifyColumn('tenant_id'), $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (TicketTeam $team): void {
             if (empty($team->tenant_id)) {

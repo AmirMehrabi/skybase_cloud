@@ -88,7 +88,7 @@ class SubscriptionControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 100',
             'price' => 79.99,
@@ -203,10 +203,11 @@ class SubscriptionControllerTest extends TestCase
 
         foreach (range(1, 11) as $index) {
             RadiusPostAuthRecord::create([
+                'tenant_id' => $tenant->id,
                 'username' => $subscription->pppoe_username,
                 'pass' => 'secret-'.$index,
                 'reply' => $index % 2 === 0 ? "Access-Accept\nReply-Message = Welcome back" : "Access-Reject\nReply-Message = Invalid password",
-                'authdate' => now()->subMinutes($index),
+                'authdate' => now()->subSeconds($index),
             ]);
         }
 
@@ -218,7 +219,7 @@ class SubscriptionControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Recent RADIUS Auth Attempts');
-        $response->assertSee('Entries are retained for 30 days.');
+        $response->assertSee('Entries are retained for 5 minutes.');
         $response->assertViewHas('authAttempts', function (mixed $authAttempts): bool {
             return $authAttempts->total() === 11
                 && $authAttempts->perPage() === 10
@@ -300,11 +301,12 @@ class SubscriptionControllerTest extends TestCase
         });
     }
 
-    public function test_model_prune_removes_radius_post_auth_attempts_older_than_thirty_days(): void
+    public function test_model_prune_removes_radius_post_auth_attempts_older_than_five_minutes(): void
     {
         [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
 
         RadiusPostAuthRecord::create([
+            'tenant_id' => $tenant->id,
             'username' => $subscription->pppoe_username,
             'pass' => 'old-secret',
             'reply' => 'Access-Reject',
@@ -312,10 +314,11 @@ class SubscriptionControllerTest extends TestCase
         ]);
 
         RadiusPostAuthRecord::create([
+            'tenant_id' => $tenant->id,
             'username' => $subscription->pppoe_username,
             'pass' => 'recent-secret',
             'reply' => 'Access-Accept',
-            'authdate' => now()->subDays(29),
+            'authdate' => now()->subMinutes(1),
         ]);
 
         $this->artisan('model:prune', [
@@ -333,15 +336,16 @@ class SubscriptionControllerTest extends TestCase
         ]);
     }
 
-    public function test_auth_attempts_older_than_twenty_minutes_remain_visible_within_retention_window(): void
+    public function test_recent_auth_attempts_remain_visible_within_retention_window(): void
     {
         [$tenant, $user, $subscription] = $this->createRadiusAuthSubscription();
 
         RadiusPostAuthRecord::create([
+            'tenant_id' => $tenant->id,
             'username' => $subscription->pppoe_username,
             'pass' => 'retained-secret',
             'reply' => 'Access-Accept',
-            'authdate' => now()->subDays(2),
+            'authdate' => now()->subMinutes(1),
         ]);
 
         $this->actingAs($user)
@@ -493,7 +497,7 @@ class SubscriptionControllerTest extends TestCase
             'connection_status_checked_at' => now()->subMinutes(5),
         ])->saveQuietly();
 
-        $nextPlan = Plan::factory()->create([
+        $nextPlan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 300',
             'tenant_id' => $tenant->id,
@@ -557,7 +561,7 @@ class SubscriptionControllerTest extends TestCase
             'username' => 'john.doe',
             'nasipaddress' => $subscription->router->ip_address,
             'acctstarttime' => now()->subMinutes(30),
-            'acctupdatetime' => now()->subMinutes(10),
+            'acctupdatetime' => now()->subMinutes(1),
             'acctstoptime' => null,
             'acctsessiontime' => 1800,
             'framedipaddress' => $subscription->ip_address,
@@ -1578,7 +1582,7 @@ class SubscriptionControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 50',
             'price' => 49.99,
@@ -1653,7 +1657,7 @@ class SubscriptionControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 200',
             'price' => 99.99,
@@ -1721,7 +1725,7 @@ class SubscriptionControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 200',
             'price' => 99.99,
@@ -1839,7 +1843,7 @@ class SubscriptionControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 200',
             'price' => 99.99,

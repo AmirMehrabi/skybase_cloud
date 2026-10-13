@@ -25,6 +25,7 @@ class BrandingAssetController extends Controller
 
     public function settings(string $path): StreamedResponse
     {
+        abort_if(str_contains($path, '..') || str_contains($path, '\\') || str_contains($path, chr(0)), 404);
         $path = 'settings/'.ltrim($path, '/');
 
         abort_unless(Storage::disk('public')->exists($path), 404);

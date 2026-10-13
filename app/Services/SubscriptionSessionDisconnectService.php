@@ -22,6 +22,12 @@ class SubscriptionSessionDisconnectService
 
     public function disconnect(Subscription $subscription): SubscriptionSessionDisconnectResult
     {
+        if (app(TenantContext::class)->id() === null) {
+            $subscription->unsetRelation('plan')->unsetRelation('router')->unsetRelation('customer');
+
+            return app(TenantContext::class)->run($subscription->tenant_id, fn (): SubscriptionSessionDisconnectResult => $this->disconnect($subscription));
+        }
+
         return $this->disconnectForUsername($subscription, (string) $subscription->pppoe_username);
     }
 

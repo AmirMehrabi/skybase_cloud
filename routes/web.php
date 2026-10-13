@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantCo
 use App\Http\Controllers\Admin\Tenant\RoleController;
 use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Admin\Tenant\UserGroupController;
+use App\Http\Controllers\Auth\MultiFactorController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
 use App\Http\Controllers\Billing\CreditController;
@@ -49,10 +50,10 @@ use Illuminate\Support\Facades\Route;
 $customerPortalRoutes = function (): void {
     Route::middleware('guest:customer')->group(function (): void {
         Route::get('/login', [CustomerPortalLoginController::class, 'show'])->name('customer.login');
-        Route::post('/login', [CustomerPortalLoginController::class, 'store'])->name('customer.login.store');
+        Route::post('/login', [CustomerPortalLoginController::class, 'store'])->middleware('throttle:login')->name('customer.login.store');
     });
 
-    Route::middleware(['auth:customer', 'initialize_tenancy', 'check_tenant_status'])->name('customer.')->group(function (): void {
+    Route::middleware(['auth:customer', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session'])->name('customer.')->group(function (): void {
         Route::post('/logout', [CustomerPortalLoginController::class, 'destroy'])->name('logout');
         Route::get('/', CustomerPortalDashboardController::class)->name('dashboard');
         Route::get('/dashboard', CustomerPortalDashboardController::class)->name('dashboard.redirect');
@@ -61,7 +62,7 @@ $customerPortalRoutes = function (): void {
         Route::get('/subscriptions/{subscription}', [CustomerPortalSubscriptionController::class, 'show'])->whereNumber('subscription')->name('subscriptions.show');
         Route::get('/subscriptions/{subscription}/bandwidth/history', [CustomerPortalSubscriptionController::class, 'bandwidthHistory'])->whereNumber('subscription')->name('subscriptions.bandwidth.history');
         Route::get('/profile', [CustomerPortalProfileController::class, 'show'])->name('profile.show');
-        Route::patch('/profile/password', [CustomerPortalProfileController::class, 'updatePassword'])->middleware('throttle:6,1')->name('profile.password.update');
+        Route::patch('/profile/password', [CustomerPortalProfileController::class, 'updatePassword'])->middleware('throttle:password-changes')->name('profile.password.update');
         Route::get('/invoices', [CustomerPortalInvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/notifications', [CustomerPortalNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('/notifications/read-all', [CustomerPortalNotificationController::class, 'readAll'])->name('notifications.read-all');
@@ -114,8 +115,8 @@ Route::get('/brochure/government-fa', [PagesController::class, 'governmentBrochu
 
 // Contact page
 Route::get('/contact', [PagesController::class, 'contact'])->name('contact.show');
-Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
-Route::post('/demo-requests', [DemoRequestController::class, 'store'])->name('demo-requests.store');
+Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:public-forms')->name('contact.store');
+Route::post('/demo-requests', [DemoRequestController::class, 'store'])->middleware('throttle:public-forms')->name('demo-requests.store');
 
 Route::get('/storage/settings/{path}', [BrandingAssetController::class, 'settings'])->where('path', '.*')->name('branding.asset.storage');
 Route::get('/branding-assets/{asset}', BrandingAssetController::class)->name('branding.asset');
@@ -123,16 +124,16 @@ Route::get('/branding-assets/{asset}', BrandingAssetController::class)->name('br
 // Authentication Routes (Guest only)
 Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
     Route::get('/register', [TenantRegistrationController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [TenantRegistrationController::class, 'register'])->name('register.store');
+    Route::post('/register', [TenantRegistrationController::class, 'register'])->middleware('throttle:public-forms')->name('register.store');
     Route::get('/login', [TenantLoginController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [TenantLoginController::class, 'login'])->name('login.store');
+    Route::post('/login', [TenantLoginController::class, 'login'])->middleware('throttle:login')->name('login.store');
 });
 
 // Logout route (authenticated only)
 Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('auth.logout')->middleware('auth');
 
 // Protected Routes (Require Authentication & Tenancy)
-Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])->group(function () {
+Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -145,7 +146,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
     // Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::put('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.password');
+    Route::put('/profile/password', [ProfileController::class, 'changePassword'])->middleware('throttle:password-changes')->name('profile.password');
 
     // Tenant User Management
     Route::prefix('settings/users')->name('admin.tenant.users.')->group(function () {
@@ -293,6 +294,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
         Route::post('/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->name('suspend');
         Route::post('/{subscription}/kill-session', [SubscriptionController::class, 'killSession'])->name('kill-session');
         Route::post('/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('activate');
+        Route::post('/{subscription}/credentials', [SubscriptionController::class, 'credentials'])->middleware('throttle:sensitive-actions')->name('credentials');
+        Route::get('/{subscription}/renewal-preview', [SubscriptionController::class, 'renewalPreview'])->name('renewal-preview');
+        Route::post('/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('renew');
         Route::post('/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
         Route::post('/{subscription}/generate-invoice', [SubscriptionController::class, 'generateInvoice'])->name('generate-invoice');
         Route::post('/{subscription}/usage/bonus', [SubscriptionUsageController::class, 'bonus'])->name('usage.bonus');
@@ -444,7 +448,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'can'])-
 });
 
 // Super Admin Routes (Separate from tenant routes)
-Route::middleware(['auth'])->prefix('admin/super-admin')->name('admin.super-admin.')->group(function () {
+Route::middleware(['auth', 'active_account', 'auth.session', 'mfa', 'can:manage-central-tenants'])->prefix('admin/super-admin')->name('admin.super-admin.')->group(function () {
     Route::get('/tenants', [SuperAdminTenantController::class, 'index'])->name('tenants.index');
     Route::get('/tenants/{tenant}', [SuperAdminTenantController::class, 'show'])->name('tenants.show');
     Route::get('/tenants/{tenant}/edit', [SuperAdminTenantController::class, 'edit'])->name('tenants.edit');
@@ -452,4 +456,11 @@ Route::middleware(['auth'])->prefix('admin/super-admin')->name('admin.super-admi
     Route::post('/tenants/{tenant}/suspend', [SuperAdminTenantController::class, 'suspend'])->name('tenants.suspend');
     Route::post('/tenants/{tenant}/activate', [SuperAdminTenantController::class, 'activate'])->name('tenants.activate');
     Route::delete('/tenants/{tenant}', [SuperAdminTenantController::class, 'destroy'])->name('tenants.destroy');
+});
+
+Route::middleware(['auth:web', 'active_account', 'auth.session'])->prefix('account/security')->name('mfa.')->group(function (): void {
+    Route::get('/setup', [MultiFactorController::class, 'setup'])->name('setup');
+    Route::post('/setup', [MultiFactorController::class, 'confirm'])->middleware('throttle:6,1')->name('confirm');
+    Route::get('/challenge', [MultiFactorController::class, 'challenge'])->name('challenge');
+    Route::post('/challenge', [MultiFactorController::class, 'verify'])->middleware('throttle:6,1')->name('verify');
 });

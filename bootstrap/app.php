@@ -2,11 +2,16 @@
 
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckTenantStatus;
+use App\Http\Middleware\EnsureActiveAccount;
+use App\Http\Middleware\EnsureMultiFactorAuthentication;
 use App\Http\Middleware\InitializeTenancy;
+use App\Http\Middleware\ScanUploads;
+use App\Http\Middleware\SecurityHeaders;
 use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,10 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [ScanUploads::class]);
+        $middleware->append(SecurityHeaders::class);
+        $middleware->prependToPriorityList(SubstituteBindings::class, InitializeTenancy::class);
         $middleware->alias([
             'initialize_tenancy' => InitializeTenancy::class,
             'check_tenant_status' => CheckTenantStatus::class,
-            'can' => CheckPermission::class,
+            'permission' => CheckPermission::class,
+            'active_account' => EnsureActiveAccount::class,
+            'mfa' => EnsureMultiFactorAuthentication::class,
         ]);
 
         $middleware->redirectGuestsTo(function ($request): string {
@@ -44,5 +54,5 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']);
     })->create();

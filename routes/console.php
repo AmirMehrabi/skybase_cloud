@@ -58,3 +58,5 @@ Schedule::command('model:prune', [
 ])
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+Schedule::command('security:harden-storage --prune')->daily()->withoutOverlapping()->when(fn (): bool => config('security.maintain_storage'));

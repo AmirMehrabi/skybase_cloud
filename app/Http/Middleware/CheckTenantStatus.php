@@ -10,40 +10,20 @@ class CheckTenantStatus
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $guard = auth()->check() ? auth() : auth('customer');
-
-        if (! $guard->check()) {
-            return $next($request);
+        if (config('security.enforce_active_accounts')) {
+            return app(EnsureActiveAccount::class)->handle($request, $next);
         }
-
+        $guard = auth()->guard($request->routeIs('customer.*') ? 'customer' : 'web');
         $user = $guard->user();
-
-        if (! $user->tenant_id) {
+        if (! $user || ! $user->tenant_id) {
             return $next($request);
         }
-
         $tenant = $user->tenant;
-
-        if (! $tenant) {
+        if (! $tenant || $tenant->isSuspended() || $tenant->status === 'pending') {
             $guard->logout();
 
-            return redirect()->route($request->routeIs('customer.*') ? 'customer.login' : 'auth.login')->with('error', 'Tenant not found.');
-        }
-
-        if ($tenant->isSuspended()) {
-            $guard->logout();
-
-            return redirect()->route($request->routeIs('customer.*') ? 'customer.login' : 'auth.login')->with('error', 'Your account has been suspended. Please contact support.');
-        }
-
-        if ($tenant->status === 'pending') {
-            if ($request->routeIs('customer.*')) {
-                $guard->logout();
-
-                return redirect()->route('customer.login')->with('error', 'Your account is pending activation. Please contact support.');
-            }
-
-            return redirect()->route('pending.activation');
+            return redirect()->route($request->routeIs('customer.*') ? 'customer.login' : 'auth.login')
+                ->with('error', 'Your account is unavailable. Please contact support.');
         }
 
         return $next($request);

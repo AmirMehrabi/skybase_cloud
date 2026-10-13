@@ -316,7 +316,7 @@ class MonitoringFeatureTest extends TestCase
             'tax_exempt' => false,
             'status' => 'active',
         ]);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'billing_cycle' => 'monthly',
             'price' => 50,

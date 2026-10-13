@@ -17,7 +17,7 @@ class WorkOrderTransitionService
     public function transition(WorkOrder $workOrder, WorkOrderStatus $target, User $actor, array $context = []): WorkOrder
     {
         return DB::transaction(function () use ($workOrder, $target, $actor, $context): WorkOrder {
-            $workOrder = WorkOrder::query()->lockForUpdate()->findOrFail($workOrder->id);
+            $workOrder = WorkOrder::query()->where('tenant_id', $actor->tenant_id)->lockForUpdate()->findOrFail($workOrder->id);
             $current = $workOrder->status;
 
             if (! in_array($target->value, $current->allowedTransitions(), true)) {

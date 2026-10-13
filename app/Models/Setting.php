@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
+use App\Services\CompatibleSecretCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Setting extends Model
 {
+    use BelongsToTenant;
     use HasFactory;
 
     protected $fillable = [
@@ -19,8 +22,13 @@ class Setting extends Model
     ];
 
     protected $casts = [
-        'value' => 'array',
+        'value' => CompatibleSecretCast::class.':array',
     ];
+
+    public function getHidden(): array
+    {
+        return config('security.redact_credentials') ? array_merge(parent::getHidden(), ['value']) : parent::getHidden();
+    }
 
     public function tenant(): BelongsTo
     {

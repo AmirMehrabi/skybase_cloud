@@ -40,7 +40,7 @@ class RadiusAccountingUsageServiceTest extends TestCase
             'tax_exempt' => false,
             'password' => 'password123',
         ]);
-        $plan = Plan::factory()->create(['status' => 'active', 'data_limit' => 100, 'data_unit' => 'GB', 'unlimited' => false]);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'data_limit' => 100, 'data_unit' => 'GB', 'unlimited' => false]);
         $router = Router::factory()->create(['tenant_id' => $tenant->id, 'ip_address' => '10.0.0.1']);
         $subscription = Subscription::withoutEvents(fn (): Subscription => Subscription::create([
             'tenant_id' => $tenant->id,

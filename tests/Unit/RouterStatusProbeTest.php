@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Router;
 use App\Services\Monitoring\PingProbe;
+use App\Services\OutboundConnectionPolicy;
 use App\Services\RouterStatusProbe;
 use Tests\TestCase;
 
@@ -22,6 +23,7 @@ class RouterStatusProbeTest extends TestCase
             'ssh_port' => 22,
         ]);
 
+        $this->mock(OutboundConnectionPolicy::class)->shouldReceive('resolve')->once()->andReturn('127.0.0.1');
         $pingProbe = $this->mock(PingProbe::class);
         $pingProbe->shouldReceive('check')
             ->once()

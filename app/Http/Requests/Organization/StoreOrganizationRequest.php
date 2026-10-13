@@ -37,7 +37,7 @@ class StoreOrganizationRequest extends FormRequest
             'status' => ['required', Rule::in(['active', 'inactive'])],
             'user_group_id' => ['nullable', Rule::exists('user_groups', 'id')->where(fn ($query) => $query->where('tenant_id', $tenantId))],
             'billing_enabled' => ['boolean'],
-            'default_plan_id' => [Rule::requiredIf($this->boolean('billing_enabled')), 'nullable', 'exists:plans,id'],
+            'default_plan_id' => [Rule::requiredIf($this->boolean('billing_enabled')), 'nullable', Rule::exists('plans', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'default_billing_cycle' => [Rule::requiredIf($this->boolean('billing_enabled')), 'nullable', Rule::in(['monthly', 'quarterly', 'yearly'])],
             'default_grace_period_days' => [Rule::requiredIf($this->boolean('billing_enabled')), 'nullable', 'integer', 'min:0', 'max:365'],
             'default_discount_type' => ['required', Rule::in(['none', 'fixed', 'percentage'])],

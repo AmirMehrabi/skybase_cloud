@@ -74,13 +74,13 @@ class TenantRegistrationController extends Controller
             DB::rollBack();
             \Log::error('Registration database error: '.$e->getMessage());
 
-            return back()->withInput()
+            return back()->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Registration failed. Please try again.');
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Registration error: '.$e->getMessage());
 
-            return back()->withInput()
+            return back()->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Registration failed. Please try again.');
         }
     }

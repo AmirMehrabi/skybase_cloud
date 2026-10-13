@@ -4,6 +4,7 @@ namespace App\Http\Requests\Customer;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class BulkDeleteCustomersRequest extends FormRequest
 {
@@ -25,9 +26,9 @@ class BulkDeleteCustomersRequest extends FormRequest
         return [
             'selection_mode' => ['required', 'in:selected,all'],
             'ids' => ['required_if:selection_mode,selected', 'nullable', 'array'],
-            'ids.*' => ['integer', 'exists:customers,id'],
+            'ids.*' => ['integer', Rule::exists('customers', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'excluded_ids' => ['nullable', 'array'],
-            'excluded_ids.*' => ['integer', 'exists:customers,id'],
+            'excluded_ids.*' => ['integer', Rule::exists('customers', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'search' => ['nullable', 'string'],
             'status' => ['nullable', 'string'],
             'plan' => ['nullable', 'string'],

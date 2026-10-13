@@ -289,7 +289,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function accessPointsIndex() {
     return {
         accessPoints: [],

@@ -210,7 +210,7 @@ class CustomerPortalExperienceTest extends TestCase
         string $code,
         array $overrides = []
     ): Subscription {
-        $plan = Plan::factory()->create(['name' => 'Fiber 100']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'name' => 'Fiber 100']);
 
         return Subscription::create(array_merge([
             'tenant_id' => $tenant->id,

@@ -16,8 +16,9 @@ class SubscriptionIndexDataTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_subscriptions_index_data_includes_pppoe_credentials_and_connection_status(): void
+    public function test_subscriptions_index_data_excludes_passwords_and_includes_connection_status(): void
     {
+        config(['security.redact_credentials' => true]);
         $tenant = $this->createTenant('alpha-net');
         $admin = User::factory()->create([
             'tenant_id' => $tenant->id,
@@ -45,7 +46,7 @@ class SubscriptionIndexDataTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
         ]);
 
@@ -74,7 +75,7 @@ class SubscriptionIndexDataTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('subscriptions.0.pppoe_username', 'alpha.user');
-        $response->assertJsonPath('subscriptions.0.pppoe_password', 'secret-pass');
+        $response->assertJsonMissingPath('subscriptions.0.pppoe_password');
         $response->assertJsonPath('subscriptions.0.connection_status', 'offline');
         $response->assertJsonPath('subscriptions.0.connection_type', 'pppoe');
     }
@@ -108,7 +109,7 @@ class SubscriptionIndexDataTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create(['status' => 'active']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active']);
 
         $router = Router::factory()->create([
             'tenant_id' => $tenant->id,
@@ -183,7 +184,7 @@ class SubscriptionIndexDataTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create(['status' => 'active']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active']);
 
         $router = Router::factory()->create([
             'tenant_id' => $tenant->id,

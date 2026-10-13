@@ -313,7 +313,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function bandwidthMonitoring() {
     return {
         liveMode: false,

@@ -51,7 +51,7 @@ class SubscriptionQuotaEnforcementTest extends TestCase
             'name' => 'Quota Customer', 'billing_type' => 'postpaid', 'billing_enabled' => true,
             'balance' => 0, 'credit_limit' => 0, 'tax_exempt' => false, 'status' => 'active',
         ]);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'tenant_id' => $tenant->id, 'status' => 'active', 'type' => 'pppoe', 'data_limit' => 1,
             'data_unit' => 'MB', 'unlimited' => false, 'data_cap_action' => 'suspend', 'billing_cycle' => 'monthly',
         ]);

@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SubscriptionItem extends Model
 {
+    use BelongsToTenant;
     use HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'subscription_id',
         'item_type',
         'item_code',
@@ -30,6 +33,13 @@ class SubscriptionItem extends Model
         'starts_at',
         'ends_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $item): void {
+            $item->tenant_id ??= Subscription::withoutGlobalScopes()->whereKey($item->subscription_id)->value('tenant_id');
+        });
+    }
 
     protected function casts(): array
     {

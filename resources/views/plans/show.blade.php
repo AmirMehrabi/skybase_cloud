@@ -3,7 +3,7 @@
 @section('title', 'Plan Details')
 
 @php
-function getStatusBadgeClass($status)
+$getStatusBadgeClass = static function ($status): string
 {
     $classes = [
         'active' => 'bg-green-100 text-green-800 border-green-200',
@@ -12,9 +12,9 @@ function getStatusBadgeClass($status)
     ];
 
     return $classes[$status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-}
+};
 
-function getVisibilityBadgeClass($visibility)
+$getVisibilityBadgeClass = static function ($visibility): string
 {
     $classes = [
         'public' => 'bg-blue-100 text-blue-800 border-blue-200',
@@ -23,7 +23,7 @@ function getVisibilityBadgeClass($visibility)
     ];
 
     return $classes[$visibility] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-}
+};
 @endphp
 
 @section('content')
@@ -41,10 +41,10 @@ function getVisibilityBadgeClass($visibility)
                 <div>
                     <div class="flex items-center gap-3">
                         <h1 class="text-2xl font-bold text-gray-900">{{ $plan['name'] }}</h1>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border {{ getStatusBadgeClass($plan['status']) }}">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border {{ $getStatusBadgeClass($plan['status']) }}">
                             {{ ucfirst($plan['status']) }}
                         </span>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border {{ getVisibilityBadgeClass($plan['visibility']) }}">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border {{ $getVisibilityBadgeClass($plan['visibility']) }}">
                             {{ ucfirst($plan['visibility']) }}
                         </span>
                     </div>
@@ -167,11 +167,11 @@ function getVisibilityBadgeClass($visibility)
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Status</dt>
-                    <dd><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($plan['status']) }}">{{ ucfirst($plan['status']) }}</span></dd>
+                    <dd><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $getStatusBadgeClass($plan['status']) }}">{{ ucfirst($plan['status']) }}</span></dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Visibility</dt>
-                    <dd><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getVisibilityBadgeClass($plan['visibility']) }}">{{ ucfirst($plan['visibility']) }}</span></dd>
+                    <dd><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $getVisibilityBadgeClass($plan['visibility']) }}">{{ ucfirst($plan['visibility']) }}</span></dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Category</dt>

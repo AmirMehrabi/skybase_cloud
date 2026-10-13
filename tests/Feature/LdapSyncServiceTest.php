@@ -23,7 +23,7 @@ class LdapSyncServiceTest extends TestCase
 
         Customer::withoutGlobalScopes()->create([
             'tenant_id' => $otherTenant->id,
-            'customer_code' => 'cust-100',
+            'customer_code' => 'other-cust-100',
             'customer_type' => 'individual',
             'name' => 'Other Tenant',
             'first_name' => 'Other',
@@ -72,7 +72,7 @@ class LdapSyncServiceTest extends TestCase
         $this->assertSame('10.10.0.5', $subscription->ip_address);
         $this->assertDatabaseHas('customers', [
             'tenant_id' => $otherTenant->id,
-            'customer_code' => 'cust-100',
+            'customer_code' => 'other-cust-100',
             'name' => 'Other Tenant',
         ]);
     }

@@ -17,6 +17,10 @@
     "dependencies": {
         "@toast-ui/editor": "^3.2.2",
         "alpinejs": "^3.15.8",
-        "leaflet": "^1.9.4"
+        "leaflet": "^1.9.4",
+        "dompurify": "^3.4.17"
+    },
+    "overrides": {
+        "dompurify": "^3.4.17"
     }
 }

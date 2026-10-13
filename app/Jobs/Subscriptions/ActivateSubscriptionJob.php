@@ -4,6 +4,7 @@ namespace App\Jobs\Subscriptions;
 
 use App\Models\Subscription;
 use App\Services\RadiusProvisioningService;
+use App\Services\TenantContext;
 use App\Services\TenantNotificationService;
 use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Bus\Queueable;
@@ -29,31 +30,34 @@ class ActivateSubscriptionJob implements ShouldQueue
         RadiusProvisioningService $radiusProvisioning,
         TenantNotificationService $notifications,
     ): void {
-        $subscription = Subscription::withoutGlobalScopes()
-            ->withoutTrashed()
-            ->where('tenant_id', $this->tenantId)
-            ->with(['customer.organization', 'plan'])
-            ->find($this->subscriptionId);
+        app(TenantContext::class)->run($this->tenantId, function () use ($radiusProvisioning, $notifications): void {
+            $subscription = Subscription::withoutGlobalScopes()
+                ->withoutTrashed()
+                ->where('tenant_id', $this->tenantId)
+                ->with(['customer.organization', 'plan'])
+                ->find($this->subscriptionId);
 
-        if (! $subscription) {
-            return;
-        }
+            if (! $subscription) {
+                return;
+            }
 
-        $radiusProvisioning->syncSubscription($subscription);
+            $radiusProvisioning->syncSubscription($subscription);
 
-        $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
-            'title' => 'Subscription activated',
-            'body' => "{$subscription->subscription_code} was activated.",
-            'action_url' => route('subscriptions.show', $subscription),
-        ], $subscription);
-
-        if ($subscription->customer) {
-            $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
-                'title' => 'Your subscription is active',
-                'body' => "{$subscription->subscription_code} is now active.",
-                'category' => 'service',
-                'action_url' => route('customer.subscriptions.index'),
+            $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
+                'title' => 'Subscription activated',
+                'body' => "{$subscription->subscription_code} was activated.",
+                'action_url' => route('subscriptions.show', $subscription),
             ], $subscription);
-        }
+
+            if ($subscription->customer) {
+                $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_ACTIVATED, [
+                    'title' => 'Your subscription is active',
+                    'body' => "{$subscription->subscription_code} is now active.",
+                    'category' => 'service',
+                    'action_url' => route('customer.subscriptions.index'),
+                ], $subscription);
+            }
+
+        });
     }
 }

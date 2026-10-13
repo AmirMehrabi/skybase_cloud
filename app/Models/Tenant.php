@@ -125,37 +125,37 @@ class Tenant extends Model
 
     public function plan(): BelongsTo
     {
-        return $this->belongsTo(Plan::class);
+        return $this->belongsTo(Plan::class)->where('tenant_id', $this->id);
     }
 
     public function users(): HasMany
     {
-        return $this->hasMany(User::class);
+        return $this->hasMany(User::class)->where('tenant_id', $this->id);
     }
 
     public function roles(): HasMany
     {
-        return $this->hasMany(Role::class);
+        return $this->hasMany(Role::class)->where('tenant_id', $this->id);
     }
 
     public function settings(): HasMany
     {
-        return $this->hasMany(Setting::class);
+        return $this->hasMany(Setting::class)->where('tenant_id', $this->id);
     }
 
     public function customers(): HasMany
     {
-        return $this->hasMany(Customer::class);
+        return $this->hasMany(Customer::class)->where('tenant_id', $this->id);
     }
 
     public function routers(): HasMany
     {
-        return $this->hasMany(Router::class);
+        return $this->hasMany(Router::class)->where('tenant_id', $this->id);
     }
 
     public function sites(): HasMany
     {
-        return $this->hasMany(Site::class);
+        return $this->hasMany(Site::class)->where('tenant_id', $this->id);
     }
 
     public function isActive(): bool

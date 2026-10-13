@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
+use App\Models\Scopes\TenantScope;
+use App\Services\CompatibleSecretCast;
 use App\Services\RadiusProvisioningService;
+use App\Services\SafeRouterUsername;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\UserGroupAssignmentService;
 use Carbon\CarbonInterface;
@@ -15,11 +19,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Validator;
 use LdapRecord\Laravel\ImportableFromLdap;
 use LdapRecord\Laravel\LdapImportable;
 
 class Subscription extends Model implements LdapImportable
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
 
@@ -30,9 +36,16 @@ class Subscription extends Model implements LdapImportable
         return ['pppoe_password', 'updated_at', 'deleted_at'];
     }
 
+    public function getHidden(): array
+    {
+        return config('security.redact_credentials') ? array_merge(parent::getHidden(), ['pppoe_password']) : parent::getHidden();
+    }
+
     protected function casts(): array
     {
         return [
+            'pppoe_password' => CompatibleSecretCast::class,
+
             'base_price' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'tax_amount' => 'decimal:2',
@@ -55,15 +68,12 @@ class Subscription extends Model implements LdapImportable
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query): void {
-            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
-
-            if ($tenantId) {
-                $query->where('tenant_id', $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::saving(function (Subscription $subscription): void {
+            if ($subscription->isDirty('pppoe_username') && filled($subscription->pppoe_username)) {
+                Validator::make(['username' => $subscription->pppoe_username], ['username' => ['string', 'max:255', SafeRouterUsername::validationRule()]])->validate();
+            }
             if (filled($subscription->organization_id)) {
                 $inherited = app(UserGroupAssignmentService::class)->inheritedGroup($subscription);
 

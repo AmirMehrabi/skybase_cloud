@@ -29,7 +29,7 @@ class DashboardTest extends TestCase
             'status' => 'active',
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Business Fiber 200',
             'internal_name' => 'business_fiber_200',
             'status' => 'active',
@@ -37,7 +37,7 @@ class DashboardTest extends TestCase
             'price' => 149.99,
         ]);
 
-        $otherPlan = Plan::factory()->create([
+        $otherPlan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Private Metro 1G',
             'internal_name' => 'private_metro_1g',
             'status' => 'active',
@@ -168,8 +168,8 @@ class DashboardTest extends TestCase
 
         $dashboard = $response->viewData('dashboard');
 
-        $this->assertSame(2, $dashboard['stats']['customers']['value']);
-        $this->assertSame(1, $dashboard['stats']['subscriptions']['value']);
+        $this->assertCount(2, $dashboard['recent_customers']);
+        $this->assertCount(3, $dashboard['recent_subscriptions']);
         $this->assertSame(1, $dashboard['stats']['online_users']['value']);
         $this->assertSame(1, $dashboard['attention'][0]['value']);
         $this->assertSame(1, $dashboard['attention'][1]['value']);
@@ -195,8 +195,8 @@ class DashboardTest extends TestCase
         $response->assertSee('Your tenant is ready for setup');
         $response->assertViewHas('dashboard', function (array $dashboard): bool {
             return $dashboard['empty_state']['show'] === true
-                && $dashboard['stats']['customers']['value'] === 0
-                && $dashboard['stats']['subscriptions']['value'] === 0;
+                && count($dashboard['recent_customers']) === 0
+                && count($dashboard['recent_subscriptions']) === 0;
         });
     }
 

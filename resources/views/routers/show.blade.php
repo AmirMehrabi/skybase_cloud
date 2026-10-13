@@ -436,7 +436,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function routerShow(router, netflowSummary) {
     return {
         router: router,

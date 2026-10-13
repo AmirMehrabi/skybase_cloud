@@ -87,7 +87,7 @@ class SubscriptionConnectionStatusSyncTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
         ]);
 

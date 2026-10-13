@@ -19,7 +19,7 @@ class PermissionRegistry
             'dashboard' => ['label' => 'Dashboard', 'description' => 'Dashboard, search, and administrative notifications', 'actions' => self::actions(['read', 'actions'])],
             'organizations' => ['label' => 'Organizations', 'description' => 'Manage customer organizations and companies', 'actions' => self::actions(['read', 'write', 'delete'])],
             'customers' => ['label' => 'Customers', 'description' => 'Customer records, notes, status, and billing settings', 'actions' => self::actions()],
-            'subscriptions' => ['label' => 'Subscriptions', 'description' => 'Services, connection operations, RADIUS, IP, and subscription billing', 'actions' => self::actions()],
+            'subscriptions' => ['label' => 'Subscriptions', 'description' => 'Services, connection operations, RADIUS, IP, and subscription billing', 'actions' => self::actions(['read', 'write', 'delete', 'actions', 'credentials'])],
             'support_tickets' => ['label' => 'Support Tickets', 'description' => 'View and respond to support tickets', 'actions' => self::actions(['read', 'write', 'actions'])],
             'support_teams' => ['label' => 'Support Teams', 'description' => 'Manage support teams and their members', 'actions' => self::actions()],
             'work_orders' => ['label' => 'Work Orders', 'description' => 'Schedule, execute, and provision ISP field work', 'actions' => self::actions(['read', 'write', 'delete', 'create', 'update', 'assign', 'schedule', 'execute', 'provision', 'complete', 'cancel', 'manage'])],
@@ -240,6 +240,8 @@ class PermissionRegistry
             'subscriptions.suspend' => 'subscriptions.actions',
             'subscriptions.kill-session' => 'subscriptions.actions',
             'subscriptions.activate' => 'subscriptions.actions',
+            'subscriptions.renewal-preview' => 'subscriptions.actions',
+            'subscriptions.renew' => 'subscriptions.actions',
             'subscriptions.generate-invoice' => 'subscriptions.actions',
             'subscriptions.usage.bonus' => 'subscriptions.actions',
             'subscriptions.usage.reset' => 'subscriptions.actions',
@@ -321,6 +323,12 @@ class PermissionRegistry
             'ipam.pools.edit' => 'ipam.write',
             'ipam.pools.update' => 'ipam.write',
             'ipam.pools.ip-addresses.release' => 'ipam.actions',
+            'ipam.pools.ip-addresses.assign' => 'ipam.actions',
+            'ipam.pools.ip-addresses.status' => 'ipam.actions',
+            'api.ip-pools.check-ip' => 'ipam.read',
+            'api.subscriptions.check-pppoe-username' => 'subscriptions.read',
+            'subscriptions.credentials' => 'subscriptions.credentials',
+            'support.tickets.view-scope' => 'support_tickets.read',
             'ipam.pools.destroy' => 'ipam.delete',
 
             'sites.index' => 'sites.read',
@@ -486,6 +494,7 @@ class PermissionRegistry
             'complete' => 'Complete',
             'cancel' => 'Cancel',
             'manage' => 'Manage all',
+            'credentials' => 'Reveal credentials',
         ];
 
         return Arr::only($labels, $actions);

@@ -6,7 +6,7 @@
 $usagePercent = $pool->usage_percentage;
 $usageColor = $usagePercent >= 90 ? 'red' : ($usagePercent >= 80 ? 'yellow' : 'green');
 
-function getIpStatusBadge($status)
+$getIpStatusBadge = static function (mixed $status): mixed
 {
     $classes = [
         'available' => 'bg-green-100 text-green-800 border-green-200',
@@ -16,9 +16,9 @@ function getIpStatusBadge($status)
     ];
 
     return $classes[$status] ?? $classes['available'];
-}
+};
 
-function getIpRowBg($status)
+$getIpRowBg = static function (mixed $status): mixed
 {
     $classes = [
         'available' => 'bg-green-50/30',
@@ -28,7 +28,7 @@ function getIpRowBg($status)
     ];
 
     return $classes[$status] ?? '';
-}
+};
 @endphp
 
 @section('content')
@@ -218,7 +218,7 @@ function getIpRowBg($status)
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($ipAddresses as $ip)
-                        <tr class="hover:bg-gray-50 transition-colors duration-150 {{ getIpRowBg($ip->status) }}">
+                        <tr class="hover:bg-gray-50 transition-colors duration-150 {{ $getIpRowBg($ip->status) }}">
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <span class="text-sm font-mono font-medium text-blue-600">
                                     {{ $ip->ip_address }}
@@ -228,7 +228,7 @@ function getIpRowBg($status)
                                 @endif
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getIpStatusBadge($ip->status) }}">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $getIpStatusBadge($ip->status) }}">
                                     {{ ucfirst($ip->status) }}
                                 </span>
                             </td>
@@ -347,7 +347,7 @@ function getIpRowBg($status)
 @endphp
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function poolShow() {
     return {
         init() {

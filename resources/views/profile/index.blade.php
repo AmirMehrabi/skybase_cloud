@@ -3,6 +3,7 @@
 @section('title', 'Profile')
 
 @section('content')
+<p><a href="{{ route('mfa.setup') }}">Manage multi-factor authentication</a></p>
 <div class="w-full space-y-6">
     <div>
         <h1 class="text-2xl font-bold text-slate-900">My Profile</h1>

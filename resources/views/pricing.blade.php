@@ -1019,7 +1019,7 @@
 
 @push('scripts')
 <!-- Alpine.js Pricing Calculator -->
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         function pricingCalculator() {
             return {
                 subscribers: 150,

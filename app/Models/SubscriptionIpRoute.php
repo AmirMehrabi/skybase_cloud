@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\SubscriptionIpRouteFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SubscriptionIpRoute extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<SubscriptionIpRouteFactory> */
@@ -39,13 +42,7 @@ class SubscriptionIpRoute extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query): void {
-            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
-
-            if ($tenantId) {
-                $query->where('tenant_id', $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (SubscriptionIpRoute $route): void {
             if (empty($route->tenant_id)) {

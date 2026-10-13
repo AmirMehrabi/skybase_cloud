@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\NetflowFlowFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NetflowFlow extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<NetflowFlowFactory> */
@@ -57,11 +60,7 @@ class NetflowFlow extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query): void {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where('tenant_id', auth()->user()->tenant_id);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (NetflowFlow $flow): void {
             if (auth()->check() && empty($flow->tenant_id)) {

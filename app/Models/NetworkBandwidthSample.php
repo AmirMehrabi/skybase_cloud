@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\NetworkBandwidthSampleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NetworkBandwidthSample extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<NetworkBandwidthSampleFactory> */
@@ -47,11 +50,7 @@ class NetworkBandwidthSample extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query): void {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where('tenant_id', auth()->user()->tenant_id);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (NetworkBandwidthSample $sample): void {
             if (auth()->check() && empty($sample->tenant_id)) {

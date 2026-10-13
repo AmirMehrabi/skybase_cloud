@@ -31,7 +31,7 @@ class StoreWorkOrderRequest extends FormRequest
             'customer_id' => ['required', Rule::exists(Customer::class, 'id')->where('tenant_id', $tenantId)],
             'subscription_id' => ['nullable', Rule::exists(Subscription::class, 'id')->where('tenant_id', $tenantId)],
             'source_ticket_id' => ['nullable', Rule::exists(Ticket::class, 'id')->where('tenant_id', $tenantId)],
-            'plan_id' => ['nullable', Rule::exists(Plan::class, 'id')],
+            'plan_id' => ['nullable', Rule::exists(Plan::class, 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'assigned_team_id' => [
                 'required',
                 Rule::exists(TicketTeam::class, 'id')->where(

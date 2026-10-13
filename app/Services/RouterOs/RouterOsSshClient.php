@@ -3,7 +3,12 @@
 namespace App\Services\RouterOs;
 
 use App\Models\Router;
+use App\Services\OutboundConnectionPolicy;
+use App\Services\SafeRouterUsername;
 use RuntimeException;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\Process;
 
 class RouterOsSshClient
 {
@@ -12,7 +17,7 @@ class RouterOsSshClient
      */
     public function disconnect(Router $router, string $username, ?int $timeoutSeconds = null): int
     {
-        $host = (string) $router->ip_address;
+        $host = app(OutboundConnectionPolicy::class)->resolve((string) $router->ip_address, (int) ($router->ssh_port ?: 22), $router->tenant_id, configuredDestination: true);
         $port = (int) ($router->ssh_port ?: 22);
         $timeout = max(1, (int) ($timeoutSeconds ?? $router->timeout ?? 30));
 
@@ -32,68 +37,31 @@ class RouterOsSshClient
         $sshCommand = [
             'ssh',
             '-o', 'BatchMode=yes',
+            ...(config('security.strict_ssh_host_keys') ? ['-o', 'StrictHostKeyChecking=yes', '-o', 'HostKeyAlias='.$router->ip_address] : []),
             '-o', 'ConnectTimeout='.$timeout,
             '-p', (string) $port,
-            $router->api_username.'@'.$host,
+            '-l', (string) $router->api_username,
+            '--',
+            $host,
             $remoteCommand,
         ];
 
-        $process = $this->openProcess($sshCommand);
-
-        if (! is_resource($process['process'])) {
-            throw new RuntimeException('Unable to start SSH process for RouterOS disconnect.');
+        if (strlen((string) $router->api_username) > 255 || preg_match('/[\x00-\x1f\x7f]/', (string) $router->api_username)) {
+            throw new RuntimeException('Invalid RouterOS SSH account name.');
+        }
+        $process = new Process($sshCommand, timeout: $timeout + 5);
+        try {
+            $process->mustRun();
+        } catch (ProcessFailedException|ProcessTimedOutException $exception) {
+            throw new RuntimeException('RouterOS SSH operation failed or timed out.', previous: $exception);
         }
 
-        $output = stream_get_contents($process['pipes'][1]) ?: '';
-        $errorOutput = stream_get_contents($process['pipes'][2]) ?: '';
-
-        foreach ($process['pipes'] as $pipe) {
-            fclose($pipe);
-        }
-
-        $exitCode = proc_close($process['process']);
-
-        if ($exitCode !== 0) {
-            $message = trim($errorOutput ?: $output);
-
-            throw new RuntimeException($message !== '' ? $message : 'RouterOS SSH disconnect command failed.');
-        }
-
-        return $this->countRemovedSessions($output);
-    }
-
-    /**
-     * @param  array<int, string>  $sshCommand
-     * @return array{process: resource, pipes: array<int, resource>}
-     */
-    protected function openProcess(array $sshCommand): array
-    {
-        $descriptorSpec = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $process = proc_open($sshCommand, $descriptorSpec, $pipes);
-
-        if (! is_resource($process)) {
-            throw new RuntimeException('Unable to start SSH process for RouterOS disconnect.');
-        }
-
-        fclose($pipes[0]);
-
-        return [
-            'process' => $process,
-            'pipes' => [
-                1 => $pipes[1],
-                2 => $pipes[2],
-            ],
-        ];
+        return $this->countRemovedSessions($process->getOutput());
     }
 
     private function quoteRouterosString(string $value): string
     {
-        return '"'.$value.'"';
+        return SafeRouterUsername::quote($value);
     }
 
     private function countRemovedSessions(string $output): int

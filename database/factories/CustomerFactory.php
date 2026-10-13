@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\DB;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Customer>
+ * @extends Factory<Customer>
  */
 class CustomerFactory extends Factory
 {
@@ -47,24 +47,12 @@ class CustomerFactory extends Factory
             'state' => fake()->state(),
             'postal_code' => fake()->postcode(),
             'country' => fake()->randomElement(['United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Australia']),
-            'plan' => fake()->randomElement($plans),
-            'site' => fake()->randomElement($sites),
-            'router' => fake()->randomElement($routers),
-            'ip_address' => fake()->optional(0.8)->ipv4(),
-            'pppoe_username' => fake()->optional(0.8)->userName(),
-            'pppoe_password' => fake()->optional(0.8)->password(8, 16),
             'billing_type' => fake()->randomElement(['prepaid', 'postpaid']),
-            'billing_cycle' => fake()->randomElement($billingCycles),
             'balance' => fake()->randomFloat(2, -500, 500),
             'credit_limit' => fake()->randomFloat(2, 0, 1000),
             'tax_exempt' => fake()->boolean(10),
             'status' => fake()->randomElement($statuses),
         ];
-
-        // Add activation date for active customers
-        if ($data['status'] === 'active' && fake()->boolean(80)) {
-            $data['activation_date'] = fake()->dateTimeBetween('-2 years', '-1 day');
-        }
 
         return $data;
     }
@@ -76,7 +64,6 @@ class CustomerFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'active',
-            'activation_date' => fake()->dateTimeBetween('-2 years', '-1 day'),
         ]);
     }
 

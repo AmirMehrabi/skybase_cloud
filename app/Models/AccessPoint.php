@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\AccessPointFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AccessPoint extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<AccessPointFactory> */
@@ -139,11 +142,7 @@ class AccessPoint extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query) {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function ($accessPoint) {
             if (auth()->check() && empty($accessPoint->tenant_id)) {

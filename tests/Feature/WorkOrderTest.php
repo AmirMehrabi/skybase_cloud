@@ -212,7 +212,7 @@ class WorkOrderTest extends TestCase
     {
         Bus::fake();
         [$tenant, $admin, $customer] = $this->context('alpha');
-        $plan = Plan::factory()->create(['status' => 'active', 'billing_cycle' => 'monthly', 'price' => 100]);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'billing_cycle' => 'monthly', 'price' => 100]);
         $router = Router::factory()->create(['tenant_id' => $tenant->id]);
         $workOrder = $this->workOrder($tenant, $admin, $customer);
         $workOrder->forceFill(['type' => WorkOrderType::NewInstallation, 'status' => WorkOrderStatus::ReadyForActivation])->save();

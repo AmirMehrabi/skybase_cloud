@@ -23,6 +23,13 @@ class RadiusProvisioningService
 
     public function syncSubscription(Subscription $subscription, ?string $previousUsername = null): void
     {
+        if (app(TenantContext::class)->id() === null) {
+            $subscription->unsetRelation('plan')->unsetRelation('router')->unsetRelation('customer');
+            app(TenantContext::class)->run($subscription->tenant_id, fn () => $this->syncSubscription($subscription, $previousUsername));
+
+            return;
+        }
+
         if ($subscription->trashed()) {
             return;
         }
@@ -247,6 +254,12 @@ class RadiusProvisioningService
 
     public function provisioningSkipReason(Subscription $subscription): ?string
     {
+        if (app(TenantContext::class)->id() === null) {
+            $subscription->unsetRelation('plan')->unsetRelation('router')->unsetRelation('customer');
+
+            return app(TenantContext::class)->run($subscription->tenant_id, fn (): ?string => $this->provisioningSkipReason($subscription));
+        }
+
         if ((string) $subscription->tenant_id === '') {
             return 'missing tenant_id';
         }

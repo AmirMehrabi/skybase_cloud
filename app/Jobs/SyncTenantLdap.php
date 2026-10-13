@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Tenant;
 use App\Services\Ldap\LdapSyncService;
+use App\Services\TenantContext;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -17,12 +18,15 @@ class SyncTenantLdap implements ShouldQueue
 
     public function handle(LdapSyncService $sync): void
     {
-        $tenant = Tenant::query()->find($this->tenantId);
+        app(TenantContext::class)->run($this->tenantId, function () use ($sync): void {
+            $tenant = Tenant::query()->find($this->tenantId);
 
-        if (! $tenant) {
-            return;
-        }
+            if (! $tenant) {
+                return;
+            }
 
-        $sync->syncTenant($tenant);
+            $sync->syncTenant($tenant);
+
+        });
     }
 }

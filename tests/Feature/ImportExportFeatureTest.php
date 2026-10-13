@@ -81,13 +81,13 @@ class ImportExportFeatureTest extends TestCase
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
 
-        Plan::factory()->create([
+        Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Exported Fiber',
             'internal_name' => 'exported_fiber',
             'status' => 'active',
             'type' => 'pppoe',
         ]);
-        Plan::factory()->create([
+        Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Hidden Wireless',
             'internal_name' => 'hidden_wireless',
             'status' => 'inactive',
@@ -122,7 +122,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'internal_name' => 'fiber_100',
             'status' => 'active',
@@ -182,7 +182,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        Plan::factory()->create([
+        Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Old Name',
             'internal_name' => 'existing_plan',
             'status' => 'active',
@@ -273,7 +273,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'internal_name' => 'fiber_100',
             'status' => 'active',
@@ -367,7 +367,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 250',
             'internal_name' => 'fiber_250',
             'status' => 'active',
@@ -528,7 +528,7 @@ class ImportExportFeatureTest extends TestCase
 
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'internal_name' => 'fiber_100',
             'status' => 'active',
@@ -629,7 +629,7 @@ class ImportExportFeatureTest extends TestCase
         $routerName = 'Core Router '.substr((string) Str::uuid(), 0, 8);
         $subscriptionCode = 'SUB-IMP-'.substr((string) Str::uuid(), 0, 8);
         $username = 'john.routed.'.substr((string) Str::uuid(), 0, 8);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => $planName,
             'internal_name' => 'fiber_300_'.substr((string) Str::uuid(), 0, 8),
             'status' => 'active',
@@ -800,7 +800,7 @@ class ImportExportFeatureTest extends TestCase
 
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 300',
             'internal_name' => 'fiber_300',
             'status' => 'active',
@@ -1035,7 +1035,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber Routed Import',
             'internal_name' => 'fiber_routed_import',
             'status' => 'active',
@@ -1148,7 +1148,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber Route Reassign',
             'internal_name' => 'fiber_route_reassign',
             'status' => 'active',
@@ -1276,7 +1276,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 50',
             'internal_name' => 'fiber_50',
             'status' => 'active',
@@ -1366,7 +1366,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber Reconcile',
             'internal_name' => 'fiber_reconcile',
             'status' => 'active',
@@ -1485,7 +1485,7 @@ class ImportExportFeatureTest extends TestCase
         Storage::fake('imports');
         $tenant = $this->createTenant('alpha-net');
         $user = $this->createUser($tenant);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber Restore',
             'internal_name' => 'fiber_restore',
             'status' => 'active',
@@ -1596,6 +1596,8 @@ class ImportExportFeatureTest extends TestCase
 
     private function createUser(Tenant $tenant): User
     {
+        app()->instance('current_tenant', $tenant);
+
         return User::factory()->create([
             'tenant_id' => $tenant->id,
             'role' => 'admin',

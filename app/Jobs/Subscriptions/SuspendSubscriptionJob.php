@@ -6,6 +6,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\RadiusProvisioningService;
 use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\TenantContext;
 use App\Services\TenantNotificationService;
 use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Bus\Queueable;
@@ -33,43 +34,46 @@ class SuspendSubscriptionJob implements ShouldQueue
         SubscriptionSessionDisconnectService $disconnectService,
         TenantNotificationService $notifications,
     ): void {
-        $subscription = Subscription::withoutGlobalScopes()
-            ->withoutTrashed()
-            ->where('tenant_id', $this->tenantId)
-            ->with(['customer', 'plan', 'router'])
-            ->find($this->subscriptionId);
+        app(TenantContext::class)->run($this->tenantId, function () use ($radiusProvisioning, $disconnectService, $notifications): void {
+            $subscription = Subscription::withoutGlobalScopes()
+                ->withoutTrashed()
+                ->where('tenant_id', $this->tenantId)
+                ->with(['customer', 'plan', 'router'])
+                ->find($this->subscriptionId);
 
-        if (! $subscription) {
-            return;
-        }
+            if (! $subscription) {
+                return;
+            }
 
-        $radiusProvisioning->syncSubscription($subscription);
+            $radiusProvisioning->syncSubscription($subscription);
 
-        $disconnectResult = $disconnectService->disconnect($subscription);
-        $disconnectService->recordActivity($subscription, $disconnectResult, $this->causer());
+            $disconnectResult = $disconnectService->disconnect($subscription);
+            $disconnectService->recordActivity($subscription, $disconnectResult, $this->causer());
 
-        $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
-            'title' => 'Subscription suspended',
-            'body' => "{$subscription->subscription_code} was suspended.",
-            'action_url' => route('subscriptions.show', $subscription),
-        ], $subscription);
-
-        if ($subscription->customer) {
-            $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
-                'title' => 'Your subscription was suspended',
-                'body' => "{$subscription->subscription_code} is currently suspended.",
-                'category' => 'service',
-                'action_url' => route('customer.subscriptions.index'),
-            ], $subscription);
-        }
-
-        if ($disconnectResult->shouldAlert()) {
-            $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::OPERATIONAL_FAILURE, [
-                'title' => 'Router disconnect failed',
-                'body' => $disconnectResult->message,
+            $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
+                'title' => 'Subscription suspended',
+                'body' => "{$subscription->subscription_code} was suspended.",
                 'action_url' => route('subscriptions.show', $subscription),
             ], $subscription);
-        }
+
+            if ($subscription->customer) {
+                $notifications->notifyCustomer($subscription->customer, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
+                    'title' => 'Your subscription was suspended',
+                    'body' => "{$subscription->subscription_code} is currently suspended.",
+                    'category' => 'service',
+                    'action_url' => route('customer.subscriptions.index'),
+                ], $subscription);
+            }
+
+            if ($disconnectResult->shouldAlert()) {
+                $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::OPERATIONAL_FAILURE, [
+                    'title' => 'Router disconnect failed',
+                    'body' => $disconnectResult->message,
+                    'action_url' => route('subscriptions.show', $subscription),
+                ], $subscription);
+            }
+
+        });
     }
 
     private function causer(): ?User

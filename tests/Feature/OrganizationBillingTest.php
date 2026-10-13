@@ -20,8 +20,8 @@ class OrganizationBillingTest extends TestCase
     public function test_subscription_create_rejects_service_that_differs_from_billing_enabled_organization_default(): void
     {
         [$tenant, $user] = $this->tenantUser();
-        $defaultPlan = Plan::factory()->create(['status' => 'active', 'price' => 80, 'billing_cycle' => 'monthly']);
-        $otherPlan = Plan::factory()->create(['status' => 'active', 'price' => 120, 'billing_cycle' => 'monthly']);
+        $defaultPlan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'price' => 80, 'billing_cycle' => 'monthly']);
+        $otherPlan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'price' => 120, 'billing_cycle' => 'monthly']);
         $router = Router::factory()->online()->create(['tenant_id' => $tenant->id]);
         $organization = $this->organization($tenant, $defaultPlan);
         $customer = $this->customer($tenant, $organization);
@@ -34,6 +34,7 @@ class OrganizationBillingTest extends TestCase
         $response->assertSessionHasErrors('plan_id');
         $this->assertDatabaseMissing('subscriptions', [
             'customer_id' => $customer->id,
+            'name' => 'Managed service',
             'plan_id' => $otherPlan->id,
         ]);
     }
@@ -41,7 +42,7 @@ class OrganizationBillingTest extends TestCase
     public function test_subscription_create_applies_organization_billing_defaults_to_subscription_and_plan_item(): void
     {
         [$tenant, $user] = $this->tenantUser();
-        $defaultPlan = Plan::factory()->create(['status' => 'active', 'name' => 'Managed Fiber', 'price' => 100, 'billing_cycle' => 'monthly']);
+        $defaultPlan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'name' => 'Managed Fiber', 'price' => 100, 'billing_cycle' => 'monthly']);
         $router = Router::factory()->online()->create(['tenant_id' => $tenant->id]);
         $organization = $this->organization($tenant, $defaultPlan);
         $customer = $this->customer($tenant, $organization);
@@ -64,6 +65,7 @@ class OrganizationBillingTest extends TestCase
             ],
         ]));
 
+        $response->assertSessionHasNoErrors();
         $subscription = Subscription::query()->where('customer_id', $customer->id)->firstOrFail();
         $item = $subscription->items()->where('item_type', 'plan')->firstOrFail();
 
@@ -151,6 +153,7 @@ class OrganizationBillingTest extends TestCase
     {
         return [
             'customer_id' => $customer->id,
+            'name' => 'Managed service',
             'plan_id' => $plan->id,
             'router_id' => $router->id,
             'connection_type' => 'pppoe',

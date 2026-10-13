@@ -169,7 +169,7 @@ class IpamController extends Controller
             if ($this->isDuplicatePoolException($e)) {
                 return redirect()
                     ->back()
-                    ->withInput()
+                    ->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                     ->withErrors([
                         'network_address' => 'An IP pool with this network address and CIDR already exists.',
                     ]);
@@ -179,7 +179,7 @@ class IpamController extends Controller
 
             return redirect()
                 ->back()
-                ->withInput()
+                ->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Failed to create IP pool. Please try again.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -187,7 +187,7 @@ class IpamController extends Controller
 
             return redirect()
                 ->back()
-                ->withInput()
+                ->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Failed to create IP pool. Please try again.');
         }
     }
@@ -367,7 +367,7 @@ class IpamController extends Controller
             if ($this->isDuplicatePoolException($e)) {
                 return redirect()
                     ->back()
-                    ->withInput()
+                    ->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                     ->withErrors([
                         'network_address' => 'An IP pool with this network address and CIDR already exists.',
                     ]);
@@ -377,7 +377,7 @@ class IpamController extends Controller
 
             return redirect()
                 ->back()
-                ->withInput()
+                ->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Failed to update IP pool. Please try again.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -385,7 +385,7 @@ class IpamController extends Controller
 
             return redirect()
                 ->back()
-                ->withInput()
+                ->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Failed to update IP pool. Please try again.');
         }
     }

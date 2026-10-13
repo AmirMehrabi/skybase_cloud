@@ -1,6 +1,6 @@
 @once
     @push('scripts')
-        <script>
+        <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
             function standardFormValidator(rules, serverErrors = {}) {
                 return {
                     rules,

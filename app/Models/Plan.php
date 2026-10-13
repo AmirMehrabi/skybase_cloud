@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
+use App\Models\Scopes\TenantScope;
 use App\Services\RadiusProvisioningService;
 use App\Services\TrafficShaping\PlanTrafficShapingService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Plan extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
     use HasFactory, LogsTenantActivity;
 
@@ -188,11 +190,7 @@ class Plan extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            if ($tenantId = tenant_id() ?? auth()->user()?->tenant_id) {
-                $query->where('tenant_id', $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (Plan $plan): void {
             $plan->tenant_id ??= tenant_id() ?? auth()->user()?->tenant_id;

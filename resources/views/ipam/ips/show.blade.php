@@ -38,7 +38,7 @@ $subscriptions = [
     ['id' => 3, 'code' => 'SUB-2024-003'],
 ];
 
-function getIpStatusBadge($status)
+$getIpStatusBadge = static function (mixed $status): mixed
 {
     $classes = [
         'available' => 'bg-green-100 text-green-800 border-green-200',
@@ -48,7 +48,7 @@ function getIpStatusBadge($status)
     ];
 
     return $classes[$status] ?? $classes['available'];
-}
+};
 @endphp
 
 @section('content')
@@ -195,7 +195,7 @@ function getIpStatusBadge($status)
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                 <h3 class="text-sm font-semibold text-gray-900 mb-4">Current Status</h3>
                 <div class="flex items-center justify-center py-4">
-                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border {{ getIpStatusBadge($ipAddress['status']) }}">
+                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border {{ $getIpStatusBadge($ipAddress['status']) }}">
                         {{ ucfirst($ipAddress['status']) }}
                     </span>
                 </div>
@@ -358,7 +358,7 @@ function getIpStatusBadge($status)
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function ipDetail() {
     return {
         init() {

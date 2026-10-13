@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TenantLoginRequest;
-use App\Models\User;
 use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -28,45 +27,29 @@ class TenantLoginController extends Controller
 
     public function login(TenantLoginRequest $request): RedirectResponse
     {
-        $credentials = $request->only('email', 'password');
-
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user) {
-            return back()->withInput()
-                ->withErrors([
-                    'email' => 'These credentials do not match our records.',
-                ]);
+        if (! Auth::guard('web')->attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+            return back()->withInput($request->only('email', 'remember'))
+                ->withErrors(['email' => 'These credentials do not match our records.']);
         }
+        $user = Auth::guard('web')->user();
+        if (config('security.enforce_active_accounts') && (! $user->isActive() || (! $user->isCentralAdmin() && (! $user->tenant_id || $user->tenant?->status !== 'active')))) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-        if ($user->tenant_id) {
-            $tenant = $user->tenant;
-
-            if (! $tenant) {
-                return back()->withInput()
-                    ->withErrors([
-                        'email' => 'Tenant not found. Please contact support.',
-                    ]);
-            }
-
-            if ($tenant->isSuspended()) {
-                return back()->withInput()
-                    ->withErrors([
-                        'email' => 'Your account has been suspended. Please contact support.',
-                    ]);
-            }
-        }
-
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            return back()->withInput()
-                ->withErrors([
-                    'email' => 'These credentials do not match our records.',
-                ]);
+            return back()->withInput($request->only('email', 'remember'))
+                ->withErrors(['email' => 'These credentials do not match our records.']);
         }
 
         $request->session()->regenerate();
 
         $user->update(['last_login_at' => now()]);
+
+        $request->session()->forget('mfa_verified_user');
+        $request->session()->put('auth.password_confirmed_at', time());
+        if ($user->isCentralAdmin()) {
+            return redirect()->route('admin.super-admin.tenants.index');
+        }
 
         $landingRoute = PermissionRegistry::firstAccessibleRoute($user) ?? 'dashboard';
 

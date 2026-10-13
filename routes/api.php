@@ -15,14 +15,16 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth')->group(function () {
-    // IPAM API Routes
-    Route::prefix('ip-pools')->name('api.ip-pools.')->group(function () {
-        Route::get('/check-ip', [IpamController::class, 'checkIp'])->name('check-ip');
-    });
+Route::middleware(config('security.strict_api_access')
+    ? ['web', 'auth:web', 'initialize_tenancy', 'active_account', 'auth.session', 'mfa', 'permission', 'throttle:60,1']
+    : ['auth'])->group(function () {
+        // IPAM API Routes
+        Route::prefix('ip-pools')->name('api.ip-pools.')->group(function () {
+            Route::get('/check-ip', [IpamController::class, 'checkIp'])->name('check-ip');
+        });
 
-    // Subscription API Routes
-    Route::prefix('subscriptions')->name('api.subscriptions.')->group(function () {
-        Route::get('/check-pppoe-username', [SubscriptionController::class, 'checkPppoeUsername'])->name('check-pppoe-username');
+        // Subscription API Routes
+        Route::prefix('subscriptions')->name('api.subscriptions.')->group(function () {
+            Route::get('/check-pppoe-username', [SubscriptionController::class, 'checkPppoeUsername'])->name('check-pppoe-username');
+        });
     });
-});

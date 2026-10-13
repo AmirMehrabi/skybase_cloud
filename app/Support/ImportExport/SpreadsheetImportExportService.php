@@ -13,6 +13,8 @@ use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
 use App\Services\RadiusProvisioningService;
+use App\Services\SafeRouterUsername;
+use App\Services\SpreadsheetSecurity;
 use App\Services\SubscriptionIpRouteSyncService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as SpreadsheetDate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -34,11 +37,14 @@ class SpreadsheetImportExportService
     {
         $headings = ImportExportSchema::headings($run->module);
         $rows = match ($run->module) {
-            ImportExportSchema::MODULE_PLANS => $this->planExportRows($run->filters ?? []),
+            ImportExportSchema::MODULE_PLANS => $this->planExportRows($run),
             ImportExportSchema::MODULE_SUBSCRIPTIONS => $this->subscriptionExportRows($run),
             default => [],
         };
 
+        if (config('security.enforce_resource_limits') && count($rows) > config('security.export_max_rows')) {
+            throw new \RuntimeException('Export exceeds the permitted number of rows. Narrow the filters.');
+        }
         $path = ImportExportSchema::basePath($run->tenant_id, $run->id).'/'.ImportExportSchema::exportFilename($run->module, $run->id);
 
         $this->writeSpreadsheet($path, $headings, $rows);
@@ -73,7 +79,7 @@ class SpreadsheetImportExportService
 
             try {
                 $result = match ($run->module) {
-                    ImportExportSchema::MODULE_PLANS => $this->importPlanRow($row),
+                    ImportExportSchema::MODULE_PLANS => $this->importPlanRow($run, $row),
                     ImportExportSchema::MODULE_SUBSCRIPTIONS => $this->importSubscriptionRow($run, $row),
                     ImportExportSchema::MODULE_SUBSCRIPTION_IP_ADJUSTMENTS => $this->importSubscriptionIpAdjustmentRow($run, $row),
                     default => ['status' => 'failed', 'identifier' => null, 'action' => null, 'message' => 'Unsupported import module.'],
@@ -83,7 +89,7 @@ class SpreadsheetImportExportService
                     'status' => 'failed',
                     'identifier' => $row['plan_name'] ?? $row['plan_internal_name'] ?? $row['subscription_code'] ?? $row['customer_code'] ?? null,
                     'action' => null,
-                    'message' => $exception->getMessage(),
+                    'message' => 'Row processing failed. Contact support with the run ID.',
                 ];
             }
 
@@ -115,11 +121,13 @@ class SpreadsheetImportExportService
      * @param  array<string, mixed>  $filters
      * @return list<array<int, mixed>>
      */
-    protected function planExportRows(array $filters): array
+    protected function planExportRows(ImportExportRun $run): array
     {
         return Plan::query()
-            ->filter($filters)
+            ->where('tenant_id', $run->tenant_id)
+            ->filter($run->filters ?? [])
             ->ordered()
+            ->when(config('security.enforce_resource_limits'), fn (Builder $query): Builder => $query->limit(config('security.export_max_rows') + 1))
             ->get()
             ->map(fn (Plan $plan): array => [
                 $plan->name,
@@ -168,6 +176,7 @@ class SpreadsheetImportExportService
             ->filter($filters)
             ->with(['customer', 'plan', 'router'])
             ->latest()
+            ->when(config('security.enforce_resource_limits'), fn (Builder $query): Builder => $query->limit(config('security.export_max_rows') + 1))
             ->get()
             ->map(function (Subscription $subscription): array {
                 $customer = $subscription->customer;
@@ -207,7 +216,7 @@ class SpreadsheetImportExportService
                     $subscription->mac_address,
                     $subscription->ip_management,
                     $subscription->pppoe_username,
-                    $subscription->pppoe_password,
+                    config('security.redact_credentials') ? null : $subscription->pppoe_password,
                     $subscription->base_price,
                     $subscription->discount_amount,
                     $subscription->discount_type,
@@ -234,7 +243,7 @@ class SpreadsheetImportExportService
      * @param  array<string, mixed>  $row
      * @return array{status: string, identifier: ?string, action: ?string, message: string}
      */
-    protected function importPlanRow(array $row): array
+    protected function importPlanRow(ImportExportRun $run, array $row): array
     {
         $data = $this->normalizePlanRow($row);
         $validator = Validator::make($data, [
@@ -270,7 +279,8 @@ class SpreadsheetImportExportService
             return $this->failedResult($data['internal_name'] ?? null, $validator->errors()->first());
         }
 
-        $plan = Plan::query()->where('internal_name', $data['internal_name'])->first();
+        $data['tenant_id'] = $run->tenant_id;
+        $plan = Plan::query()->where('tenant_id', $run->tenant_id)->where('internal_name', $data['internal_name'])->first();
         $action = $plan ? 'updated' : 'created';
         $plan ??= new Plan;
         $plan->fill($data);
@@ -346,7 +356,7 @@ class SpreadsheetImportExportService
             'ip_address' => ['nullable', 'string', 'max:255'],
             'mac_address' => ['nullable', 'string', 'max:17'],
             'ip_management' => ['nullable', Rule::in(['system', 'router'])],
-            'pppoe_username' => ['nullable', 'string', 'max:255'],
+            'pppoe_username' => ['nullable', 'string', 'max:255', SafeRouterUsername::validationRule()],
             'pppoe_password' => ['nullable', 'string', 'max:255'],
             'discount_type' => ['nullable', Rule::in(['none', 'fixed', 'percentage'])],
             'billing_cycle' => ['nullable', Rule::in(['monthly', 'quarterly', 'yearly'])],
@@ -584,7 +594,7 @@ class SpreadsheetImportExportService
 
         foreach ($rows as $rowIndex => $row) {
             foreach ($row as $columnIndex => $value) {
-                $sheet->setCellValue(Coordinate::stringFromColumnIndex($columnIndex + 1).($rowIndex + 2), $value);
+                $sheet->setCellValueExplicit(Coordinate::stringFromColumnIndex($columnIndex + 1).($rowIndex + 2), $value, is_numeric($value) && ! is_string($value) ? DataType::TYPE_NUMERIC : DataType::TYPE_STRING);
             }
         }
 
@@ -603,7 +613,16 @@ class SpreadsheetImportExportService
      */
     protected function readSpreadsheet(string $path): array
     {
-        $spreadsheet = IOFactory::load($path);
+        app(SpreadsheetSecurity::class)->inspect($path);
+        $reader = IOFactory::createReaderForFile($path);
+        $info = $reader->listWorksheetInfo($path);
+        foreach ($info as $worksheet) {
+            if (config('security.enforce_resource_limits') && ($worksheet['totalRows'] > config('security.spreadsheet_max_rows') + 1 || $worksheet['totalColumns'] > config('security.spreadsheet_max_columns'))) {
+                throw new \RuntimeException('Spreadsheet dimensions exceed the permitted limits.');
+            }
+        }
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($path);
         $sheet = $spreadsheet->getActiveSheet();
         $highestRow = $sheet->getHighestDataRow();
         $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
@@ -914,7 +933,7 @@ class SpreadsheetImportExportService
             'identifier' => $result['identifier'],
             'action' => $result['action'],
             'message' => $result['message'],
-            'payload' => $payload,
+            'payload' => collect($payload)->reject(fn (mixed $value, string $key): bool => preg_match('/password|secret|token|credential/i', $key) === 1)->all(),
         ]);
     }
 

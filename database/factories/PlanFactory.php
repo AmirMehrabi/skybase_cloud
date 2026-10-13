@@ -24,7 +24,7 @@ class PlanFactory extends Factory
             'name' => ucwords($name),
             'internal_name' => strtolower(str_replace(' ', '_', $name)).'_'.fake()->unique()->numberBetween(1, 9999),
             'description' => fake()->sentence(),
-            'status' => fake()->randomElement(['active', 'inactive', 'archived']),
+            'status' => 'active',
             'visibility' => fake()->randomElement(['public', 'private', 'hidden']),
             'type' => fake()->randomElement(['pppoe', 'hotspot', 'static', 'dhcp', 'fiber', 'wireless']),
             'category' => fake()->randomElement(['Residential', 'Business', 'Enterprise']),

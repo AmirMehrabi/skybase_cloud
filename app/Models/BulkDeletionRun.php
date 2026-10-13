@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\Scopes\TenantScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BulkDeletionRun extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
     use HasFactory;
 
@@ -69,13 +71,7 @@ class BulkDeletionRun extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
-
-            if ($tenantId) {
-                $query->where('tenant_id', $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (BulkDeletionRun $run): void {
             if (empty($run->tenant_id)) {

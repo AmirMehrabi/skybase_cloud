@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Profile\ChangePasswordRequest;
 use App\Http\Requests\Profile\UpdateProfileRequest;
+use App\Services\SecurityEventLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
@@ -36,6 +37,10 @@ class ProfileController extends Controller
         $user->update([
             'password' => $request->input('password'),
         ]);
+
+        $request->session()->regenerate();
+        $request->session()->put('password_hash_web', $user->password);
+        app(SecurityEventLogger::class)->record('password.changed', ['user_id' => $user->id, 'tenant_id' => $user->tenant_id]);
 
         return redirect()->route('profile.index')->with('success', 'Password changed successfully.');
     }

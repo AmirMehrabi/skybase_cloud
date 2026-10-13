@@ -13,6 +13,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\SimplePdfReport;
+use App\Services\SpreadsheetSecurity;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
@@ -124,7 +125,7 @@ class ReportController extends Controller
             $stream = fopen('php://output', 'wb');
             fputcsv($stream, ['Date', 'Customer', 'Download bytes', 'Upload bytes', 'Total bytes', 'Sessions']);
             foreach ($records as $record) {
-                fputcsv($stream, [$record['date'], $record['customer'], $record['download'], $record['upload'], $record['total'], $record['sessions']]);
+                fputcsv($stream, [$record['date'], SpreadsheetSecurity::csvValue($record['customer']), $record['download'], $record['upload'], $record['total'], $record['sessions']]);
             }
             fclose($stream);
         }, 'usage-report.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
@@ -138,7 +139,7 @@ class ReportController extends Controller
         $summary = $this->usageSummary($records);
         $lines = ["Period: {$from->toDateString()} to {$to->toDateString()}", 'Total usage: '.$this->formatBytes((int) $summary['totalUsage']), ''];
         foreach ($records as $record) {
-            $lines[] = sprintf('%-12s %-28s D: %-10s U: %-10s Sessions: %d', $record['date'], mb_strimwidth($record['customer'], 0, 28), $this->formatBytes($record['download']), $this->formatBytes($record['upload']), $record['sessions']);
+            $lines[] = sprintf('%-12s %-28s D: %-10s U: %-10s Sessions: %d', $record['date'], mb_strimwidth(SpreadsheetSecurity::csvValue($record['customer']), 0, 28), $this->formatBytes($record['download']), $this->formatBytes($record['upload']), $record['sessions']);
         }
 
         return response($this->pdfReport->render('Usage Report', $lines), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'attachment; filename="usage-report.pdf"']);
@@ -201,7 +202,7 @@ class ReportController extends Controller
                 'id' => $record['id'],
                 'period' => $record['last_activity_date_label'] ?? 'Unknown',
                 'date' => $record['last_activity_date'],
-                'customer' => $record['customer'],
+                'customer' => SpreadsheetSecurity::csvValue($record['customer']),
                 'customerId' => (string) $record['customer_id'],
                 'planId' => $record['plan_id'] ? (string) $record['plan_id'] : '',
                 'routerId' => $record['router_id'] ? (string) $record['router_id'] : '',

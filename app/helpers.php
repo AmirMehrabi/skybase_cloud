@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Tenant;
+use App\Services\TenantContext;
 
 if (! function_exists('tenant')) {
     /**
@@ -22,6 +23,6 @@ if (! function_exists('tenant_id')) {
      */
     function tenant_id(): ?string
     {
-        return tenant()?->id;
+        return app(TenantContext::class)->id();
     }
 }

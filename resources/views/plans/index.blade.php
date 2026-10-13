@@ -7,7 +7,7 @@ $totalPlans = $plans->count();
 $activeCount = $plans->where('status', 'active')->count();
 $totalSubscribers = $plans->sum('subscribers');
 
-function getStatusBadgeClass($status)
+$getStatusBadgeClass = static function (mixed $status): mixed
 {
     $classes = [
         'active' => 'bg-green-100 text-green-800 border-green-200',
@@ -16,7 +16,7 @@ function getStatusBadgeClass($status)
     ];
 
     return $classes[$status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-}
+};
 @endphp
 
 @section('content')
@@ -256,7 +256,7 @@ function getStatusBadgeClass($status)
                                 <div class="text-sm text-gray-900" x-text="plan.subscribers"></div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border" :class="getStatusBadgeClass(plan.status)" x-text="capitalize(plan.status)"></span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border" :class="$getStatusBadgeClass(plan.status)" x-text="capitalize(plan.status)"></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right">
                                 <div class="flex items-center justify-end gap-2">
@@ -413,7 +413,7 @@ function getStatusBadgeClass($status)
     </div>
 </div>
 
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function plansModule() {
     return {
         search: '',
@@ -472,7 +472,7 @@ function plansModule() {
             return str.charAt(0).toUpperCase() + str.slice(1);
         },
 
-        getStatusBadgeClass(status) {
+        $getStatusBadgeClass(status) {
             const classes = {
                 'active': 'bg-green-100 text-green-800 border-green-200',
                 'inactive': 'bg-gray-100 text-gray-800 border-gray-200',

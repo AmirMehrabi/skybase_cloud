@@ -175,13 +175,13 @@ class UserGroupTest extends TestCase
         $visibleGroup = $this->group($tenant, 'Visible');
         $hiddenGroup = $this->group($tenant, 'Hidden');
         $user->forceFill(['user_group_id' => $visibleGroup->id])->save();
-        $visiblePlan = Plan::factory()->create([
+        $visiblePlan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'tenant_id' => $tenant->id,
             'user_group_id' => $visibleGroup->id,
             'name' => 'Visible Plan',
             'status' => 'active',
         ]);
-        $hiddenPlan = Plan::factory()->create([
+        $hiddenPlan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'tenant_id' => $tenant->id,
             'user_group_id' => $hiddenGroup->id,
             'name' => 'Hidden Plan',

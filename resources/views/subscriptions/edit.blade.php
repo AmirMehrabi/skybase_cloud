@@ -302,7 +302,7 @@
                 </div>
                 <div>
                     <label for="pppoe_password" class="block text-sm font-medium text-gray-700 mb-1">PPP Password</label>
-                    <input type="password" name="pppoe_password" id="pppoe_password" value="{{ old('pppoe_password', $subscription->pppoe_password) }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
+                    <input type="password" name="pppoe_password" id="pppoe_password" value="{{ config('security.redact_credentials') ? '' : old('pppoe_password', $subscription->pppoe_password) }}" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                     @error('pppoe_password')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -376,7 +376,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function subscriptionEditForm({ routerId, ipPoolId, ipAddress, ipPools, ipRoutes, accessPointId, billingEnabled, autoSuspensionEnabled }) {
     return {
         form: {

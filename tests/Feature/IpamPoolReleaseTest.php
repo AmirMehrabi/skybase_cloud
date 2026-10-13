@@ -81,7 +81,7 @@ class IpamPoolReleaseTest extends TestCase
         $user = $this->createTenantUser($tenant);
         $router = $this->createRouter($tenant, 'Core Router');
         $customer = $this->createCustomer($tenant, 'Amina', 'Hassan');
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 100',
             'price' => 79.99,

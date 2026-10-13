@@ -88,8 +88,8 @@ class VpnUserControllerTest extends TestCase
         $response = $this->actingAs($user)->get(route('vpn-users.index'));
 
         $response->assertOk();
-        $response->assertSee('visible_user');
-        $response->assertDontSee('hidden_user');
+        $data = $this->getJson(route('vpn-users.data'));
+        $data->assertOk()->assertJsonFragment(['username' => 'visible_user'])->assertJsonMissing(['username' => 'hidden_user']);
 
         $this->actingAs($user)
             ->get(route('vpn-users.show', $hiddenVpnUser))

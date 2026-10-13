@@ -24,7 +24,7 @@ class TaxSystemTest extends TestCase
         $this->setTax($tenant, enabled: true, percentage: 15);
 
         $customer = $this->customer($tenant, taxExempt: false);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'status' => 'active',
             'name' => 'Fiber 100',
             'price' => 100,
@@ -70,7 +70,7 @@ class TaxSystemTest extends TestCase
         $this->setTax($tenant, enabled: true, percentage: 15);
 
         $customer = $this->customer($tenant, taxExempt: true);
-        $plan = Plan::factory()->create(['status' => 'active', 'price' => 100]);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'price' => 100]);
         $router = Router::factory()->online()->create(['tenant_id' => $tenant->id]);
 
         $this->actingAs($user)->post(route('subscriptions.store'), $this->subscriptionPayload($customer, $router, $plan));
@@ -89,7 +89,7 @@ class TaxSystemTest extends TestCase
         $this->setTax($tenant, enabled: true, percentage: 5);
 
         $customer = $this->customer($tenant, taxExempt: false);
-        $plan = Plan::factory()->create(['status' => 'active', 'price' => 100]);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'price' => 100]);
         $router = Router::factory()->online()->create(['tenant_id' => $tenant->id]);
 
         $this->actingAs($user)->post(route('subscriptions.store'), $this->subscriptionPayload($customer, $router, $plan));

@@ -3,7 +3,8 @@
 @section('title', 'IP Pools')
 
 @php
-function getPoolStatusBadge($status)
+
+$getPoolStatusBadge = static function (mixed $status): mixed
 {
     $classes = [
         'active' => 'bg-green-100 text-green-800 border-green-200',
@@ -12,9 +13,9 @@ function getPoolStatusBadge($status)
     ];
 
     return $classes[$status] ?? $classes['active'];
-}
+};
 
-function getPoolTypeBadge($type)
+$getPoolTypeBadge = static function (mixed $type): mixed
 {
     $classes = [
         'dynamic' => 'bg-blue-100 text-blue-800 border-blue-200',
@@ -23,14 +24,14 @@ function getPoolTypeBadge($type)
     ];
 
     return $classes[$type] ?? $classes['dynamic'];
-}
+};
 
-function getUsageColor($percentage)
+$getUsageColor = static function (mixed $percentage): mixed
 {
     if ($percentage >= 90) return 'red';
     if ($percentage >= 80) return 'yellow';
     return 'green';
-}
+};
 @endphp
 
 @section('content')
@@ -171,7 +172,7 @@ function getUsageColor($percentage)
                     @foreach($ipPools as $pool)
                         @php
                             $usagePercent = round($pool->usage_percentage);
-                            $usageColor = getUsageColor($usagePercent);
+                            $usageColor = $getUsageColor($usagePercent);
                         @endphp
                         <tr class="hover:bg-gray-50 transition-colors duration-150">
                             <td class="px-4 py-4 whitespace-nowrap">
@@ -179,7 +180,7 @@ function getUsageColor($percentage)
                                     <a href="{{ route('ipam.pools.show', $pool) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
                                         {{ $pool->name }}
                                     </a>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border {{ getPoolTypeBadge($pool->type) }}">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border {{ $getPoolTypeBadge($pool->type) }}">
                                         {{ ucfirst($pool->type) }}
                                     </span>
                                 </div>
@@ -221,7 +222,7 @@ function getUsageColor($percentage)
                                 </div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getPoolStatusBadge($pool->status) }}">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $getPoolStatusBadge($pool->status) }}">
                                     {{ ucfirst($pool->status) }}
                                 </span>
                             </td>
@@ -286,7 +287,7 @@ function getUsageColor($percentage)
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function ipamPools() {
     return {
         init() {

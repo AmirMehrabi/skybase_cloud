@@ -18,7 +18,7 @@ class OrganizationControllerTest extends TestCase
     public function test_owner_can_create_an_organization_with_billing_defaults(): void
     {
         [$tenant, $user] = $this->tenantUser();
-        $plan = Plan::factory()->create(['status' => 'active', 'billing_cycle' => 'monthly']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'status' => 'active', 'billing_cycle' => 'monthly']);
 
         $response = $this->actingAs($user)->post(route('organizations.store'), [
             'name' => 'Enterprise Accounts',

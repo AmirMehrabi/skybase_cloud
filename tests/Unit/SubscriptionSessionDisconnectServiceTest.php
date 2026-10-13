@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Router;
 use App\Models\Subscription;
+use App\Models\Tenant;
 use App\Services\RouterOs\RouterOsClient;
 use App\Services\RouterOs\RouterOsSshClient;
 use App\Services\SubscriptionSessionDisconnectService;
@@ -15,6 +16,12 @@ use Tests\TestCase;
 class SubscriptionSessionDisconnectServiceTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        app()->instance('current_tenant', new Tenant(['id' => 'unit-test-tenant']));
+    }
 
     public function test_active_radius_session_uses_the_most_recent_open_radacct_row(): void
     {

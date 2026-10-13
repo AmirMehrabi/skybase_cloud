@@ -69,12 +69,12 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
+            'driver' => 'central-identity',
             'model' => env('AUTH_MODEL', User::class),
         ],
 
         'customers' => [
-            'driver' => 'eloquent',
+            'driver' => 'central-identity',
             'model' => Customer::class,
         ],
 

@@ -3,16 +3,29 @@
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PlanCrudTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Tenant $tenant;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $slug = Str::random(12);
+        $this->tenant = Tenant::create(['id' => (string) Str::uuid(), 'name' => $slug, 'company_name' => $slug, 'email' => $slug.'@example.com', 'slug' => $slug, 'status' => 'active']);
+        $this->actingAs(User::factory()->create(['tenant_id' => $this->tenant->id, 'role' => 'owner']));
+    }
+
     public function test_index_page_displays_plans(): void
     {
-        Plan::factory()->create([
+        Plan::factory()->create(['tenant_id' => $this->tenant->id,
             'name' => 'Test Plan',
             'internal_name' => 'test_plan',
             'status' => 'active',
@@ -55,6 +68,7 @@ class PlanCrudTest extends TestCase
             'currency' => 'USD',
             'billing_cycle' => 'monthly',
             'setup_fee' => 0,
+            'grace_period_days' => 7,
             'priority' => 5,
         ];
 
@@ -69,7 +83,7 @@ class PlanCrudTest extends TestCase
 
     public function test_can_update_existing_plan(): void
     {
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $this->tenant->id,
             'name' => 'Original Name',
             'internal_name' => 'original_plan',
             'status' => 'active',
@@ -95,6 +109,7 @@ class PlanCrudTest extends TestCase
             'currency' => 'USD',
             'billing_cycle' => 'monthly',
             'setup_fee' => 50,
+            'grace_period_days' => 7,
             'priority' => 8,
         ];
 
@@ -109,7 +124,7 @@ class PlanCrudTest extends TestCase
 
     public function test_can_delete_plan(): void
     {
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $this->tenant->id,
             'name' => 'To Delete',
             'internal_name' => 'to_delete',
             'status' => 'active',
@@ -127,7 +142,7 @@ class PlanCrudTest extends TestCase
 
     public function test_show_page_displays_plan_details(): void
     {
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $this->tenant->id,
             'name' => 'Detail Test',
             'internal_name' => 'detail_test',
             'status' => 'active',
@@ -143,7 +158,7 @@ class PlanCrudTest extends TestCase
 
     public function test_edit_page_displays_form_with_plan_data(): void
     {
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $this->tenant->id,
             'name' => 'Edit Test',
             'internal_name' => 'edit_test',
             'status' => 'active',

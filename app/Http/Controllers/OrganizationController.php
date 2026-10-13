@@ -32,7 +32,7 @@ class OrganizationController extends Controller
             ->with('defaultPlan')
             ->withCount('customers')
             ->orderByDesc('created_at')
-            ->paginate($request->integer('per_page', 100))
+            ->paginate(max(1, config('security.enforce_resource_limits') ? min(100, $request->integer('per_page', 100)) : $request->integer('per_page', 100)))
             ->through(fn (Organization $organization) => [
                 'id' => $organization->id,
                 'code' => $organization->code,

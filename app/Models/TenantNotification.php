@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
 use Illuminate\Notifications\DatabaseNotification;
 
 class TenantNotification extends DatabaseNotification
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     protected $table = 'notifications';

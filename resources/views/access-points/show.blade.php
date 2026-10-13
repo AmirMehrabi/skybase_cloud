@@ -229,7 +229,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 document.addEventListener('alpine:init', () => {
     Alpine.data('deleteConfirm', () => ({
         async confirmDelete() {

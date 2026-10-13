@@ -894,7 +894,7 @@
         })
         ->all();
 @endphp
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function subscriptionCreateForm() {
     return {
         selectedOrganizationIds: @js(collect(old('organization_ids', []))->map(fn ($id) => (string) $id)->values()->all()),

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\LogsTenantActivity;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\UserGroupFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UserGroup extends Model
 {
+    use BelongsToTenant;
+
     /** @use HasFactory<UserGroupFactory> */
     use HasFactory, LogsTenantActivity;
 
@@ -19,13 +23,7 @@ class UserGroup extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query): void {
-            $tenantId = tenant_id() ?? auth()->user()?->tenant_id;
-
-            if ($tenantId) {
-                $query->where($query->qualifyColumn('tenant_id'), $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (UserGroup $userGroup): void {
             if (blank($userGroup->tenant_id)) {

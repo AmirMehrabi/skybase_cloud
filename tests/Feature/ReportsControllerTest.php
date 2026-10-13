@@ -29,7 +29,7 @@ class ReportsControllerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $plan = Plan::factory()->create(['name' => 'Fiber 500']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'name' => 'Fiber 500']);
         $router = Router::factory()->create(['tenant_id' => $tenant->id, 'name' => 'Core Alpha']);
         $customer = Customer::create([
             'tenant_id' => $tenant->id,
@@ -113,7 +113,7 @@ class ReportsControllerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $plan = Plan::factory()->create(['name' => 'Business Fiber']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'name' => 'Business Fiber']);
         $customer = Customer::create([
             'tenant_id' => $tenant->id,
             'name' => 'Revenue Customer',

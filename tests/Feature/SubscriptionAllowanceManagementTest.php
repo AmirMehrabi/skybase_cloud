@@ -183,7 +183,7 @@ class SubscriptionAllowanceManagementTest extends TestCase
             'tax_exempt' => false,
             'status' => 'active',
         ]);
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             ...$planAttributes,
             'tenant_id' => $tenant->id,
             'status' => 'active',

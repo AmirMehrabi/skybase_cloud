@@ -515,7 +515,7 @@ class TicketingTest extends TestCase
      */
     private function createSubscription(Tenant $tenant, Customer $customer, array $overrides = []): Subscription
     {
-        $plan = Plan::factory()->create(['name' => 'Fiber 100']);
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id, 'name' => 'Fiber 100']);
 
         return Subscription::withoutGlobalScopes()->create(array_merge([
             'tenant_id' => $tenant->id,

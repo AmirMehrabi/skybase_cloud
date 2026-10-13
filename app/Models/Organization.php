@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Organization extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<OrganizationFactory> */
@@ -118,11 +121,7 @@ class Organization extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query) {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (Organization $organization) {
             if (empty($organization->code)) {

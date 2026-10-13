@@ -9,6 +9,7 @@ use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\Tenant;
 use App\Services\TaxResolverService;
+use App\Services\TenantContext;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -191,6 +192,10 @@ class LdapSyncService
      */
     public function syncTenantFromEntries(Tenant $tenant, array $settings, iterable $customerEntries, iterable $subscriptionEntries, bool $dryRun = false, iterable $organizationEntries = [], ?array $selectedOuDns = null): array
     {
+        if (app(TenantContext::class)->id() === null) {
+            return app(TenantContext::class)->run($tenant->id, fn (): array => $this->syncTenantFromEntries($tenant, $settings, $customerEntries, $subscriptionEntries, $dryRun, $organizationEntries, $selectedOuDns));
+        }
+
         $result = $this->emptyResult($dryRun ? 'preview' : 'synced');
         $syncedOrganizationGuids = [];
         $syncedCustomerGuids = [];

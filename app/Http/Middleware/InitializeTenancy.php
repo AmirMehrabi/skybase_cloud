@@ -3,47 +3,22 @@
 namespace App\Http\Middleware;
 
 use App\Models\Tenant;
+use App\Services\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class InitializeTenancy
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $guard = auth()->check() ? auth() : auth('customer');
-
-        if (! $guard->check()) {
-            return $next($request);
-        }
-
+        $guard = Auth::guard($request->routeIs('customer.*') ? 'customer' : 'web');
         $user = $guard->user();
+        abort_unless($user && filled($user->tenant_id), 403);
+        $tenant = Tenant::query()->find($user->tenant_id);
+        abort_unless($tenant && (string) $user->tenant_id === (string) $tenant->id, 403);
 
-        if (! $user->tenant_id) {
-            return $next($request);
-        }
-
-        $tenant = Tenant::find($user->tenant_id);
-
-        if (! $tenant) {
-            $guard->logout();
-
-            return redirect()->route($request->routeIs('customer.*') ? 'customer.login' : 'auth.login')->with('error', 'Tenant not found.');
-        }
-
-        // Verify the user belongs to the tenant (security check)
-        if ($user->tenant_id !== $tenant->id) {
-            $guard->logout();
-
-            return redirect()->route($request->routeIs('customer.*') ? 'customer.login' : 'auth.login')->with('error', 'Invalid tenant access.');
-        }
-
-        // Store the tenant in the app container for global access
-        app()->instance('current_tenant', $tenant);
-
-        // Set a global tenant_id in the request for easy access
-        $request->merge(['_tenant_id' => $tenant->id]);
-
-        return $next($request);
+        return app(TenantContext::class)->run((string) $tenant->id, fn (): Response => $next($request));
     }
 }

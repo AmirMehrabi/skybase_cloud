@@ -288,9 +288,9 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     window.billingDashboard = @json($billingDashboard ?? []);
 </script>
-<script src="{{ asset('js/billing/dashboard.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/dashboard.js') }}"></script>
 @endpush
 @endsection

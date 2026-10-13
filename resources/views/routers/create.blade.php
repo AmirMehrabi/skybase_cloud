@@ -96,9 +96,9 @@
                     type="number"
                     label="API Port"
                     name="api_port"
-                    :value="old('api_port', 8728)"
+                    :value="old('api_port', config('security.require_router_tls') ? 8729 : 8728)"
                     :error="$errors->first('api_port')"
-                    hint="Default: 8728"
+                    :hint="'Default: '.(config('security.require_router_tls') ? 8729 : 8728)"
                 />
 
                 <x-ui.input.text

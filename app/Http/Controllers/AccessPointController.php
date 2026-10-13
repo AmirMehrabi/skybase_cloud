@@ -34,7 +34,7 @@ class AccessPointController extends Controller
             ->with(['siteRecord', 'router'])
             ->filter($filters)
             ->orderBy('created_at', 'desc')
-            ->paginate($request->integer('per_page', 50))
+            ->paginate(max(1, config('security.enforce_resource_limits') ? min(100, $request->integer('per_page', 50)) : $request->integer('per_page', 50)))
             ->through(fn (AccessPoint $ap) => [
                 'id' => $ap->id,
                 'name' => $ap->name,

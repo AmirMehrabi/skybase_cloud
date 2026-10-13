@@ -24,6 +24,7 @@ class ProfileController extends Controller
         ]);
 
         $request->session()->regenerate();
+        $request->session()->put('password_hash_customer', $customer->password);
 
         return redirect()
             ->route('customer.profile.show')

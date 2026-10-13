@@ -61,7 +61,7 @@ class CustomerController extends Controller
                 },
             ])
             ->orderBy('created_at', 'desc')
-            ->paginate($request->integer('per_page', 100))
+            ->paginate(max(1, config('security.enforce_resource_limits') ? min(100, $request->integer('per_page', 100)) : $request->integer('per_page', 100)))
             ->through(fn (Customer $customer) => $this->customerIndexPayload($customer));
 
         return response()->json([

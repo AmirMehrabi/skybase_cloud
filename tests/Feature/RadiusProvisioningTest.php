@@ -418,7 +418,7 @@ class RadiusProvisioningTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'internal_name' => $slug === 'alpha-net' ? 'fiber_100' : Str::slug($slug, '_').'_fiber_100',
             'router_profile' => 'fiber_100',

@@ -483,7 +483,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function subscriptionsIndex() {
     return {
         subscriptions: [],

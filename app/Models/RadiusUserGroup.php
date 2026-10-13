@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\Scopes\TenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RadiusUserGroup extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     protected $table = 'radusergroup';
@@ -27,11 +29,7 @@ class RadiusUserGroup extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function (RadiusUserGroup $radiusUserGroup): void {
             if (auth()->check() && empty($radiusUserGroup->tenant_id)) {

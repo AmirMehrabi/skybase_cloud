@@ -622,7 +622,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
 function customerShow(customer, subscriptions, invoices, payments, tickets, activityLog, paymentStoreUrl) {
     return {
         customer,

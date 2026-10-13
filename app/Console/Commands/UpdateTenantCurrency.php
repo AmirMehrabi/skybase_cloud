@@ -79,7 +79,9 @@ class UpdateTenantCurrency extends Command
         DB::transaction(function () use ($updates, $currency): void {
             $updates['tenant']->update(['currency' => $currency]);
             $updates['plans']->update(['currency' => $currency]);
-            $updates['settings']->update(['value' => json_encode($currency, JSON_THROW_ON_ERROR)]);
+            foreach ($updates['settings']->get() as $setting) {
+                $setting->forceFill(['value' => $currency])->saveQuietly();
+            }
             $updates['subscription data adjustments']->update(['currency' => $currency]);
         });
 

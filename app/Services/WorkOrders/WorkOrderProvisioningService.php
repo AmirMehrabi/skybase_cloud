@@ -19,7 +19,7 @@ class WorkOrderProvisioningService
     public function provision(WorkOrder $workOrder, User $actor, array $data): Subscription
     {
         $subscription = DB::transaction(function () use ($workOrder, $actor, $data): Subscription {
-            $workOrder = WorkOrder::query()->lockForUpdate()->findOrFail($workOrder->id);
+            $workOrder = WorkOrder::query()->where('tenant_id', $actor->tenant_id)->lockForUpdate()->findOrFail($workOrder->id);
 
             if ($workOrder->subscription_id) {
                 return $workOrder->subscription()->firstOrFail();
@@ -29,7 +29,7 @@ class WorkOrderProvisioningService
                 throw ValidationException::withMessages(['status' => 'The work order must be ready for activation with its checklist complete.']);
             }
 
-            $plan = Plan::query()->findOrFail($data['plan_id']);
+            $plan = Plan::query()->where('tenant_id', $actor->tenant_id)->findOrFail($data['plan_id']);
             $subscription = Subscription::withoutEvents(fn (): Subscription => Subscription::create([
                 'tenant_id' => $workOrder->tenant_id,
                 'subscription_code' => Subscription::generateSubscriptionCode(),

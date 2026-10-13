@@ -16,6 +16,7 @@ use App\Models\Tenant;
 use App\Services\Ldap\LdapConnectionFactory;
 use App\Services\Ldap\LdapSyncService;
 use App\Services\NotificationPreferenceService;
+use App\Services\OutboundConnectionPolicy;
 use App\Services\RadiusProvisioningService;
 use App\Services\TaxResolverService;
 use App\Support\Notifications\NotificationEventRegistry;
@@ -712,7 +713,10 @@ class SettingController extends Controller
         }
 
         $scheme = $encryption === 'ssl' ? 'ssl' : 'tcp';
-        $remoteSocket = "{$scheme}://{$host}:{$port}";
+        $peerName = $host;
+        $host = app(OutboundConnectionPolicy::class)->resolve($host, $port, configuredDestination: true);
+        $remoteSocket = $scheme.'://'.(str_contains($host, ':') ? '['.$host.']' : $host).':'.$port;
+        $context = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'peer_name' => $peerName]]);
         $errorCode = 0;
         $errorMessage = '';
 
@@ -721,7 +725,8 @@ class SettingController extends Controller
             $errorCode,
             $errorMessage,
             10,
-            STREAM_CLIENT_CONNECT
+            STREAM_CLIENT_CONNECT,
+            $context,
         );
 
         if ($socket === false) {

@@ -115,7 +115,7 @@
             </main>
         </div>
 
-        <script>
+        <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
             const isRtl = document.documentElement.dir === 'rtl' || document.body.style.direction === 'rtl';
             const translateClass = isRtl ? 'translate-x-full' : '-translate-x-full';
             const sidebar = document.getElementById('sidebar');

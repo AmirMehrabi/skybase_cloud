@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
@@ -17,6 +18,7 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<UserFactory> */
@@ -34,12 +36,12 @@ class User extends Authenticatable
 
     protected $hidden = [
         'password',
-        'remember_token',
+        'remember_token', 'mfa_secret', 'mfa_recovery_codes',
     ];
 
     protected function activityLogExcept(): array
     {
-        return ['password', 'remember_token', 'updated_at'];
+        return ['password', 'remember_token', 'updated_at', 'mfa_secret', 'mfa_recovery_codes'];
     }
 
     protected function casts(): array
@@ -47,6 +49,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'mfa_secret' => 'encrypted',
+            'mfa_recovery_codes' => 'encrypted:array',
+            'mfa_confirmed_at' => 'datetime',
+            'mfa_last_counter' => 'integer',
             'last_login_at' => 'datetime',
         ];
     }
@@ -114,7 +120,7 @@ class User extends Authenticatable
     {
         $this->settings()->updateOrCreate(
             ['key' => $key],
-            ['value' => $value],
+            ['tenant_id' => $this->tenant_id, 'value' => $value],
         );
     }
 
@@ -162,6 +168,11 @@ class User extends Authenticatable
         $permission = PermissionRegistry::routePermission($routeName);
 
         return $permission === null || $this->hasPermission($permission);
+    }
+
+    public function isCentralAdmin(): bool
+    {
+        return $this->tenant_id === null && $this->normalizedRoleName() === 'super_admin' && $this->isActive();
     }
 
     public function isOwner(): bool

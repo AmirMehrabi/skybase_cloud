@@ -5,6 +5,7 @@ namespace App\Http\Requests\WorkOrder;
 use App\Models\AccessPoint;
 use App\Models\Plan;
 use App\Models\Router;
+use App\Services\SafeRouterUsername;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +25,7 @@ class ProvisionWorkOrderRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'service_type' => ['required', Rule::in(['hotspot', 'pppoe', 'vpn'])],
-            'plan_id' => ['required', Rule::exists(Plan::class, 'id')],
+            'plan_id' => ['required', Rule::exists(Plan::class, 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'router_id' => ['required', Rule::exists(Router::class, 'id')->where('tenant_id', $tenantId)],
             'access_point_id' => ['nullable', Rule::exists(AccessPoint::class, 'id')->where('tenant_id', $tenantId)],
             'connection_type' => ['required', Rule::in(['pppoe', 'dhcp', 'static'])],
@@ -33,6 +34,7 @@ class ProvisionWorkOrderRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('subscriptions', 'pppoe_username')->where('tenant_id', $tenantId),
+                SafeRouterUsername::validationRule(),
             ],
             'pppoe_password' => [$connectionType === 'pppoe' ? 'required' : 'nullable', 'string', 'max:255'],
             'mac_address' => [$connectionType === 'dhcp' ? 'required' : 'nullable', 'mac_address'],

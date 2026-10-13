@@ -15,6 +15,7 @@ use App\Services\NotificationPreferenceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -222,7 +223,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'users' => ['required', 'array'],
-            'users.*' => ['exists:users,id'],
+            'users.*' => [Rule::exists('users', 'id')->where('tenant_id', tenant_id())],
             'action' => ['required', 'in:activate,deactivate,delete'],
         ]);
 

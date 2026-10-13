@@ -277,13 +277,13 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     window.billingCredits = @json($credits ?? []);
     window.billingCreditCustomers = @json($customers ?? []);
     window.billingCreditStats = @json($stats ?? []);
     window.billingCreditStoreUrl = @json(route('billing.credits.store'));
     window.billingCsrfToken = @json(csrf_token());
 </script>
-<script src="{{ asset('js/billing/credits.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/credits.js') }}"></script>
 @endpush
 @endsection

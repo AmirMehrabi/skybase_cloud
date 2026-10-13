@@ -308,7 +308,7 @@
     <style>
         [x-cloak] { display: none !important; }
     </style>
-    <script>
+    <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         function ldapOuPicker(config) {
             return {
                 discoverUrl: config.discoverUrl,

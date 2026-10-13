@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Scopes\TenantScope;
+use App\Services\CompatibleSecretCast;
 use Database\Factories\RouterFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Router extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<RouterFactory> */
@@ -71,9 +75,17 @@ class Router extends Model
      *
      * @return array<string, string>
      */
+    public function getHidden(): array
+    {
+        return config('security.redact_credentials') ? array_merge(parent::getHidden(), ['api_password', 'coa_secret']) : parent::getHidden();
+    }
+
     protected function casts(): array
     {
         return [
+            'api_password' => CompatibleSecretCast::class,
+            'coa_secret' => CompatibleSecretCast::class,
+
             'enable_monitoring' => 'boolean',
             'enable_provisioning' => 'boolean',
             'netflow_enabled' => 'boolean',
@@ -195,11 +207,7 @@ class Router extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function ($query) {
-            if (auth()->check() && auth()->user()->tenant_id) {
-                $query->where($query->qualifyColumn('tenant_id'), auth()->user()->tenant_id);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
 
         static::creating(function ($router) {
             if (auth()->check() && empty($router->tenant_id)) {

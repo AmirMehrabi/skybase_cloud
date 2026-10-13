@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\SecurityEventLogger;
 use App\Support\Rbac\PermissionRegistry;
 use Closure;
 use Illuminate\Http\Request;
@@ -19,14 +20,17 @@ class CheckPermission
         $permission ??= $this->permissionForRequest($request);
 
         if ($permission === null) {
+            abort_unless(! config('security.strict_route_permissions') || $request->routeIs('profile.*'), 403, PermissionRegistry::DENIED_MESSAGE);
+
             return $next($request);
         }
 
-        if ($user->role === 'super_admin') {
+        if ($user->isCentralAdmin()) {
             return $next($request);
         }
 
         if (! $user->hasPermission($permission)) {
+            app(SecurityEventLogger::class)->record('authorization.denied', ['user_id' => $user->id, 'tenant_id' => $user->tenant_id, 'route' => $request->route()?->getName(), 'ip' => $request->ip()]);
             if ($request->routeIs('dashboard')) {
                 $landingRoute = PermissionRegistry::firstAccessibleRoute($user);
 

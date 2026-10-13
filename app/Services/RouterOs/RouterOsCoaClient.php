@@ -3,6 +3,7 @@
 namespace App\Services\RouterOs;
 
 use App\Models\Router;
+use App\Services\OutboundConnectionPolicy;
 use RuntimeException;
 
 class RouterOsCoaClient
@@ -30,8 +31,9 @@ class RouterOsCoaClient
 
         $port = (int) ($router->coa_port ?: 1700);
         $timeout = max(1, min((int) ($timeoutSeconds ?? $router->timeout ?? 5), 5));
+        $host = app(OutboundConnectionPolicy::class)->resolve($router->ip_address, $port, $router->tenant_id, configuredDestination: true);
         $connection = @stream_socket_client(
-            "udp://{$router->ip_address}:{$port}",
+            'udp://'.(str_contains($host, ':') ? '['.$host.']' : $host).':'.$port,
             $errno,
             $error,
             $timeout,

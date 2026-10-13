@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\Subscription;
+use App\Models\Tenant;
 use App\Support\Notifications\NotificationEventRegistry;
 use Carbon\CarbonInterface;
 use Illuminate\Database\QueryException;
@@ -14,6 +15,11 @@ class BillingService
 {
     public function createInvoiceForSubscription(Subscription $subscription, ?CarbonInterface $periodStart = null, bool $includeOneTimeItems = false): ?Invoice
     {
+        if (app(TenantContext::class)->id() === null) {
+            return app(TenantContext::class)->run($subscription->tenant_id, fn (): ?Invoice => $this->createInvoiceForSubscription($subscription, $periodStart, $includeOneTimeItems));
+        }
+        abort_unless(app(TenantContext::class)->id() === (string) $subscription->tenant_id, 403);
+
         $subscription->loadMissing(['customer.organization', 'plan', 'items']);
 
         if (! $subscription->isBillable()) {
@@ -21,8 +27,9 @@ class BillingService
         }
 
         return DB::transaction(function () use ($subscription, $periodStart, $includeOneTimeItems) {
-            $lockedSubscription = Subscription::withoutGlobalScopes()
+            $lockedSubscription = Subscription::withoutGlobalScopes()->where('tenant_id', tenant_id())
                 ->withoutTrashed()
+                ->where('tenant_id', $subscription->tenant_id)
                 ->with(['customer.organization', 'plan', 'items'])
                 ->lockForUpdate()
                 ->findOrFail($subscription->id);
@@ -42,7 +49,7 @@ class BillingService
 
             $periodEnd = $lockedSubscription->billingPeriodEndFor($periodStart)->startOfDay();
 
-            $existingInvoice = Invoice::withoutGlobalScopes()
+            $existingInvoice = Invoice::withoutGlobalScopes()->where('tenant_id', tenant_id())
                 ->where('tenant_id', $lockedSubscription->tenant_id)
                 ->where('subscription_id', $lockedSubscription->id)
                 ->whereDate('billing_period_start', $periodStart)
@@ -75,7 +82,7 @@ class BillingService
                     'status' => 'issued',
                 ]);
             } catch (QueryException $exception) {
-                $duplicate = Invoice::withoutGlobalScopes()
+                $duplicate = Invoice::withoutGlobalScopes()->where('tenant_id', tenant_id())
                     ->where('tenant_id', $lockedSubscription->tenant_id)
                     ->where('subscription_id', $lockedSubscription->id)
                     ->whereDate('billing_period_start', $periodStart)
@@ -127,10 +134,19 @@ class BillingService
 
     public function generateDueInvoices(?CarbonInterface $asOf = null): int
     {
+        if (app(TenantContext::class)->id() === null) {
+            $total = 0;
+            foreach (Tenant::query()->where('status', 'active')->cursor() as $tenant) {
+                $total += app(TenantContext::class)->run($tenant->id, fn (): int => $this->generateDueInvoices($asOf));
+            }
+
+            return $total;
+        }
+
         $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
         $created = 0;
 
-        Subscription::withoutGlobalScopes()
+        Subscription::withoutGlobalScopes()->where('tenant_id', tenant_id())
             ->withoutTrashed()
             ->with(['customer.organization', 'plan', 'items'])
             ->where('billing_enabled', true)
@@ -164,9 +180,18 @@ class BillingService
 
     public function markOverdueInvoices(?CarbonInterface $asOf = null): int
     {
+        if (app(TenantContext::class)->id() === null) {
+            $total = 0;
+            foreach (Tenant::query()->where('status', 'active')->cursor() as $tenant) {
+                $total += app(TenantContext::class)->run($tenant->id, fn (): int => $this->markOverdueInvoices($asOf));
+            }
+
+            return $total;
+        }
+
         $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
 
-        return Invoice::withoutGlobalScopes()
+        return Invoice::withoutGlobalScopes()->where('tenant_id', tenant_id())
             ->outstanding()
             ->whereDate('due_date', '<', $asOf)
             ->update(['status' => 'overdue']);
@@ -174,10 +199,19 @@ class BillingService
 
     public function suspendOverdueSubscriptions(?CarbonInterface $asOf = null): int
     {
+        if (app(TenantContext::class)->id() === null) {
+            $total = 0;
+            foreach (Tenant::query()->where('status', 'active')->cursor() as $tenant) {
+                $total += app(TenantContext::class)->run($tenant->id, fn (): int => $this->suspendOverdueSubscriptions($asOf));
+            }
+
+            return $total;
+        }
+
         $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
         $suspended = 0;
 
-        Subscription::withoutGlobalScopes()
+        Subscription::withoutGlobalScopes()->where('tenant_id', tenant_id())
             ->withoutTrashed()
             ->where('status', 'active')
             ->where('billing_enabled', true)
@@ -243,7 +277,7 @@ class BillingService
         do {
             $number = 'INV-'.now()->format('ymd').'-'.strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
         } while (
-            Invoice::withoutGlobalScopes()
+            Invoice::withoutGlobalScopes()->where('tenant_id', tenant_id())
                 ->where('tenant_id', $tenantId)
                 ->where('invoice_number', $number)
                 ->exists()

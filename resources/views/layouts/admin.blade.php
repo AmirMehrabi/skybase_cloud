@@ -253,7 +253,7 @@
     </div>
 
     <!-- Custom JavaScript for Mobile Menu -->
-    <script>
+    <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         // Check if RTL
         const isRtl = document.documentElement.dir === 'rtl' || document.body.style.direction === 'rtl';
         const translateClass = isRtl ? 'translate-x-full' : '-translate-x-full';
@@ -663,7 +663,7 @@
 
     <!-- Reports Sub-Sidebar JavaScript -->
     @if(request()->routeIs('admin.reports.*'))
-    <script>
+    <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         (function() {
             const closeReportsSidebar = document.getElementById('close-reports-sidebar');
             const backToDashboard = document.getElementById('back-to-dashboard');

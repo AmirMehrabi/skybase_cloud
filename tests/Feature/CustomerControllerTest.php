@@ -78,7 +78,7 @@ class CustomerControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 300',
             'status' => 'active',
             'billing_cycle' => 'monthly',
@@ -244,13 +244,13 @@ class CustomerControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $firstPlan = Plan::factory()->create([
+        $firstPlan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'status' => 'active',
             'billing_cycle' => 'monthly',
         ]);
 
-        $secondPlan = Plan::factory()->create([
+        $secondPlan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 300',
             'status' => 'active',
             'billing_cycle' => 'monthly',
@@ -381,7 +381,7 @@ class CustomerControllerTest extends TestCase
             'tax_exempt' => false,
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'status' => 'active',
             'billing_cycle' => 'monthly',
@@ -525,7 +525,7 @@ class CustomerControllerTest extends TestCase
 
         $this->bindFakeRouterOsClient();
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 500',
             'status' => 'active',
             'billing_cycle' => 'monthly',
@@ -674,7 +674,7 @@ class CustomerControllerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'name' => 'Fiber 100',
             'status' => 'active',
             'billing_cycle' => 'monthly',

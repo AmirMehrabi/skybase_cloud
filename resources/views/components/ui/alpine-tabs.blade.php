@@ -29,7 +29,7 @@ $defaultTab ??= array_key_first($tabs) ?? null;
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     // Expose activeTab to child components
     document.addEventListener('alpine:init', () => {
         Alpine.store('tabs', {

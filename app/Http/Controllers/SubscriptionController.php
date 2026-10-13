@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubscriptionRequest;
 use App\Http\Requests\Subscription\BulkDeleteSubscriptionsRequest;
+use App\Http\Requests\Subscription\RenewSubscriptionRequest;
+use App\Http\Requests\Subscription\RevealCredentialsRequest;
 use App\Http\Requests\Subscription\ShowSubscriptionRequest;
 use App\Http\Requests\Subscription\UpdateSubscriptionBillingRequest;
+use App\Http\Requests\Subscription\UpdateSubscriptionRequest;
 use App\Jobs\BulkDeleteModelsJob;
 use App\Jobs\Subscriptions\ActivateSubscriptionJob;
 use App\Jobs\Subscriptions\SuspendSubscriptionJob;
@@ -29,8 +32,10 @@ use App\Services\Monitoring\RrdToolService;
 use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
+use App\Services\SecurityEventLogger;
 use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
+use App\Services\SubscriptionRenewalService;
 use App\Services\SubscriptionSessionDisconnectService;
 use App\Services\SubscriptionUsageService;
 use App\Services\TaxResolverService;
@@ -44,7 +49,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -62,6 +66,16 @@ class SubscriptionController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function credentials(RevealCredentialsRequest $request, Subscription $subscription): JsonResponse
+    {
+        abort_unless((string) $subscription->tenant_id === (string) $request->user()->tenant_id, 403);
+        app(SecurityEventLogger::class)->record('credentials.revealed', [
+            'user_id' => $request->user()->id, 'tenant_id' => $subscription->tenant_id, 'resource_id' => $subscription->id, 'ip' => $request->ip(),
+        ]);
+
+        return response()->json(['password' => $subscription->pppoe_password])->header('Cache-Control', 'no-store');
+    }
+
     public function index(): View
     {
         return view('subscriptions.index');
@@ -77,7 +91,7 @@ class SubscriptionController extends Controller
         $subscriptions = Subscription::filter($filters)
             ->with(['customer', 'plan', 'router', 'activatedBy', 'suspendedBy'])
             ->orderBy('created_at', 'desc')
-            ->paginate($request->integer('per_page', 100))
+            ->paginate(max(1, config('security.enforce_resource_limits') ? min(100, $request->integer('per_page', 100)) : $request->integer('per_page', 100)))
             ->through(
                 fn ($subscription) => [
                     'id' => $subscription->id,
@@ -92,7 +106,8 @@ class SubscriptionController extends Controller
                     'bandwidth' => $subscription->plan ? $subscription->plan->download_speed.'↓/'.$subscription->plan->upload_speed.'↑ '.$subscription->plan->bandwidth_unit : 'N/A',
                     'router' => $subscription->router?->name ?? 'N/A',
                     'pppoe_username' => $subscription->pppoe_username,
-                    'pppoe_password' => $subscription->pppoe_password,
+                    ...(! config('security.redact_credentials') ? ['pppoe_password' => $subscription->pppoe_password] : []),
+
                     'status' => $subscription->status,
                     'connection_status' => $subscription->connection_status,
                     'connection_status_checked_at' => $subscription->connection_status_checked_at?->format('M d, Y H:i'),
@@ -181,8 +196,10 @@ class SubscriptionController extends Controller
 
         // Set base price from plan
         $plan = Plan::query()->findOrFail($validated['plan_id']);
-        $validated['billing_cycle'] = $plan->billing_cycle;
-        $validated['grace_period_days'] = $plan->grace_period_days;
+        if (! $customer->organization?->billing_enabled) {
+            $validated['billing_cycle'] = $plan->billing_cycle;
+            $validated['grace_period_days'] = $plan->grace_period_days;
+        }
         $validated['base_price'] = $plan->price;
 
         // Handle activation
@@ -319,7 +336,7 @@ class SubscriptionController extends Controller
         ]);
         $activityActions = $activityLogFormatter->eventsForSubject($subscription, $subscription->tenant_id);
         $billingInvoices = $this->billingInvoicesForSubscription($subscription);
-        $usageSummary = $this->usageSummaryForSubscription($subscription);
+        $usageSummary = $this->usageSummaryForSubscription($subscription, $currentUsageCycle);
         $usageSessions = $this->radiusAccountingUsage->paginatedSessionsForSubscription(
             $subscription,
             $filters,
@@ -409,7 +426,7 @@ class SubscriptionController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
+    public function update(UpdateSubscriptionRequest $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
         $effectiveRouterId = $request->input('router_id', $subscription->router_id);
         $originalPlanId = (string) $subscription->plan_id;
@@ -417,41 +434,10 @@ class SubscriptionController extends Controller
         $originalGracePeriodDays = (string) $subscription->grace_period_days;
         $originalBillingEnabled = (bool) $subscription->billing_enabled;
 
-        $validated = $request->validate([
-            'plan_id' => 'nullable|exists:plans,id',
-            'name' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:255',
-            'service_type' => 'nullable|in:hotspot,pppoe,vpn',
-            'router_id' => 'nullable|exists:routers,id',
-            'access_point_id' => 'nullable|exists:access_points,id',
-            'site' => 'nullable|string|max:255',
-            'ip_pool_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('ip_pools', 'id')->where(fn ($query) => $query->where(function ($query) use ($effectiveRouterId): void {
-                    $query->where('router_id', $effectiveRouterId)
-                        ->orWhere('all_devices', true);
-                })),
-            ],
-            'ip_address' => 'nullable|ip|max:255',
-            'pppoe_username' => 'nullable|string|max:255',
-            'pppoe_password' => 'nullable|string|max:255',
-            'billing_cycle' => 'nullable|in:daily,weekly,monthly,quarterly,yearly',
-            'billing_enabled' => 'nullable|boolean',
-            'auto_suspension_enabled' => 'nullable|boolean',
-            'grace_period_days' => 'nullable|integer|min:0|max:365',
-            'next_billing_date' => 'nullable|date',
-            'status' => 'nullable|in:pending,active,suspended,cancelled',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after:start_date',
-            'notes' => 'nullable|string',
-            'sync_ip_routes' => 'nullable|boolean',
-            'ip_routes' => 'nullable|array',
-            'ip_routes.*' => 'array',
-            'ip_routes.*.ip_pool_id' => 'nullable|integer|exists:ip_pools,id',
-            'ip_routes.*.ip_address' => 'nullable|ip|max:255',
-            'ip_routes.*.cidr' => 'nullable|integer|min:1|max:32',
-        ]);
+        $validated = $request->validated();
+        if (! $request->filled('pppoe_password')) {
+            unset($validated['pppoe_password']);
+        }
         $ipRoutesProvided = $request->boolean('sync_ip_routes') || array_key_exists('ip_routes', $validated);
         $ipRoutes = $this->normalizedIpRouteRows($validated['ip_routes'] ?? []);
         unset($validated['sync_ip_routes'], $validated['ip_routes']);
@@ -824,6 +810,29 @@ class SubscriptionController extends Controller
         return redirect()
             ->route('subscriptions.show', $subscription)
             ->with('success', $message);
+    }
+
+    public function renewalPreview(Request $request, Subscription $subscription, SubscriptionRenewalService $renewals): JsonResponse
+    {
+        abort_unless($request->user()->tenant_id === $subscription->tenant_id, 403);
+
+        return response()->json($renewals->preview($subscription))->header('Cache-Control', 'no-store');
+    }
+
+    public function renew(RenewSubscriptionRequest $request, Subscription $subscription, SubscriptionRenewalService $renewals): JsonResponse|RedirectResponse
+    {
+        $invoice = $renewals->renew($request, $subscription);
+        $message = $invoice ? 'Subscription renewed and renewal invoice generated.' : 'Subscription renewed. Billing is disabled; no invoice was generated.';
+        $request->session()->flash('success', $message);
+        if ($invoice) {
+            $request->session()->flash('renewal_invoice_id', $invoice->id);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message, 'redirect' => route('subscriptions.show', $subscription)]);
+        }
+
+        return redirect()->route('subscriptions.show', $subscription);
     }
 
     /**
@@ -1303,23 +1312,27 @@ class SubscriptionController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function usageSummaryForSubscription(Subscription $subscription): array
+    private function usageSummaryForSubscription(Subscription $subscription, ?SubscriptionUsageCycle $cycle = null): array
     {
         $sessions = $this->radiusAccountingUsage->sessionsForSubscription(
             $subscription,
-            $this->usageWindowStartForSubscription($subscription),
+            $cycle?->starts_at ?? $this->usageWindowStartForSubscription($subscription),
             now(),
             500,
         );
         $downloadBytes = (int) $sessions->sum('download');
         $uploadBytes = (int) $sessions->sum('upload');
+        if ($cycle?->accounting_baselines !== null) {
+            $downloadBytes = $cycle->used_download_bytes;
+            $uploadBytes = $cycle->used_upload_bytes;
+        }
         $totalBytes = $downloadBytes + $uploadBytes;
         $quotaBytes = $this->quotaBytesForPlan($subscription->plan);
         $peakSession = $sessions->sortByDesc('total')->first();
         $latestSession = $sessions->sortByDesc('last_activity_sort')->first();
 
         return [
-            'window' => $this->usageWindowLabelForSubscription($subscription),
+            'window' => $cycle ? $cycle->starts_at->format('M d, Y H:i').' - '.now()->format('M d, Y H:i') : $this->usageWindowLabelForSubscription($subscription),
             'download_gb' => round($downloadBytes / 1073741824, 2),
             'upload_gb' => round($uploadBytes / 1073741824, 2),
             'total_gb' => round($totalBytes / 1073741824, 2),

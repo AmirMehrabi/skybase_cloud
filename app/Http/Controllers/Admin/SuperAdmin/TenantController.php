@@ -3,25 +3,33 @@
 namespace App\Http\Controllers\Admin\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\SuperAdmin\UpdateTenantRequest;
+use App\Models\Plan;
 use App\Models\Tenant;
+use App\Services\SecurityEventLogger;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class TenantController extends Controller
 {
     public function index(): View
     {
-        $tenants = Tenant::with('plan', 'users')
-            ->withCount('users', 'customers', 'routers')
+        Gate::authorize('manage-central-tenants');
+        $tenants = Tenant::query()
             ->latest()
             ->paginate(20);
+
+        foreach ($tenants as $tenant) {
+            $tenant->load(['plan', 'users'])->loadCount(['users', 'customers', 'routers']);
+        }
 
         return view('admin.super-admin.tenants.index', compact('tenants'));
     }
 
     public function show(Tenant $tenant): View
     {
+        Gate::authorize('manage-central-tenants');
         $tenant->load(['plan', 'users', 'settings', 'roles']);
         $userCount = $tenant->users()->count();
         $customerCount = $tenant->customers()->count();
@@ -32,26 +40,19 @@ class TenantController extends Controller
 
     public function edit(Tenant $tenant): View
     {
-        $plans = \App\Models\Plan::active()->ordered()->get();
+        Gate::authorize('manage-central-tenants');
+        $plans = Plan::query()->where('tenant_id', $tenant->id)->active()->ordered()->get();
 
         return view('admin.super-admin.tenants.edit', compact('tenant', 'plans'));
     }
 
-    public function update(Request $request, Tenant $tenant): RedirectResponse
+    public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'company_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:tenants,email,'.$tenant->id],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'country' => ['nullable', 'string', 'max:100'],
-            'timezone' => ['required', 'string', 'max:50'],
-            'status' => ['required', 'in:pending,active,suspended'],
-            'plan_id' => ['nullable', 'exists:plans,id'],
-            'trial_ends_at' => ['nullable', 'date'],
-        ]);
+        Gate::authorize('manage-central-tenants');
+        $validated = $request->validated();
 
         $tenant->update($validated);
+        app(SecurityEventLogger::class)->record('central.tenant.updated', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
 
         return redirect()
             ->route('admin.super-admin.tenants.show', $tenant)
@@ -60,7 +61,9 @@ class TenantController extends Controller
 
     public function suspend(Tenant $tenant): RedirectResponse
     {
+        Gate::authorize('manage-central-tenants');
         $tenant->update(['status' => 'suspended']);
+        app(SecurityEventLogger::class)->record('central.tenant.suspended', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
 
         return redirect()
             ->route('admin.super-admin.tenants.show', $tenant)
@@ -69,7 +72,9 @@ class TenantController extends Controller
 
     public function activate(Tenant $tenant): RedirectResponse
     {
+        Gate::authorize('manage-central-tenants');
         $tenant->update(['status' => 'active']);
+        app(SecurityEventLogger::class)->record('central.tenant.activated', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
 
         return redirect()
             ->route('admin.super-admin.tenants.show', $tenant)
@@ -78,6 +83,8 @@ class TenantController extends Controller
 
     public function destroy(Tenant $tenant): RedirectResponse
     {
+        Gate::authorize('manage-central-tenants');
+        app(SecurityEventLogger::class)->record('central.tenant.deleted', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
         $tenant->delete();
 
         return redirect()

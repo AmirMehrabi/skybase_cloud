@@ -14,6 +14,12 @@ class SubscriptionIpRouteSyncService
 {
     public function syncRoutes(Subscription $subscription): void
     {
+        if (app(TenantContext::class)->id() === null) {
+            $subscription->unsetRelation('ipRoutes')->unsetRelation('customer')->unsetRelation('plan');
+            app(TenantContext::class)->run($subscription->tenant_id, fn () => $this->syncRoutes($subscription));
+
+            return;
+        }
         $subscription->loadMissing(['customer.organization', 'plan', 'ipRoutes']);
 
         Log::info('Subscription IP route RADIUS sync started.', [

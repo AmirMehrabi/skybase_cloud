@@ -291,9 +291,9 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     window.billingReports = @json($billingReports ?? []);
 </script>
-<script src="{{ asset('js/billing/reports.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/reports.js') }}"></script>
 @endpush
 @endsection

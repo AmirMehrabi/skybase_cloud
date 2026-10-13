@@ -24,7 +24,7 @@ class RouterFactory extends Factory
             'model' => fake()->randomElement(['CCR1036-12G-4S', 'CCR1016-12G', 'RB4011iGS+', 'RB750Gr3', 'CCR2116-12G-4S+']),
             'vendor' => fake()->randomElement(['Mikrotik', 'Cisco', 'Juniper', 'Huawei']),
             'ip_address' => '192.168.'.fake()->numberBetween(1, 254).'.'.fake()->numberBetween(1, 254),
-            'api_port' => 8728,
+            'api_port' => config('security.require_router_tls') ? 8729 : 8728,
             'api_username' => 'admin',
             'api_password' => fake()->password(),
             'coa_port' => 1700,

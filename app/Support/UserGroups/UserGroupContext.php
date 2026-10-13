@@ -6,7 +6,7 @@ class UserGroupContext
 {
     public function shouldScope(): bool
     {
-        return $this->principal() !== null && ! $this->bypassesScope();
+        return $this->staffUser() !== null && ! $this->bypassesScope();
     }
 
     public function groupId(): ?int
@@ -27,7 +27,7 @@ class UserGroupContext
     {
         $user = $this->staffUser();
 
-        return $user !== null && $user->isOwner();
+        return $user !== null && ($user->isOwner() || $user->isCentralAdmin());
     }
 
     private function principal(): mixed
@@ -37,7 +37,7 @@ class UserGroupContext
 
     private function staffUser(): mixed
     {
-        $guard = auth()->guard();
+        $guard = auth('web');
 
         return method_exists($guard, 'hasUser') && $guard->hasUser() ? $guard->user() : null;
     }

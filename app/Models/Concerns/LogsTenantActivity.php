@@ -40,6 +40,6 @@ trait LogsTenantActivity
      */
     protected function activityLogExcept(): array
     {
-        return ['updated_at', 'deleted_at'];
+        return ['updated_at', 'deleted_at', 'password', 'pppoe_password', 'api_password', 'coa_secret', 'mfa_secret', 'mfa_recovery_codes'];
     }
 }

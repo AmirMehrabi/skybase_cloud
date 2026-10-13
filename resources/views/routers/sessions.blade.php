@@ -187,7 +187,7 @@
 </div>
 
 @push('scripts')
-<script src="{{ asset('js/routers/show-data.js') }}"></script>
-<script src="{{ asset('js/routers/sessions.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/routers/show-data.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/routers/sessions.js') }}"></script>
 @endpush
 @endsection

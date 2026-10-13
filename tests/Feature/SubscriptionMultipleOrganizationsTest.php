@@ -243,7 +243,7 @@ class SubscriptionMultipleOrganizationsTest extends TestCase
      */
     private function createServiceDependencies(Tenant $tenant): array
     {
-        $plan = Plan::factory()->create([
+        $plan = Plan::factory()->create(['tenant_id' => $tenant->id,
             'tenant_id' => $tenant->id,
             'status' => 'active',
             'price' => 50,

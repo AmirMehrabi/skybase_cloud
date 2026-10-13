@@ -231,6 +231,6 @@
 </div>
 
 @push('scripts')
-<script src="{{ asset('js/billing/invoices-edit.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/invoices-edit.js') }}"></script>
 @endpush
 @endsection

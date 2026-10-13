@@ -24,6 +24,7 @@ class RouterStatusProbe
         $errorNumber = 0;
         $errorMessage = '';
 
+        $host = app(OutboundConnectionPolicy::class)->resolve($host, $port, $router->tenant_id, configuredDestination: true);
         $connection = @fsockopen($host, $port, $errorNumber, $errorMessage, $timeout);
 
         if (is_resource($connection)) {

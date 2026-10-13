@@ -7,6 +7,7 @@ use App\Models\IpAddress;
 use App\Models\Organization;
 use App\Models\Plan;
 use App\Models\Router;
+use App\Services\SafeRouterUsername;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -49,21 +50,21 @@ class StoreSubscriptionRequest extends FormRequest
             'service_type' => 'required|in:hotspot,pppoe,vpn',
             'plan_id' => ['required', Rule::exists('plans', 'id')->where('tenant_id', $tenantId)],
             'router_id' => ['required', Rule::exists('routers', 'id')->where('tenant_id', $tenantId)],
-            'access_point_id' => 'nullable|exists:access_points,id',
+            'access_point_id' => ['nullable', Rule::exists('access_points', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'site' => 'nullable|string|max:255',
             'connection_type' => 'required|in:pppoe,dhcp,static',
             // PPP credentials (required for PPP connections)
-            'pppoe_username' => $connectionType === 'pppoe' ? 'required|string|max:255' : 'nullable|string|max:255',
-            'pppoe_password' => $connectionType === 'pppoe' ? 'required|string|max:255' : 'nullable|string|max:255',
+            'pppoe_username' => [$connectionType === 'pppoe' ? 'required' : 'nullable', 'string', 'max:255', SafeRouterUsername::validationRule()],
+            'pppoe_password' => [$connectionType === 'pppoe' ? 'required' : 'nullable', 'string', 'max:255'],
             // MAC address (required for DHCP)
             'mac_address' => $connectionType === 'dhcp' ? 'required|mac_address' : 'nullable|mac_address',
             // IP management
             'ip_management' => 'nullable|in:system,router',
-            'ip_pool_id' => $ipManagement === 'system' ? 'required|exists:ip_pools,id' : 'nullable|exists:ip_pools,id',
+            'ip_pool_id' => $ipManagement === 'system' ? ['required', Rule::exists('ip_pools', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)] : ['nullable', Rule::exists('ip_pools', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'ip_address' => 'nullable|ip|max:255',
             'ip_routes' => 'nullable|array',
             'ip_routes.*' => 'array',
-            'ip_routes.*.ip_pool_id' => 'nullable|integer|exists:ip_pools,id',
+            'ip_routes.*.ip_pool_id' => ['nullable', 'integer', Rule::exists('ip_pools', 'id')->where('tenant_id', tenant_id() ?? $this->user()?->tenant_id)],
             'ip_routes.*.ip_address' => 'nullable|ip|max:255',
             'ip_routes.*.cidr' => 'nullable|integer|min:1|max:32',
             'billing_cycle' => 'nullable|in:daily,weekly,monthly,quarterly,yearly',

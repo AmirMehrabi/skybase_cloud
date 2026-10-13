@@ -64,7 +64,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     function supportTicketCreate(subscriptions, initialSubscriptionId, teamAgents) {
         return {
             open: false,

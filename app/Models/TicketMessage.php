@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Scopes\TenantScope;
 use Database\Factories\TicketMessageFactory;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TicketMessage extends Model
 {
+    use BelongsToTenant;
     use BelongsToUserGroup;
 
     /** @use HasFactory<TicketMessageFactory> */
@@ -40,13 +42,7 @@ class TicketMessage extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope('tenant', function (Builder $query): void {
-            $tenantId = tenant_id() ?? auth()->user()?->tenant_id ?? auth('customer')->user()?->tenant_id;
-
-            if ($tenantId) {
-                $query->where($query->qualifyColumn('tenant_id'), $tenantId);
-            }
-        });
+        static::addGlobalScope('tenant', TenantScope::apply(...));
     }
 
     public function ticket(): BelongsTo
@@ -62,11 +58,11 @@ class TicketMessage extends Model
     public function authorName(): string
     {
         if ($this->author_type === 'customer' && $this->author_id) {
-            return Customer::withoutGlobalScopes()->find($this->author_id)?->full_name ?? 'Customer';
+            return Customer::withoutGlobalScopes()->where('tenant_id', $this->tenant_id)->find($this->author_id)?->full_name ?? 'Customer';
         }
 
         if ($this->author_type === 'user' && $this->author_id) {
-            return User::query()->find($this->author_id)?->name ?? 'Staff';
+            return User::query()->where('tenant_id', $this->tenant_id)->find($this->author_id)?->name ?? 'Staff';
         }
 
         return 'System';

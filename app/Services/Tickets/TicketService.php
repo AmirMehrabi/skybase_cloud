@@ -182,7 +182,8 @@ class TicketService
 
     private function storeAttachment(Ticket $ticket, TicketMessage $message, UploadedFile $file, string $uploaderType, ?int $uploaderId, string $visibility): TicketAttachment
     {
-        $path = $file->store("tickets/{$ticket->tenant_id}/{$ticket->ticket_number}", 'public');
+        $disk = config('security.attachment_disk');
+        $path = $file->store("tickets/{$ticket->tenant_id}/{$ticket->ticket_number}", $disk);
 
         return TicketAttachment::create([
             'tenant_id' => $ticket->tenant_id,
@@ -191,9 +192,9 @@ class TicketService
             'uploader_type' => $uploaderType === 'customer' ? 'customer' : 'user',
             'uploader_id' => $uploaderId,
             'original_name' => $file->getClientOriginalName(),
-            'disk' => 'public',
+            'disk' => $disk,
             'path' => $path,
-            'mime_type' => $file->getClientMimeType(),
+            'mime_type' => $file->getMimeType(),
             'size' => $file->getSize() ?: 0,
             'visibility' => $visibility,
         ]);

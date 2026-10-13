@@ -27,7 +27,7 @@
         'ip_address' => $subscription->ip_address ?? 'N/A',
         'mac_address' => $subscription->mac_address ?? 'N/A',
         'pppoe_username' => $subscription->pppoe_username ?? 'N/A',
-        'pppoe_password' => $subscription->pppoe_password ?? 'N/A',
+        'pppoe_password' => config('security.redact_credentials') ? 'Protected' : ($subscription->pppoe_password ?? ''),
         'start_date' => optional(
             $subscription->start_date ?? ($subscription->activation_date ?? $subscription->created_at),
         )->toDateString(),
@@ -84,8 +84,9 @@
     };
 
     if (!function_exists('getStatusBadgeClass')) {
-        function getStatusBadgeClass($status)
-        {
+
+$getStatusBadgeClass = static function (mixed $status): mixed
+{
             $classes = [
                 'active' => 'bg-green-100 text-green-800 border-green-200',
                 'pending' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -96,11 +97,14 @@
             ];
 
             return $classes[$status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-        }
+        };
     }
 @endphp
 
 @section('content')
+@if(auth('web')->user()->hasPermission('subscriptions.credentials'))
+    <x-subscription-credentials :subscription="$subscriptionModel" />
+@endif
     <div x-data="{
         tab: @js(request('tab', 'overview')),
         usageView: @js(request('usage_view', 'table')),
@@ -115,7 +119,7 @@
             open: {{ $errors->has('pppoe_username') || $errors->has('pppoe_password') ? 'true' : 'false' }},
             form: {
                 pppoe_username: @js(old('pppoe_username', $subscriptionModel->pppoe_username ?? '')),
-                pppoe_password: @js(old('pppoe_password', $subscriptionModel->pppoe_password ?? '')),
+                pppoe_password: @js(config('security.redact_credentials') ? '' : ($subscriptionModel->pppoe_password ?? '')),
             },
             submitting: false,
             message: null,
@@ -479,6 +483,13 @@
             };
         },
     }" x-init="initBandwidth()" class="space-y-6">
+        @if (session('renewal_invoice_id'))
+            <div class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                Renewal invoice generated.
+                <a href="{{ route('billing.invoices.show', session('renewal_invoice_id')) }}" class="font-medium underline">View renewal invoice</a>
+            </div>
+        @endif
+
         <!-- Top Header Card -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -494,7 +505,7 @@
                         <div class="flex items-center gap-3">
                             <h1 class="text-2xl font-bold text-gray-900">{{ $subscription['name'] }}</h1>
                             <span
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border {{ getStatusBadgeClass($subscription['status']) }}">
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium border {{ $getStatusBadgeClass($subscription['status']) }}">
                                 {{ ucfirst($subscription['status']) }}
                             </span>
                         </div>
@@ -551,6 +562,10 @@
                     </svg>
                     Manage Credentials
                 </button>
+
+                @if ($subscription['status'] !== 'cancelled' && auth()->user()->hasPermission('subscriptions.actions'))
+                    <x-subscription-renewal :subscription="$subscriptionModel" />
+                @endif
 
                 @if ($subscription['status'] === 'active')
                     <form method="POST" action="{{ route('subscriptions.suspend', $subscription['id']) }}">
@@ -1007,7 +1022,7 @@
                                 <div class="flex justify-between">
                                     <dt class="text-sm text-gray-500">Status</dt>
                                     <dd><span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($subscription['status']) }}">{{ ucfirst($subscription['status']) }}</span>
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $getStatusBadgeClass($subscription['status']) }}">{{ ucfirst($subscription['status']) }}</span>
                                     </dd>
                                 </div>
                                 <div class="flex justify-between">
@@ -1311,7 +1326,7 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
-                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
+                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
@@ -1738,7 +1753,7 @@
                                 <h3 class="text-lg font-semibold text-gray-900">Recent RADIUS Auth Attempts</h3>
                                 <p class="text-sm text-gray-500 mt-1">
                                     Latest radpostauth rows for {{ $subscription['pppoe_username'] }}.
-                                    Entries are retained for 30 days.
+                                    Entries are retained for 5 minutes.
                                 </p>
                             </div>
                             <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
@@ -1801,7 +1816,7 @@
                                         <tr>
                                             <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
                                                 No authentication attempts have been recorded for this subscription in
-                                                the retained 30-day history.
+                                                the retained five-minute history.
                                             </td>
                                         </tr>
                                     @endforelse
@@ -1971,7 +1986,7 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
-                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
+                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $getStatusBadgeClass($invoice['status']) }}">{{ ucfirst($invoice['status']) }}</span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span

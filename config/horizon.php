@@ -83,7 +83,7 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    'middleware' => ['web', 'auth:web', 'active_account', 'auth.session', 'mfa'],
 
     /*
     |--------------------------------------------------------------------------

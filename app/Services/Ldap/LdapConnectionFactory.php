@@ -2,6 +2,7 @@
 
 namespace App\Services\Ldap;
 
+use App\Services\OutboundConnectionPolicy;
 use Illuminate\Support\Facades\Log;
 use LdapRecord\Connection;
 use LdapRecord\Container;
@@ -15,17 +16,33 @@ class LdapConnectionFactory
      */
     public function register(string $tenantId, array $connectionSettings): string
     {
+        if (config('security.require_ldap_tls') && ! ($connectionSettings['use_tls'] ?? false) && ! ($connectionSettings['use_starttls'] ?? false)) {
+            throw new \RuntimeException('Encrypted LDAP is required. Enable TLS or StartTLS.');
+        }
+        $port = (int) ($connectionSettings['port'] ?? (($connectionSettings['use_tls'] ?? false) ? 636 : 389));
+        $hosts = $this->hosts($connectionSettings);
+        foreach ($hosts as $host) {
+            app(OutboundConnectionPolicy::class)->resolve($host, $port, $tenantId, configuredDestination: true);
+        }
+
         $name = 'tenant_'.str_replace('-', '_', $tenantId);
         $config = [
-            'hosts' => $this->hosts($connectionSettings),
+            'hosts' => $hosts,
             'username' => $connectionSettings['username'] ?? null,
             'password' => $connectionSettings['password'] ?? null,
-            'port' => (int) ($connectionSettings['port'] ?? 389),
+            'port' => $port,
             'base_dn' => $connectionSettings['base_dn'] ?? null,
             'timeout' => (int) ($connectionSettings['timeout'] ?? 5),
             'use_tls' => (bool) ($connectionSettings['use_tls'] ?? false),
             'use_starttls' => (bool) ($connectionSettings['use_starttls'] ?? false),
         ];
+
+        if (config('security.require_ldap_tls')) {
+            $config['options'][LDAP_OPT_X_TLS_REQUIRE_CERT] = LDAP_OPT_X_TLS_DEMAND;
+        }
+        if (config('security.ldap_ca_file')) {
+            $config['options'][LDAP_OPT_X_TLS_CACERTFILE] = config('security.ldap_ca_file');
+        }
 
         Container::addConnection(new Connection($config), $name);
 

@@ -3,6 +3,7 @@
 namespace App\Services\RouterOs;
 
 use App\Models\Router;
+use App\Services\OutboundConnectionPolicy;
 use RuntimeException;
 
 class RouterOsClient
@@ -31,28 +32,40 @@ class RouterOsClient
      */
     public function connect(Router $router, ?int $timeoutSeconds = null)
     {
-        $host = $router->ip_address;
+        $requireTls = (bool) config('security.require_router_tls');
+        $peerName = config('security.router_tls_peer_names.'.$router->id, $router->ip_address);
+        $port = (int) ($router->api_port ?: ($requireTls ? 8729 : 8728));
+        if ($requireTls && $port === 8728) {
+            throw new RuntimeException('Plaintext RouterOS API is disabled. Configure API-SSL.');
+        }
         $timeout = max(1, (int) ($timeoutSeconds ?? $router->timeout ?? 30));
-
-        $ports = array_values(array_unique(array_filter([
-            (int) ($router->api_port ?: 8728),
-            8729,
-        ])));
-        $errors = [];
-
-        foreach ($ports as $port) {
-            $connection = @stream_socket_client("tcp://{$host}:{$port}", $errno, $error, $timeout);
-
-            if ($connection) {
+        $ports = $requireTls ? [$port] : array_values(array_unique([$port, 8729]));
+        foreach ($ports as $candidatePort) {
+            $host = app(OutboundConnectionPolicy::class)->resolve($router->ip_address, $candidatePort, $router->tenant_id, configuredDestination: true);
+            $address = str_contains($host, ':') ? '['.$host.']' : $host;
+            $options = ['verify_peer' => true, 'verify_peer_name' => true, 'allow_self_signed' => false, 'peer_name' => $peerName];
+            if (config('security.router_tls_ca_file')) {
+                $options['cafile'] = config('security.router_tls_ca_file');
+            }
+            $context = stream_context_create(['ssl' => $options]);
+            $connection = $this->openConnection(($requireTls ? 'tls' : 'tcp').'://'.$address.':'.$candidatePort, $timeout, $context);
+            if (is_resource($connection)) {
                 stream_set_timeout($connection, $timeout);
 
                 return $connection;
             }
-
-            $errors[] = "{$host}:{$port} - {$error}";
         }
 
-        throw new RuntimeException('Unable to connect to RouterOS API. Tried '.implode('; ', $errors), $errno ?? 0);
+        throw new RuntimeException('Unable to establish a RouterOS connection.');
+    }
+
+    /**
+     * @param  resource  $context
+     * @return resource|false
+     */
+    protected function openConnection(string $address, int $timeout, mixed $context): mixed
+    {
+        return @stream_socket_client($address, $errno, $error, $timeout, STREAM_CLIENT_CONNECT, $context);
     }
 
     /**
