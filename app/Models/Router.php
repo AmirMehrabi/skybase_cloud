@@ -4,8 +4,10 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Concerns\HashesPasswordCredentials;
 use App\Models\Scopes\TenantScope;
 use App\Services\CompatibleSecretCast;
+use App\Services\CredentialVisibility;
 use Database\Factories\RouterFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,9 +20,10 @@ class Router extends Model
 {
     use BelongsToTenant;
     use BelongsToUserGroup;
-
     /** @use HasFactory<RouterFactory> */
     use HasFactory;
+
+    use HashesPasswordCredentials;
 
     /**
      * The attributes that are mass assignable.
@@ -70,16 +73,24 @@ class Router extends Model
         'timeout',
     ];
 
+    /** @var list<string> */
+    protected $hidden = ['api_password_hash'];
+
+    protected function credentialPasswordColumn(): string
+    {
+        return 'api_password';
+    }
+
+    public function getHidden(): array
+    {
+        return CredentialVisibility::passwordsRedacted() ? array_merge(parent::getHidden(), ['api_password', 'coa_secret']) : parent::getHidden();
+    }
+
     /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
      */
-    public function getHidden(): array
-    {
-        return config('security.redact_credentials') ? array_merge(parent::getHidden(), ['api_password', 'coa_secret']) : parent::getHidden();
-    }
-
     protected function casts(): array
     {
         return [

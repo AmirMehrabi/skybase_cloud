@@ -12,6 +12,7 @@ use App\Models\Plan;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
+use App\Services\CredentialVisibility;
 use App\Services\RadiusProvisioningService;
 use App\Services\SafeRouterUsername;
 use App\Services\SpreadsheetSecurity;
@@ -216,7 +217,7 @@ class SpreadsheetImportExportService
                     $subscription->mac_address,
                     $subscription->ip_management,
                     $subscription->pppoe_username,
-                    config('security.redact_credentials') ? null : $subscription->pppoe_password,
+                    CredentialVisibility::passwordsRedacted() ? null : $subscription->pppoe_password,
                     $subscription->base_price,
                     $subscription->discount_amount,
                     $subscription->discount_type,

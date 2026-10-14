@@ -28,6 +28,7 @@ use App\Models\SubscriptionItem;
 use App\Models\SubscriptionUsageCycle;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
+use App\Services\CredentialVisibility;
 use App\Services\Monitoring\RrdToolService;
 use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
@@ -106,7 +107,7 @@ class SubscriptionController extends Controller
                     'bandwidth' => $subscription->plan ? $subscription->plan->download_speed.'↓/'.$subscription->plan->upload_speed.'↑ '.$subscription->plan->bandwidth_unit : 'N/A',
                     'router' => $subscription->router?->name ?? 'N/A',
                     'pppoe_username' => $subscription->pppoe_username,
-                    ...(! config('security.redact_credentials') ? ['pppoe_password' => $subscription->pppoe_password] : []),
+                    ...(! CredentialVisibility::passwordsRedacted() ? ['pppoe_password' => $subscription->pppoe_password] : []),
 
                     'status' => $subscription->status,
                     'connection_status' => $subscription->connection_status,

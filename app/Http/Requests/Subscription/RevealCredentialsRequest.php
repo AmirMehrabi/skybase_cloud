@@ -8,7 +8,8 @@ class RevealCredentialsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasPermission('subscriptions.credentials') === true;
+        return ! config('security.password_encryption', false)
+            && $this->user()?->hasPermission('subscriptions.credentials') === true;
     }
 
     public function rules(): array

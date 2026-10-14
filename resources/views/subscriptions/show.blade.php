@@ -27,7 +27,7 @@
         'ip_address' => $subscription->ip_address ?? 'N/A',
         'mac_address' => $subscription->mac_address ?? 'N/A',
         'pppoe_username' => $subscription->pppoe_username ?? 'N/A',
-        'pppoe_password' => config('security.redact_credentials') ? 'Protected' : ($subscription->pppoe_password ?? ''),
+        'pppoe_password' => \App\Services\CredentialVisibility::passwordsRedacted() ? '••••••••' : ($subscription->pppoe_password ?? ''),
         'start_date' => optional(
             $subscription->start_date ?? ($subscription->activation_date ?? $subscription->created_at),
         )->toDateString(),
@@ -119,7 +119,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
             open: {{ $errors->has('pppoe_username') || $errors->has('pppoe_password') ? 'true' : 'false' }},
             form: {
                 pppoe_username: @js(old('pppoe_username', $subscriptionModel->pppoe_username ?? '')),
-                pppoe_password: @js(config('security.redact_credentials') ? '' : ($subscriptionModel->pppoe_password ?? '')),
+                pppoe_password: @js(\App\Services\CredentialVisibility::passwordsRedacted() ? '' : ($subscriptionModel->pppoe_password ?? '')),
             },
             submitting: false,
             message: null,
@@ -1093,7 +1093,11 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                                 class="font-mono text-sm font-medium text-gray-900">{{ $subscription['pppoe_username'] }}</span>
                                         </button>
                                         <button type="button"
+                                            @if(!\App\Services\CredentialVisibility::passwordsRedacted())
                                             @click="copyCredential('password', @js($subscription['pppoe_password']))"
+                                            @else
+                                            disabled
+                                            @endif
                                             class="w-full inline-flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left hover:bg-gray-100 transition-colors">
                                             <span class="text-xs text-gray-500 uppercase tracking-wide">Password</span>
                                             <span

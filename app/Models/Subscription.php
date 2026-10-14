@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\BelongsToUserGroup;
+use App\Models\Concerns\HashesPasswordCredentials;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Models\Scopes\TenantScope;
 use App\Services\CompatibleSecretCast;
+use App\Services\CredentialVisibility;
 use App\Services\RadiusProvisioningService;
 use App\Services\SafeRouterUsername;
 use App\Services\SubscriptionIpRouteSyncService;
@@ -28,17 +30,25 @@ class Subscription extends Model implements LdapImportable
     use BelongsToTenant;
     use BelongsToUserGroup;
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
+    use HashesPasswordCredentials;
 
     protected $fillable = ['tenant_id', 'user_group_id', 'customer_id', 'organization_id', 'subscription_code', 'name', 'phone', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'auto_suspension_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
 
     protected function activityLogExcept(): array
     {
-        return ['pppoe_password', 'updated_at', 'deleted_at'];
+        return ['pppoe_password', 'pppoe_password_hash', 'updated_at', 'deleted_at'];
+    }
+
+    protected $hidden = ['pppoe_password_hash'];
+
+    protected function credentialPasswordColumn(): string
+    {
+        return 'pppoe_password';
     }
 
     public function getHidden(): array
     {
-        return config('security.redact_credentials') ? array_merge(parent::getHidden(), ['pppoe_password']) : parent::getHidden();
+        return CredentialVisibility::passwordsRedacted() ? array_merge(parent::getHidden(), ['pppoe_password']) : parent::getHidden();
     }
 
     protected function casts(): array

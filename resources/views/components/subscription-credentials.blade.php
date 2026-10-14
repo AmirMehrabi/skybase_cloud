@@ -1,4 +1,7 @@
 @props(['subscription'])
+@if(config('security.password_encryption', false))
+    <code>••••••••</code>
+@else
 <div x-data="{ password: null, currentPassword: '', error: '', async reveal() {
     this.error = ''; this.password = null;
     const response = await fetch(@js(route('subscriptions.credentials', $subscription)), {
@@ -17,3 +20,4 @@
     <p x-text="error" role="alert"></p>
     <code x-text="password" x-show="password !== null" x-cloak></code>
 </div>
+@endif

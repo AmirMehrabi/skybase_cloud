@@ -110,7 +110,7 @@ class ActivityLogFormatter
             ->keys()
             ->merge($old->keys())
             ->unique()
-            ->reject(fn (string $attribute): bool => in_array($attribute, ['password', 'remember_token', 'pppoe_password'], true))
+            ->reject(fn (string $attribute): bool => in_array($attribute, ['password', 'remember_token', 'pppoe_password', 'pppoe_password_hash', 'api_password_hash'], true))
             ->map(fn (string $attribute): string => Str::headline($attribute))
             ->values()
             ->all();

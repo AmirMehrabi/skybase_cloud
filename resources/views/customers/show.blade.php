@@ -50,7 +50,7 @@
             'router' => $subscription->router?->name ?? 'N/A',
             'ip_address' => $subscription->ip_address ?? 'N/A',
             'pppoe_username' => $subscription->pppoe_username,
-            'pppoe_password' => $subscription->pppoe_password,
+            'pppoe_password' => \App\Services\CredentialVisibility::passwordsRedacted() ? null : $subscription->pppoe_password,
             'connection_status' => $subscription->connection_status,
             'status' => $subscription->status,
             'activated_at' => optional($subscription->activation_date ?? $subscription->created_at)->format('M d, Y'),
@@ -209,8 +209,12 @@
                             <td class="px-6 py-4 text-sm font-mono text-gray-900" x-text="subscription.pppoe_username || '—'"></td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-2">
+                                    @if(\App\Services\CredentialVisibility::passwordsRedacted())
+                                    <span class="text-sm font-mono text-gray-900">••••••••</span>
+                                    @else
                                     <span class="text-sm font-mono text-gray-900" x-text="subscription.pppoe_password ? (revealedCredentials[subscription.id] ? subscription.pppoe_password : '••••••••') : '—'"></span>
                                     <button type="button" x-show="subscription.pppoe_password" @click="toggleCredential(subscription.id)" class="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50" x-text="revealedCredentials[subscription.id] ? 'Hide' : 'Show'"></button>
+                                    @endif
                                 </div>
                             </td>
                             <td class="px-6 py-4">

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'password_encryption' => (bool) env('PASSWORD_ENCRYPTION', false),
     'encrypt_secrets' => (bool) env('SECURITY_ENCRYPT_SECRETS', false),
     'require_router_tls' => (bool) env('SECURITY_REQUIRE_ROUTER_TLS', false),
     'require_ldap_tls' => (bool) env('SECURITY_REQUIRE_LDAP_TLS', false),
