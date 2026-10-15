@@ -2,6 +2,9 @@
 
 namespace App\Support\UserGroups;
 
+use App\Models\Customer;
+use App\Models\User;
+
 class UserGroupContext
 {
     public function shouldScope(): bool
@@ -30,22 +33,24 @@ class UserGroupContext
         return $user !== null && ($user->isOwner() || $user->isCentralAdmin());
     }
 
-    private function principal(): mixed
+    private function principal(): User|Customer|null
     {
         return $this->staffUser() ?? $this->customerUser();
     }
 
-    private function staffUser(): mixed
+    private function staffUser(): ?User
     {
         $guard = auth('web');
+        $user = method_exists($guard, 'hasUser') && $guard->hasUser() ? $guard->user() : null;
 
-        return method_exists($guard, 'hasUser') && $guard->hasUser() ? $guard->user() : null;
+        return $user instanceof User ? $user : null;
     }
 
-    private function customerUser(): mixed
+    private function customerUser(): ?Customer
     {
         $guard = auth('customer');
+        $user = method_exists($guard, 'hasUser') && $guard->hasUser() ? $guard->user() : null;
 
-        return method_exists($guard, 'hasUser') && $guard->hasUser() ? $guard->user() : null;
+        return $user instanceof Customer ? $user : null;
     }
 }

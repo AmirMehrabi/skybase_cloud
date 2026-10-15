@@ -129,6 +129,24 @@ class CustomerPortalExperienceTest extends TestCase
             ->assertJsonStructure(['chartData', 'hasData']);
     }
 
+    public function test_customer_dashboard_loads_when_the_web_guard_contains_a_customer(): void
+    {
+        $tenant = $this->createTenant();
+        $customer = $this->createCustomer($tenant, 'owner@example.com');
+        $this->createSubscription($tenant, $customer, 'SUB-OWNED');
+        $otherCustomer = $this->createCustomer($tenant, 'other@example.com');
+        $this->createSubscription($tenant, $otherCustomer, 'SUB-OTHER');
+
+        auth('web')->setUser($customer);
+
+        $this->actingAs($customer, 'customer')
+            ->get(route('customer.dashboard'))
+            ->assertOk()
+            ->assertSee('1 total')
+            ->assertSee('SUB-OWNED')
+            ->assertDontSee('SUB-OTHER');
+    }
+
     public function test_customer_bandwidth_service_sums_subscription_series_and_preserves_missing_values(): void
     {
         $tenant = $this->createTenant();
