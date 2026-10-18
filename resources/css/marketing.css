@@ -1,0 +1,54 @@
+@import 'tailwindcss' source(none);
+
+@source '../views/layouts/layout.blade.php';
+@source '../views/home.blade.php';
+@source '../views/features.blade.php';
+@source '../views/pricing.blade.php';
+@source '../views/contact.blade.php';
+@source '../views/changelog.blade.php';
+@source '../views/seo/*.blade.php';
+@source '../views/alternatives/*.blade.php';
+@source '../views/components/ui/input/*.blade.php';
+
+@font-face {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('./fonts/manrope-latin.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 500 700;
+    font-display: swap;
+    src: url('./fonts/space-grotesk-latin.woff2') format('woff2');
+}
+
+@theme {
+    --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}

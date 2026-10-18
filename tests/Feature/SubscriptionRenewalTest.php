@@ -218,6 +218,59 @@ class SubscriptionRenewalTest extends TestCase
         $this->assertSame(400, $usage->reconcile($subscription->fresh())->usedBytes());
     }
 
+    public function test_renewal_binds_tenant_router_addresses_and_excludes_other_tenant_sessions(): void
+    {
+        [$user, $subscription] = $this->subscription();
+        [, $otherSubscription] = $this->subscription();
+        $router = Router::factory()->create(['tenant_id' => $subscription->tenant_id, 'ip_address' => '192.0.2.1']);
+        $otherRouter = Router::factory()->create(['tenant_id' => $otherSubscription->tenant_id, 'ip_address' => '192.0.2.2']);
+        $sessions = [];
+
+        foreach ([$router, $otherRouter] as $sessionRouter) {
+            $sessions[] = RadiusAccountingRecord::withoutEvents(fn (): RadiusAccountingRecord => RadiusAccountingRecord::withoutGlobalScopes()->create([
+                'acctsessionid' => 'session-'.$sessionRouter->id,
+                'username' => $subscription->pppoe_username,
+                'nasipaddress' => $sessionRouter->ip_address,
+                'acctstarttime' => now()->subHour(),
+                'acctinputoctets' => 1000,
+                'acctoutputoctets' => 2000,
+            ]));
+        }
+
+        $token = $this->previewToken($user, $subscription);
+        $connection = $subscription->getConnection();
+        $connection->flushQueryLog();
+        $connection->enableQueryLog();
+
+        try {
+            $this->postJson(route('subscriptions.renew', $subscription), $this->payload($token))->assertOk();
+            $accountingQueries = collect($connection->getQueryLog())
+                ->filter(fn (array $query): bool => str_starts_with($query['query'], 'select') && str_contains($query['query'], 'radacct'));
+        } finally {
+            $connection->disableQueryLog();
+            $connection->flushQueryLog();
+        }
+
+        $this->assertNotEmpty($accountingQueries);
+
+        foreach ($accountingQueries as $query) {
+            $this->assertContains($router->ip_address, $query['bindings']);
+            $this->assertNotContains($otherRouter->ip_address, $query['bindings']);
+            $this->assertStringNotContainsString('routers', $query['query']);
+        }
+
+        $cycle = $subscription->usageCycles()->whereNull('closed_at')->firstOrFail();
+        $this->assertSame([
+            $sessions[0]->getKey() => ['upload' => 1000, 'download' => 2000],
+        ], $cycle->accounting_baselines);
+
+        foreach ($sessions as $session) {
+            $session->forceFill(['acctinputoctets' => 1100, 'acctoutputoctets' => 2300])->save();
+        }
+
+        $this->assertSame(400, app(SubscriptionUsageService::class)->reconcile($subscription->fresh())->usedBytes());
+    }
+
     public function test_renewal_rolls_back_when_the_usage_cycle_cannot_be_created(): void
     {
         [$user, $subscription] = $this->subscription();

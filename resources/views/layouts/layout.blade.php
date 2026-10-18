@@ -34,40 +34,15 @@
 
     <title>@yield('title', 'SkyBase Cloud')</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="preload" href="{{ Vite::asset('resources/css/fonts/space-grotesk-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
 
     <style>
         [x-cloak] {
             display: none !important;
         }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Manrope', sans-serif;
-        }
-
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            font-family: 'Space Grotesk', sans-serif;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            html {
-                scroll-behavior: auto;
-            }
-        }
     </style>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/marketing.css', 'resources/js/marketing.js'])
     @stack('styles')
 </head>
 <body class="@yield('body_class', 'bg-[#fffdf8] text-[#17211f]')">
@@ -80,7 +55,7 @@
         <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div class="flex min-h-20 items-center justify-between gap-5">
                 <a href="{{ route('home') }}" class="flex items-center focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-4" aria-label="SkyBase Cloud home">
-                    <img src="{{ asset('assets/images/logo/logo-black.png') }}" class="h-9 w-auto" alt="SkyBase Cloud">
+                    <img src="{{ asset('assets/images/logo/logo-black.png') }}" width="300" height="75" class="h-9 w-auto" alt="SkyBase Cloud">
                 </a>
 
                 <div class="hidden items-center gap-7 md:flex">
@@ -163,7 +138,7 @@
         <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1fr_auto_auto] lg:px-8">
             <div>
                 <a href="{{ route('home') }}" class="inline-flex focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-4 focus:ring-offset-[#17211f]" aria-label="SkyBase Cloud home">
-                    <img src="{{ asset('assets/images/logo/logo-white.png') }}" alt="SkyBase Cloud" class="h-8 w-auto">
+                    <img src="{{ asset('assets/images/logo/logo-white.png') }}" width="300" height="75" loading="lazy" decoding="async" alt="SkyBase Cloud" class="h-8 w-auto">
                 </a>
                 <p class="mt-4 max-w-sm text-sm leading-6 text-white/60">Straightforward ISP operations for MikroTik networks.</p>
             </div>

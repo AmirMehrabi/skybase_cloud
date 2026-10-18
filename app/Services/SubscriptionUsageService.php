@@ -146,8 +146,12 @@ class SubscriptionUsageService
 
     private function accountingForSubscription(Subscription $subscription): Builder
     {
+        $routerAddresses = Router::withoutGlobalScopes()
+            ->where('tenant_id', $subscription->tenant_id)
+            ->pluck('ip_address');
+
         return RadiusAccountingRecord::withoutGlobalScopes()->whereNotNull('username')->where('username', $subscription->pppoe_username)
-            ->whereIn('nasipaddress', Router::withoutGlobalScopes()->where('tenant_id', $subscription->tenant_id)->select('ip_address'));
+            ->whereIn('nasipaddress', $routerAddresses);
     }
 
     public function addData(Subscription $subscription, string $type, int $bytes, string $reason, ?int $userId = null): SubscriptionDataAdjustment
