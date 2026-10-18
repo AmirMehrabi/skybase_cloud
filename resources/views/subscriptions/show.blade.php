@@ -102,6 +102,10 @@ $getStatusBadgeClass = static function (mixed $status): mixed
 @endphp
 
 @section('content')
+    @if(config('ipdr.enabled'))
+        <a href="{{ route('subscriptions.ipdr', $subscriptionModel) }}">View IPDR flow records</a>
+    @endif
+
 @if(auth('web')->user()->hasPermission('subscriptions.credentials'))
     <x-subscription-credentials :subscription="$subscriptionModel" />
 @endif

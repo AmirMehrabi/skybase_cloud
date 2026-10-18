@@ -21,6 +21,11 @@ class NetflowCollect extends Command
      */
     public function handle(): int
     {
+        if (config('ipdr.enabled')) {
+            $this->error('NetFlow collection is delegated to IPDR.');
+
+            return self::FAILURE;
+        }
         $script = base_path('tools/netflow-collector/collector.py');
         $host = (string) ($this->option('host') ?: config('netflow.collector_bind_host'));
         $port = (string) ($this->option('port') ?: config('netflow.collector_port'));

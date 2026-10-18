@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'collector_host' => env('NETFLOW_COLLECTOR_HOST'),
+    'collector_host' => env('NETFLOW_COLLECTOR_HOST') ?: env('IPDR_COLLECTOR_HOST'),
     'collector_bind_host' => env('NETFLOW_COLLECTOR_BIND_HOST', '0.0.0.0'),
     'collector_port' => (int) env('NETFLOW_COLLECTOR_PORT', 2055),
     'python' => env('NETFLOW_PYTHON_BINARY', 'python3'),

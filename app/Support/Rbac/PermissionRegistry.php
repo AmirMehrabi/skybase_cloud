@@ -327,6 +327,7 @@ class PermissionRegistry
             'ipam.pools.ip-addresses.status' => 'ipam.actions',
             'api.ip-pools.check-ip' => 'ipam.read',
             'api.subscriptions.check-pppoe-username' => 'subscriptions.read',
+            'subscriptions.ipdr' => 'subscriptions.read',
             'subscriptions.credentials' => 'subscriptions.credentials',
             'support.tickets.view-scope' => 'support_tickets.read',
             'ipam.pools.destroy' => 'ipam.delete',

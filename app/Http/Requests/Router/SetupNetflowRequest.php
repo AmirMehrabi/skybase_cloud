@@ -27,9 +27,9 @@ class SetupNetflowRequest extends FormRequest
             'netflow_enabled' => ['required', 'boolean'],
             'netflow_collector_host' => [Rule::requiredIf(fn (): bool => $this->boolean('netflow_enabled')), 'nullable', 'string', 'max:255'],
             'netflow_collector_port' => [Rule::requiredIf(fn (): bool => $this->boolean('netflow_enabled')), 'integer', 'min:1', 'max:65535'],
-            'netflow_version' => [Rule::requiredIf(fn (): bool => $this->boolean('netflow_enabled')), 'integer', Rule::in([5, 9])],
+            'netflow_version' => [Rule::requiredIf(fn (): bool => $this->boolean('netflow_enabled')), 'integer', Rule::in(config('ipdr.enabled') ? [9] : [5, 9])],
             'netflow_interfaces' => [Rule::requiredIf(fn (): bool => $this->boolean('netflow_enabled')), 'nullable', 'string', 'max:255'],
-            'netflow_sampling_interval' => [Rule::requiredIf(fn (): bool => $this->boolean('netflow_enabled')), 'integer', 'min:1', 'max:1000000'],
+            'netflow_sampling_interval' => [Rule::requiredIf(fn (): bool => $this->boolean('netflow_enabled')), 'integer', 'min:1', 'max:'.(config('ipdr.enabled') ? '1' : '1000000')],
         ];
     }
 

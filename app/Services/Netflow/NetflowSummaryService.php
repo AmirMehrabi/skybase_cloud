@@ -4,6 +4,7 @@ namespace App\Services\Netflow;
 
 use App\Models\NetflowFlow;
 use App\Models\Router;
+use App\Services\IpdrClient;
 use Illuminate\Support\Collection;
 
 class NetflowSummaryService
@@ -13,6 +14,15 @@ class NetflowSummaryService
      */
     public function forRouter(Router $router): array
     {
+        if (config('ipdr.enabled')) {
+            try {
+                return app(IpdrClient::class)->report((string) $router->tenant_id, ['router_id' => (string) $router->id]);
+            } catch (\Throwable $exception) {
+                report($exception);
+
+                return ['stats' => ['flows' => 0, 'bytes' => 0, 'packets' => 0, 'throughput_bps' => 0, 'last_packet_at' => null], 'top_sources' => [], 'top_destinations' => [], 'top_protocols' => [], 'latest_flows' => [], 'error' => 'IPDR is temporarily unavailable.'];
+            }
+        }
         $since = now()->subHour();
 
         $query = NetflowFlow::query()

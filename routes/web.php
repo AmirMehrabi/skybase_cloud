@@ -40,6 +40,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SubscriptionIpdrController;
 use App\Http\Controllers\SubscriptionUsageController;
 use App\Http\Controllers\Support\TicketController as SupportTicketController;
 use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamController;
@@ -271,6 +272,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
 
     // Subscription Management Routes
     Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+        Route::get('/{subscription}/ipdr', SubscriptionIpdrController::class)->whereNumber('subscription')->name('ipdr');
         Route::get('/', [SubscriptionController::class, 'index'])->name('index');
         Route::get('/data', [SubscriptionController::class, 'data'])->name('data');
         Route::get('/stats', [SubscriptionController::class, 'stats'])->name('stats');

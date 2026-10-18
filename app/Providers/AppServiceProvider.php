@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\IpAddress;
+use App\Models\Subscription;
+use App\Models\SubscriptionIpRoute;
 use App\Models\User;
 use App\Services\CentralIdentityProvider;
+use App\Services\IpdrInventoryService;
 use App\Services\SecurityEventLogger;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -20,6 +24,29 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        foreach (['saved', 'deleted', 'restored'] as $event) {
+            Event::listen('eloquent.'.$event.': '.Subscription::class, function (Subscription $subscription): void {
+                app(IpdrInventoryService::class)->subscription($subscription);
+            });
+            Event::listen('eloquent.'.$event.': '.SubscriptionIpRoute::class, function (SubscriptionIpRoute $route): void {
+                if (! config('ipdr.enabled')) {
+                    return;
+                }
+                $subscription = Subscription::query()->where('tenant_id', $route->tenant_id)->withTrashed()->find($route->subscription_id);
+                if ($subscription) {
+                    app(IpdrInventoryService::class)->subscription($subscription);
+                }
+            });
+            Event::listen('eloquent.'.$event.': '.IpAddress::class, function (IpAddress $address): void {
+                if (! config('ipdr.enabled')) {
+                    return;
+                }
+                $codes = array_filter([$address->subscription_code, $address->getOriginal('subscription_code')]);
+                foreach (Subscription::query()->where('tenant_id', $address->tenant_id)->whereIn('subscription_code', $codes)->get() as $subscription) {
+                    app(IpdrInventoryService::class)->subscription($subscription);
+                }
+            });
+        }
         Auth::provider('central-identity', fn ($app, array $config): CentralIdentityProvider => new CentralIdentityProvider($app['hash'], $config['model']));
         Gate::define('manage-central-tenants', fn (User $user): bool => $user->isCentralAdmin());
         RateLimiter::for('login', fn (Request $request): array => config('security.enforce_rate_limits') ? [

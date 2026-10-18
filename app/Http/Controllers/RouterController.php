@@ -8,9 +8,11 @@ use App\Http\Requests\Router\UpdateRouterRequest;
 use App\Models\NetflowFlow;
 use App\Models\Router;
 use App\Models\Site;
+use App\Services\IpdrClient;
 use App\Services\Monitoring\RrdToolService;
 use App\Services\Netflow\NetflowSummaryService;
 use App\Services\RouterOs\RouterOsTrafficFlowService;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -141,6 +143,10 @@ class RouterController extends Controller
     public function show(Router $router, NetflowSummaryService $netflowSummary): View
     {
         $this->authorizeTenantAccess($router);
+
+        if (config('ipdr.enabled') && blank($router->netflow_collector_host)) {
+            $router->netflow_collector_host = config('ipdr.collector_host');
+        }
 
         return view('routers.show', [
             'router' => $router,
@@ -278,6 +284,20 @@ class RouterController extends Controller
             ], 422);
         }
 
+        if (config('ipdr.enabled')) {
+            try {
+                $report = app(IpdrClient::class)->report((string) $router->tenant_id, ['router_id' => (string) $router->id]);
+                $last = isset($report['last_received_at']) ? CarbonImmutable::parse($report['last_received_at']) : null;
+                $received = $last && $last->gte(now()->subSeconds((int) config('netflow.test_window_seconds')));
+                $router->forceFill(['netflow_test_status' => $received ? 'received' : 'timeout', 'netflow_last_tested_at' => now(), 'netflow_last_packet_at' => $last ?? $router->netflow_last_packet_at, 'netflow_error' => $received ? null : 'IPDR has not received recent flows from this router.'])->save();
+
+                return response()->json(['message' => $received ? 'IPDR is receiving NetFlow packets.' : 'IPDR has not received recent flows from this router.', 'status' => $received ? 'received' : 'timeout', 'last_packet_at' => $last?->diffForHumans()], $received ? 200 : 422);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return response()->json(['message' => 'IPDR is temporarily unavailable.', 'status' => 'unavailable'], 503);
+            }
+        }
         $latestFlow = NetflowFlow::query()
             ->where('tenant_id', $router->tenant_id)
             ->where('router_id', $router->id)
