@@ -106,9 +106,6 @@ $getStatusBadgeClass = static function (mixed $status): mixed
         <a href="{{ route('subscriptions.ipdr', $subscriptionModel) }}">View IPDR flow records</a>
     @endif
 
-@if(auth('web')->user()->hasPermission('subscriptions.credentials'))
-    <x-subscription-credentials :subscription="$subscriptionModel" />
-@endif
     <div x-data="{
         tab: @js(request('tab', 'overview')),
         usageView: @js(request('usage_view', 'table')),
@@ -1096,6 +1093,9 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                             <span
                                                 class="font-mono text-sm font-medium text-gray-900">{{ $subscription['pppoe_username'] }}</span>
                                         </button>
+                                        @if(auth('web')->user()->hasPermission('subscriptions.credentials'))
+                                            <x-subscription-credentials :subscription="$subscriptionModel" />
+                                        @else
                                         <button type="button"
                                             @if(!\App\Services\CredentialVisibility::passwordsRedacted())
                                             @click="copyCredential('password', @js($subscription['pppoe_password']))"
@@ -1107,6 +1107,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                             <span
                                                 class="font-mono text-sm font-medium text-gray-900">{{ $subscription['pppoe_password'] }}</span>
                                         </button>
+                                        @endif
                                         <p class="text-xs text-green-600" x-show="copiedField" x-transition>
                                             <span
                                                 x-text="copiedField === 'username' ? 'Username copied' : 'Password copied'"></span>
