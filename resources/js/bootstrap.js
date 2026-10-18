@@ -5,6 +5,9 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 // Alpine.js
 import Alpine from 'alpinejs';
+import { createSubscriptionIpdr } from './subscriptions/ipdr';
+
+Alpine.data('subscriptionIpdr', createSubscriptionIpdr);
 
 window.Alpine = Alpine;
 

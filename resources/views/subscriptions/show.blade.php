@@ -102,9 +102,6 @@ $getStatusBadgeClass = static function (mixed $status): mixed
 @endphp
 
 @section('content')
-    @if(config('ipdr.enabled'))
-        <a href="{{ route('subscriptions.ipdr', $subscriptionModel) }}">View IPDR flow records</a>
-    @endif
 
     <div x-data="{
         tab: @js(request('tab', 'overview')),
@@ -967,6 +964,14 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                         class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
                         Usage
                     </button>
+                    @if(config('ipdr.enabled'))
+                    <button type="button" @click="tab = 'ipdr'"
+                        :aria-selected="tab === 'ipdr'" aria-controls="subscription-ipdr-panel"
+                        :class="tab === 'ipdr' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
+                        IPDR Traffic
+                    </button>
+                    @endif
                     <button @click="tab = 'auth'"
                         :class="tab === 'auth' ? 'border-blue-500 text-blue-600' :
                             'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -1753,6 +1758,10 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                         </div>
                     </div>
                 </div>
+
+                @if(config('ipdr.enabled'))
+                    @include('modules.subscriptions.partials.ipdr-tab', ['ipdrSubscription' => $subscriptionModel])
+                @endif
 
                 <!-- TAB: Auth Attempts -->
                 <div x-show="tab === 'auth'" x-transition class="space-y-6">

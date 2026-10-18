@@ -24,7 +24,7 @@ class ShowSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tab' => ['nullable', Rule::in(['overview', 'usage', 'auth', 'billing', 'contract', 'invoices', 'activity'])],
+            'tab' => ['nullable', Rule::in(['overview', 'usage', 'auth', 'billing', 'contract', 'invoices', 'activity', ...(config('ipdr.enabled') ? ['ipdr'] : [])])],
             'usage_view' => ['nullable', Rule::in(['table', 'chart'])],
             'usage_page' => ['nullable', 'integer', 'min:1'],
             'usage_per_page' => ['nullable', Rule::in([10, 25, 50, 100])],

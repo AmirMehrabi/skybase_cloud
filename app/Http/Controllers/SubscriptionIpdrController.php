@@ -6,15 +6,18 @@ use App\Http\Requests\IpdrReportRequest;
 use App\Models\Subscription;
 use App\Services\IpdrClient;
 use Illuminate\Http\JsonResponse;
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 use Throwable;
 
 class SubscriptionIpdrController extends Controller
 {
-    public function __invoke(IpdrReportRequest $request, Subscription $subscription, IpdrClient $client): View|JsonResponse
+    public function __invoke(IpdrReportRequest $request, Subscription $subscription, IpdrClient $client): RedirectResponse|JsonResponse
     {
         abort_unless(config('ipdr.enabled'), 404);
         abort_unless((string) $subscription->tenant_id === (string) tenant_id(), 403);
+        if (! $request->expectsJson()) {
+            return redirect()->route('subscriptions.show', ['subscription' => $subscription, 'tab' => 'ipdr'] + $request->validated());
+        }
         $error = null;
         $report = null;
         try {
@@ -23,10 +26,7 @@ class SubscriptionIpdrController extends Controller
             report($exception);
             $error = 'IPDR is temporarily unavailable. Existing RADIUS quota accounting is unaffected.';
         }
-        if ($request->expectsJson()) {
-            return response()->json($report ?? ['message' => $error], $error ? 503 : 200);
-        }
 
-        return view('modules.subscriptions.ipdr', compact('subscription', 'report', 'error'));
+        return response()->json($report ?? ['message' => $error], $error ? 503 : 200);
     }
 }
