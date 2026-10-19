@@ -27,6 +27,7 @@ use App\Http\Controllers\CustomerPortal\SubscriptionController as CustomerPortal
 use App\Http\Controllers\CustomerPortal\TicketController as CustomerPortalTicketController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
+use App\Http\Controllers\GolestanController;
 use App\Http\Controllers\ImportExportController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\NetworkController;
@@ -135,6 +136,11 @@ Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
 
 // Logout route (authenticated only)
 Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('auth.logout')->middleware('auth');
+
+Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa'])->group(function (): void {
+    Route::get('/admin/golestan', [GolestanController::class, 'index'])->name('golestan.index');
+    Route::post('/admin/golestan', [GolestanController::class, 'search'])->middleware('throttle:10,1')->name('golestan.search');
+});
 
 // Protected Routes (Require Authentication & Tenancy)
 Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
