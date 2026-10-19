@@ -480,7 +480,7 @@ function planForm() {
             throttleDownloadSpeed: @js(old('throttle_download_speed', data_get($plan, 'throttle_download_speed', ''))),
             throttleUploadSpeed: @js(old('throttle_upload_speed', data_get($plan, 'throttle_upload_speed', ''))),
             price: @js(old('price', data_get($plan, 'price', ''))),
-            currency: @js(old('currency', data_get($plan, 'currency', 'USD'))),
+            currency: @js(old('currency', data_get($plan, 'currency', tenant()?->currency ?? 'USD'))),
             billingCycle: @js(old('billing_cycle', data_get($plan, 'billing_cycle', 'monthly'))),
             gracePeriodDays: @js(old('grace_period_days', data_get($plan, 'grace_period_days', 7))),
             setupFee: @js(old('setup_fee', data_get($plan, 'setup_fee', ''))),

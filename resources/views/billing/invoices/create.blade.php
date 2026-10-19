@@ -239,6 +239,6 @@
 </div>
 
 @push('scripts')
-<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/invoices-create.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/invoices-create.js') }}?v={{ filemtime(public_path('js/billing/invoices-create.js')) }}"></script>
 @endpush
 @endsection

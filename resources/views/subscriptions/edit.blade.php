@@ -114,7 +114,7 @@
                     <select name="plan_id" id="plan_id" @disabled($organizationBilling) class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50">
                         @foreach($plans as $plan)
                             <option value="{{ $plan->id }}" @selected((string) old('plan_id', $organizationBilling ? $organization->default_plan_id : $subscription->plan_id) === (string) $plan->id)>
-                                {{ $plan->name }} - ${{ number_format((float) $plan->price, 2) }}/{{ $plan->billing_cycle }}
+                                {{ $plan->name }} - {{ tenant()?->currency ?? 'USD' }} {{ number_format((float) $plan->price, 2) }}/{{ $plan->billing_cycle }}
                             </option>
                         @endforeach
                     </select>

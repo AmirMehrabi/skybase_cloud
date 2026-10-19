@@ -219,11 +219,11 @@
 
             <!-- Y-axis labels -->
             <div class="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-gray-400 -ml-1">
-                <span>$200k</span>
-                <span>$150k</span>
-                <span>$100k</span>
-                <span>$50k</span>
-                <span>$0</span>
+                <span>{{ tenant()?->currency ?? 'USD' }} 200k</span>
+                <span>{{ tenant()?->currency ?? 'USD' }} 150k</span>
+                <span>{{ tenant()?->currency ?? 'USD' }} 100k</span>
+                <span>{{ tenant()?->currency ?? 'USD' }} 50k</span>
+                <span>{{ tenant()?->currency ?? 'USD' }} 0</span>
             </div>
         </div>
     </div>
@@ -291,6 +291,6 @@
 <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
     window.billingDashboard = @json($billingDashboard ?? []);
 </script>
-<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/dashboard.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/dashboard.js') }}?v={{ filemtime(public_path('js/billing/dashboard.js')) }}"></script>
 @endpush
 @endsection

@@ -263,6 +263,6 @@
     window.billingInvoiceCancelUrlTemplate = @json(route('billing.invoices.cancel', '__invoice__'));
     window.billingCsrfToken = @json(csrf_token());
 </script>
-<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/invoices-index.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/invoices-index.js') }}?v={{ filemtime(public_path('js/billing/invoices-index.js')) }}"></script>
 @endpush
 @endsection

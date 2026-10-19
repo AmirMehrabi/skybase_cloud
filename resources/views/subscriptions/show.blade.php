@@ -514,7 +514,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                             <span>&bull;</span>
                             <span>{{ $subscription['plan_name'] }}</span>
                             <span>&bull;</span>
-                            <span>${{ number_format($subscription['monthly_price'], 2) }}/mo</span>
+                            <span>{{ tenant()?->currency ?? 'USD' }} {{ number_format($subscription['monthly_price'], 2) }}/mo</span>
                         </div>
                         @if ($subscriptionModel->restrictions->whereNull('cleared_at')->isNotEmpty())
                             <div class="mt-3 flex flex-wrap gap-2">
@@ -625,7 +625,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
         <div class="grid grid-cols-2 gap-6 lg:grid-cols-4">
             <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-xs uppercase tracking-wide text-gray-500">Balance</p>
-                <p class="mt-1 text-xl font-bold text-gray-900">${{ number_format($subscription['balance'], 2) }}</p>
+                <p class="mt-1 text-xl font-bold text-gray-900">{{ tenant()?->currency ?? 'USD' }} {{ number_format($subscription['balance'], 2) }}</p>
             </div>
             <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                 <p class="text-xs uppercase tracking-wide text-gray-500">Next Billing</p>
@@ -822,7 +822,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                     class="block w-full rounded-lg border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                     @foreach ($plans as $plan)
                                         <option value="{{ $plan['id'] }}">{{ $plan['name'] }} -
-                                            ${{ number_format((float) $plan['price'], 2) }}/{{ $plan['billing_cycle'] }}
+                                            {{ tenant()?->currency ?? 'USD' }} {{ number_format((float) $plan['price'], 2) }}/{{ $plan['billing_cycle'] }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -1133,7 +1133,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                 <div class="flex justify-between">
                                     <dt class="text-sm text-gray-500">Monthly Price</dt>
                                     <dd class="text-sm font-medium text-gray-900">
-                                        ${{ number_format($subscription['monthly_price'], 2) }}</dd>
+                                        {{ tenant()?->currency ?? 'USD' }} {{ number_format($subscription['monthly_price'], 2) }}</dd>
                                 </div>
                                 <div class="flex justify-between">
                                     <dt class="text-sm text-gray-500">Discount</dt>
@@ -1148,13 +1148,13 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                 <div class="flex justify-between pt-3 border-t border-gray-200">
                                     <dt class="text-sm font-medium text-gray-900">Total Monthly</dt>
                                     <dd class="text-lg font-bold text-gray-900">
-                                        ${{ number_format($subscription['total_price'], 2) }}</dd>
+                                        {{ tenant()?->currency ?? 'USD' }} {{ number_format($subscription['total_price'], 2) }}</dd>
                                 </div>
                                 <div class="flex justify-between">
                                     <dt class="text-sm text-gray-500">Current Balance</dt>
                                     <dd
                                         class="text-sm font-bold {{ $subscription['balance'] > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                        ${{ number_format($subscription['balance'], 2) }}
+                                        {{ tenant()?->currency ?? 'USD' }} {{ number_format($subscription['balance'], 2) }}
                                     </dd>
                                 </div>
                                 <div class="flex justify-between">
@@ -1333,7 +1333,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
-                                                    class="text-sm font-medium text-gray-900">${{ number_format($invoice['amount'], 2) }}</span>
+                                                    class="text-sm font-medium text-gray-900">{{ tenant()?->currency ?? 'USD' }} {{ number_format($invoice['amount'], 2) }}</span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
@@ -1993,11 +1993,11 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
-                                                    class="text-sm font-medium text-gray-900">${{ number_format($invoice['amount'], 2) }}</span>
+                                                    class="text-sm font-medium text-gray-900">{{ tenant()?->currency ?? 'USD' }} {{ number_format($invoice['amount'], 2) }}</span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
-                                                    class="text-sm font-medium {{ $invoice['balance_due'] > 0 ? 'text-red-600' : 'text-green-600' }}">${{ number_format($invoice['balance_due'], 2) }}</span>
+                                                    class="text-sm font-medium {{ $invoice['balance_due'] > 0 ? 'text-red-600' : 'text-green-600' }}">{{ tenant()?->currency ?? 'USD' }} {{ number_format($invoice['balance_due'], 2) }}</span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span

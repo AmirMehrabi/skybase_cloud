@@ -79,7 +79,7 @@ function paymentsIndex() {
         formatCurrency(value) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: 'USD'
+                currency: document.querySelector('meta[name="tenant-currency"]')?.content || 'USD'
             }).format(value || 0);
         },
 

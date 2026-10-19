@@ -238,6 +238,6 @@
     window.billingPaymentShow = @json($payment ?? []);
     window.billingCsrfToken = @json(csrf_token());
 </script>
-<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/payments-show.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/payments-show.js') }}?v={{ filemtime(public_path('js/billing/payments-show.js')) }}"></script>
 @endpush
 @endsection

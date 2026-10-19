@@ -167,7 +167,7 @@
                     <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('plan_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
                         <option value="">Select a plan</option>
                         @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}" data-price="{{ $plan->price }}" data-billing-cycle="{{ $plan->billing_cycle }}" data-grace-period="{{ $plan->grace_period_days }}">{{ $plan->name }} - ${{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
+                            <option value="{{ $plan->id }}" data-price="{{ $plan->price }}" data-billing-cycle="{{ $plan->billing_cycle }}" data-grace-period="{{ $plan->grace_period_days }}">{{ $plan->name }} - {{ tenant()?->currency ?? 'USD' }} {{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
                         @endforeach
                     </select>
                     @error('plan_id')
@@ -566,8 +566,8 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
                         <div class="relative">
-                            <span class="absolute left-3 top-2 text-gray-500">$</span>
-                            <input type="number" step="0.01" x-model="items[0].unit_price" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-7 pr-3 border disabled:bg-gray-50">
+                            <span class="absolute left-3 top-2 text-gray-500">{{ tenant()?->currency ?? 'USD' }}</span>
+                            <input type="number" step="0.01" x-model="items[0].unit_price" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-14 pr-3 border disabled:bg-gray-50">
                         </div>
                     </div>
                     <div>
@@ -576,7 +576,7 @@
                             <input type="number" step="0.01" x-model="items[0].discount_amount" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border disabled:bg-gray-50">
                             <select x-model="items[0].discount_type" @change="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50">
                                 <option value="none">None</option>
-                                <option value="fixed">$</option>
+                                <option value="fixed">{{ tenant()?->currency ?? 'USD' }}</option>
                                 <option value="percentage">%</option>
                             </select>
                         </div>
@@ -591,13 +591,13 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                     <div class="text-sm text-gray-600">
-                        Subtotal: <span class="font-semibold" x-text="'$' + formatCurrency(items[0].subtotal)"></span>
+                        Subtotal: <span class="font-semibold" x-text="formatCurrency(items[0].subtotal)"></span>
                     </div>
                     <div class="text-sm text-gray-600">
-                        Tax: <span class="font-semibold" x-text="'$' + formatCurrency(items[0].tax_amount)"></span>
+                        Tax: <span class="font-semibold" x-text="formatCurrency(items[0].tax_amount)"></span>
                     </div>
                     <div class="text-sm font-semibold text-gray-900">
-                        Total: <span class="text-blue-600" x-text="'$' + formatCurrency(items[0].total)"></span>
+                        Total: <span class="text-blue-600" x-text="formatCurrency(items[0].total)"></span>
                     </div>
                 </div>
             </div>
@@ -618,8 +618,8 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
                             <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-500">$</span>
-                                <input type="number" step="0.01" x-model="item.unit_price" @input="calculateAdditionalItemTotal(index)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-7 pr-3 border">
+                                <span class="absolute left-3 top-2 text-gray-500">{{ tenant()?->currency ?? 'USD' }}</span>
+                                <input type="number" step="0.01" x-model="item.unit_price" @input="calculateAdditionalItemTotal(index)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-14 pr-3 border">
                             </div>
                         </div>
                         <div>
@@ -628,7 +628,7 @@
                                 <input type="number" step="0.01" x-model="item.discount_amount" @input="calculateAdditionalItemTotal(index)" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                                 <select x-model="item.discount_type" @change="calculateAdditionalItemTotal(index)" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                                     <option value="none">None</option>
-                                    <option value="fixed">$</option>
+                                    <option value="fixed">{{ tenant()?->currency ?? 'USD' }}</option>
                                     <option value="percentage">%</option>
                                 </select>
                             </div>
@@ -658,13 +658,13 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                         <div class="text-sm text-gray-600">
-                            Subtotal: <span class="font-semibold" x-text="'$' + formatCurrency(item.subtotal)"></span>
+                            Subtotal: <span class="font-semibold" x-text="formatCurrency(item.subtotal)"></span>
                         </div>
                         <div class="text-sm text-gray-600">
-                            Tax: <span class="font-semibold" x-text="'$' + formatCurrency(item.tax_amount)"></span>
+                            Tax: <span class="font-semibold" x-text="formatCurrency(item.tax_amount)"></span>
                         </div>
                         <div class="text-sm font-semibold text-gray-900">
-                            Total: <span class="text-blue-600" x-text="'$' + formatCurrency(item.total)"></span>
+                            Total: <span class="text-blue-600" x-text="formatCurrency(item.total)"></span>
                         </div>
                     </div>
                     <input type="hidden" :name="'items[' + (index + 1) + '][item_type]'" value="additional_service">
@@ -711,20 +711,20 @@
             <div class="space-y-2">
                 <div class="flex justify-between text-sm">
                     <span class="text-gray-600">Subtotal:</span>
-                    <span class="font-medium" x-text="'$' + formatCurrency(form.subtotal)"></span>
+                    <span class="font-medium" x-text="formatCurrency(form.subtotal)"></span>
                 </div>
                 <div class="flex justify-between text-sm">
                     <span class="text-gray-600">Total Discount:</span>
-                    <span class="font-medium text-red-600" x-text="'-$' + formatCurrency(form.totalDiscount)"></span>
+                    <span class="font-medium text-red-600" x-text="'-' + formatCurrency(form.totalDiscount)"></span>
                 </div>
                 <div class="flex justify-between text-sm">
                     <span class="text-gray-600">Total Tax:</span>
-                    <span class="font-medium" x-text="'$' + formatCurrency(form.totalTax)"></span>
+                    <span class="font-medium" x-text="formatCurrency(form.totalTax)"></span>
                 </div>
                 <div class="border-t border-gray-200 pt-2 mt-2">
                     <div class="flex justify-between">
                         <span class="text-base font-semibold text-gray-900">Total Monthly:</span>
-                        <span class="text-xl font-bold text-blue-600" x-text="'$' + formatCurrency(form.total)"></span>
+                        <span class="text-xl font-bold text-blue-600" x-text="formatCurrency(form.total)"></span>
                     </div>
                 </div>
             </div>
@@ -1217,7 +1217,10 @@ function subscriptionCreateForm() {
         },
 
         formatCurrency(value) {
-            return parseFloat(value || 0).toFixed(2);
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: document.querySelector('meta[name="tenant-currency"]')?.content || 'USD',
+            }).format(Number(value || 0));
         },
 
         // IP Address validation

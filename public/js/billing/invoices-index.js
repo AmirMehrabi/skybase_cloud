@@ -112,7 +112,7 @@ function invoicesIndex() {
         formatCurrency(value, currency = null) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: currency || this.selectedInvoice?.currency || this.invoices[0]?.currency || 'USD'
+                currency: currency || this.selectedInvoice?.currency || document.querySelector('meta[name="tenant-currency"]')?.content || 'USD'
             }).format(value);
         },
 

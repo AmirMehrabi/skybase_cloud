@@ -284,6 +284,6 @@
     window.billingCreditStoreUrl = @json(route('billing.credits.store'));
     window.billingCsrfToken = @json(csrf_token());
 </script>
-<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/credits.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/credits.js') }}?v={{ filemtime(public_path('js/billing/credits.js')) }}"></script>
 @endpush
 @endsection

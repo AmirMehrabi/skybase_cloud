@@ -296,6 +296,6 @@
     window.billingPaymentStoreUrl = @json(route('billing.payments.store'));
     window.billingCsrfToken = @json(csrf_token());
 </script>
-<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/payments-index.js') }}"></script>
+<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}" src="{{ asset('js/billing/payments-index.js') }}?v={{ filemtime(public_path('js/billing/payments-index.js')) }}"></script>
 @endpush
 @endsection

@@ -45,7 +45,7 @@ function invoiceShow() {
         formatCurrency(value) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: this.invoice.currency || 'USD'
+                currency: this.invoice.currency || document.querySelector('meta[name="tenant-currency"]')?.content || 'USD'
             }).format(value || 0);
         },
 
