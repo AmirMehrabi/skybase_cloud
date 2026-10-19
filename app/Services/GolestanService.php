@@ -11,8 +11,7 @@ use RuntimeException;
 
 class GolestanService
 {
-    /** @return array{records: array<int, array<string, string>>, xml: string} */
-    public function search(string $studentNumber, string $username, #[\SensitiveParameter] string $password): array
+    public function requestXml(string $studentNumber, string $username, #[\SensitiveParameter] string $password): string
     {
         $public = new DOMDocument;
         $root = $public->appendChild($public->createElement('Root'));
@@ -42,11 +41,19 @@ class GolestanService
             $element->appendChild($document->createTextNode($value));
         }
 
+        $document->formatOutput = true;
+
+        return $document->saveXML();
+    }
+
+    /** @return array{records: array<int, array<string, string>>, xml: string} */
+    public function search(string $studentNumber, string $username, #[\SensitiveParameter] string $password): array
+    {
         try {
             $response = Http::connectTimeout(10)->timeout(40)
                 ->withOptions(['allow_redirects' => false])
                 ->withHeaders(['SOAPAction' => '"urn:nowpardaz/golInfo"'])
-                ->withBody($document->saveXML(), 'text/xml; charset=utf-8')
+                ->withBody($this->requestXml($studentNumber, $username, $password), 'text/xml; charset=utf-8')
                 ->post('https://eduold.uk.ac.ir/GolestanService/gservice.asmx');
         } catch (ConnectionException) {
             throw new RuntimeException('Golestan could not be reached. Please try again.');

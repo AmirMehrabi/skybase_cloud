@@ -70,6 +70,24 @@ class GolestanSearchTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_generated_request_xml_matches_the_sent_request_with_password_masked(): void
+    {
+        Http::fake(['*' => Http::response($this->soap('<Root/>'))]);
+        $response = $this->actingAs($this->user())->post(route('golestan.search'), $this->payload());
+        $response->assertOk()->assertSee('Generated request XML')->assertDontSee('test-password');
+        $preview = $response->viewData('requestXml');
+        $response->assertSee($preview);
+        Http::assertSent(function (Request $request) use ($preview): bool {
+            $document = new DOMDocument;
+            $document->loadXML($request->body());
+            (new DOMXPath($document))->query('//*[local-name()="pass"]')->item(0)->nodeValue = '[REDACTED]';
+            $expected = new DOMDocument;
+            $expected->loadXML($preview);
+
+            return $document->C14N() === $expected->C14N();
+        });
+    }
+
     public function test_invalid_search_is_rejected_without_sending_credentials_or_flashing_password(): void
     {
         Http::preventStrayRequests();
@@ -99,14 +117,16 @@ class GolestanSearchTest extends TestCase
     {
         Http::fake(['*' => Http::response($this->soap('<Root><P>دسترسي به اطلاعات درخواستي وجود ندارد</P></Root>'))]);
         $this->actingAs($this->user())->post(route('golestan.search'), $this->payload())
-            ->assertOk()->assertSee('دسترسي به اطلاعات درخواستي وجود ندارد')->assertDontSee('No student found');
+            ->assertOk()->assertSee('دسترسي به اطلاعات درخواستي وجود ندارد')->assertDontSee('No student found')
+            ->assertSee('Generated request XML')->assertSee('[REDACTED]')->assertDontSee('test-password');
     }
 
     public function test_connection_failure_is_displayed_without_exposing_credentials(): void
     {
         Http::fake(['*' => Http::failedConnection()]);
         $this->actingAs($this->user())->post(route('golestan.search'), $this->payload())
-            ->assertOk()->assertSee('Golestan could not be reached')->assertDontSee('test-password');
+            ->assertOk()->assertSee('Golestan could not be reached')->assertDontSee('test-password')
+            ->assertSee('Generated request XML')->assertSee('[REDACTED]');
     }
 
     public function test_malformed_response_is_displayed_as_an_error(): void

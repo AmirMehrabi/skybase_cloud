@@ -13,6 +13,11 @@
             <x-ui.button type="submit" variant="brand" x-bind:disabled="searching"><span x-text="searching ? 'Searching…' : 'Search student'">Search student</span></x-ui.button>
         </form>
     </x-ui.card>
+    @if($requestXml !== null)
+        <x-ui.card title="Generated request XML" subtitle="SOAP request sent to Golestan. The password is masked in this preview.">
+            <pre dir="ltr" class="max-h-96 overflow-auto rounded-lg bg-gray-50 p-4 text-xs">{{ $requestXml }}</pre>
+        </x-ui.card>
+    @endif
     @if($serviceError)
         <div role="alert" class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ $serviceError }}</div>
     @endif
