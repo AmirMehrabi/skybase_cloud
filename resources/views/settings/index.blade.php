@@ -34,7 +34,7 @@
 
     <!-- Tabs Navigation -->
     <div class="border-b border-gray-200 mb-6">
-        <nav class="flex -mb-px space-x-8">
+        <nav class="flex -mb-px space-x-8 overflow-x-auto">
             <button onclick="showTab('general')" id="tab-general" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                 General
             </button>
@@ -55,6 +55,8 @@
             </button>
         </nav>
     </div>
+
+    <div class="mb-5 flex flex-wrap gap-4 text-sm"><a class="font-medium text-teal-800 underline" href="{{ route('settings.sms') }}">SMS gateway settings</a><a class="font-medium text-teal-800 underline" href="{{ route('communications.index') }}">Message templates & delivery rules</a></div>
 
     <!-- General Tab -->
     <div id="content-general" class="tab-content {{ $activeTab === 'general' ? '' : 'hidden' }}">

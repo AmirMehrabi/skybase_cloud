@@ -38,6 +38,12 @@
     </li>
     @endif
 
+    @foreach(['campaigns.index' => 'Campaigns', 'communications.index' => 'Communications'] as $destination => $label)
+    @if($can($destination))
+    <li><a href="{{ route($destination) }}" class="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-teal-50/85 hover:bg-white/10"><span>{{ $label }}</span></a></li>
+    @endif
+    @endforeach
+
     <!-- Customers -->
     @if($can('customers.index'))
     <li>

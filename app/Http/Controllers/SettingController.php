@@ -13,10 +13,11 @@ use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\Tenant;
+use App\Services\CommunicationDeliveryService;
+use App\Services\EmailConnectionTester;
 use App\Services\Ldap\LdapConnectionFactory;
 use App\Services\Ldap\LdapSyncService;
 use App\Services\NotificationPreferenceService;
-use App\Services\OutboundConnectionPolicy;
 use App\Services\RadiusProvisioningService;
 use App\Services\TaxResolverService;
 use App\Support\Notifications\NotificationEventRegistry;
@@ -24,6 +25,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Throwable;
 
@@ -184,13 +186,19 @@ class SettingController extends Controller
         $tenant = $this->getTenant();
         $direction = $request->validated('direction');
         $settings = $this->getEmailSettings($tenant->id)[$direction];
+        if ($request->input('action') === 'send') {
+            abort_unless($direction === 'outgoing', 422);
+            app(CommunicationDeliveryService::class)->create($tenant->id, 'email-test:'.Str::uuid(), ['channel' => 'email', 'destination' => $request->input('destination'), 'content' => ['subject' => 'SkyBase email test', 'email_body' => 'Your outgoing email configuration is working.'], 'expires_at' => now()->addMinutes(15)]);
+
+            return redirect()->route('settings.index', ['tab' => 'email'])->with('success', 'Test email queued. See Delivery activity for its result.');
+        }
 
         try {
             $this->testEmailConnection($settings, $direction);
         } catch (Throwable $exception) {
             return redirect()
                 ->route('settings.index', ['tab' => 'email'])
-                ->with('error', ucfirst($direction).' email test failed: '.$exception->getMessage());
+                ->with('error', ucfirst($direction).' email test failed. Check the host, port, TLS, credentials and mailbox.');
         }
 
         return redirect()
@@ -704,42 +712,7 @@ class SettingController extends Controller
      */
     private function testEmailConnection(array $settings, string $direction): void
     {
-        $host = trim((string) ($settings['host'] ?? ''));
-        $port = (int) ($settings['port'] ?? 0);
-        $encryption = $settings['encryption'] ?? 'none';
-
-        if ($host === '' || $port < 1 || $port > 65535) {
-            throw new \RuntimeException('Host and port are required before testing.');
-        }
-
-        $scheme = $encryption === 'ssl' ? 'ssl' : 'tcp';
-        $peerName = $host;
-        $host = app(OutboundConnectionPolicy::class)->resolve($host, $port, configuredDestination: true);
-        $remoteSocket = $scheme.'://'.(str_contains($host, ':') ? '['.$host.']' : $host).':'.$port;
-        $context = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'peer_name' => $peerName]]);
-        $errorCode = 0;
-        $errorMessage = '';
-
-        $socket = @stream_socket_client(
-            $remoteSocket,
-            $errorCode,
-            $errorMessage,
-            10,
-            STREAM_CLIENT_CONNECT,
-            $context,
-        );
-
-        if ($socket === false) {
-            throw new \RuntimeException($errorMessage !== '' ? $errorMessage : "Unable to connect to {$host}:{$port}.");
-        }
-
-        stream_set_timeout($socket, 10);
-
-        if ($direction === 'outgoing') {
-            fgets($socket, 512);
-        }
-
-        fclose($socket);
+        app(EmailConnectionTester::class)->test($settings, $direction);
     }
 
     private function getTenant(): Tenant

@@ -1100,6 +1100,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                         </button>
                                         @if(auth('web')->user()->hasPermission('subscriptions.credentials'))
                                             <x-subscription-credentials :subscription="$subscriptionModel" />
+                                            <x-subscription-sms-credentials :subscription="$subscriptionModel" />
                                         @else
                                         <button type="button"
                                             @if(!\App\Services\CredentialVisibility::passwordsRedacted())

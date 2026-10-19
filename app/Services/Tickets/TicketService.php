@@ -223,6 +223,15 @@ class TicketService
 
         $ticket->forceFill($updates)->save();
         $this->eventService->record($ticket, $eventType, ['status' => $oldStatus], ['status' => $status], $actorType, $actorId);
+        if ($oldStatus !== $status) {
+            $event = $status === Ticket::STATUS_RESOLVED ? 'support.ticket_resolved' : 'support.ticket_status_changed';
+            $payload = ['title' => 'Ticket '.str_replace('_', ' ', $status), 'body' => $ticket->ticket_number.': '.$ticket->subject, 'ticket_id' => $ticket->id, 'event_identity' => $ticket->id.':'.$status.':'.$ticket->updated_at->format('U.u')];
+            $ticket->loadMissing('customer');
+            if ($ticket->customer && ! ($actorType === 'customer' && (int) $actorId === (int) $ticket->customer_id)) {
+                $this->notifications->notifyCustomer($ticket->customer, $event, $payload, $ticket);
+            }
+            $this->notifications->notifyAdmins($ticket->tenant_id, $event, $payload, $ticket);
+        }
     }
 
     public function updateAssignment(Ticket $ticket, TicketTeam $team, ?User $user, User $actor): void

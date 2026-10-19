@@ -62,3 +62,5 @@ Schedule::command('model:prune', [
 Schedule::command('security:harden-storage --prune')->daily()->withoutOverlapping()->when(fn (): bool => config('security.maintain_storage'));
 
 Schedule::command('ipdr:sync')->everyMinute()->withoutOverlapping(30)->when(fn () => config('ipdr.enabled'));
+
+Schedule::command('communications:process')->everyMinute()->withoutOverlapping(10);

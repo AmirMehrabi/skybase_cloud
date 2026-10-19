@@ -1,3 +1,4 @@
+<p class="mb-5 text-sm text-gray-600">Save settings before testing. Outgoing tests verify SMTP authentication and TLS. Incoming tests log in and check mailbox access without reading or deleting messages.</p>
 <form action="{{ route('settings.update.email') }}" method="POST" class="space-y-6">
     @csrf
     @method('PUT')
@@ -155,16 +156,19 @@
 <div class="mt-4 flex flex-wrap items-center justify-end gap-3">
     <form action="{{ route('settings.test.email') }}" method="POST">
         @csrf
-        <input type="hidden" name="direction" value="incoming">
+        <x-ui.input.hidden name="direction" value="incoming" />
         <x-ui.button type="submit" variant="secondary">
             Test Incoming
         </x-ui.button>
     </form>
     <form action="{{ route('settings.test.email') }}" method="POST">
         @csrf
-        <input type="hidden" name="direction" value="outgoing">
+        <x-ui.input.hidden name="direction" value="outgoing" />
         <x-ui.button type="submit" variant="secondary">
             Test Outgoing
         </x-ui.button>
     </form>
 </div>
+<div class="mt-6"><x-ui.card title="Send a test email" subtitle="Save settings first. This sends a real message using your outgoing SMTP profile.">
+<form method="POST" action="{{ route('settings.test.email') }}" class="flex flex-wrap items-end gap-4">@csrf<x-ui.input.hidden name="direction" value="outgoing" /><x-ui.input.hidden name="action" value="send" /><x-ui.input.text name="destination" type="email" label="Test recipient" required /><x-ui.button type="submit" variant="secondary">Queue test email</x-ui.button><a class="text-sm text-teal-800 underline" href="{{ route('communications.deliveries') }}">Delivery activity</a></form>
+</x-ui.card></div>

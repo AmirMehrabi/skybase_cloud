@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\CentralIdentityProvider;
 use App\Services\IpdrInventoryService;
 use App\Services\SecurityEventLogger;
+use App\Services\TenantNotificationService;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -24,6 +25,18 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        Event::listen('eloquent.updated: '.Subscription::class, function (Subscription $subscription): void {
+            $event = $subscription->wasChanged('status') && $subscription->status === 'cancelled' ? 'subscription.cancelled' : ($subscription->wasChanged('plan_id') ? 'subscription.plan_changed' : null);
+            if ($event) {
+                $subscription->loadMissing('customer');
+                $payload = ['title' => $event === 'subscription.cancelled' ? 'Subscription cancelled' : 'Subscription service changed', 'body' => $subscription->subscription_code, 'subscription_id' => $subscription->id, 'event_identity' => $subscription->id.':'.$event.':'.$subscription->updated_at->format('U.u')];
+                $notifications = app(TenantNotificationService::class);
+                if ($subscription->customer) {
+                    $notifications->notifyCustomer($subscription->customer, $event, $payload, $subscription);
+                }
+                $notifications->notifyAdmins($subscription->tenant_id, $event, $payload, $subscription);
+            }
+        });
         foreach (['saved', 'deleted', 'restored'] as $event) {
             Event::listen('eloquent.'.$event.': '.Subscription::class, function (Subscription $subscription): void {
                 app(IpdrInventoryService::class)->subscription($subscription);

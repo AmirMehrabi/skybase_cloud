@@ -4,6 +4,7 @@
     'id' => null,
     'value' => null,
     'checked' => false,
+    'checkedOnly' => false,
     'disabled' => false,
     'error' => null,
 ])
@@ -19,7 +20,7 @@ $id ??= $name;
             id="{{ $id }}"
             name="{{ $name }}"
             value="{{ $value ?? '1' }}"
-            @if($checked || $value) checked @endif
+            @if($checked || (!$checkedOnly && $value)) checked @endif
             @if($disabled) disabled @endif
             {{ $attributes->merge(['class' => 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500']) }}
         />

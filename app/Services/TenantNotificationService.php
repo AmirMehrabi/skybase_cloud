@@ -36,7 +36,13 @@ class TenantNotificationService
                 continue;
             }
 
+            app(NotificationAutomationService::class)->send($recipient, $eventKey, $payload, $related);
+
             if (! $this->preferences->shouldDeliverInApp($recipient, $eventKey, (bool) $event['critical'])) {
+                continue;
+            }
+
+            if (isset($payload['event_identity']) && TenantNotification::query()->where('tenant_id', $tenantId)->where('notifiable_type', $recipient->getMorphClass())->where('notifiable_id', $recipient->getKey())->where('data->event_identity', $payload['event_identity'])->exists()) {
                 continue;
             }
 
@@ -86,6 +92,10 @@ class TenantNotificationService
 
     public function ticketCreated(Ticket $ticket): void
     {
+        $ticket->loadMissing('customer');
+        if ($ticket->customer) {
+            $this->notifyCustomer($ticket->customer, NotificationEventRegistry::TICKET_CREATED, ['title' => 'Your support ticket was created', 'body' => $ticket->ticket_number.': '.$ticket->subject, 'ticket_id' => $ticket->id, 'action_url' => route('customer.support.show', $ticket)], $ticket);
+        }
         $this->notifyAdmins($ticket->tenant_id, NotificationEventRegistry::TICKET_CREATED, [
             'title' => 'New support ticket',
             'body' => "{$ticket->ticket_number}: {$ticket->subject}",

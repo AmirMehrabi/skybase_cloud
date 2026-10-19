@@ -14,6 +14,8 @@ use App\Http\Controllers\Billing\InvoiceController;
 use App\Http\Controllers\Billing\PaymentController;
 use App\Http\Controllers\Billing\ReportController;
 use App\Http\Controllers\BrandingAssetController;
+use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CommunicationController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPortal\Auth\LoginController as CustomerPortalLoginController;
@@ -39,6 +41,7 @@ use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SmsGatewayController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SubscriptionIpdrController;
 use App\Http\Controllers\SubscriptionUsageController;
@@ -136,6 +139,29 @@ Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('aut
 // Protected Routes (Require Authentication & Tenancy)
 Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
 
+    Route::prefix('campaigns')->name('campaigns.')->group(function (): void {
+        Route::get('/', [CampaignController::class, 'index'])->name('index');
+        Route::get('/create', [CampaignController::class, 'create'])->name('create');
+        Route::post('/', [CampaignController::class, 'store'])->name('store');
+        Route::get('/{campaign}', [CampaignController::class, 'show'])->name('show');
+        Route::get('/{campaign}/edit', [CampaignController::class, 'edit'])->name('edit');
+        Route::put('/{campaign}', [CampaignController::class, 'update'])->name('update');
+        Route::post('/{campaign}/action', [CampaignController::class, 'action'])->name('action');
+    });
+    Route::prefix('communications')->name('communications.')->group(function (): void {
+        Route::get('/', [CommunicationController::class, 'index'])->name('index');
+        Route::get('/create', [CommunicationController::class, 'create'])->name('create');
+        Route::post('/', [CommunicationController::class, 'store'])->name('store');
+        Route::get('/deliveries', [CommunicationController::class, 'deliveries'])->name('deliveries');
+        Route::post('/deliveries/{delivery}/retry', [CommunicationController::class, 'retry'])->name('retry');
+        Route::get('/incidents', [CommunicationController::class, 'incidents'])->name('incidents');
+        Route::put('/policy', [CommunicationController::class, 'policy'])->name('policy');
+        Route::post('/incidents/{incident}/action', [CommunicationController::class, 'incidentAction'])->name('incident-action');
+        Route::get('/templates/{template}/edit', [CommunicationController::class, 'edit'])->name('edit');
+        Route::put('/templates/{template}', [CommunicationController::class, 'update'])->name('update');
+        Route::post('/templates/{template}/test', [CommunicationController::class, 'test'])->name('test');
+    });
+
     // Dashboard
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/search/resources', ResourceSearchController::class)->name('search.resources');
@@ -187,6 +213,9 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
         Route::put('/general', [SettingController::class, 'updateGeneral'])->name('update.general');
         Route::put('/branding', [SettingController::class, 'updateBranding'])->name('update.branding');
         Route::put('/billing-tax', [SettingController::class, 'updateBillingTax'])->name('update.billing-tax');
+        Route::get('/sms', [SmsGatewayController::class, 'index'])->name('sms');
+        Route::put('/sms', [SmsGatewayController::class, 'update'])->name('update.sms');
+        Route::post('/sms/test', [SmsGatewayController::class, 'test'])->middleware('throttle:sensitive-actions')->name('test.sms');
         Route::put('/email', [SettingController::class, 'updateEmail'])->name('update.email');
         Route::post('/email/test', [SettingController::class, 'testEmail'])->name('test.email');
         Route::put('/notifications', [SettingController::class, 'updateNotifications'])->name('update.notifications');
@@ -296,6 +325,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
         Route::post('/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->name('suspend');
         Route::post('/{subscription}/kill-session', [SubscriptionController::class, 'killSession'])->name('kill-session');
         Route::post('/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('activate');
+        Route::post('/{subscription}/credentials-sms', [SubscriptionController::class, 'sendCredentialsSms'])->middleware('throttle:sensitive-actions')->name('credentials-sms');
         Route::post('/{subscription}/credentials', [SubscriptionController::class, 'credentials'])->middleware('throttle:sensitive-actions')->name('credentials');
         Route::get('/{subscription}/renewal-preview', [SubscriptionController::class, 'renewalPreview'])->name('renewal-preview');
         Route::post('/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('renew');

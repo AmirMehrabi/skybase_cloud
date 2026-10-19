@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
@@ -36,6 +37,6 @@ class CompatibleSecretCast implements CastsAttributes
         $raw = $this->format === 'array' ? json_encode($value, JSON_THROW_ON_ERROR) : (string) $value;
         $alreadyEncrypted = isset($attributes[$key]) && self::isEncrypted((string) $attributes[$key]);
 
-        return config('security.encrypt_secrets') || $alreadyEncrypted ? Crypt::encryptString($raw) : $raw;
+        return config('security.encrypt_secrets') || $alreadyEncrypted || ($model instanceof Setting && (str_starts_with($attributes['key'] ?? '', 'email.') || str_starts_with($attributes['key'] ?? '', 'sms.'))) ? Crypt::encryptString($raw) : $raw;
     }
 }

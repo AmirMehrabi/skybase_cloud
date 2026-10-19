@@ -32,6 +32,16 @@ class NotificationEventRegistry
     public static function events(): array
     {
         return [
+            'support.ticket_status_changed' => ['label' => 'Ticket status changed', 'category' => 'support', 'severity' => 'info', 'critical' => false, 'roles' => ['owner', 'admin', 'support']],
+            'support.ticket_resolved' => ['label' => 'Ticket resolved', 'category' => 'support', 'severity' => 'success', 'critical' => false, 'roles' => ['owner', 'admin', 'support']],
+            'subscription.cancelled' => ['label' => 'Subscription cancelled', 'category' => 'subscription', 'severity' => 'warning', 'critical' => false, 'roles' => ['owner', 'admin', 'support']],
+            'subscription.plan_changed' => ['label' => 'Subscription service changed', 'category' => 'subscription', 'severity' => 'info', 'critical' => false, 'roles' => ['owner', 'admin', 'support']],
+            'network.router_recovered' => ['label' => 'Router recovered', 'category' => 'network', 'severity' => 'success', 'critical' => false, 'roles' => ['owner', 'admin', 'noc']],
+            'billing.invoice_reminder_7' => ['label' => 'Invoice reminder (7 days)', 'category' => 'billing', 'severity' => 'info', 'critical' => false, 'roles' => []],
+            'billing.invoice_reminder_5' => ['label' => 'Invoice reminder (5 days)', 'category' => 'billing', 'severity' => 'info', 'critical' => false, 'roles' => []],
+            'billing.invoice_reminder_3' => ['label' => 'Invoice reminder (3 days)', 'category' => 'billing', 'severity' => 'info', 'critical' => false, 'roles' => []],
+            'billing.invoice_reminder_1' => ['label' => 'Invoice reminder (1 days)', 'category' => 'billing', 'severity' => 'info', 'critical' => false, 'roles' => []],
+            'billing.invoice_reminder_0' => ['label' => 'Invoice reminder (0 days)', 'category' => 'billing', 'severity' => 'info', 'critical' => false, 'roles' => []],
             self::TICKET_CREATED => ['label' => 'Support ticket created', 'category' => 'support', 'severity' => 'info', 'critical' => false, 'roles' => ['owner', 'admin', 'support']],
             self::TICKET_CUSTOMER_REPLY => ['label' => 'Customer replied to a ticket', 'category' => 'support', 'severity' => 'info', 'critical' => false, 'roles' => ['owner', 'admin', 'support']],
             self::TICKET_STAFF_REPLY => ['label' => 'Staff replied to a ticket', 'category' => 'support', 'severity' => 'info', 'critical' => false, 'roles' => []],

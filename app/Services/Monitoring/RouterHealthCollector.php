@@ -4,6 +4,8 @@ namespace App\Services\Monitoring;
 
 use App\Models\Router;
 use App\Models\RouterMonitoringState;
+use App\Services\NotificationIncidentService;
+use App\Services\TenantContext;
 use Throwable;
 
 class RouterHealthCollector
@@ -85,6 +87,8 @@ class RouterHealthCollector
             ['tenant_id' => $router->tenant_id, 'router_id' => $router->id],
             $sample,
         );
+
+        app(TenantContext::class)->run((string) $router->tenant_id, fn () => app(NotificationIncidentService::class)->observe($router, $status !== 'offline'));
 
         return $sample;
     }

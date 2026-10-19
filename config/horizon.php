@@ -197,6 +197,8 @@ return [
     */
 
     'defaults' => [
+        'communications' => ['connection' => 'redis', 'queue' => ['notifications'], 'balance' => 'auto', 'maxProcesses' => 2, 'tries' => 1, 'timeout' => 50, 'memory' => 128],
+        'campaigns' => ['connection' => 'redis', 'queue' => ['campaigns'], 'balance' => 'auto', 'maxProcesses' => 2, 'tries' => 1, 'timeout' => 50, 'memory' => 128],
         'subscriptions' => [
             'connection' => 'redis',
             'queue' => ['subscriptions', 'default'],

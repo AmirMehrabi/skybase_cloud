@@ -28,12 +28,15 @@ use App\Models\SubscriptionItem;
 use App\Models\SubscriptionUsageCycle;
 use App\Services\ActivityLogFormatter;
 use App\Services\BillingService;
+use App\Services\CommunicationDeliveryService;
 use App\Services\CredentialVisibility;
+use App\Services\MessageTemplateService;
 use App\Services\Monitoring\RrdToolService;
 use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
 use App\Services\SecurityEventLogger;
+use App\Services\SmsGatewayService;
 use App\Services\SubscriptionDeletionService;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionRenewalService;
@@ -75,6 +78,32 @@ class SubscriptionController extends Controller
         ]);
 
         return response()->json(['password' => $subscription->pppoe_password])->header('Cache-Control', 'no-store');
+    }
+
+    public function sendCredentialsSms(RevealCredentialsRequest $request, Subscription $subscription): RedirectResponse
+    {
+        abort_unless((string) $subscription->tenant_id === (string) tenant()->id, 403);
+        $subscription->loadMissing('customer');
+        $customer = $subscription->customer;
+        $phone = $customer?->mobile ?: $customer?->phone;
+        $password = (string) $subscription->pppoe_password;
+        if (! $phone || ! $password || ! $subscription->pppoe_username) {
+            throw ValidationException::withMessages(['sms' => 'A customer phone, PPP username and recoverable password are required.']);
+        }
+        $settings = app(SmsGatewayService::class)->settings($subscription->tenant_id);
+        $content = ['sms_body' => 'Username: '.$subscription->pppoe_username."\nPassword: ".$password];
+        if ($settings['provider'] === 'kavenegar') {
+            if (blank($settings['kavenegar']['credentials_template'])) {
+                throw ValidationException::withMessages(['sms' => 'Configure the credentials Lookup template in SMS gateway settings.']);
+            }
+            $content = app(MessageTemplateService::class)->render(['sms_mode' => 'lookup', 'lookup_template' => $settings['kavenegar']['credentials_template'], 'lookup_tokens' => ['token' => 'first_name', 'token2' => 'username', 'token3' => 'reset_code']], ['first_name' => $customer->first_name ?: 'Customer', 'username' => $subscription->pppoe_username, 'reset_code' => $password]);
+        }
+        app(CommunicationDeliveryService::class)->create($subscription->tenant_id, 'credentials:'.$subscription->id.':'.intdiv(now()->timestamp, 60), [
+            'channel' => 'sms', 'destination' => $phone, 'content' => $content, 'context' => ['sensitive' => true], 'expires_at' => now()->addMinutes(15),
+        ]);
+        app(SecurityEventLogger::class)->record('credentials.sms_requested', ['user_id' => $request->user()->id, 'tenant_id' => $subscription->tenant_id, 'resource_id' => $subscription->id]);
+
+        return back()->with('success', 'Credentials SMS queued. Track the result in Delivery activity.');
     }
 
     public function index(): View

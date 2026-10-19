@@ -106,6 +106,20 @@ class NotificationPreferenceService
         ];
     }
 
+    public function shouldDeliverExternal(Model $notifiable, ?string $eventKey, string $channel, bool $campaign = false): bool
+    {
+        $tenantId = $this->tenantIdFor($notifiable);
+        if (! $tenantId || ! in_array($channel, ['email', 'sms'], true)) {
+            return false;
+        }
+        $tenantSettings = $this->tenantSettings($tenantId);
+        $settings = $this->settingsFor($notifiable);
+
+        return $tenantSettings['enabled'] && ($tenantSettings['channels'][$channel] ?? false)
+            && ($campaign || ($tenantSettings['events'][$eventKey] ?? true))
+            && $settings['notifications_enabled'] && $settings[$channel.'_enabled'];
+    }
+
     private function tenantIdFor(Model $notifiable): ?string
     {
         return $notifiable->tenant_id ?? tenant_id();

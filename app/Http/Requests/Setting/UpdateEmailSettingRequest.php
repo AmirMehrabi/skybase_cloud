@@ -8,7 +8,7 @@ class UpdateEmailSettingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() === true;
+        return $this->user()?->hasPermission('settings.write') === true;
     }
 
     public function rules(): array
@@ -16,21 +16,21 @@ class UpdateEmailSettingRequest extends FormRequest
         return [
             'incoming_active' => ['nullable', 'boolean'],
             'incoming_protocol' => ['required', 'in:imap,pop3'],
-            'incoming_host' => ['nullable', 'string', 'max:255'],
+            'incoming_host' => ['required_if:incoming_active,1', 'nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
             'incoming_port' => ['nullable', 'integer', 'between:1,65535'],
             'incoming_encryption' => ['required', 'in:none,ssl,tls'],
-            'incoming_username' => ['nullable', 'string', 'max:255'],
-            'incoming_password' => ['nullable', 'string', 'max:255'],
-            'incoming_mailbox' => ['nullable', 'string', 'max:255'],
+            'incoming_username' => ['nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
+            'incoming_password' => ['nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
+            'incoming_mailbox' => ['nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
 
             'outgoing_active' => ['nullable', 'boolean'],
-            'outgoing_host' => ['nullable', 'string', 'max:255'],
+            'outgoing_host' => ['required_if:outgoing_active,1', 'nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
             'outgoing_port' => ['nullable', 'integer', 'between:1,65535'],
             'outgoing_encryption' => ['required', 'in:none,ssl,tls'],
-            'outgoing_username' => ['nullable', 'string', 'max:255'],
-            'outgoing_password' => ['nullable', 'string', 'max:255'],
-            'outgoing_from_email' => ['nullable', 'email', 'max:255'],
-            'outgoing_from_name' => ['nullable', 'string', 'max:255'],
+            'outgoing_username' => ['nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
+            'outgoing_password' => ['nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
+            'outgoing_from_email' => ['required_if:outgoing_active,1', 'nullable', 'email', 'max:255'],
+            'outgoing_from_name' => ['nullable', 'string', 'max:255', 'not_regex:/[\r\n\x00]/'],
         ];
     }
 
