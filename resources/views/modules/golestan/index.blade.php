@@ -37,5 +37,4 @@
         </x-ui.card>
     @endif
 </div>
-
 @endsection
