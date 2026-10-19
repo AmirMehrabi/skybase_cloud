@@ -1,13 +1,16 @@
 @extends('layouts.admin')
 @section('title', 'Message template')
 @section('content')
-<x-communication-nav />
-<h1 class="mb-6 text-2xl font-semibold text-gray-900">{{ $template->exists ? 'Edit template & rule' : 'New template & rule' }}</h1>
+@php($isCampaign = blank($template->event_key))
+<x-communication-nav :template="$template" />
+<x-ui.page-header :title="$template->exists ? $template->name : ($isCampaign ? 'New campaign template' : 'New notification rule')" :description="$isCampaign ? 'Write a reusable message for your customer campaigns.' : 'Connect an application event to a clear, personalized message.'" icon="template" :eyebrow="$isCampaign ? 'Campaigns' : 'Notifications'" />
 <form method="POST" action="{{ $template->exists ? route('communications.update', $template) : route('communications.store') }}" class="space-y-6">
 @csrf @if($template->exists) @method('PUT') @endif
-<x-ui.card title="Delivery rule"><div class="grid gap-5 md:grid-cols-2">
+<x-ui.card :title="$isCampaign ? 'Template details' : 'Delivery rule'"><div class="grid gap-5 md:grid-cols-2">
 <x-ui.input.text name="name" label="Name" :value="old('name', $template->name)" required />
-<x-ui.input.select name="event_key" label="Application event" :options="$events" :value="old('event_key', $template->event_key)" placeholder="Manual campaign template" />
+@unless($isCampaign)
+<x-ui.input.select name="event_key" label="Application event" :options="$events" :value="old('event_key', $template->event_key)" placeholder="Choose an event" required />
+@endunless
 <x-ui.input.select name="recipient_type" label="Recipient type" :options="['customer'=>'Customer','admin'=>'Staff','both'=>'Customer and staff']" :value="old('recipient_type', $template->recipient_type)" required />
 <x-ui.input.checkbox name="enabled" label="Enabled" :checked="old('enabled', $template->enabled)" />
 </div><div class="mt-5 flex gap-5">@foreach(['email'=>'Email','sms'=>'SMS'] as $key=>$label)<x-ui.input.checkbox name="channels[]" :checked-only="true" :id="'channel-'.$key" :value="$key" :label="$label" :checked="in_array($key, old('channels', $template->channels ?? []))" />@endforeach</div>
@@ -23,10 +26,12 @@
 <x-ui.input.text name="lookup_template" label="Approved template name" :value="old('lookup_template', $template->lookup_template)" />
 @foreach(['token','token2','token3','token10','token20'] as $token)<x-ui.input.select :name="'lookup_tokens['.$token.']'" :label="$token.' variable'" :options="array_combine(App\Services\MessageTemplateService::VARIABLES, App\Services\MessageTemplateService::VARIABLES)" :value="old('lookup_tokens.'.$token, $template->lookup_tokens[$token] ?? '')" placeholder="Unused" />@endforeach
 </div></x-ui.card>
+@unless($isCampaign)
 <x-ui.card title="Incident escalation contacts" subtitle="Used by router offline/recovery rules. One contact per line: channel, destination, escalation stage (0 for initial).">
 <x-ui.input.textarea name="recipient_lines" label="Contacts" :value="old('recipient_lines', collect($template->recipients)->map(fn($contact) => $contact['channel'].', '.$contact['destination'].', '.$contact['stage'])->implode(PHP_EOL))" placeholder="email, noc@example.com, 0" rows="4" />
 </x-ui.card>
-<div class="flex justify-end"><x-ui.button type="submit">Save template</x-ui.button></div>
+@endunless
+<div class="flex justify-end"><x-ui.button type="submit" variant="brand">Save template</x-ui.button></div>
 </form>
 @if($template->exists)
 <div class="mt-6"><x-ui.card title="Send a real test" subtitle="Save changes first. A test uses sample values and can incur provider charges."><form method="POST" action="{{ route('communications.test', $template) }}" class="flex flex-wrap items-end gap-4">@csrf<x-ui.input.hidden name="action" value="send" /><x-ui.input.select name="channel" label="Channel" :options="array_combine($template->channels, $template->channels)" required /><x-ui.input.text name="destination" label="Test email or phone" required /><x-ui.button type="submit" variant="secondary">Queue test message</x-ui.button></form></x-ui.card></div>

@@ -3,6 +3,7 @@
 @section('title', 'User Groups')
 
 @section('content')
+<x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings', 'url' => route('settings.index')], ['label' => 'User groups']]" />
 <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
     <div><h1 class="text-2xl font-bold text-gray-900">User Groups</h1><p class="mt-1 text-gray-600">Control which tenant data each staff group can access.</p></div>
     @if(auth()->user()?->hasPermission('user_groups.write'))

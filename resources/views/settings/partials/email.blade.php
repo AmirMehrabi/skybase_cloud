@@ -147,7 +147,7 @@
     </x-ui.card>
 
     <div class="flex flex-wrap items-center justify-end gap-3">
-        <x-ui.button type="submit">
+        <x-ui.button type="submit" variant="brand">
             Save Email Settings
         </x-ui.button>
     </div>

@@ -17,7 +17,7 @@ class SettingsGeneralTest extends TestCase
         $tenant = $this->createTenant('alpha-net');
         $admin = $this->createAdminForTenant($tenant);
 
-        $response = $this->actingAs($admin)->get(route('settings.index', ['tab' => 'general']));
+        $response = $this->actingAs($admin)->get(route('settings.section', ['section' => 'general']));
 
         $response->assertOk();
         $response->assertSee('SLE - Sierra Leonean Leone (Le)');
@@ -55,7 +55,7 @@ class SettingsGeneralTest extends TestCase
             'custom_domain' => 'settings.alpha.test',
         ]);
 
-        $response->assertRedirect(route('settings.index', ['tab' => 'general']));
+        $response->assertRedirect(route('settings.section', ['section' => 'general']));
         $response->assertSessionHasNoErrors();
 
         $updatedTenant = $tenant->fresh();

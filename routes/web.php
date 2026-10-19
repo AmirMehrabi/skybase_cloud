@@ -143,6 +143,8 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
         Route::get('/', [CampaignController::class, 'index'])->name('index');
         Route::get('/create', [CampaignController::class, 'create'])->name('create');
         Route::post('/', [CampaignController::class, 'store'])->name('store');
+        Route::get('/templates', [CommunicationController::class, 'index'])->name('templates');
+        Route::get('/deliveries', [CommunicationController::class, 'deliveries'])->name('deliveries');
         Route::get('/{campaign}', [CampaignController::class, 'show'])->name('show');
         Route::get('/{campaign}/edit', [CampaignController::class, 'edit'])->name('edit');
         Route::put('/{campaign}', [CampaignController::class, 'update'])->name('update');
@@ -225,6 +227,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
         Route::post('/ldap/preview', [SettingController::class, 'previewLdap'])->name('preview.ldap');
         Route::post('/ldap/sync', [SettingController::class, 'syncLdap'])->name('sync.ldap');
         Route::match(['post', 'delete'], '/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
+        Route::get('/{section}', [SettingController::class, 'section'])->whereIn('section', ['general', 'branding', 'billing', 'email', 'notifications', 'ldap'])->name('section');
     });
 
     Route::prefix('support')->name('support.')->group(function () {

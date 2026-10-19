@@ -41,7 +41,7 @@ class SettingsEmailTest extends TestCase
             'outgoing_from_name' => 'Alpha Billing',
         ]);
 
-        $response->assertRedirect(route('settings.index', ['tab' => 'email']));
+        $response->assertRedirect(route('settings.section', ['section' => 'email']));
 
         $incoming = Setting::forTenant($tenant->id)->where('key', 'email.incoming')->firstOrFail();
         $outgoing = Setting::forTenant($tenant->id)->where('key', 'email.outgoing')->firstOrFail();
@@ -91,7 +91,7 @@ class SettingsEmailTest extends TestCase
             'outgoing_username' => 'mailer@alpha.test',
             'outgoing_from_email' => 'billing@alpha.test',
             'outgoing_from_name' => 'Alpha Billing',
-        ])->assertRedirect(route('settings.index', ['tab' => 'email']));
+        ])->assertRedirect(route('settings.section', ['section' => 'email']));
 
         $incoming = Setting::forTenant($tenant->id)->where('key', 'email.incoming')->firstOrFail();
         $outgoing = Setting::forTenant($tenant->id)->where('key', 'email.outgoing')->firstOrFail();

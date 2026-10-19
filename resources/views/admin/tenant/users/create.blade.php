@@ -3,6 +3,7 @@
 @section('title', 'Add User')
 
 @section('content')
+<x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings', 'url' => route('settings.index')], ['label' => 'Team members', 'url' => route('admin.tenant.users.index')], ['label' => 'Create']]" />
 <div class="mb-6">
     <a href="{{ route('admin.tenant.users.index') }}" class="text-blue-600 hover:text-blue-800 flex items-center gap-2 mb-2">
         <i class="fas fa-arrow-left"></i>

@@ -28,7 +28,7 @@
                            value="{{ old('primary_color', $tenant->primary_color) }}"
                            class="h-10 w-20 rounded border border-gray-300 cursor-pointer">
                     <input type="text" value="{{ old('primary_color', $tenant->primary_color) }}"
-                           class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                           class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-teal-700 sm:text-sm"
                            readonly>
                 </div>
                 @error('primary_color')
@@ -46,7 +46,7 @@
                            value="{{ old('secondary_color', $tenant->secondary_color) }}"
                            class="h-10 w-20 rounded border border-gray-300 cursor-pointer">
                     <input type="text" value="{{ old('secondary_color', $tenant->secondary_color) }}"
-                           class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                           class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-teal-700 sm:text-sm"
                            readonly>
                 </div>
                 @error('secondary_color')
@@ -64,7 +64,7 @@
                            value="{{ old('accent_color', $tenant->accent_color) }}"
                            class="h-10 w-20 rounded border border-gray-300 cursor-pointer">
                     <input type="text" value="{{ old('accent_color', $tenant->accent_color) }}"
-                           class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                           class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-teal-700 sm:text-sm"
                            readonly>
                 </div>
                 @error('accent_color')
@@ -305,7 +305,7 @@
 
     <!-- Save Button -->
     <div class="flex justify-end">
-        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-900 hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-700">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
             </svg>

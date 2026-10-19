@@ -4,37 +4,16 @@
 
 @section('content')
 <div class="mx-auto max-w-6xl space-y-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-gray-900">Notifications</h1>
-            <p class="mt-1 text-sm text-gray-500">Operational alerts, support updates, billing events, and system messages.</p>
-        </div>
-
-        <form method="POST" action="{{ route('notifications.read-all') }}">
-            @csrf
-            @method('PATCH')
-            <button type="submit" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Mark all read</button>
-        </form>
-    </div>
+    <x-communication-nav />
+    <x-ui.page-header title="Notifications" description="Your operational alerts, support updates and billing messages, in one inbox." icon="bell">
+        @if(auth()->user()->canAccessRoute('notifications.read-all'))<form method="POST" action="{{ route('notifications.read-all') }}">@csrf @method('PATCH')<x-ui.button type="submit" variant="secondary">Mark all read</x-ui.button></form>@endif
+    </x-ui.page-header>
 
     <form method="GET" action="{{ route('notifications.index') }}" class="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-4">
-        <select name="status" class="rounded-lg border-gray-300 text-sm">
-            <option value="">All statuses</option>
-            <option value="unread" @selected(request('status') === 'unread')>Unread</option>
-        </select>
-        <select name="category" class="rounded-lg border-gray-300 text-sm">
-            <option value="">All categories</option>
-            @foreach($categories as $category)
-                <option value="{{ $category }}" @selected(request('category') === $category)>{{ ucfirst($category) }}</option>
-            @endforeach
-        </select>
-        <select name="severity" class="rounded-lg border-gray-300 text-sm">
-            <option value="">All severities</option>
-            @foreach($severities as $severity)
-                <option value="{{ $severity }}" @selected(request('severity') === $severity)>{{ ucfirst($severity) }}</option>
-            @endforeach
-        </select>
-        <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Apply filters</button>
+        <x-ui.input.select name="status" label="Status" :options="['unread' => 'Unread']" :value="request('status')" placeholder="All statuses" />
+        <x-ui.input.select name="category" label="Category" :options="collect($categories)->mapWithKeys(fn($category) => [$category => ucfirst($category)])->all()" :value="request('category')" placeholder="All categories" />
+        <x-ui.input.select name="severity" label="Severity" :options="collect($severities)->mapWithKeys(fn($severity) => [$severity => ucfirst($severity)])->all()" :value="request('severity')" placeholder="All severities" />
+        <div class="flex items-end"><x-ui.button type="submit" variant="brand" class="w-full">Apply filters</x-ui.button></div>
     </form>
 
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">

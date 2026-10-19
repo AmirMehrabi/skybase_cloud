@@ -3,6 +3,7 @@
 @section('title', 'Create User Group')
 
 @section('content')
+<x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings', 'url' => route('settings.index')], ['label' => 'User groups', 'url' => route('admin.tenant.user-groups.index')], ['label' => 'Create']]" />
 <div class="mb-6">
     <a href="{{ route('admin.tenant.user-groups.index') }}" class="mb-2 flex items-center gap-2 text-blue-600 hover:text-blue-800"><i class="fas fa-arrow-left"></i><span>Back to User Groups</span></a>
     <h1 class="text-2xl font-bold text-gray-900">Create User Group</h1>

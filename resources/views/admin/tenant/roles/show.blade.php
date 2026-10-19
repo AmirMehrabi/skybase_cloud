@@ -3,6 +3,7 @@
 @section('title', 'Role Details')
 
 @section('content')
+<x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings', 'url' => route('settings.index')], ['label' => 'Roles & permissions', 'url' => route('admin.tenant.roles.index')], ['label' => 'Details']]" />
 <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
     <div>
         <a href="{{ route('admin.tenant.roles.index') }}" class="mb-2 flex items-center gap-2 text-blue-600 hover:text-blue-800">

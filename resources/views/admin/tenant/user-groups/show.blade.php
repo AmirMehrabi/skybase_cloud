@@ -3,6 +3,7 @@
 @section('title', 'User Group Details')
 
 @section('content')
+<x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings', 'url' => route('settings.index')], ['label' => 'User groups', 'url' => route('admin.tenant.user-groups.index')], ['label' => 'Details']]" />
 <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
     <div><a href="{{ route('admin.tenant.user-groups.index') }}" class="mb-2 flex items-center gap-2 text-blue-600 hover:text-blue-800"><i class="fas fa-arrow-left"></i><span>Back to User Groups</span></a><h1 class="text-2xl font-bold text-gray-900">{{ $userGroup->name }}</h1><p class="mt-1 text-gray-600">{{ $userGroup->description ?: 'No description provided.' }}</p></div>
     @if(auth()->user()?->hasPermission('user_groups.write'))<a href="{{ route('admin.tenant.user-groups.edit', $userGroup) }}" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Edit User Group</a>@endif

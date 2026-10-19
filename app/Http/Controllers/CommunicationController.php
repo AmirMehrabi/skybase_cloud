@@ -23,16 +23,22 @@ use Illuminate\View\View;
 
 class CommunicationController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        app(NotificationAutomationService::class)->ensureDefaults(tenant()->id);
+        $isCampaign = $request->routeIs('campaigns.templates');
+        if (! $isCampaign) {
+            app(NotificationAutomationService::class)->ensureDefaults(tenant()->id);
+        }
+        $templates = CommunicationTemplate::query()->when($isCampaign, fn ($query) => $query->whereNull('event_key'), fn ($query) => $query->whereNotNull('event_key'))->orderBy('name')->paginate(20);
 
-        return view('modules.communications.index', ['templates' => CommunicationTemplate::query()->orderBy('name')->paginate(20)]);
+        return view('modules.communications.index', compact('templates', 'isCampaign'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return $this->form(new CommunicationTemplate(['channels' => ['email'], 'enabled' => true, 'sms_mode' => 'plain', 'recipient_type' => 'customer', 'lookup_tokens' => []]));
+        $event = $request->query('kind') === 'campaign' ? null : NotificationEventRegistry::INVOICE_CREATED;
+
+        return $this->form(new CommunicationTemplate(['channels' => ['email'], 'enabled' => true, 'event_key' => $event, 'sms_mode' => 'plain', 'recipient_type' => 'customer', 'lookup_tokens' => []]));
     }
 
     public function edit(CommunicationTemplate $template): View
@@ -75,16 +81,17 @@ class CommunicationController extends Controller
         }
         $template->fill($data)->fill(['version' => $template->exists ? $template->version + 1 : 1])->save();
 
-        return redirect()->route('communications.index')->with('success', 'Template saved. Already queued messages keep their original content.');
+        return redirect()->route($template->event_key ? 'communications.index' : 'campaigns.templates')->with('success', 'Template saved. Already queued messages keep their original content.');
     }
 
     public function deliveries(Request $request): View
     {
-        $deliveries = MessageDelivery::query()->with('campaign')->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')))
+        $isCampaign = $request->routeIs('campaigns.deliveries');
+        $deliveries = MessageDelivery::query()->with('campaign')->when($isCampaign, fn ($query) => $query->whereNotNull('campaign_id'), fn ($query) => $query->whereNull('campaign_id'))->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')))
             ->when($request->filled('channel'), fn ($query) => $query->where('channel', $request->input('channel')))
             ->when($request->filled('event_key'), fn ($query) => $query->where('event_key', $request->input('event_key')))->latest()->paginate(30)->withQueryString();
 
-        return view('modules.communications.deliveries', compact('deliveries'));
+        return view('modules.communications.deliveries', compact('deliveries', 'isCampaign'));
     }
 
     public function retry(DeliveryActionRequest $request, MessageDelivery $delivery): RedirectResponse

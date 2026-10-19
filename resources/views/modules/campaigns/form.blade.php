@@ -1,9 +1,8 @@
 @extends('layouts.admin')
 @section('title', $campaign->exists ? 'Edit campaign' : 'New campaign')
 @section('content')
-<x-communication-nav />
-<h1 class="mb-2 text-2xl font-semibold text-gray-900">{{ $campaign->exists ? 'Edit campaign' : 'New campaign' }}</h1>
-<p class="mb-6 text-sm text-gray-500">Choose an audience and message. You can review exclusions and personalized previews before sending.</p>
+<x-communication-nav :campaign="$campaign" />
+<x-ui.page-header :title="$campaign->exists ? 'Edit campaign' : 'New campaign'" description="Choose an audience and message, then review personalized previews before sending." icon="megaphone" eyebrow="Campaigns" />
 @php($filters = old('filters', request('audience') ? $audiences->firstWhere('id', request('audience'))?->filters ?? $campaign->audience_filters : $campaign->audience_filters))
 <form method="POST" action="{{ $campaign->exists ? route('campaigns.update', $campaign) : route('campaigns.store') }}" class="space-y-6">
 @csrf @if($campaign->exists) @method('PUT') @endif
@@ -35,6 +34,6 @@
 <x-ui.input.textarea name="sms_body" label="SMS message" :value="old('sms_body', $campaign->content['sms_body'] ?? '')" rows="4" />
 <p class="text-sm text-gray-500">Available customer variables: @verbatim {{customer_name}}, {{first_name}}, {{last_name}}, {{email}}, {{phone}}, {{username}} @endverbatim. Exact SMS segments appear on review.</p>
 </div></x-ui.card>
-<div class="flex justify-end"><x-ui.button type="submit">Save draft & review</x-ui.button></div>
+<div class="flex justify-end"><x-ui.button type="submit" variant="brand">Save draft & review</x-ui.button></div>
 </form>
 @endsection

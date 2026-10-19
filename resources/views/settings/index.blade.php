@@ -1,117 +1,18 @@
 @extends('layouts.admin')
-
 @section('title', 'Settings')
-
 @section('content')
-@php
-    $activeTab = request()->get('tab', 'general');
-@endphp
-
-<div class="max-w-6xl mx-auto">
-    <!-- Page Header -->
-    <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-gray-900">Settings</h1>
-        <p class="mt-1 text-sm text-gray-500">Manage your account settings and preferences</p>
-    </div>
-
-    @if($errors->any())
-        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div class="flex">
-                <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                </svg>
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-red-800">Please fix the following errors:</p>
-                    <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+<div class="mx-auto max-w-7xl">
+    <x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings']]" />
+    <x-ui.page-header title="Settings" description="Your workspace, your way. Manage your company, connections and team from one place." icon="settings" />
+    <div class="space-y-9">
+        @foreach(collect(App\Support\SettingsNavigation::sections())->filter(fn($section) => auth()->user()->canAccessRoute($section['route']))->groupBy('group') as $group => $sections)
+            <section aria-labelledby="settings-group-{{ $loop->index }}">
+                <div class="mb-4 flex items-center gap-3"><h2 id="settings-group-{{ $loop->index }}" class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ $group }}</h2><div class="h-px flex-1 bg-slate-200"></div></div>
+                <div class="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    @foreach($sections as $section)<x-settings-card :title="$section['title']" :description="$section['description']" :icon="$section['icon']" :href="route($section['route'], $section['parameters'])" />@endforeach
                 </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- Tabs Navigation -->
-    <div class="border-b border-gray-200 mb-6">
-        <nav class="flex -mb-px space-x-8 overflow-x-auto">
-            <button onclick="showTab('general')" id="tab-general" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                General
-            </button>
-            <button onclick="showTab('branding')" id="tab-branding" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'branding' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                Branding & Appearance
-            </button>
-            <button onclick="showTab('billing')" id="tab-billing" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'billing' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                Billing
-            </button>
-            <button onclick="showTab('email')" id="tab-email" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'email' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                Email
-            </button>
-            <button onclick="showTab('notifications')" id="tab-notifications" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'notifications' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                Notifications
-            </button>
-            <button onclick="showTab('ldap')" id="tab-ldap" class="tab-button py-4 px-1 border-b-2 font-medium text-sm {{ $activeTab === 'ldap' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                LDAP Sync
-            </button>
-        </nav>
-    </div>
-
-    <div class="mb-5 flex flex-wrap gap-4 text-sm"><a class="font-medium text-teal-800 underline" href="{{ route('settings.sms') }}">SMS gateway settings</a><a class="font-medium text-teal-800 underline" href="{{ route('communications.index') }}">Message templates & delivery rules</a></div>
-
-    <!-- General Tab -->
-    <div id="content-general" class="tab-content {{ $activeTab === 'general' ? '' : 'hidden' }}">
-        @include('settings.partials.general')
-    </div>
-
-    <!-- Branding Tab -->
-    <div id="content-branding" class="tab-content {{ $activeTab === 'branding' ? '' : 'hidden' }}">
-        @include('settings.partials.branding')
-    </div>
-
-    <!-- Billing Tab -->
-    <div id="content-billing" class="tab-content {{ $activeTab === 'billing' ? '' : 'hidden' }}">
-        @include('settings.partials.billing')
-    </div>
-
-    <!-- Email Tab -->
-    <div id="content-email" class="tab-content {{ $activeTab === 'email' ? '' : 'hidden' }}">
-        @include('settings.partials.email')
-    </div>
-
-    <div id="content-notifications" class="tab-content {{ $activeTab === 'notifications' ? '' : 'hidden' }}">
-        @include('settings.partials.notifications')
-    </div>
-
-    <!-- LDAP Tab -->
-    <div id="content-ldap" class="tab-content {{ $activeTab === 'ldap' ? '' : 'hidden' }}">
-        @include('settings.partials.ldap')
+            </section>
+        @endforeach
     </div>
 </div>
-
-<script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
-    function showTab(tabName) {
-        // Hide all tab contents
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.add('hidden');
-        });
-
-        // Show selected tab content
-        document.getElementById('content-' + tabName).classList.remove('hidden');
-
-        // Update tab button styles
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.classList.remove('border-blue-500', 'text-blue-600');
-            button.classList.add('border-transparent', 'text-gray-500');
-        });
-
-        const activeButton = document.getElementById('tab-' + tabName);
-        activeButton.classList.remove('border-transparent', 'text-gray-500');
-        activeButton.classList.add('border-blue-500', 'text-blue-600');
-
-        // Update URL without reloading
-        const url = new URL(window.location);
-        url.searchParams.set('tab', tabName);
-        window.history.pushState({}, '', url);
-    }
-</script>
 @endsection

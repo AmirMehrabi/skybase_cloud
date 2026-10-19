@@ -11,6 +11,7 @@
 @endpush
 
 @section('content')
+<x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings', 'url' => route('settings.index')], ['label' => 'Team members']]" />
 <div class="mb-6">
     <div class="flex items-center justify-between">
         <div>

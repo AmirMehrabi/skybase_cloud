@@ -51,7 +51,7 @@
                         id="hosts"
                         name="hosts"
                         rows="3"
-                        class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-teal-700"
                         placeholder="ldap1.example.com&#10;ldap2.example.com"
                     >{{ old('hosts', $hosts) }}</textarea>
                     @error('hosts')
@@ -127,7 +127,7 @@
                         <p class="text-sm font-medium text-gray-900">OU discovery</p>
                         <p class="mt-1 text-sm text-gray-500">Searches under the LDAP Base DN above. Newly discovered OUs are included automatically unless unchecked.</p>
                     </div>
-                    <button type="button" x-on:click="fetchOus" x-bind:disabled="loading" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                    <button type="button" x-on:click="fetchOus" x-bind:disabled="loading" class="inline-flex items-center justify-center rounded-lg bg-teal-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60">
                         <span x-show="! loading">Fetch OUs</span>
                         <span x-cloak x-show="loading">Fetching...</span>
                     </button>
@@ -159,7 +159,7 @@
                     <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div class="md:w-80">
                             <label for="ou_search" class="sr-only">Search OUs</label>
-                            <input id="ou_search" type="search" x-model="query" placeholder="Search OUs" class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <input id="ou_search" type="search" x-model="query" placeholder="Search OUs" class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-teal-700">
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" x-on:click="selectVisible" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50">Select visible</button>
@@ -170,7 +170,7 @@
                     <div class="max-h-96 overflow-y-auto rounded-lg border border-gray-200">
                         <template x-for="ou in filteredOus()" :key="ou.dn">
                             <label class="flex cursor-pointer gap-3 border-b border-gray-100 px-4 py-3 last:border-b-0 hover:bg-gray-50">
-                                <input type="checkbox" class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" x-bind:checked="isSelected(ou)" x-on:change="toggleOu(ou, $event.target.checked)">
+                                <input type="checkbox" class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-teal-700" x-bind:checked="isSelected(ou)" x-on:change="toggleOu(ou, $event.target.checked)">
                                 <span class="min-w-0 flex-1">
                                     <span class="block text-sm font-medium text-gray-900" x-text="ou.name"></span>
                                     <span class="mt-0.5 block truncate text-xs text-gray-500" x-text="ou.path"></span>
@@ -242,7 +242,7 @@
         </x-ui.card>
 
         <div class="flex justify-end">
-            <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+            <button type="submit" class="rounded-lg bg-teal-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2">
                 Save LDAP Settings
             </button>
         </div>

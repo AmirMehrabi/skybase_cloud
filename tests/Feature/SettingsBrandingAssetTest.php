@@ -60,7 +60,7 @@ class SettingsBrandingAssetTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('settings.delete.asset', ['asset' => 'company_logo']))
-            ->assertRedirect(route('settings.index', ['tab' => 'branding']));
+            ->assertRedirect(route('settings.section', ['section' => 'branding']));
 
         $this->assertNull($tenant->fresh()->company_logo);
         Storage::disk('public')->assertMissing($path);
@@ -84,7 +84,7 @@ class SettingsBrandingAssetTest extends TestCase
 
         $this->actingAs($admin)
             ->delete(route('settings.delete.asset', ['asset' => 'company_logo']))
-            ->assertRedirect(route('settings.index', ['tab' => 'branding']));
+            ->assertRedirect(route('settings.section', ['section' => 'branding']));
 
         $this->assertNull($tenant->fresh()->company_logo);
         Storage::disk('public')->assertMissing($path);

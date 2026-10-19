@@ -189,6 +189,9 @@ class PermissionRegistry
         return [
             'dashboard' => 'dashboard.read',
             'search.resources' => 'dashboard.read',
+            'settings.section' => 'settings.read',
+            'campaigns.templates' => 'communications.read',
+            'campaigns.deliveries' => 'communications.read',
             'settings.sms' => 'settings.read',
             'campaigns.index' => 'campaigns.read',
             'campaigns.show' => 'campaigns.read',

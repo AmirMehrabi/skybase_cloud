@@ -1,68 +1,26 @@
 <form action="{{ route('settings.update.notifications') }}" method="POST" class="space-y-6">
-    @csrf
-    @method('PUT')
-
-    <x-ui.card title="Notification Delivery" subtitle="Control tenant-wide notification behavior. Email and SMS preferences are stored for future delivery, but v1 sends in-app notifications only.">
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <label class="flex items-center gap-3 rounded-lg border border-gray-200 p-4">
-                <input type="hidden" name="notifications_enabled" value="0">
-                <input type="checkbox" name="notifications_enabled" value="1" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" @checked(old('notifications_enabled', $notificationSettings['enabled']))>
-                <span>
-                    <span class="block text-sm font-medium text-gray-900">Enable optional notifications</span>
-                    <span class="block text-xs text-gray-500">Critical admin alerts still appear in-app.</span>
-                </span>
-            </label>
-
-            <label class="flex items-center gap-3 rounded-lg border border-gray-200 p-4">
-                <input type="hidden" name="in_app_enabled" value="0">
-                <input type="checkbox" name="in_app_enabled" value="1" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" @checked(old('in_app_enabled', $notificationSettings['channels']['in_app']))>
-                <span>
-                    <span class="block text-sm font-medium text-gray-900">In-app notifications</span>
-                    <span class="block text-xs text-gray-500">Show notifications in admin and customer portals.</span>
-                </span>
-            </label>
-
-            <label class="flex items-center gap-3 rounded-lg border border-gray-200 p-4 opacity-80">
-                <input type="hidden" name="email_enabled" value="0">
-                <input type="checkbox" name="email_enabled" value="1" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" @checked(old('email_enabled', $notificationSettings['channels']['email']))>
-                <span>
-                    <span class="block text-sm font-medium text-gray-900">Email preferences</span>
-                    <span class="block text-xs text-gray-500">Stored now; external sending comes later.</span>
-                </span>
-            </label>
-
-            <label class="flex items-center gap-3 rounded-lg border border-gray-200 p-4 opacity-80">
-                <input type="hidden" name="sms_enabled" value="0">
-                <input type="checkbox" name="sms_enabled" value="1" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" @checked(old('sms_enabled', $notificationSettings['channels']['sms']))>
-                <span>
-                    <span class="block text-sm font-medium text-gray-900">SMS preferences</span>
-                    <span class="block text-xs text-gray-500">Stored now; external sending comes later.</span>
-                </span>
-            </label>
+    @csrf @method('PUT')
+    <x-ui.card title="Delivery channels" subtitle="Set workspace defaults. Individual recipient preferences and enabled message rules also apply.">
+        <div class="grid gap-4 md:grid-cols-2">
+            <x-ui.input.toggle name="notifications_enabled" label="Enable optional notifications" description="Allow event-based updates for your staff and customers. Critical staff alerts stay available in-app." :checked="old('notifications_enabled', $notificationSettings['enabled'])" />
+            <x-ui.input.toggle name="in_app_enabled" label="In-app notifications" description="Show updates in the staff and customer notification inboxes." :checked="old('in_app_enabled', $notificationSettings['channels']['in_app'])" />
+            <x-ui.input.toggle name="email_enabled" label="Email delivery" description="Send enabled rules through your configured outgoing email connection." :checked="old('email_enabled', $notificationSettings['channels']['email'])" />
+            <x-ui.input.toggle name="sms_enabled" label="SMS delivery" description="Send enabled rules through your active SMS gateway." :checked="old('sms_enabled', $notificationSettings['channels']['sms'])" />
+        </div>
+        <div class="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-100 pt-4 text-xs font-semibold text-teal-800">
+            <a href="{{ route('settings.section', ['section' => 'email']) }}" class="inline-flex items-center gap-1 hover:underline">Email connection <x-ui.icon name="arrow-up-right" class="size-3.5" /></a>
+            <a href="{{ route('settings.sms') }}" class="inline-flex items-center gap-1 hover:underline">SMS gateway <x-ui.icon name="arrow-up-right" class="size-3.5" /></a>
+            @if(auth()->user()->canAccessRoute('communications.index'))<a href="{{ route('communications.index') }}" class="inline-flex items-center gap-1 hover:underline">Templates & rules <x-ui.icon name="arrow-up-right" class="size-3.5" /></a>@endif
         </div>
     </x-ui.card>
-
-    <x-ui.card title="Notification Events" subtitle="Choose which optional events create notifications. Critical operational events remain mandatory for admins.">
-        <div class="divide-y divide-gray-100">
-            @foreach($notificationEvents as $eventKey => $event)
-                <label class="flex items-center justify-between gap-4 py-4">
-                    <span>
-                        <span class="block text-sm font-medium text-gray-900">{{ $event['label'] }}</span>
-                        <span class="block text-xs text-gray-500">{{ ucfirst($event['category']) }} · {{ ucfirst($event['severity']) }}{{ $event['critical'] ? ' · Mandatory for admins' : '' }}</span>
-                    </span>
-                    <span class="flex items-center gap-2">
-                        <input type="hidden" name="events[{{ $eventKey }}]" value="0">
-                        <input type="checkbox" name="events[{{ $eventKey }}]" value="1" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" @checked(old("events.{$eventKey}", $notificationSettings['events'][$eventKey] ?? true)) @disabled($event['critical'])>
-                        @if($event['critical'])
-                            <input type="hidden" name="events[{{ $eventKey }}]" value="1">
-                        @endif
-                    </span>
-                </label>
-            @endforeach
-        </div>
-    </x-ui.card>
-
-    <div class="flex justify-end">
-        <button type="submit" class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700">Save Notification Settings</button>
-    </div>
+    @foreach(collect($notificationEvents)->groupBy('category', preserveKeys: true) as $category => $events)
+        <x-ui.card :title="ucfirst($category).' events'" subtitle="Choose the updates relevant to your workspace.">
+            <div class="grid gap-3 md:grid-cols-2">
+                @foreach($events as $eventKey => $event)
+                    <x-ui.input.toggle :name="'events['.$eventKey.']'" :label="$event['label']" :description="$event['critical'] ? 'Critical alert · always enabled for staff in-app.' : ucfirst($event['severity']).' priority'" :checked="old('events.'.$eventKey, $notificationSettings['events'][$eventKey] ?? true)" :disabled="$event['critical']" />
+                @endforeach
+            </div>
+        </x-ui.card>
+    @endforeach
+    <div class="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4"><p class="text-xs text-slate-500">Changes apply to this workspace.</p><x-ui.button type="submit" variant="brand">Save preferences</x-ui.button></div>
 </form>

@@ -107,7 +107,7 @@ class TaxSystemTest extends TestCase
             'sync_existing_subscription_items' => '1',
         ]);
 
-        $response->assertRedirect(route('settings.index', ['tab' => 'billing']));
+        $response->assertRedirect(route('settings.section', ['section' => 'billing']));
         $response->assertSessionHasNoErrors();
 
         $subscription->refresh();

@@ -38,11 +38,24 @@
     </li>
     @endif
 
-    @foreach(['campaigns.index' => 'Campaigns', 'communications.index' => 'Communications'] as $destination => $label)
-    @if($can($destination))
-    <li><a href="{{ route($destination) }}" class="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-teal-50/85 hover:bg-white/10"><span>{{ $label }}</span></a></li>
-    @endif
-    @endforeach
+    @php
+        $templateRouteModel = request()->route('template');
+        $campaignTemplatePage = ($templateRouteModel instanceof App\Models\CommunicationTemplate && blank($templateRouteModel->event_key)) || (request()->routeIs('communications.create') && request('kind') === 'campaign');
+        $campaignActive = request()->routeIs('campaigns.*') || $campaignTemplatePage;
+        $notificationActive = request()->routeIs('notifications.*') || (request()->routeIs('communications.*') && !$campaignTemplatePage);
+    @endphp
+    <x-sidebar-menu title="Campaigns" icon="megaphone" id="sidebar-campaigns" :active="$campaignActive" :items="[
+        ['label' => 'All campaigns', 'route' => 'campaigns.index', 'active' => request()->routeIs('campaigns.index', 'campaigns.show', 'campaigns.edit', 'campaigns.action')],
+        ['label' => 'New campaign', 'route' => 'campaigns.create', 'active' => request()->routeIs('campaigns.create')],
+        ['label' => 'Campaign templates', 'route' => 'campaigns.templates', 'active' => request()->routeIs('campaigns.templates') || $campaignTemplatePage],
+        ['label' => 'Delivery activity', 'route' => 'campaigns.deliveries', 'active' => request()->routeIs('campaigns.deliveries')],
+    ]" />
+    <x-sidebar-menu title="Notifications" icon="bell" id="sidebar-notifications" :active="$notificationActive" :items="[
+        ['label' => 'Inbox', 'route' => 'notifications.index', 'active' => request()->routeIs('notifications.*')],
+        ['label' => 'Templates & rules', 'route' => 'communications.index', 'active' => request()->routeIs('communications.index', 'communications.create', 'communications.edit') && !$campaignTemplatePage],
+        ['label' => 'Delivery activity', 'route' => 'communications.deliveries', 'active' => request()->routeIs('communications.deliveries')],
+        ['label' => 'Incidents', 'route' => 'communications.incidents', 'active' => request()->routeIs('communications.incidents')],
+    ]" />
 
     <!-- Customers -->
     @if($can('customers.index'))
@@ -339,10 +352,11 @@
     <!-- Settings Section -->
     @if($canSettings)
     <li class="pt-4">
-        <div class="px-3 py-2 text-xs font-semibold text-[#f5c542]/85 uppercase tracking-wider">Settings</div>
+        <div class="px-3 py-2 text-xs font-semibold text-[#f5c542]/85 uppercase tracking-wider">Workspace</div>
     </li>
     @endif
 
+    @if(!$can('settings.index'))
     <!-- Users -->
     @if($can('admin.tenant.users.index'))
     <li>
@@ -380,11 +394,13 @@
     </li>
     @endif
 
+    @endif
+
     <!-- Settings -->
     @if($can('settings.index'))
     <li>
         <a href="{{ route('settings.index') }}"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg border text-sm font-medium transition {{ str_starts_with($currentRoute, 'settings.') ? 'border-white/15 bg-white/[0.12] text-white shadow-sm' : 'border-transparent text-teal-50/85 hover:border-white/10 hover:bg-white/10 hover:text-white' }}">
+           class="flex items-center gap-3 px-3 py-2 rounded-lg border text-sm font-medium transition {{ (str_starts_with($currentRoute, 'settings.') || str_starts_with($currentRoute, 'admin.tenant.')) ? 'border-white/15 bg-white/[0.12] text-white shadow-sm' : 'border-transparent text-teal-50/85 hover:border-white/10 hover:bg-white/10 hover:text-white' }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>

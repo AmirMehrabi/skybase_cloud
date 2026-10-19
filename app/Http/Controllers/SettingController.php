@@ -31,20 +31,32 @@ use Throwable;
 
 class SettingController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View|RedirectResponse
     {
+        if ($request->filled('tab')) {
+            $section = $request->query('tab');
+            abort_unless(is_string($section) && in_array($section, ['general', 'branding', 'billing', 'email', 'notifications', 'ldap'], true), 404);
+
+            return redirect()->route('settings.section', ['section' => $section]);
+        }
+
+        return view('settings.index');
+    }
+
+    public function section(string $section): View
+    {
+        abort_unless(in_array($section, ['general', 'branding', 'billing', 'email', 'notifications', 'ldap'], true), 404);
         $tenant = $this->getTenant();
+        $data = match ($section) {
+            'general' => ['timezones' => \DateTimeZone::listIdentifiers(), 'currencies' => $this->getCurrencies(), 'locales' => $this->getLocales()],
+            'email' => ['emailSettings' => $this->getEmailSettings($tenant->id)],
+            'ldap' => ['ldapSettings' => app(LdapSyncService::class)->settingsForTenant($tenant->id)],
+            'notifications' => ['notificationSettings' => app(NotificationPreferenceService::class)->tenantSettings($tenant->id), 'notificationEvents' => NotificationEventRegistry::events()],
+            'billing' => ['taxSettings' => app(TaxResolverService::class)->settings($tenant->id)],
+            default => [],
+        };
 
-        $timezones = \DateTimeZone::listIdentifiers();
-        $currencies = $this->getCurrencies();
-        $locales = $this->getLocales();
-        $emailSettings = $this->getEmailSettings($tenant->id);
-        $ldapSettings = app(LdapSyncService::class)->settingsForTenant($tenant->id);
-        $notificationSettings = app(NotificationPreferenceService::class)->tenantSettings($tenant->id);
-        $notificationEvents = NotificationEventRegistry::events();
-        $taxSettings = app(TaxResolverService::class)->settings($tenant->id);
-
-        return view('settings.index', compact('tenant', 'timezones', 'currencies', 'locales', 'emailSettings', 'ldapSettings', 'notificationSettings', 'notificationEvents', 'taxSettings'));
+        return view('settings.section', $data + compact('tenant', 'section'));
     }
 
     public function updateBillingTax(UpdateBillingTaxSettingRequest $request, TaxResolverService $taxResolver): RedirectResponse
@@ -71,7 +83,7 @@ class SettingController extends Controller
         }
 
         return redirect()
-            ->route('settings.index', ['tab' => 'billing'])
+            ->route('settings.section', ['section' => 'billing'])
             ->with('success', 'Billing tax settings updated successfully.');
     }
 
@@ -97,7 +109,7 @@ class SettingController extends Controller
         );
 
         return redirect()
-            ->route('settings.index', ['tab' => 'notifications'])
+            ->route('settings.section', ['section' => 'notifications'])
             ->with('success', 'Notification settings updated successfully.');
     }
 
@@ -177,7 +189,7 @@ class SettingController extends Controller
         );
 
         return redirect()
-            ->route('settings.index', ['tab' => 'email'])
+            ->route('settings.section', ['section' => 'email'])
             ->with('success', 'Email settings updated successfully.');
     }
 
@@ -190,19 +202,19 @@ class SettingController extends Controller
             abort_unless($direction === 'outgoing', 422);
             app(CommunicationDeliveryService::class)->create($tenant->id, 'email-test:'.Str::uuid(), ['channel' => 'email', 'destination' => $request->input('destination'), 'content' => ['subject' => 'SkyBase email test', 'email_body' => 'Your outgoing email configuration is working.'], 'expires_at' => now()->addMinutes(15)]);
 
-            return redirect()->route('settings.index', ['tab' => 'email'])->with('success', 'Test email queued. See Delivery activity for its result.');
+            return redirect()->route('settings.section', ['section' => 'email'])->with('success', 'Test email queued. See Delivery activity for its result.');
         }
 
         try {
             $this->testEmailConnection($settings, $direction);
         } catch (Throwable $exception) {
             return redirect()
-                ->route('settings.index', ['tab' => 'email'])
+                ->route('settings.section', ['section' => 'email'])
                 ->with('error', ucfirst($direction).' email test failed. Check the host, port, TLS, credentials and mailbox.');
         }
 
         return redirect()
-            ->route('settings.index', ['tab' => 'email'])
+            ->route('settings.section', ['section' => 'email'])
             ->with('success', ucfirst($direction).' email connection tested successfully.');
     }
 
@@ -246,7 +258,7 @@ class SettingController extends Controller
         ]);
 
         return redirect()
-            ->route('settings.index', ['tab' => 'general'])
+            ->route('settings.section', ['section' => 'general'])
             ->with('success', 'General settings updated successfully.');
     }
 
@@ -291,7 +303,7 @@ class SettingController extends Controller
         $tenant->save();
 
         return redirect()
-            ->route('settings.index', ['tab' => 'branding'])
+            ->route('settings.section', ['section' => 'branding'])
             ->with('success', 'Branding settings updated successfully.');
     }
 
@@ -328,7 +340,7 @@ class SettingController extends Controller
         $radiusProvisioning->syncSubscriptionsForTenant($tenant->id);
 
         return redirect()
-            ->route('settings.index', ['tab' => 'ldap'])
+            ->route('settings.section', ['section' => 'ldap'])
             ->with('success', 'LDAP settings updated successfully.');
     }
 
@@ -343,12 +355,12 @@ class SettingController extends Controller
             $connections->test($tenant->id, $settings['connection']);
         } catch (Throwable $exception) {
             return redirect()
-                ->route('settings.index', ['tab' => 'ldap'])
+                ->route('settings.section', ['section' => 'ldap'])
                 ->with('error', 'LDAP connection test failed: '.$exception->getMessage());
         }
 
         return redirect()
-            ->route('settings.index', ['tab' => 'ldap'])
+            ->route('settings.section', ['section' => 'ldap'])
             ->with('success', 'LDAP connection tested successfully.');
     }
 
@@ -408,12 +420,12 @@ class SettingController extends Controller
             $result = $sync->syncTenant($tenant, dryRun: true);
         } catch (Throwable $exception) {
             return redirect()
-                ->route('settings.index', ['tab' => 'ldap'])
+                ->route('settings.section', ['section' => 'ldap'])
                 ->with('error', 'LDAP preview failed: '.$exception->getMessage());
         }
 
         return redirect()
-            ->route('settings.index', ['tab' => 'ldap'])
+            ->route('settings.section', ['section' => 'ldap'])
             ->with('success', $this->ldapResultMessage('LDAP preview completed.', $result));
     }
 
@@ -427,12 +439,12 @@ class SettingController extends Controller
             $result = $sync->syncTenant($tenant);
         } catch (Throwable $exception) {
             return redirect()
-                ->route('settings.index', ['tab' => 'ldap'])
+                ->route('settings.section', ['section' => 'ldap'])
                 ->with('error', 'LDAP sync failed: '.$exception->getMessage());
         }
 
         return redirect()
-            ->route('settings.index', ['tab' => 'ldap'])
+            ->route('settings.section', ['section' => 'ldap'])
             ->with('success', $this->ldapResultMessage('LDAP sync completed.', $result));
     }
 
@@ -453,7 +465,7 @@ class SettingController extends Controller
 
         if (! \in_array($asset, $allowedAssets, true)) {
             return redirect()
-                ->route('settings.index', ['tab' => 'branding'])
+                ->route('settings.section', ['section' => 'branding'])
                 ->with('error', 'Invalid asset.');
         }
 
@@ -464,7 +476,7 @@ class SettingController extends Controller
         }
 
         return redirect()
-            ->route('settings.index', ['tab' => 'branding'])
+            ->route('settings.section', ['section' => 'branding'])
             ->with('success', 'Asset deleted successfully.');
     }
 

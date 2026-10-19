@@ -3,6 +3,7 @@
 @section('title', 'Role Management')
 
 @section('content')
+<x-ui.breadcrumbs :items="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Settings', 'url' => route('settings.index')], ['label' => 'Roles & permissions']]" />
 <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
     <div>
         <h1 class="text-2xl font-bold text-gray-900">Role Management</h1>

@@ -24,7 +24,7 @@ class SettingsLdapTest extends TestCase
 
         $response = $this->actingAs($user)->put(route('settings.update.ldap'), $this->validPayload());
 
-        $response->assertRedirect(route('settings.index', ['tab' => 'ldap']));
+        $response->assertRedirect(route('settings.section', ['section' => 'ldap']));
 
         $connection = Setting::forTenant($tenant->id)->where('key', 'ldap.connection')->firstOrFail();
         $organizations = Setting::forTenant($tenant->id)->where('key', 'ldap.organization_sync')->firstOrFail();
@@ -67,7 +67,7 @@ class SettingsLdapTest extends TestCase
 
         $this->actingAs($user)
             ->put(route('settings.update.ldap'), $payload)
-            ->assertRedirect(route('settings.index', ['tab' => 'ldap']));
+            ->assertRedirect(route('settings.section', ['section' => 'ldap']));
 
         $connection = Setting::forTenant($tenant->id)->where('key', 'ldap.connection')->firstOrFail();
 
