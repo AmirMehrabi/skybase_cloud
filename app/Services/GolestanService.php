@@ -32,7 +32,7 @@ class GolestanService
             'pass' => $password,
             'sec' => 'AA0ECD9901',
             'pub' => $public->saveXML($root),
-            'pri' => '<Root><N UQID="245" id="5" F="" T=""/><N UQID="10" id="10" F="" T=""/><N UQID="153" id="20" F="" T=""/><N UQID="17450" id="24" F="" T=""/></Root>',
+            'pri' => '<Root><N UQID="245" id="2" F="" T=""/><N UQID="10" id="10" F="" T=""/><N UQID="153" id="20" F="" T=""/><N UQID="17450" id="24" F="" T=""/></Root>',
             'mor' => '',
             'iFID' => '1132',
         ];
