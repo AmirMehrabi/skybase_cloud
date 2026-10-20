@@ -433,12 +433,8 @@ class SubscriptionController extends Controller
             ->get(['id', 'name', 'site', 'vendor', 'model', 'status']);
 
         $ipPools = IpPool::query()
-            ->where(function ($query) use ($subscription, $currentPoolIds): void {
-                $query->active()
-                    ->where(function ($query) use ($subscription): void {
-                        $query->where('router_id', $subscription->router_id)
-                            ->orWhere('all_devices', true);
-                    });
+            ->where(function ($query) use ($currentPoolIds): void {
+                $query->active();
 
                 if ($currentPoolIds->isNotEmpty()) {
                     $query->orWhereIn('id', $currentPoolIds);
@@ -450,7 +446,9 @@ class SubscriptionController extends Controller
         $currentIpPoolId = old('ip_pool_id', $subscription->ip_pool_id ?: $subscription->ipAddress?->ip_pool_id);
         $currentIpAddress = old('ip_address', $subscription->ip_address ?: $subscription->ipAddress?->ip_address);
 
-        return view('subscriptions.edit', compact('subscription', 'plans', 'routers', 'ipPools', 'currentIpPoolId', 'currentIpAddress'));
+        $currentIpManagement = old('ip_management', $subscription->ip_management ?: (($subscription->ip_pool_id || $subscription->ipAddress?->ip_pool_id) ? 'system' : 'router'));
+
+        return view('subscriptions.edit', compact('subscription', 'plans', 'routers', 'ipPools', 'currentIpPoolId', 'currentIpAddress', 'currentIpManagement'));
     }
 
     /**
@@ -493,10 +491,16 @@ class SubscriptionController extends Controller
                 $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now());
             }
 
+            $ipManagementChanged = isset($validated['ip_management']) && $validated['ip_management'] !== $subscription->ip_management;
+
+            if (($validated['ip_management'] ?? $subscription->ip_management) === 'router') {
+                $validated['ip_pool_id'] = null;
+            }
+
             $poolChanged = array_key_exists('ip_pool_id', $validated) && (string) $validated['ip_pool_id'] !== (string) $subscription->ip_pool_id;
             $routerChanged = array_key_exists('router_id', $validated) && (string) $validated['router_id'] !== (string) $subscription->router_id;
 
-            if (($poolChanged || $routerChanged) && $subscription->isSystemManagedIp() && filled($subscription->ip_address)) {
+            if (($poolChanged || $routerChanged || $ipManagementChanged) && $subscription->isSystemManagedIp() && filled($subscription->ip_address)) {
                 $subscription->releaseIpAddress();
             }
 
@@ -509,13 +513,17 @@ class SubscriptionController extends Controller
             $validated['billing_cycle'] = $authoritativePlan->billing_cycle;
             $validated['grace_period_days'] = $authoritativePlan->grace_period_days;
 
+            if ($ipManagementChanged && $validated['ip_management'] === 'router') {
+                $this->replaceSubscriptionIpRoutes($subscription, []);
+            }
+
             $subscription->update($validated);
             $subscription->refresh();
 
             if ($ipAddressProvided) {
                 $updatedIp = $subscription->updateIpAddress($ipAddress);
 
-                if ($ipAddress !== null && blank($ipAddress) === false && ! $updatedIp) {
+                if ($subscription->isSystemManagedIp() && filled($ipAddress) && ! $updatedIp) {
                     throw ValidationException::withMessages([
                         'ip_address' => 'The selected IP address is not available in the selected pool.',
                     ]);

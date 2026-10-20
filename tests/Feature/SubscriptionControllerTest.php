@@ -438,6 +438,150 @@ class SubscriptionControllerTest extends TestCase
         $editResponse->assertSee(':selected="address.ip_address === route.ip_address"', false);
     }
 
+    public function test_edit_page_backfills_ip_management_and_restores_old_input(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        $this->actingAs($user)->get(route('subscriptions.edit', $subscription))
+            ->assertOk()
+            ->assertSee('IP Management')
+            ->assertSee('Router Managed')
+            ->assertSee('System Managed')
+            ->assertViewHas('currentIpManagement', 'system')
+            ->assertViewHas('currentIpPoolId', (string) $subscription->ip_pool_id)
+            ->assertViewHas('currentIpAddress', '10.10.0.11');
+
+        $this->withSession(['_old_input' => [
+            'ip_management' => 'router',
+            'ip_address' => '192.0.2.5',
+            'ip_pool_id' => '',
+        ]])->get(route('subscriptions.edit', $subscription))
+            ->assertOk()
+            ->assertViewHas('currentIpManagement', 'router')
+            ->assertViewHas('currentIpAddress', '192.0.2.5')
+            ->assertViewHas('currentIpPoolId', '');
+    }
+
+    public function test_edit_page_infers_legacy_ip_management_from_existing_assignment(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $subscription->forceFill(['ip_management' => null, 'ip_pool_id' => null])->saveQuietly();
+
+        $this->actingAs($user)->get(route('subscriptions.edit', $subscription))
+            ->assertOk()
+            ->assertViewHas('currentIpManagement', 'system')
+            ->assertViewHas('currentIpAddress', '10.10.0.11');
+
+        $subscription->forceFill(['ip_management' => 'router', 'ip_address' => '192.0.2.5'])->saveQuietly();
+
+        $this->get(route('subscriptions.edit', $subscription))
+            ->assertOk()
+            ->assertViewHas('currentIpManagement', 'router')
+            ->assertViewHas('currentIpAddress', '192.0.2.5');
+    }
+
+    public function test_update_switches_to_router_managed_and_releases_primary_and_route_ips(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $routeIp = IpAddress::create([
+            'tenant_id' => $tenant->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address' => '10.10.0.13',
+            'status' => 'assigned',
+            'customer_id' => $subscription->customer_id,
+            'metadata' => ['purpose' => 'subscription_ip_route'],
+        ]);
+        $route = SubscriptionIpRoute::create([
+            'tenant_id' => $tenant->id,
+            'subscription_id' => $subscription->id,
+            'ip_pool_id' => $subscription->ip_pool_id,
+            'ip_address_id' => $routeIp->id,
+            'ip_address' => '10.10.0.13',
+            'cidr' => 32,
+        ]);
+
+        $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'ip_management' => 'router',
+            'ip_address' => '192.0.2.5',
+        ])->assertRedirect(route('subscriptions.show', $subscription))->assertSessionHasNoErrors();
+
+        $subscription->refresh();
+        $this->assertSame('router', $subscription->ip_management);
+        $this->assertNull($subscription->ip_pool_id);
+        $this->assertSame('192.0.2.5', $subscription->ip_address);
+        $this->assertSame('available', $routeIp->fresh()->status);
+        $this->assertDatabaseMissing('subscription_ip_routes', ['id' => $route->id]);
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.10.0.11',
+            'status' => 'available',
+            'subscription_code' => null,
+        ]);
+    }
+
+    public function test_update_switches_router_managed_subscription_to_system_managed(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $poolId = $subscription->ip_pool_id;
+        $subscription->releaseIpAddress();
+        $subscription->update(['ip_management' => 'router', 'ip_pool_id' => null, 'ip_address' => '192.0.2.5']);
+
+        $this->actingAs($user)->put(route('subscriptions.update', $subscription), [
+            'ip_management' => 'system',
+            'ip_pool_id' => $poolId,
+            'ip_address' => '10.10.0.12',
+            'sync_ip_routes' => '1',
+        ])->assertRedirect(route('subscriptions.show', $subscription))->assertSessionHasNoErrors();
+
+        $this->assertSame('system', $subscription->fresh()->ip_management);
+        $this->assertDatabaseHas('ip_addresses', [
+            'tenant_id' => $tenant->id,
+            'ip_address' => '10.10.0.12',
+            'status' => 'assigned',
+            'subscription_code' => $subscription->subscription_code,
+        ]);
+    }
+
+    public function test_update_rejects_unknown_ip_management_mode(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        $this->actingAs($user)->putJson(route('subscriptions.update', $subscription), [
+            'ip_management' => 'invalid',
+        ])->assertUnprocessable()->assertJsonValidationErrors('ip_management');
+
+        $this->assertSame('system', $subscription->fresh()->ip_management);
+    }
+
+    public function test_update_requires_a_pool_when_system_managed_is_selected(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+
+        $this->actingAs($user)->putJson(route('subscriptions.update', $subscription), [
+            'ip_management' => 'system',
+            'ip_pool_id' => '',
+        ])->assertUnprocessable()->assertJsonValidationErrors('ip_pool_id');
+    }
+
+    public function test_update_rolls_back_ip_management_when_the_address_is_unavailable(): void
+    {
+        [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
+        $poolId = $subscription->ip_pool_id;
+        $subscription->releaseIpAddress();
+        $subscription->update(['ip_management' => 'router', 'ip_pool_id' => null, 'ip_address' => '192.0.2.5']);
+
+        $this->actingAs($user)->putJson(route('subscriptions.update', $subscription), [
+            'ip_management' => 'system',
+            'ip_pool_id' => $poolId,
+            'ip_address' => '10.10.0.99',
+        ])->assertUnprocessable()->assertJsonValidationErrors('ip_address');
+
+        $subscription->refresh();
+        $this->assertSame('router', $subscription->ip_management);
+        $this->assertNull($subscription->ip_pool_id);
+        $this->assertSame('192.0.2.5', $subscription->ip_address);
+    }
+
     public function test_edit_page_allows_selecting_a_pool_when_no_pool_is_assigned(): void
     {
         [$tenant, $user, $subscription] = $this->createSystemManagedSubscriptionWithPool();
@@ -452,7 +596,8 @@ class SubscriptionControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('IP Pool Assignment');
         $response->assertSee('Select IP Pool');
-        $response->assertDontSee('Manual IP Address');
+        $response->assertSee('Router Managed');
+        $response->assertSee('System Managed');
         $response->assertSee('Select a pool for this router, then choose the primary IP from that pool.');
         $response->assertViewHas('currentIpPoolId', (string) $subscription->ipAddress?->ip_pool_id);
         $response->assertViewHas('currentIpAddress', '10.10.0.11');

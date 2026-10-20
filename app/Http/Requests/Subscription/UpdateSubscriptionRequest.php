@@ -26,7 +26,9 @@ class UpdateSubscriptionRequest extends FormRequest
             'router_id' => ['nullable', Rule::exists('routers', 'id')->where('tenant_id', $tenantId)],
             'access_point_id' => ['nullable', Rule::exists('access_points', 'id')->where('tenant_id', $tenantId)],
             'site' => 'nullable|string|max:255',
+            'ip_management' => ['sometimes', 'required', Rule::in(['router', 'system'])],
             'ip_pool_id' => [
+                Rule::requiredIf($this->input('ip_management') === 'system'),
                 'nullable',
                 'integer',
                 Rule::exists('ip_pools', 'id')->where('tenant_id', $tenantId)->where(fn ($query) => $query->where(function ($query) use ($effectiveRouterId): void {
@@ -57,6 +59,13 @@ class UpdateSubscriptionRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['plan_id.exists' => 'The selected plan is unavailable.', 'router_id.exists' => 'The selected router is unavailable.', 'ip_pool_id.exists' => 'The selected IP pool is unavailable.'];
+        return [
+            'ip_management.in' => 'Please select Router Managed or System Managed.',
+            'ip_management.required' => 'Please select how IP addresses are managed.',
+            'plan_id.exists' => 'The selected plan is unavailable.',
+            'router_id.exists' => 'The selected router is unavailable.',
+            'ip_pool_id.required' => 'Please select an IP pool for system-managed IPs.',
+            'ip_pool_id.exists' => 'The selected IP pool is unavailable.',
+        ];
     }
 }
