@@ -5,7 +5,24 @@
     <x-ui.card title="Golestan student search" subtitle="Shahid Bahonar University of Kerman · Student information report 1132">
         <form method="POST" action="{{ route('golestan.search') }}" class="space-y-5" x-data="{ searching: false }" @submit="searching = true">
             @csrf
-            <x-ui.input.text name="student_number" label="Student number / شماره دانشجو" :value="old('student_number', $studentNumber)" :error="$errors->first('student_number')" placeholder="92133002" inputmode="numeric" dir="ltr" required />
+            <p class="text-sm text-gray-500">Enter at least one criterion. From only = exact match; From + To = range; To only = upper limit. Criteria are combined. Fields marked کد require the university's Golestan codes. Dates use Golestan's YYYY/MM/DD format.</p>
+            @error('filters')<p role="alert" class="text-sm text-red-600">{{ $message }}</p>@enderror
+            @foreach(collect($filterFields)->groupBy('group', preserveKeys: true) as $group => $fields)
+                <details open class="rounded-lg border border-gray-200 p-4">
+                    <summary class="cursor-pointer text-sm font-medium text-gray-700">{{ $group }}</summary>
+                    <div class="mt-4 space-y-5">
+                        @foreach($fields as $name => $field)
+                            <fieldset class="space-y-1.5">
+                                <legend class="text-sm font-medium text-gray-700">{{ $field['label'] }}</legend>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <x-ui.input.text :name="$name" label="From / از" :value="old($name, $filters[$name] ?? '')" :error="$errors->first($name)" :inputmode="in_array($field['type'], ['number', 'national_id']) ? 'numeric' : 'text'" :dir="$field['type'] === 'text' ? 'auto' : 'ltr'" :placeholder="$field['type'] === 'date' ? '1380/01/01' : ''" />
+                                    <x-ui.input.text :name="$name.'_to'" label="To / تا" :value="old($name.'_to', $filters[$name.'_to'] ?? '')" :error="$errors->first($name.'_to')" :inputmode="in_array($field['type'], ['number', 'national_id']) ? 'numeric' : 'text'" :dir="$field['type'] === 'text' ? 'auto' : 'ltr'" :placeholder="$field['type'] === 'date' ? '1380/12/29' : ''" />
+                                </div>
+                            </fieldset>
+                        @endforeach
+                    </div>
+                </details>
+            @endforeach
             <x-ui.button type="submit" variant="brand" x-bind:disabled="searching"><span x-text="searching ? 'Searching…' : 'Search student'">Search student</span></x-ui.button>
         </form>
     </x-ui.card>
@@ -28,8 +45,9 @@
                         </div>
                     @endforeach
                 </dl>
+                @unless($loop->last)<hr class="my-5 border-gray-200" />@endunless
             @empty
-                <p class="text-sm text-gray-500">No student found for this number.</p>
+                <p class="text-sm text-gray-500">No student found for these criteria.</p>
             @endforelse
             <details class="mt-5">
                 <summary class="cursor-pointer text-sm font-medium text-gray-700">View XML response</summary>

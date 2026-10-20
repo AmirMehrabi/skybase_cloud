@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\GolestanService;
+use App\Support\GolestanFilters;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -261,6 +262,103 @@ XML;
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('unsupported XML');
         app(GolestanService::class)->search('92133002');
+    }
+
+    public function test_national_id_search_does_not_require_a_student_number_and_preserves_leading_zeros(): void
+    {
+        Http::fake(['*' => Http::response($this->soap('<Root><p STDNO="92133002" SSNO="0012345678"/><p STDNO="92133003" SSNO="0012345678"/></Root>'))]);
+        $response = $this->actingAs($this->user())->post(route('golestan.search'), ['national_id' => '۰۰۱۲۳۴۵۶۷۸']);
+        $response->assertOk()->assertSee('Results (2)')->assertSee('92133003');
+        $this->assertSame('0012345678', $response->viewData('filters')['national_id']);
+        Http::assertSent(function (Request $request): bool {
+            $document = new DOMDocument;
+            $document->loadXML($request->body());
+            $public = new DOMDocument;
+            $public->loadXML((new DOMXPath($document))->evaluate('string(//*[local-name()="pub"])'));
+            $xpath = new DOMXPath($public);
+
+            return $xpath->evaluate('string(/Root/N[@id="6"]/@F1)') === '0012345678'
+                && $xpath->evaluate('string(/Root/N[@id="6"]/@T1)') === '0012345678'
+                && $xpath->evaluate('string(/Root/N[@id="4"]/@F1)') === '';
+        });
+    }
+
+    public function test_ranges_are_inclusive_and_support_multiple_results(): void
+    {
+        Http::fake(['*' => Http::response($this->soap('<Root><p STDNO="92133001"/><p STDNO="92133002"/><p STDNO="92133003"/><p STDNO="92133004"/></Root>'))]);
+        $this->actingAs($this->user())->post(route('golestan.search'), ['student_number' => '92133002', 'student_number_to' => '92133003'])
+            ->assertOk()->assertSee('Results (2)')->assertViewHas('result', fn (array $result): bool => array_column($result['records'], 'STDNO') === ['92133002', '92133003']);
+    }
+
+    public function test_empty_search_and_reversed_ranges_are_rejected_before_calling_golestan(): void
+    {
+        Http::preventStrayRequests();
+        $this->actingAs($this->user())->post(route('golestan.search'), [])->assertSessionHasErrors('filters');
+        $this->post(route('golestan.search'), ['student_number' => '99999999999999999999', 'student_number_to' => '10000000000000000000'])
+            ->assertSessionHasErrors('student_number_to');
+        $this->post(route('golestan.search'), ['birth_date' => '1380/12/01', 'birth_date_to' => '1380/01/01'])
+            ->assertSessionHasErrors('birth_date_to');
+        Http::assertNothingSent();
+    }
+
+    public function test_invalid_types_national_ids_and_dates_are_rejected(): void
+    {
+        Http::preventStrayRequests();
+        $this->actingAs($this->user())->post(route('golestan.search'), ['national_id' => '123', 'faculty' => ['1'], 'birth_date' => '1380/13/32'])
+            ->assertSessionHasErrors(['national_id', 'faculty', 'birth_date']);
+        Http::assertNothingSent();
+    }
+
+    public function test_all_documented_fields_are_available_and_map_to_the_correct_xml_ranges(): void
+    {
+        $fields = GolestanFilters::fields();
+        $this->actingAs($this->user())->get(route('golestan.index'))->assertOk()
+            ->assertSee('کد ملی')->assertSee('تاریخ تولد')->assertSee('ترم ورود');
+        $filters = [];
+        foreach ($fields as $name => $field) {
+            [$from, $to] = match ($field['type']) {
+                'date' => ['1380/01/01', '1381/12/29'],
+                'national_id' => ['0012345678', '0012345679'],
+                'text' => ['علی & <test>', 'محمد'],
+                default => ['1', '9'],
+            };
+            $filters[$name] = $from;
+            $filters[$name.'_to'] = $to;
+        }
+        $document = new DOMDocument;
+        $document->loadXML(app(GolestanService::class)->requestXml($filters));
+        $xpath = new DOMXPath($document);
+        $public = new DOMDocument;
+        $public->loadXML($xpath->evaluate('string(//*[local-name()="pub"])'));
+        $private = new DOMDocument;
+        $private->loadXML($xpath->evaluate('string(//*[local-name()="pri"])'));
+        foreach ($fields as $name => $field) {
+            $isPrivate = $name === 'academic_term';
+            $node = (new DOMXPath($isPrivate ? $private : $public))->query('/Root/N[@id="'.$field['id'].'"]')->item(0);
+            $this->assertNotNull($node, $name);
+            $this->assertSame($filters[$name], $node->getAttribute($isPrivate ? 'F' : 'F1'), $name);
+            $this->assertSame($filters[$name.'_to'], $node->getAttribute($isPrivate ? 'T' : 'T1'), $name);
+        }
+        $this->assertSame('2', (new DOMXPath($private))->evaluate('string(/Root/N[@id="5"]/@F)'));
+    }
+
+    public function test_combined_filters_and_upper_only_bounds_are_sent_and_retained(): void
+    {
+        Http::fake(['*' => Http::response($this->soap('<Root/>'))]);
+        $filters = ['last_name' => 'احمدی', 'faculty' => '۱۲', 'entry_term_to' => '۱۴۰۵۱', 'birth_date' => '۱۳۸۰/۰۱/۰۱', 'academic_term' => '۱۴۰۴۱'];
+        $response = $this->actingAs($this->user())->post(route('golestan.search'), $filters);
+        $response->assertOk()->assertSee('احمدی')->assertSee('14051')->assertSee('1380/01/01');
+        Http::assertSent(function (Request $request): bool {
+            $document = new DOMDocument;
+            $document->loadXML($request->body());
+            $public = new DOMDocument;
+            $public->loadXML((new DOMXPath($document))->evaluate('string(//*[local-name()="pub"])'));
+            $xpath = new DOMXPath($public);
+
+            return $xpath->evaluate('string(/Root/N[@id="27"]/@F1)') === ''
+                && $xpath->evaluate('string(/Root/N[@id="27"]/@T1)') === '14051'
+                && $xpath->evaluate('string(/Root/N[@id="18"]/@T1)') === '12';
+        });
     }
 
     /** @return array<string, string> */

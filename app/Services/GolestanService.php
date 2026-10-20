@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\GolestanFilters;
 use DOMDocument;
 use DOMElement;
 use DOMXPath;
@@ -11,20 +12,41 @@ use RuntimeException;
 
 class GolestanService
 {
-    public function requestXml(string $studentNumber, bool $redactPassword = false): string
+    /** @param array<string, string|null>|string $filters */
+    public function requestXml(array|string $filters, bool $redactPassword = false): string
     {
+        $filters = is_string($filters) ? ['student_number' => $filters] : $filters;
+        $ranges = [];
+        foreach (GolestanFilters::fields() as $name => $field) {
+            if ($name !== 'academic_term') {
+                $ranges[$field['id']] = GolestanFilters::range($filters, $name);
+            }
+        }
         $public = new DOMDocument;
         $root = $public->appendChild($public->createElement('Root'));
-        foreach ([1, 2, 4, 6, 7, 8, 10, 18, 20, 22, 24, 26, 27, 29, 30, 32, 34, 36, 37, 38, 40, 42, 48, 101, 102, 103] as $id) {
+        foreach ([1, 2, 3, 4, 6, 7, 8, 10, 18, 20, 22, 24, 26, 27, 29, 30, 32, 34, 36, 37, 38, 40, 42, 48, 101, 102, 103] as $id) {
+            if ($id === 3 && $ranges[3] === ['', '']) {
+                continue;
+            }
             $node = $root->appendChild($public->createElement('N'));
             $node->setAttribute('id', (string) $id);
             $attributes = [
                 'fs' => '1', 'ft' => '7',
-                'F1' => $id === 4 ? $studentNumber : '', 'T1' => $id === 4 ? $studentNumber : '',
+                'F1' => $ranges[$id][0], 'T1' => $ranges[$id][1],
                 'F2' => '', 'T2' => '', 'B' => ' ', 'Q' => '0', 'A' => ' ',
                 'S' => in_array($id, [18, 20, 22, 24, 26], true) ? '0' : ' ',
             ];
             foreach ($attributes as $attribute => $value) {
+                $node->setAttribute($attribute, $value);
+            }
+        }
+
+        [$termFrom, $termTo] = GolestanFilters::range($filters, 'academic_term');
+        $private = new DOMDocument;
+        $privateRoot = $private->appendChild($private->createElement('Root'));
+        foreach ([5 => ['245', '2', '2'], 10 => ['10', $termFrom, $termTo], 20 => ['153', '', ''], 24 => ['17450', '', '']] as $id => [$uqid, $from, $to]) {
+            $node = $privateRoot->appendChild($private->createElement('N'));
+            foreach (['UQID' => $uqid, 'id' => (string) $id, 'fs' => '0', 'ft' => '7', 'F' => $from, 'T' => $to] as $attribute => $value) {
                 $node->setAttribute($attribute, $value);
             }
         }
@@ -38,7 +60,7 @@ class GolestanService
             'pass' => $redactPassword ? '[REDACTED]' : (string) config('services.golestan.password'),
             'sec' => 'AA0ECD9901',
             'pub' => $public->saveXML($root),
-            'pri' => '<Root><N UQID="245" id="5" fs="0" ft="7" F="2" T="2"/><N UQID="10" id="10" fs="0" ft="7" F="" T=""/><N UQID="153" id="20" fs="0" ft="7" F="" T=""/><N UQID="17450" id="24" fs="0" ft="7" F="" T=""/></Root>',
+            'pri' => $private->saveXML($privateRoot),
             'mor' => '<Root/>',
             'iFID' => '1132',
         ];
@@ -52,9 +74,13 @@ class GolestanService
         return $document->saveXML();
     }
 
-    /** @return array{records: array<int, array<string, string>>, xml: string} */
-    public function search(string $studentNumber): array
+    /**
+     * @param  array<string, string|null>|string  $filters
+     * @return array{records: array<int, array<string, string>>, xml: string}
+     */
+    public function search(array|string $filters): array
     {
+        $filters = is_string($filters) ? ['student_number' => $filters] : $filters;
         if (! config('services.golestan.enabled')) {
             throw new RuntimeException('Golestan integration is disabled.');
         }
@@ -66,7 +92,7 @@ class GolestanService
             $response = Http::connectTimeout(10)->timeout(40)
                 ->withOptions(['allow_redirects' => false])
                 ->withHeaders(['SOAPAction' => '"urn:nowpardaz/golInfo"'])
-                ->withBody($this->requestXml($studentNumber), 'text/xml; charset=utf-8')
+                ->withBody($this->requestXml($filters), 'text/xml; charset=utf-8')
                 ->post('https://eduold.uk.ac.ir/GolestanService/gservice.asmx');
         } catch (ConnectionException) {
             throw new RuntimeException('Golestan could not be reached. Please try again.');
@@ -97,7 +123,10 @@ class GolestanService
                     $record[$field->localName] = trim($field->textContent);
                 }
             }
-            if (($record['STDNO'] ?? null) === $studentNumber) {
+            [$from, $to] = GolestanFilters::range($filters, 'student_number');
+            $number = $record['STDNO'] ?? '';
+            if (($from === '' || GolestanFilters::compareNumbers($number, $from) >= 0)
+                && ($to === '' || GolestanFilters::compareNumbers($number, $to) <= 0)) {
                 $records[] = $record;
             }
         }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\GolestanSearchRequest;
 use App\Services\GolestanService;
+use App\Support\GolestanFilters;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use RuntimeException;
@@ -22,14 +23,14 @@ class GolestanController extends Controller
         $result = null;
         $error = null;
         try {
-            $result = $service->search($request->validated('student_number'));
+            $result = $service->search($request->validated());
         } catch (RuntimeException $exception) {
             $error = $exception->getMessage();
         }
 
         return $this->page([
-            'studentNumber' => $request->validated('student_number'),
-            'requestXml' => $service->requestXml($request->validated('student_number'), redactPassword: true),
+            'filters' => $request->validated(),
+            'requestXml' => $service->requestXml($request->validated(), redactPassword: true),
             'result' => $result,
             'serviceError' => $error,
         ]);
@@ -39,7 +40,7 @@ class GolestanController extends Controller
     private function page(array $data = []): Response
     {
         return response()->view('modules.golestan.index', array_merge([
-            'studentNumber' => '', 'result' => null, 'serviceError' => null, 'requestXml' => null,
+            'filters' => [], 'filterFields' => GolestanFilters::fields(), 'result' => null, 'serviceError' => null, 'requestXml' => null,
         ], $data))->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 }
