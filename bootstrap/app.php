@@ -3,11 +3,13 @@
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckTenantStatus;
 use App\Http\Middleware\EnsureActiveAccount;
+use App\Http\Middleware\EnsureGolestanEnabled;
 use App\Http\Middleware\EnsureMultiFactorAuthentication;
 use App\Http\Middleware\InitializeTenancy;
 use App\Http\Middleware\ScanUploads;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\Rbac\PermissionRegistry;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, EnsureGolestanEnabled::class);
         $middleware->web(append: [ScanUploads::class]);
         $middleware->append(SecurityHeaders::class);
         $middleware->prependToPriorityList(SubstituteBindings::class, InitializeTenancy::class);

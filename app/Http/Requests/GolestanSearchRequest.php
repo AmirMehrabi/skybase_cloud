@@ -26,8 +26,6 @@ class GolestanSearchRequest extends FormRequest
     {
         return [
             'student_number' => ['required', 'string', 'regex:/\A[0-9]{1,20}\z/'],
-            'username' => ['required', 'string', 'max:100'],
-            'password' => ['required', 'string', 'max:200'],
         ];
     }
 
@@ -37,8 +35,6 @@ class GolestanSearchRequest extends FormRequest
         return [
             'student_number.required' => 'Enter a student number.',
             'student_number.regex' => 'The student number must contain 1 to 20 digits.',
-            'username.required' => 'Enter your Golestan web-service username.',
-            'password.required' => 'Enter your Golestan web-service password.',
         ];
     }
 }

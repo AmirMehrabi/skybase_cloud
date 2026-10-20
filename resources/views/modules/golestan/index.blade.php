@@ -5,10 +5,6 @@
     <x-ui.card title="Golestan student search" subtitle="Shahid Bahonar University of Kerman · Student information report 1132">
         <form method="POST" action="{{ route('golestan.search') }}" class="space-y-5" x-data="{ searching: false }" @submit="searching = true">
             @csrf
-            <div class="grid gap-5 md:grid-cols-2">
-                <x-ui.input.text name="username" label="Web-service username" :value="old('username', $username)" :error="$errors->first('username')" autocomplete="off" required />
-                <x-ui.input.password name="password" label="Web-service password" :error="$errors->first('password')" autocomplete="off" hint="Credentials are used only for this search and are not saved." required />
-            </div>
             <x-ui.input.text name="student_number" label="Student number / شماره دانشجو" :value="old('student_number', $studentNumber)" :error="$errors->first('student_number')" placeholder="92133002" inputmode="numeric" dir="ltr" required />
             <x-ui.button type="submit" variant="brand" x-bind:disabled="searching"><span x-text="searching ? 'Searching…' : 'Search student'">Search student</span></x-ui.button>
         </form>

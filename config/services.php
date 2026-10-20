@@ -14,6 +14,12 @@ return [
     |
     */
 
+    'golestan' => [
+        'enabled' => env('GOLESTAN_ENABLED', false),
+        'username' => env('GOLESTAN_USERNAME'),
+        'password' => env('GOLESTAN_PASSWORD'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

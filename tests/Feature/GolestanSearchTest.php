@@ -18,6 +18,109 @@ class GolestanSearchTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['services.golestan.enabled' => true, 'services.golestan.username' => 'test-user', 'services.golestan.password' => 'test-password']);
+    }
+
+    public function test_disabled_integration_returns_404_for_guests_and_admins(): void
+    {
+        config(['services.golestan.enabled' => false]);
+        Http::preventStrayRequests();
+        $this->get(route('golestan.index'))->assertNotFound();
+        $this->post(route('golestan.search'), $this->payload())->assertNotFound();
+        $this->actingAs($this->user())->get(route('golestan.index'))->assertNotFound();
+        $this->post(route('golestan.search'), $this->payload())->assertNotFound();
+        Http::assertNothingSent();
+    }
+
+    public function test_posted_credentials_cannot_override_environment_credentials(): void
+    {
+        Http::fake(['*' => Http::response($this->soap('<Root/>'))]);
+        $this->actingAs($this->user())->post(route('golestan.search'), $this->payload() + ['username' => 'override', 'password' => 'override-password'])->assertOk();
+        Http::assertSent(function (Request $request): bool {
+            $document = new DOMDocument;
+            $document->loadXML($request->body());
+            $xpath = new DOMXPath($document);
+
+            return $xpath->evaluate('string(//*[local-name()="login"])') === 'test-user'
+                && $xpath->evaluate('string(//*[local-name()="pass"])') === 'test-password';
+        });
+    }
+
+    public function test_filters_match_the_working_browser_form(): void
+    {
+        $document = new DOMDocument;
+        $document->loadXML(app(GolestanService::class)->requestXml('92133002'));
+        $xpath = new DOMXPath($document);
+        $expectedPub = <<<'XML'
+<Root>
+<N id="1" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="2" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="4" fs="1" ft="7" F1="92133002" T1="92133002" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="6" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="7" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="8" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="10" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="18" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S="0"/>
+<N id="20" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S="0"/>
+<N id="22" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S="0"/>
+<N id="24" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S="0"/>
+<N id="26" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S="0"/>
+<N id="27" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="29" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="30" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="32" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="34" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="36" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="37" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="38" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="40" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="42" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="48" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="101" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="102" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+<N id="103" fs="1" ft="7" F1="" T1="" F2="" T2="" B=" " Q="0" A=" " S=" "/>
+</Root>
+XML;
+        $expected = new DOMDocument;
+        $expected->preserveWhiteSpace = false;
+        $expected->loadXML($expectedPub);
+        $actual = new DOMDocument;
+        $actual->preserveWhiteSpace = false;
+        $actual->loadXML($xpath->evaluate('string(//*[local-name()="pub"])'));
+        $this->assertSame($expected->C14N(), $actual->C14N());
+
+        $expectedPri = <<<'XML'
+<Root>
+<N id="5" fs="0" ft="7" UQID="245" F="2" T="2"/>
+<N id="10" fs="0" ft="7" UQID="10" F="" T=""/>
+<N id="20" fs="0" ft="7" UQID="153" F="" T=""/>
+<N id="24" fs="0" ft="7" UQID="17450" F="" T=""/>
+</Root>
+XML;
+        $expected = new DOMDocument;
+        $expected->preserveWhiteSpace = false;
+        $expected->loadXML($expectedPri);
+        $actual = new DOMDocument;
+        $actual->preserveWhiteSpace = false;
+        $actual->loadXML($xpath->evaluate('string(//*[local-name()="pri"])'));
+        $this->assertSame($expected->C14N(), $actual->C14N());
+
+        $expectedMor = <<<'XML'
+<Root/>
+XML;
+        $expected = new DOMDocument;
+        $expected->preserveWhiteSpace = false;
+        $expected->loadXML($expectedMor);
+        $actual = new DOMDocument;
+        $actual->preserveWhiteSpace = false;
+        $actual->loadXML($xpath->evaluate('string(//*[local-name()="mor"])'));
+        $this->assertSame($expected->C14N(), $actual->C14N());
+
+    }
+
     public function test_guest_must_log_in(): void
     {
         Http::preventStrayRequests();
@@ -39,7 +142,7 @@ class GolestanSearchTest extends TestCase
     {
         Http::preventStrayRequests();
         $this->actingAs($this->user())->get(route('golestan.index'))
-            ->assertOk()->assertSee('Golestan student search')->assertHeader('Cache-Control', 'no-store, private');
+            ->assertOk()->assertSee('Golestan student search')->assertDontSee('name="password"', false)->assertDontSee('name="username"', false)->assertHeader('Cache-Control', 'no-store, private');
         Http::assertNothingSent();
     }
 
@@ -97,11 +200,12 @@ class GolestanSearchTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_missing_credentials_are_rejected(): void
+    public function test_missing_environment_credentials_show_an_error_without_sending_a_request(): void
     {
+        config(['services.golestan.password' => null]);
         Http::preventStrayRequests();
-        $this->actingAs($this->user())->post(route('golestan.search'), ['student_number' => '92133002'])
-            ->assertSessionHasErrors(['username', 'password']);
+        $this->actingAs($this->user())->post(route('golestan.search'), $this->payload())
+            ->assertOk()->assertSee('Golestan web-service credentials are not configured.');
         Http::assertNothingSent();
     }
 
@@ -146,7 +250,7 @@ class GolestanSearchTest extends TestCase
     public function test_service_accepts_element_based_records_and_ignores_other_student_numbers(): void
     {
         Http::fake(['*' => Http::response($this->soap('<Root><Student><STDNO>92133002</STDNO><firstname>Example</firstname></Student><Student><STDNO>999</STDNO><firstname>Other student</firstname></Student></Root>'))]);
-        $result = app(GolestanService::class)->search('92133002', 'test-user', 'test-password');
+        $result = app(GolestanService::class)->search('92133002');
         $this->assertCount(1, $result['records']);
         $this->assertSame('Example', $result['records'][0]['firstname']);
     }
@@ -156,13 +260,13 @@ class GolestanSearchTest extends TestCase
         Http::fake(['*' => Http::response('<!DOCTYPE Root [<!ENTITY secret SYSTEM "file:///etc/passwd">]><Root>&secret;</Root>')]);
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('unsupported XML');
-        app(GolestanService::class)->search('92133002', 'test-user', 'test-password');
+        app(GolestanService::class)->search('92133002');
     }
 
     /** @return array<string, string> */
     private function payload(): array
     {
-        return ['student_number' => '92133002', 'username' => 'test-user', 'password' => 'test-password'];
+        return ['student_number' => '92133002'];
     }
 
     private function soap(string $result): string

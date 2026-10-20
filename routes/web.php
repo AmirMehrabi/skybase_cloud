@@ -50,6 +50,7 @@ use App\Http\Controllers\Support\TicketController as SupportTicketController;
 use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamController;
 use App\Http\Controllers\VpnUserController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Middleware\EnsureGolestanEnabled;
 use Illuminate\Support\Facades\Route;
 
 $customerPortalRoutes = function (): void {
@@ -137,7 +138,7 @@ Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
 // Logout route (authenticated only)
 Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('auth.logout')->middleware('auth');
 
-Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa'])->group(function (): void {
+Route::middleware([EnsureGolestanEnabled::class, 'auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa'])->group(function (): void {
     Route::get('/admin/golestan', [GolestanController::class, 'index'])->name('golestan.index');
     Route::post('/admin/golestan', [GolestanController::class, 'search'])->middleware('throttle:10,1')->name('golestan.search');
 });

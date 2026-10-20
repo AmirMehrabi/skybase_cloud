@@ -11,15 +11,21 @@ use RuntimeException;
 
 class GolestanService
 {
-    public function requestXml(string $studentNumber, string $username, #[\SensitiveParameter] string $password): string
+    public function requestXml(string $studentNumber, bool $redactPassword = false): string
     {
         $public = new DOMDocument;
         $root = $public->appendChild($public->createElement('Root'));
-        foreach ([1, 2, 3, 4, 6, 7, 8, 10, 18, 20, 22, 24, 26, 27, 29, 30, 32, 34, 36, 37, 38, 40, 42, 48, 101, 102, 103] as $id) {
+        foreach ([1, 2, 4, 6, 7, 8, 10, 18, 20, 22, 24, 26, 27, 29, 30, 32, 34, 36, 37, 38, 40, 42, 48, 101, 102, 103] as $id) {
             $node = $root->appendChild($public->createElement('N'));
             $node->setAttribute('id', (string) $id);
-            foreach (['F1', 'T1', 'F2', 'T2', 'A', 'S', 'Q', 'B'] as $attribute) {
-                $node->setAttribute($attribute, $id === 4 && in_array($attribute, ['F1', 'T1'], true) ? $studentNumber : '');
+            $attributes = [
+                'fs' => '1', 'ft' => '7',
+                'F1' => $id === 4 ? $studentNumber : '', 'T1' => $id === 4 ? $studentNumber : '',
+                'F2' => '', 'T2' => '', 'B' => ' ', 'Q' => '0', 'A' => ' ',
+                'S' => in_array($id, [18, 20, 22, 24, 26], true) ? '0' : ' ',
+            ];
+            foreach ($attributes as $attribute => $value) {
+                $node->setAttribute($attribute, $value);
             }
         }
 
@@ -28,12 +34,12 @@ class GolestanService
         $body = $envelope->appendChild($document->createElementNS('http://schemas.xmlsoap.org/soap/envelope/', 'soap:Body'));
         $operation = $body->appendChild($document->createElementNS('urn:nowpardaz', 'golInfo'));
         $parameters = [
-            'login' => $username,
-            'pass' => $password,
+            'login' => (string) config('services.golestan.username'),
+            'pass' => $redactPassword ? '[REDACTED]' : (string) config('services.golestan.password'),
             'sec' => 'AA0ECD9901',
             'pub' => $public->saveXML($root),
-            'pri' => '<Root><N UQID="245" id="2" F="" T=""/><N UQID="10" id="10" F="" T=""/><N UQID="153" id="20" F="" T=""/><N UQID="17450" id="24" F="" T=""/></Root>',
-            'mor' => '',
+            'pri' => '<Root><N UQID="245" id="5" fs="0" ft="7" F="2" T="2"/><N UQID="10" id="10" fs="0" ft="7" F="" T=""/><N UQID="153" id="20" fs="0" ft="7" F="" T=""/><N UQID="17450" id="24" fs="0" ft="7" F="" T=""/></Root>',
+            'mor' => '<Root/>',
             'iFID' => '1132',
         ];
         foreach ($parameters as $name => $value) {
@@ -47,13 +53,20 @@ class GolestanService
     }
 
     /** @return array{records: array<int, array<string, string>>, xml: string} */
-    public function search(string $studentNumber, string $username, #[\SensitiveParameter] string $password): array
+    public function search(string $studentNumber): array
     {
+        if (! config('services.golestan.enabled')) {
+            throw new RuntimeException('Golestan integration is disabled.');
+        }
+        if (blank(config('services.golestan.username')) || blank(config('services.golestan.password'))) {
+            throw new RuntimeException('Golestan web-service credentials are not configured.');
+        }
+
         try {
             $response = Http::connectTimeout(10)->timeout(40)
                 ->withOptions(['allow_redirects' => false])
                 ->withHeaders(['SOAPAction' => '"urn:nowpardaz/golInfo"'])
-                ->withBody($this->requestXml($studentNumber, $username, $password), 'text/xml; charset=utf-8')
+                ->withBody($this->requestXml($studentNumber), 'text/xml; charset=utf-8')
                 ->post('https://eduold.uk.ac.ir/GolestanService/gservice.asmx');
         } catch (ConnectionException) {
             throw new RuntimeException('Golestan could not be reached. Please try again.');
