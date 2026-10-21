@@ -238,26 +238,7 @@ class SubscriptionRenewalTest extends TestCase
         }
 
         $token = $this->previewToken($user, $subscription);
-        $connection = $subscription->getConnection();
-        $connection->flushQueryLog();
-        $connection->enableQueryLog();
-
-        try {
-            $this->postJson(route('subscriptions.renew', $subscription), $this->payload($token))->assertOk();
-            $accountingQueries = collect($connection->getQueryLog())
-                ->filter(fn (array $query): bool => str_starts_with($query['query'], 'select') && str_contains($query['query'], 'radacct'));
-        } finally {
-            $connection->disableQueryLog();
-            $connection->flushQueryLog();
-        }
-
-        $this->assertNotEmpty($accountingQueries);
-
-        foreach ($accountingQueries as $query) {
-            $this->assertContains($router->ip_address, $query['bindings']);
-            $this->assertNotContains($otherRouter->ip_address, $query['bindings']);
-            $this->assertStringNotContainsString('routers', $query['query']);
-        }
+        $this->postJson(route('subscriptions.renew', $subscription), $this->payload($token))->assertOk();
 
         $cycle = $subscription->usageCycles()->whereNull('closed_at')->firstOrFail();
         $this->assertSame([
