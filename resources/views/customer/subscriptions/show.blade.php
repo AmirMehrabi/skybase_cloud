@@ -75,6 +75,7 @@
             </dl>
         </section>
 
+        @if($showBilling)
         <section class="rounded-2xl border border-slate-900/10 bg-white p-6 shadow-sm">
             <h3 class="text-lg font-semibold text-slate-950">Billing</h3>
             <dl class="mt-5 space-y-5">
@@ -106,6 +107,7 @@
                 @endif
             </dl>
         </section>
+        @endif
     </div>
 
     @include('customer.partials.bandwidth-chart', [
@@ -114,6 +116,7 @@
         'description' => 'Download and upload throughput for this subscription.',
     ])
 
+    @if($showBilling)
     <section class="rounded-2xl border border-slate-900/10 bg-white p-6 shadow-sm">
         <div class="flex items-center justify-between gap-4">
             <div>
@@ -147,5 +150,6 @@
             </table>
         </div>
     </section>
+    @endif
 </div>
 @endsection

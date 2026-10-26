@@ -4,6 +4,7 @@ namespace App\Http\Controllers\CustomerPortal;
 
 use App\Http\Controllers\Controller;
 use App\Services\Monitoring\CustomerBandwidthUsageService;
+use App\Support\CustomerPortalSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,6 +14,7 @@ class DashboardController extends Controller
     public function __invoke(Request $request): View
     {
         $customer = $request->user('customer');
+        $showBilling = CustomerPortalSettings::showsBilling($customer->tenant_id);
 
         $subscriptionsQuery = $customer->subscriptions();
         $subscriptions = (clone $subscriptionsQuery)
@@ -21,13 +23,13 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $invoices = $customer->invoices()
-            ->latest('issue_date')
-            ->limit(5)
-            ->get();
+        $invoices = $showBilling
+            ? $customer->invoices()->latest('issue_date')->limit(5)->get()
+            : collect();
 
         return view('customer.dashboard', [
             'customer' => $customer,
+            'showBilling' => $showBilling,
             'subscriptions' => $subscriptions,
             'invoices' => $invoices,
             'stats' => [
@@ -36,13 +38,13 @@ class DashboardController extends Controller
                 'suspended_subscriptions' => (clone $subscriptionsQuery)->suspended()->count(),
                 'online_subscriptions' => (clone $subscriptionsQuery)->where('connection_status', 'online')->count(),
                 'open_tickets' => $customer->tickets()->open()->count(),
-                'unpaid_invoices' => $customer->invoices()->outstanding()->count(),
-                'current_balance' => $customer->balance,
+                'unpaid_invoices' => $showBilling ? $customer->invoices()->outstanding()->count() : null,
+                'current_balance' => $showBilling ? $customer->balance : null,
             ],
-            'nextBillingDate' => $customer->subscriptions()
+            'nextBillingDate' => $showBilling ? $customer->subscriptions()
                 ->whereNotNull('next_billing_date')
                 ->whereDate('next_billing_date', '>=', today())
-                ->min('next_billing_date'),
+                ->min('next_billing_date') : null,
         ]);
     }
 

@@ -33,11 +33,13 @@
             <p class="mt-2 text-3xl font-bold text-emerald-700">{{ $stats['online_subscriptions'] }}</p>
             <p class="mt-1 text-xs text-slate-500">{{ $stats['suspended_subscriptions'] }} suspended</p>
         </div>
+        @if($showBilling)
         <div class="rounded-2xl border border-slate-900/10 bg-white p-5 shadow-sm">
             <p class="text-sm text-slate-500">Unpaid invoices</p>
             <p class="mt-2 text-3xl font-bold text-slate-950">{{ $stats['unpaid_invoices'] }}</p>
             <p class="mt-1 text-xs text-slate-500">Balance {{ number_format((float) $stats['current_balance'], 2) }}</p>
         </div>
+        @endif
         <div class="rounded-2xl border border-slate-900/10 bg-white p-5 shadow-sm">
             <p class="text-sm text-slate-500">Open tickets</p>
             <p class="mt-2 text-3xl font-bold text-slate-950">{{ $stats['open_tickets'] }}</p>
@@ -84,13 +86,16 @@
                         <dt class="text-slate-500">Location</dt>
                         <dd class="mt-1 font-medium text-slate-900">{{ collect([$customer->city, $customer->country])->filter()->join(', ') ?: 'Not provided' }}</dd>
                     </div>
+                    @if($showBilling)
                     <div>
                         <dt class="text-slate-500">Next billing</dt>
                         <dd class="mt-1 font-medium text-slate-900">{{ $nextBillingDate ? \Illuminate\Support\Carbon::parse($nextBillingDate)->format('M d, Y') : 'Not scheduled' }}</dd>
                     </div>
+                    @endif
                 </dl>
             </section>
 
+            @if($showBilling)
             <section class="rounded-2xl border border-slate-900/10 bg-white p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-slate-950">Recent invoices</h3>
@@ -107,6 +112,7 @@
                     @endforelse
                 </div>
             </section>
+            @endif
         </div>
     </div>
 </div>

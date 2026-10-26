@@ -16,7 +16,7 @@
                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Connection</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Next billing</th>
+                    @if($showBilling)<th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Next billing</th>@endif
                     <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
                 </tr>
             </thead>
@@ -27,7 +27,7 @@
                         <td class="px-5 py-4 text-sm text-slate-600">{{ $subscription->plan?->name ?? 'No plan assigned' }}</td>
                         <td class="px-5 py-4 text-sm text-slate-600">{{ strtoupper((string) $subscription->connection_type) }}</td>
                         <td class="px-5 py-4 text-sm"><span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold capitalize text-emerald-700">{{ $subscription->status }}</span></td>
-                        <td class="px-5 py-4 text-sm text-slate-600">{{ $subscription->next_billing_date?->format('M d, Y') ?? 'Not scheduled' }}</td>
+                        @if($showBilling)<td class="px-5 py-4 text-sm text-slate-600">{{ $subscription->next_billing_date?->format('M d, Y') ?? 'Not scheduled' }}</td>@endif
                         <td class="px-5 py-4 text-right">
                             <x-ui.action-icon
                                 :href="route('customer.subscriptions.show', $subscription)"
@@ -39,7 +39,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-5 py-10 text-center text-sm text-slate-500">No subscriptions found.</td>
+                        <td colspan="{{ $showBilling ? 6 : 5 }}" class="px-5 py-10 text-center text-sm text-slate-500">No subscriptions found.</td>
                     </tr>
                 @endforelse
             </tbody>

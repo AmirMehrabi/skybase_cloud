@@ -222,6 +222,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
         Route::put('/general', [SettingController::class, 'updateGeneral'])->name('update.general');
         Route::put('/branding', [SettingController::class, 'updateBranding'])->name('update.branding');
         Route::put('/billing-tax', [SettingController::class, 'updateBillingTax'])->name('update.billing-tax');
+        Route::put('/customer-portal', [SettingController::class, 'updateCustomerPortal'])->name('update.customer-portal');
         Route::get('/sms', [SmsGatewayController::class, 'index'])->name('sms');
         Route::put('/sms', [SmsGatewayController::class, 'update'])->name('update.sms');
         Route::post('/sms/test', [SmsGatewayController::class, 'test'])->middleware('throttle:sensitive-actions')->name('test.sms');
@@ -234,7 +235,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
         Route::post('/ldap/preview', [SettingController::class, 'previewLdap'])->name('preview.ldap');
         Route::post('/ldap/sync', [SettingController::class, 'syncLdap'])->name('sync.ldap');
         Route::match(['post', 'delete'], '/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
-        Route::get('/{section}', [SettingController::class, 'section'])->whereIn('section', ['general', 'branding', 'billing', 'email', 'notifications', 'ldap'])->name('section');
+        Route::get('/{section}', [SettingController::class, 'section'])->whereIn('section', ['general', 'branding', 'billing', 'customer-portal', 'email', 'notifications', 'ldap'])->name('section');
     });
 
     Route::prefix('support')->name('support.')->group(function () {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Setting\TestEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateBillingTaxSettingRequest;
 use App\Http\Requests\Setting\UpdateBrandingSettingRequest;
+use App\Http\Requests\Setting\UpdateCustomerPortalSettingRequest;
 use App\Http\Requests\Setting\UpdateEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateGeneralSettingRequest;
 use App\Http\Requests\Setting\UpdateLdapSettingRequest;
@@ -20,6 +21,7 @@ use App\Services\Ldap\LdapSyncService;
 use App\Services\NotificationPreferenceService;
 use App\Services\RadiusProvisioningService;
 use App\Services\TaxResolverService;
+use App\Support\CustomerPortalSettings;
 use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -35,7 +37,7 @@ class SettingController extends Controller
     {
         if ($request->filled('tab')) {
             $section = $request->query('tab');
-            abort_unless(is_string($section) && in_array($section, ['general', 'branding', 'billing', 'email', 'notifications', 'ldap'], true), 404);
+            abort_unless(is_string($section) && in_array($section, ['general', 'branding', 'billing', 'customer-portal', 'email', 'notifications', 'ldap'], true), 404);
 
             return redirect()->route('settings.section', ['section' => $section]);
         }
@@ -45,7 +47,7 @@ class SettingController extends Controller
 
     public function section(string $section): View
     {
-        abort_unless(in_array($section, ['general', 'branding', 'billing', 'email', 'notifications', 'ldap'], true), 404);
+        abort_unless(in_array($section, ['general', 'branding', 'billing', 'customer-portal', 'email', 'notifications', 'ldap'], true), 404);
         $tenant = $this->getTenant();
         $data = match ($section) {
             'general' => ['timezones' => \DateTimeZone::listIdentifiers(), 'currencies' => $this->getCurrencies(), 'locales' => $this->getLocales()],
@@ -53,6 +55,7 @@ class SettingController extends Controller
             'ldap' => ['ldapSettings' => app(LdapSyncService::class)->settingsForTenant($tenant->id)],
             'notifications' => ['notificationSettings' => app(NotificationPreferenceService::class)->tenantSettings($tenant->id), 'notificationEvents' => NotificationEventRegistry::events()],
             'billing' => ['taxSettings' => app(TaxResolverService::class)->settings($tenant->id)],
+            'customer-portal' => ['showBilling' => CustomerPortalSettings::showsBilling($tenant->id)],
             default => [],
         };
 
@@ -85,6 +88,24 @@ class SettingController extends Controller
         return redirect()
             ->route('settings.section', ['section' => 'billing'])
             ->with('success', 'Billing tax settings updated successfully.');
+    }
+
+    public function updateCustomerPortal(UpdateCustomerPortalSettingRequest $request): RedirectResponse
+    {
+        $tenant = $this->getTenant();
+
+        Setting::updateOrCreate(
+            ['tenant_id' => $tenant->id, 'key' => 'customer_portal.show_billing'],
+            [
+                'value' => $request->boolean('customer_portal_show_billing'),
+                'type' => 'boolean',
+                'group' => 'customer_portal',
+            ]
+        );
+
+        return redirect()
+            ->route('settings.section', ['section' => 'customer-portal'])
+            ->with('success', 'Customer portal settings updated successfully.');
     }
 
     public function updateNotifications(UpdateNotificationSettingRequest $request): RedirectResponse
