@@ -54,6 +54,21 @@ class SmsGatewayTest extends TestCase
         app(SmsGatewayService::class)->send($this->tenant->id, '+12025550100', ['sms_body' => 'test']);
     }
 
+    public function test_smsportal_reads_the_v3_send_response_envelope(): void
+    {
+        Setting::set('sms.gateway', ['provider' => 'smsportal', 'smsportal' => ['client_id' => 'client', 'secret' => 'secret', 'test_mode' => false]], 'json', $this->tenant->id);
+        Http::fake(['rest.smsportal.com/*' => Http::sequence()
+            ->push(['sendResponse' => ['eventId' => 12345678901, 'messages' => 1], 'statusCode' => 200, 'errors' => null])
+            ->push(['sendResponse' => ['eventId' => 0, 'messages' => 0], 'statusCode' => 200, 'errors' => null])]);
+
+        $result = app(SmsGatewayService::class)->send($this->tenant->id, '+12025550100', ['sms_body' => 'test']);
+        $this->assertSame('12345678901', $result['id']);
+        $this->assertSame('accepted', $result['status']);
+
+        $this->expectException(\RuntimeException::class);
+        app(SmsGatewayService::class)->send($this->tenant->id, '+12025550100', ['sms_body' => 'test']);
+    }
+
     public function test_kavenegar_lookup_preserves_credentials_tokens(): void
     {
         Setting::set('sms.gateway', ['provider' => 'kavenegar', 'kavenegar' => ['api_key' => 'key']], 'json', $this->tenant->id);

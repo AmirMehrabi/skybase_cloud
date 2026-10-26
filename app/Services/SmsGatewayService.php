@@ -44,6 +44,7 @@ class SmsGatewayService
                 ]);
             $this->check($response);
             $body = array_change_key_case($response->json() ?? [], CASE_LOWER);
+            $body = array_change_key_case($body['sendresponse'] ?? $body, CASE_LOWER);
             $id = $body['eventid'] ?? null;
             if (isset($body['messages']) && (int) $body['messages'] < 1) {
                 throw new RuntimeException('SMSPortal did not accept the message. Check recipient opt-out and error reports.', 422);
