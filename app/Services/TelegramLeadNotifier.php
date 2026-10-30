@@ -44,6 +44,21 @@ class TelegramLeadNotifier
         ]));
     }
 
+    /**
+     * @param  array{business_name: string, owner_name: string, email: string, phone: ?string, country: ?string}  $signupDetails
+     */
+    public function notifyCloudSignup(array $signupDetails): void
+    {
+        $this->sendMessage(implode("\n", [
+            'New SkyBase Cloud signup',
+            'Business: '.$signupDetails['business_name'],
+            'Owner: '.$signupDetails['owner_name'],
+            'Email: '.$signupDetails['email'],
+            'Phone: '.($signupDetails['phone'] ?: 'Not provided'),
+            'Country: '.($signupDetails['country'] ?: 'Not provided'),
+        ]), true);
+    }
+
     private function sendMessage(string $message, bool $retryOnFailure = false): void
     {
         $botToken = (string) $this->config->get('services.telegram.bot_token', '');

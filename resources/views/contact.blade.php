@@ -101,6 +101,7 @@
                             :value="old('phone')"
                             error="{{ $errors->contactInquiry->first('phone') }}"
                             placeholder="+33 7 58 35 14 73"
+                            required
                         />
                         <x-ui.input.text
                             name="company_name"

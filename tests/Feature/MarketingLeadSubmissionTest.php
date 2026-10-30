@@ -83,6 +83,7 @@ class MarketingLeadSubmissionTest extends TestCase
             'business_name' => 'Clear Sky Fiber',
             'contact_name' => 'Jane Doe',
             'email' => 'jane@example.com',
+            'phone' => '+33 7 58 35 14 73',
             'country' => 'France',
             'customer_count' => 120,
             'message' => 'We want to simplify customer and router follow-up.',
@@ -98,5 +99,24 @@ class MarketingLeadSubmissionTest extends TestCase
             'customer_count' => 120,
             'source_page' => 'home',
         ]);
+    }
+
+    public function test_homepage_guided_setup_requires_a_phone_number(): void
+    {
+        Http::fake();
+        $payload = [
+            'requested_plan' => 'Guided setup from homepage',
+            'business_name' => 'Clear Sky Fiber',
+            'contact_name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+            'country' => 'France',
+            'customer_count' => 120,
+            'source_page' => 'home',
+        ];
+
+        $this->post(route('demo-requests.store'), $payload)
+            ->assertSessionHasErrors(['phone'], errorBag: 'demoRequest');
+
+        $this->assertDatabaseCount('demo_requests', 0);
     }
 }

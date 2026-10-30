@@ -51,6 +51,10 @@ use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamContro
 use App\Http\Controllers\VpnUserController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Middleware\EnsureGolestanEnabled;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 $customerPortalRoutes = function (): void {
@@ -132,6 +136,22 @@ Route::get('/contact', [PagesController::class, 'contact'])->name('contact.show'
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:contact-inquiries')->name('contact.store');
 Route::post('/demo-requests', [DemoRequestController::class, 'store'])->middleware('throttle:public-forms')->name('demo-requests.store');
 
+Route::get('/auth/email/verify', function (Request $request): View {
+    return view('auth.verify-email');
+})->middleware('auth')->name('verification.notice');
+
+Route::get('/auth/email/verify/{id}/{hash}', function (EmailVerificationRequest $request): RedirectResponse {
+    $request->fulfill();
+
+    return redirect()->route('dashboard')->with('success', 'Your email is verified. Welcome to SkyBase Cloud.');
+})->middleware(['auth', 'signed'])->name('verification.verify');
+
+Route::post('/auth/email/verification-notification', function (Request $request): RedirectResponse {
+    $request->user()->sendEmailVerificationNotification();
+
+    return back()->with('success', 'A fresh verification link is on its way.');
+})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
 Route::get('/storage/settings/{path}', [BrandingAssetController::class, 'settings'])->where('path', '.*')->name('branding.asset.storage');
 Route::get('/branding-assets/{asset}', BrandingAssetController::class)->name('branding.asset');
 
@@ -146,13 +166,13 @@ Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
 // Logout route (authenticated only)
 Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('auth.logout')->middleware('auth');
 
-Route::middleware([EnsureGolestanEnabled::class, 'auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa'])->group(function (): void {
+Route::middleware([EnsureGolestanEnabled::class, 'auth', 'email.verified', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa'])->group(function (): void {
     Route::get('/admin/golestan', [GolestanController::class, 'index'])->name('golestan.index');
     Route::post('/admin/golestan', [GolestanController::class, 'search'])->middleware('throttle:10,1')->name('golestan.search');
 });
 
 // Protected Routes (Require Authentication & Tenancy)
-Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
+Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
 
     Route::prefix('campaigns')->name('campaigns.')->group(function (): void {
         Route::get('/', [CampaignController::class, 'index'])->name('index');
@@ -499,7 +519,7 @@ Route::middleware(['auth', 'initialize_tenancy', 'check_tenant_status', 'active_
 });
 
 // Super Admin Routes (Separate from tenant routes)
-Route::middleware(['auth', 'active_account', 'auth.session', 'mfa', 'can:manage-central-tenants'])->prefix('admin/super-admin')->name('admin.super-admin.')->group(function () {
+Route::middleware(['auth', 'email.verified', 'active_account', 'auth.session', 'mfa', 'can:manage-central-tenants'])->prefix('admin/super-admin')->name('admin.super-admin.')->group(function () {
     Route::get('/tenants', [SuperAdminTenantController::class, 'index'])->name('tenants.index');
     Route::get('/tenants/{tenant}', [SuperAdminTenantController::class, 'show'])->name('tenants.show');
     Route::get('/tenants/{tenant}/edit', [SuperAdminTenantController::class, 'edit'])->name('tenants.edit');
@@ -509,7 +529,7 @@ Route::middleware(['auth', 'active_account', 'auth.session', 'mfa', 'can:manage-
     Route::delete('/tenants/{tenant}', [SuperAdminTenantController::class, 'destroy'])->name('tenants.destroy');
 });
 
-Route::middleware(['auth:web', 'active_account', 'auth.session'])->prefix('account/security')->name('mfa.')->group(function (): void {
+Route::middleware(['auth:web', 'email.verified', 'active_account', 'auth.session'])->prefix('account/security')->name('mfa.')->group(function (): void {
     Route::get('/setup', [MultiFactorController::class, 'setup'])->name('setup');
     Route::post('/setup', [MultiFactorController::class, 'confirm'])->middleware('throttle:6,1')->name('confirm');
     Route::get('/challenge', [MultiFactorController::class, 'challenge'])->name('challenge');

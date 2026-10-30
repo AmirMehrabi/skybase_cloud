@@ -8,6 +8,7 @@ use App\Models\Concerns\BelongsToUserGroup;
 use App\Models\Concerns\LogsTenantActivity;
 use App\Support\Rbac\PermissionRegistry;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -16,7 +17,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use BelongsToTenant;
     use BelongsToUserGroup;
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'user_group_id',
         'name',
         'email',
+        'email_verification_required',
         'password',
         'role',
         'status',
@@ -48,6 +50,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'email_verification_required' => 'boolean',
             'password' => 'hashed',
             'mfa_secret' => 'encrypted',
             'mfa_recovery_codes' => 'encrypted:array',

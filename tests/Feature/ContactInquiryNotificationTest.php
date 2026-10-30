@@ -88,6 +88,17 @@ class ContactInquiryNotificationTest extends TestCase
         $this->assertRejected();
     }
 
+    public function test_phone_number_is_required_for_contact_inquiries(): void
+    {
+        $payload = $this->payload();
+        unset($payload['phone']);
+
+        $this->post(route('contact.store'), $payload)
+            ->assertSessionHasErrors(['phone'], errorBag: 'contactInquiry');
+
+        $this->assertRejected();
+    }
+
     public function test_ip_submission_limit_is_always_enforced(): void
     {
         config(['security.enforce_rate_limits' => false]);
@@ -179,6 +190,7 @@ class ContactInquiryNotificationTest extends TestCase
         return [
             'name' => 'Test Customer',
             'email' => 'customer@example.com',
+            'phone' => '+33 7 58 35 14 73',
             'subject' => 'Platform question',
             'message' => 'Please tell me more about SkyBase.',
             'form_token' => Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->subSeconds($age)->timestamp),

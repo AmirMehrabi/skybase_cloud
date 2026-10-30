@@ -5,6 +5,7 @@ use App\Http\Middleware\CheckTenantStatus;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureGolestanEnabled;
 use App\Http\Middleware\EnsureMultiFactorAuthentication;
+use App\Http\Middleware\EnsureRequiredEmailIsVerified;
 use App\Http\Middleware\InitializeTenancy;
 use App\Http\Middleware\ScanUploads;
 use App\Http\Middleware\SecurityHeaders;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check_tenant_status' => CheckTenantStatus::class,
             'permission' => CheckPermission::class,
             'active_account' => EnsureActiveAccount::class,
+            'email.verified' => EnsureRequiredEmailIsVerified::class,
             'mfa' => EnsureMultiFactorAuthentication::class,
         ]);
 

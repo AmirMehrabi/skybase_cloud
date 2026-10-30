@@ -944,6 +944,7 @@
                         :value="old('phone')"
                         error="{{ $errors->demoRequest->first('phone') }}"
                         placeholder="+1 555 123 4567"
+                        required
                     />
                     <x-ui.input.text
                         name="country"

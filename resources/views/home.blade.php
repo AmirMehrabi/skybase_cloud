@@ -229,6 +229,7 @@
                             <x-ui.input.text name="business_name" label="Business name" :value="old('business_name')" error="{{ $errors->demoRequest->first('business_name') }}" placeholder="Your business" required class="h-12 rounded-xl border-[#17211f]/20 px-4 text-base shadow-none focus:border-[#145a5a] focus:ring-[#145a5a]" />
                             <x-ui.input.text name="contact_name" label="Your name" :value="old('contact_name')" error="{{ $errors->demoRequest->first('contact_name') }}" placeholder="Your name" required class="h-12 rounded-xl border-[#17211f]/20 px-4 text-base shadow-none focus:border-[#145a5a] focus:ring-[#145a5a]" />
                             <x-ui.input.text name="email" type="email" label="Work email" :value="old('email')" error="{{ $errors->demoRequest->first('email') }}" placeholder="you@business.com" required class="h-12 rounded-xl border-[#17211f]/20 px-4 text-base shadow-none focus:border-[#145a5a] focus:ring-[#145a5a]" />
+                            <x-ui.input.text name="phone" type="tel" label="Phone number" :value="old('phone')" error="{{ $errors->demoRequest->first('phone') }}" placeholder="+33 7 58 35 14 73" required class="h-12 rounded-xl border-[#17211f]/20 px-4 text-base shadow-none focus:border-[#145a5a] focus:ring-[#145a5a]" />
                             <x-ui.input.text name="country" label="Country" :value="old('country')" error="{{ $errors->demoRequest->first('country') }}" placeholder="Where you operate" required class="h-12 rounded-xl border-[#17211f]/20 px-4 text-base shadow-none focus:border-[#145a5a] focus:ring-[#145a5a]" />
                             <div class="sm:col-span-2">
                                 <x-ui.input.text name="customer_count" type="number" label="Approximate subscribers" :value="old('customer_count')" error="{{ $errors->demoRequest->first('customer_count') }}" placeholder="For example, 120" min="1" required class="h-12 rounded-xl border-[#17211f]/20 px-4 text-base shadow-none focus:border-[#145a5a] focus:ring-[#145a5a]" />
@@ -239,7 +240,7 @@
                         </div>
 
                         <div class="mt-6 flex flex-col gap-4 border-t border-[#17211f]/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="max-w-xs text-sm leading-6 text-[#52605d]">We’ll use your email only to arrange the setup.</p>
+                            <p class="max-w-xs text-sm leading-6 text-[#52605d]">We’ll use your contact details only to arrange the setup.</p>
                             <button type="submit" class="rounded-xl bg-[#f5c542] px-6 py-3.5 font-semibold text-[#17211f] ring-1 ring-[#17211f]/10 transition hover:bg-[#ffd75c] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 motion-reduce:transition-none">Book my guided setup</button>
                         </div>
                     </form>

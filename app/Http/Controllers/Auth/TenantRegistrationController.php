@@ -4,15 +4,22 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterTenantRequest;
+use App\Jobs\SendCloudSignupTelegram;
+use App\Mail\CloudSignupReceived;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Throwable;
 
 class TenantRegistrationController extends Controller
 {
@@ -23,7 +30,7 @@ class TenantRegistrationController extends Controller
         return view('auth.register-tenant');
     }
 
-    public function register(RegisterTenantRequest $request)
+    public function register(RegisterTenantRequest $request): RedirectResponse
     {
         try {
             DB::beginTransaction();
@@ -54,6 +61,7 @@ class TenantRegistrationController extends Controller
                 'password' => Hash::make($request->password),
                 'role' => 'owner',
                 'status' => 'active',
+                'email_verification_required' => true,
             ]);
 
             if (! $user->exists) {
@@ -65,24 +73,56 @@ class TenantRegistrationController extends Controller
 
             DB::commit();
 
-            auth()->login($user);
-
-            return redirect()->route('dashboard')
-                ->with('success', 'Welcome to SkyBase Cloud! Your account has been created with a 14-day trial.');
-
         } catch (QueryException $e) {
-            DB::rollBack();
-            \Log::error('Registration database error: '.$e->getMessage());
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            Log::error('Registration database error: '.$e->getMessage());
 
             return back()->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Registration failed. Please try again.');
         } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Registration error: '.$e->getMessage());
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            Log::error('Registration error: '.$e->getMessage());
 
             return back()->withInput(request()->except(['password', 'password_confirmation', 'current_password', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code']))
                 ->with('error', 'Registration failed. Please try again.');
         }
+
+        try {
+            event(new Registered($user));
+        } catch (Throwable $throwable) {
+            Log::warning('Cloud signup verification email could not be queued.', ['exception_type' => $throwable::class]);
+        }
+
+        $signupDetails = [
+            'business_name' => $tenant->company_name,
+            'owner_name' => $user->name,
+            'email' => $user->email,
+            'phone' => $tenant->phone,
+            'country' => $tenant->country,
+        ];
+
+        foreach (config('contact.recipients') as $recipient) {
+            try {
+                Mail::to($recipient)->queue(new CloudSignupReceived($signupDetails));
+            } catch (Throwable $throwable) {
+                Log::warning('Cloud signup email notification could not be queued.', ['exception_type' => $throwable::class]);
+            }
+        }
+
+        try {
+            SendCloudSignupTelegram::dispatch($signupDetails)->onQueue('notifications');
+        } catch (Throwable $throwable) {
+            Log::warning('Cloud signup Telegram notification could not be queued.', ['exception_type' => $throwable::class]);
+        }
+
+        auth()->login($user);
+
+        return redirect()->route('verification.notice')
+            ->with('success', 'Your 14-day trial is ready. Verify your email to get started.');
     }
 
     protected function createDefaultRoles(string $tenantId): void
