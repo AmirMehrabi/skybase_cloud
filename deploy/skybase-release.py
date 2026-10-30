@@ -31,6 +31,33 @@ def artisan(release, *args):
     run(['php', 'artisan', *args, '--no-interaction'], cwd=release, build=True, env=environment)
 
 
+def verify_vite_assets(release):
+    build = release / 'public/build'
+    manifest_path = build / 'manifest.json'
+    if not manifest_path.is_file():
+        raise RuntimeError('Vite build did not produce public/build/manifest.json')
+
+    manifest = json.loads(manifest_path.read_text())
+    required = {
+        'resources/css/app.css',
+        'resources/js/app.js',
+        'resources/css/marketing.css',
+        'resources/js/marketing.js',
+    }
+    missing_entries = required.difference(manifest)
+    if missing_entries:
+        raise RuntimeError('Vite manifest is missing required entries: ' + ', '.join(sorted(missing_entries)))
+
+    for entry_name, entry in manifest.items():
+        files = [entry.get('file'), *entry.get('css', []), *entry.get('assets', [])]
+        for filename in filter(None, files):
+            asset = (build / filename).resolve()
+            if not asset.is_relative_to(build.resolve()) or not asset.is_file():
+                raise RuntimeError(f'Vite output for {entry_name} is missing: {filename}')
+
+    print(f'VERIFIED Vite build with {len(manifest)} manifest entries', flush=True)
+
+
 def switch(target):
     temporary = BASE / 'current.next'
     temporary.unlink(missing_ok=True)
@@ -81,10 +108,11 @@ def deploy():
     run(['chown', '-R', '--no-dereference', USER + ':www-data', release])
     run(['composer', 'install', '--no-dev', '--no-interaction', '--prefer-dist', '--optimize-autoloader'], cwd=release, build=True)
     run(['npm', 'ci', '--no-audit', '--no-fund'], cwd=release, build=True)
-    run(['npm', 'run', 'build'], cwd=release, build=True)
     old_assets = previous / 'public/build/assets'
     if old_assets.is_dir():
         shutil.copytree(old_assets, release / 'public/build/assets', dirs_exist_ok=True)
+    run(['npm', 'run', 'build'], cwd=release, build=True)
+    verify_vite_assets(release)
     for asset in LEGACY.joinpath('public').iterdir():
         if asset.suffix in ('.mp4', '.qcow2') and not (release / 'public' / asset.name).exists():
             (release / 'public' / asset.name).symlink_to(asset)
