@@ -4,14 +4,19 @@
 
 <h1 class="mb-2 text-2xl font-bold">ISP accounts</h1>
 <p class="mb-6 text-gray-600">{{ $tenants->total() }} matching accounts. Search ISP accounts, review account activity and manage access.</p>
-<p class="mb-5 text-sm text-gray-600">Active: {{ $totals['active'] }} · Suspended: {{ $totals['suspended'] }} · Archived: {{ $totals['archived'] }}</p>
+<div class="mb-7 grid gap-4 sm:grid-cols-3">
+@foreach(['active' => 'Active ISP accounts', 'suspended' => 'Application access suspended', 'archived' => 'Archived accounts'] as $key => $label)
+<section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p class="text-sm font-medium text-slate-600">{{ $label }}</p><p class="mt-2 text-3xl font-bold tracking-tight text-[#0d2f35]">{{ number_format($totals[$key]) }}</p></section>
+@endforeach
+</div>
 <form method="GET" class="mb-6 grid gap-4 rounded-lg border border-gray-200 bg-white p-5 md:grid-cols-4">
 <x-ui.input.text name="search" label="ISP name" :value="request('search')" />
 <x-ui.input.select name="status" label="Application access" :value="request('status')" :options="['active'=>'Active','pending'=>'Pending','suspended'=>'Suspended']" placeholder="All access states" />
 <x-ui.input.select name="archived" label="Archived accounts" :value="request('archived')" :options="['yes'=>'Archived only']" placeholder="Current accounts" />
 <x-ui.input.select name="commercial" label="Commercial state" :value="request('commercial')" :options="['unconfigured'=>'Unconfigured','active'=>'Active terms','trial'=>'Trial','expiring_trial'=>'Trial expires within 7 days','expired'=>'Paid term expired']" placeholder="All commercial states" />
 <x-ui.input.select name="activity" label="Staff activity" :value="request('activity')" :options="['inactive'=>'No login in 30 days / unknown']" placeholder="All activity" />
-<button class="rounded-lg bg-teal-800 px-4 py-2 text-white">Filter</button>
+<button class="rounded-lg bg-teal-800 px-4 py-2 text-white">Apply filters</button>
+<a href="{{ route('admin.super-admin.tenants.index') }}" class="self-center text-sm font-semibold text-teal-700">Clear filters</a>
 </form>
 <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white"><table class="w-full text-left text-sm"><thead><tr><th class="p-4">ISP</th><th>Access</th><th>SkyBase terms</th><th>Customers / routers / staff</th><th>Last staff login</th></tr></thead><tbody>
 @forelse($tenants as $tenant)

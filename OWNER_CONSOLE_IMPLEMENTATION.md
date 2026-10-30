@@ -93,4 +93,7 @@
 - [x] End old central sessions on tenant/public hosts and send them to console sign-in.
 - [x] Dedicated console login, shell, account navigation, readable tables and MFA screens.
 - [x] Host authentication and existing console/security regression tests.
-- [ ] Production DNS/TLS, configuration activation and live hostname verification.
+- [x] Production DNS/TLS, configuration activation and live hostname verification.
+- [x] Verified separate login cookie has Secure/HttpOnly/SameSite=Lax and no Domain attribute; normal login remains available.
+- [x] Verified production Vite build and all 13 manifest entries before release activation.
+- [x] Added account summary cards, filter reset, and explicit confirmation for suspend/archive actions.
