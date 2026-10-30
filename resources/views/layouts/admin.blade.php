@@ -232,6 +232,7 @@
                         <!-- User Dropdown Menu -->
                         <div id="user-menu" class="hidden absolute {{ $isRtl ? 'left-0' : 'right-0' }} mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-900/10 py-1 z-50">
                             <a href="{{ route('profile.index') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Profile</a>
+                            <a href="{{ route('mfa.setup') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Account Security</a>
                             <div class="border-t border-slate-900/10 my-1"></div>
                             <form method="POST" action="{{ route('auth.logout') }}">
                                 @csrf

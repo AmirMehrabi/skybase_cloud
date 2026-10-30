@@ -4,5 +4,4 @@
     @elseif(auth()->user()?->isOwner() && config('skybase_billing.enabled'))
         <a href="{{ route('skybase.billing.index') }}" class="font-semibold text-teal-700">SkyBase subscription</a>
     @endif
-    <a href="{{ route('mfa.setup') }}" class="text-gray-600">Account security</a>
 </nav>
