@@ -105,6 +105,7 @@
 - [x] Dedicated central delete permission, validated confirmation and transactional audit event.
 - [x] Customer/subscription totals, active/online counts, router/staff/support and overdue invoice summaries in directory rows.
 - [x] Detailed state breakdowns, infrastructure/growth, recent subscriptions/tickets and subscriber billing balance on detail pages.
+- [x] Tenant detail page shows the tenant-scoped owner's name, email, signup phone, country, verification state, account creation date, and last sign-in.
 - [x] All operational reads execute in selected tenant context and explicitly filter tenant_id; monitoring states are labeled as last recorded.
 - [x] Feature coverage for deletion confirmation/access denial/audit retention and tenant-isolated counts on both screens.
 - [ ] Bulk deletion UI and request handling added; automated tests and interactive browser review not run for this update.

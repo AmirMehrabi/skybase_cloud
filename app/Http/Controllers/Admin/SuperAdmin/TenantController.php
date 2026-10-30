@@ -75,6 +75,7 @@ class TenantController extends Controller
         Gate::authorize('view-owner-console');
         $data = app(TenantContext::class)->run($tenant->id, fn (): array => [
             'account' => SkybaseAccount::query()->where('tenant_id', $tenant->id)->first(),
+            'owner' => $tenant->users()->whereRaw('LOWER(role) = ?', ['owner'])->oldest('id')->first(['id', 'name', 'email', 'email_verified_at', 'created_at', 'last_login_at']),
             'staff' => $tenant->users()->latest()->limit(20)->get(['id', 'name', 'email', 'role', 'last_login_at']),
             'overview' => app(TenantOperationalOverview::class)->forTenant($tenant, true),
             'notes' => TenantNote::query()->where('tenant_id', $tenant->id)->latest()->limit(30)->get(),

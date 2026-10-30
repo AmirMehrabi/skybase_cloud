@@ -6,6 +6,25 @@
 <h1 class="mb-2 text-2xl font-bold">{{ $tenant->company_name }}</h1>
 <p class="mb-6 text-gray-600">{{ $tenant->email }} · {{ $tenant->application_access_suspended ? 'Application suspended' : $tenant->status }} {{ $tenant->archived_at ? ' / Archived' : '' }} · {{ $overview['customers'] }} customers · {{ $overview['subscriptions'] }} subscriptions · {{ $overview['routers'] }} routers</p>
 <div class="mb-7 flex justify-end"><x-tenant-delete-button :tenant="$tenant" /></div>
+<section class="mb-7 rounded-lg border border-gray-200 bg-white p-5">
+    <div class="mb-4">
+        <h2 class="text-lg font-semibold">Tenant owner</h2>
+        <p class="mt-1 text-sm text-gray-600">Personal contact and account details for the ISP owner.</p>
+    </div>
+    @if($owner)
+    <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div><dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Name</dt><dd class="mt-1 font-medium text-gray-900">{{ $owner->name }}</dd></div>
+        <div><dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Owner email</dt><dd class="mt-1"><a class="font-medium text-teal-700 hover:underline" href="mailto:{{ $owner->email }}">{{ $owner->email }}</a></dd></div>
+        <div><dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Signup phone</dt><dd class="mt-1 font-medium text-gray-900">{{ $tenant->phone ?: 'Not provided' }}</dd></div>
+        <div><dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Country</dt><dd class="mt-1 font-medium text-gray-900">{{ $tenant->country ?: 'Not provided' }}</dd></div>
+        <div><dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Email verification</dt><dd class="mt-1 font-medium text-gray-900">{{ $owner->email_verified_at ? 'Verified' : 'Not verified' }}</dd></div>
+        <div><dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Owner account created</dt><dd class="mt-1 font-medium text-gray-900">{{ $owner->created_at?->format('M j, Y') ?? 'Unknown' }}</dd></div>
+        <div><dt class="text-xs font-medium uppercase tracking-wide text-gray-500">Last sign in</dt><dd class="mt-1 font-medium text-gray-900">{{ $owner->last_login_at?->format('M j, Y g:i A') ?? 'No sign-in recorded' }}</dd></div>
+    </dl>
+    @else
+    <p class="text-sm text-gray-600">No user with the tenant owner role was found.</p>
+    @endif
+</section>
 <x-tenant-operational-overview :overview="$overview" />
 <div class="grid gap-6 lg:grid-cols-2">
 <section class="rounded-lg border border-gray-200 bg-white p-5"><h2 class="mb-3 text-lg font-semibold">SkyBase commercial terms</h2>
