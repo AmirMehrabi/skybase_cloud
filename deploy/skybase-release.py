@@ -111,7 +111,7 @@ def deploy():
     old_assets = previous / 'public/build/assets'
     if old_assets.is_dir():
         shutil.copytree(old_assets, release / 'public/build/assets', dirs_exist_ok=True)
-        run(['chown', '-R', USER + ':www-data', release / 'public/build/assets'])
+        run(['chown', '-R', USER + ':www-data', release / 'public/build'])
     run(['npm', 'run', 'build'], cwd=release, build=True)
     verify_vite_assets(release)
     for asset in LEGACY.joinpath('public').iterdir():
