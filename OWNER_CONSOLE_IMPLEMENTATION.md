@@ -97,3 +97,12 @@
 - [x] Verified separate login cookie has Secure/HttpOnly/SameSite=Lax and no Domain attribute; normal login remains available.
 - [x] Verified production Vite build and all 13 manifest entries before release activation.
 - [x] Added account summary cards, filter reset, and explicit confirmation for suspend/archive actions.
+
+## Tenant deletion and operational oversight
+- [x] Single-confirmation delete actions on the tenant directory and detail page.
+- [x] Recoverable deletion removes tenants from normal queries, blocks tenant context/application access, and retains business/billing/audit records. No tenant data is permanently purged.
+- [x] Dedicated central delete permission, validated confirmation and transactional audit event.
+- [x] Customer/subscription totals, active/online counts, router/staff/support and overdue invoice summaries in directory rows.
+- [x] Detailed state breakdowns, infrastructure/growth, recent subscriptions/tickets and subscriber billing balance on detail pages.
+- [x] All operational reads execute in selected tenant context and explicitly filter tenant_id; monitoring states are labeled as last recorded.
+- [x] Feature coverage for deletion confirmation/access denial/audit retention and tenant-isolated counts on both screens.

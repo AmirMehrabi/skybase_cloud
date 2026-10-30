@@ -63,7 +63,7 @@ class AppServiceProvider extends ServiceProvider
         }
         Auth::provider('console-identity', fn ($app, array $config): ConsoleIdentityProvider => new ConsoleIdentityProvider($app['hash'], $config['model']));
         Auth::provider('central-identity', fn ($app, array $config): CentralIdentityProvider => new CentralIdentityProvider($app['hash'], $config['model']));
-        foreach (['view-owner-console', 'manage-owner-commercial', 'suspend-owner-tenants'] as $ability) {
+        foreach (['view-owner-console', 'manage-owner-commercial', 'suspend-owner-tenants', 'delete-owner-tenants'] as $ability) {
             Gate::define($ability, fn (User $user): bool => $user->isCentralAdmin());
         }
         Gate::define('manage-central-tenants', fn (User $user): bool => $user->isCentralAdmin());

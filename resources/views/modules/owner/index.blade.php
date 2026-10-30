@@ -18,11 +18,13 @@
 <button class="rounded-lg bg-teal-800 px-4 py-2 text-white">Apply filters</button>
 <a href="{{ route('admin.super-admin.tenants.index') }}" class="self-center text-sm font-semibold text-teal-700">Clear filters</a>
 </form>
-<div class="overflow-x-auto rounded-lg border border-gray-200 bg-white"><table class="w-full text-left text-sm"><thead><tr><th class="p-4">ISP</th><th>Access</th><th>SkyBase terms</th><th>Customers / routers / staff</th><th>Last staff login</th></tr></thead><tbody>
+<div class="overflow-x-auto rounded-lg border border-gray-200 bg-white"><table class="w-full text-left text-sm"><thead><tr><th class="p-4">ISP</th><th>Access</th><th>SkyBase terms</th><th>Customers</th><th>Subscriptions</th><th>Operations</th><th>Last staff login</th><th>Actions</th></tr></thead><tbody>
 @forelse($tenants as $tenant)
 @php($summary = $summaries[$tenant->id])
-<tr class="border-t border-gray-200"><td class="p-4"><a class="font-semibold text-teal-700" href="{{ route('admin.super-admin.tenants.show', $tenant) }}">{{ $tenant->company_name ?: $tenant->name }}</a></td><td>{{ $tenant->archived_at ? 'Archived' : ($tenant->application_access_suspended ? 'Suspended' : ucfirst($tenant->status)) }}</td><td>{{ $summary['account']?->package_key ?? 'Unconfigured' }} / {{ $summary['account']?->status ?? 'Unconfigured' }}</td><td>{{ $summary['customers'] }} / {{ $summary['routers'] }} / {{ $summary['staff'] }}</td><td>{{ $summary['last_login'] ?? 'Unknown' }}</td></tr>
-@empty<tr><td class="p-4" colspan="5">No matching accounts.</td></tr>@endforelse
+<tr class="border-t border-gray-200"><td class="p-4"><a class="font-semibold text-teal-700" href="{{ route('admin.super-admin.tenants.show', $tenant) }}">{{ $tenant->company_name ?: $tenant->name }}</a></td><td>{{ $tenant->archived_at ? 'Archived' : ($tenant->application_access_suspended ? 'Suspended' : ucfirst($tenant->status)) }}</td><td>{{ $summary['account']?->package_key ?? 'Unconfigured' }} / {{ $summary['account']?->status ?? 'Unconfigured' }}</td><td><span class="text-lg font-bold">{{ number_format($summary['customers']) }}</span></td>
+<td><span class="text-lg font-bold">{{ number_format($summary['subscriptions']) }}</span><p class="mt-1 whitespace-nowrap text-xs text-slate-500">{{ $summary['active_subscriptions'] }} active · {{ $summary['online_subscriptions'] }} last recorded online</p></td>
+<td class="min-w-48"><p>{{ $summary['online_routers'] }} / {{ $summary['routers'] }} routers online</p><p class="mt-1 text-xs text-slate-500">{{ $summary['staff'] }} staff · {{ $summary['open_tickets'] }} open tickets</p><p class="mt-1 text-xs {{ $summary['overdue_invoices'] ? 'font-semibold text-amber-700' : 'text-slate-500' }}">{{ $summary['overdue_invoices'] }} overdue invoices</p></td><td>{{ $summary['last_login'] ?? 'Unknown' }}</td><td><div class="flex flex-col items-start gap-2"><a class="font-semibold text-teal-700" href="{{ route('admin.super-admin.tenants.show', $tenant) }}">View account</a><x-tenant-delete-button :tenant="$tenant" /></div></td></tr>
+@empty<tr><td class="p-4" colspan="8">No matching accounts.</td></tr>@endforelse
 </tbody></table></div>
 <div class="mt-5">{{ $tenants->links() }}</div>
 @endsection

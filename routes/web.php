@@ -530,7 +530,7 @@ Route::middleware(['auth', 'email.verified', 'active_account', 'auth.session', E
     Route::put('/tenants/{tenant}', [SuperAdminTenantController::class, 'update'])->name('tenants.update');
     Route::post('/tenants/{tenant}/suspend', [SuperAdminTenantController::class, 'update'])->defaults('action', 'suspend')->name('tenants.suspend');
     Route::post('/tenants/{tenant}/activate', [SuperAdminTenantController::class, 'update'])->defaults('action', 'activate')->name('tenants.activate');
-    Route::delete('/tenants/{tenant}', [SuperAdminTenantController::class, 'update'])->defaults('action', 'archive')->name('tenants.destroy');
+    Route::delete('/tenants/{tenant}', [SuperAdminTenantController::class, 'destroy'])->name('tenants.destroy');
 });
 
 Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'auth.session', 'mfa', EnsureSaasBilling::class])->prefix('account/skybase-billing')->name('skybase.billing.')->controller(SkybaseBillingController::class)->group(function (): void {

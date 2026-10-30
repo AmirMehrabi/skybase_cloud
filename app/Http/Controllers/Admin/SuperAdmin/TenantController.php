@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Owner\DeleteTenantRequest;
 use App\Http\Requests\Owner\ManageTenantRequest;
 use App\Models\SkybaseAccount;
 use App\Models\SkybaseInvoice;
@@ -12,6 +13,7 @@ use App\Models\TenantNote;
 use App\Services\SkybaseBillingService;
 use App\Services\SkybasePackageCatalog;
 use App\Services\TenantContext;
+use App\Services\TenantOperationalOverview;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -60,7 +62,7 @@ class TenantController extends Controller
         $tenants = $query->latest()->paginate(20)->withQueryString();
         $summaries = [];
         foreach ($tenants as $tenant) {
-            $summaries[$tenant->id] = app(TenantContext::class)->run($tenant->id, fn (): array => ['account' => SkybaseAccount::query()->where('tenant_id', $tenant->id)->first(), 'customers' => $tenant->customers()->count(), 'routers' => $tenant->routers()->count(), 'staff' => $tenant->users()->count(), 'last_login' => $tenant->users()->max('last_login_at')]);
+            $summaries[$tenant->id] = app(TenantContext::class)->run($tenant->id, fn (): array => ['account' => SkybaseAccount::query()->where('tenant_id', $tenant->id)->first()] + app(TenantOperationalOverview::class)->forTenant($tenant));
         }
 
         return view('modules.owner.index', compact('tenants', 'summaries', 'totals'));
@@ -72,13 +74,28 @@ class TenantController extends Controller
         $data = app(TenantContext::class)->run($tenant->id, fn (): array => [
             'account' => SkybaseAccount::query()->where('tenant_id', $tenant->id)->first(),
             'staff' => $tenant->users()->latest()->limit(20)->get(['id', 'name', 'email', 'role', 'last_login_at']),
-            'customerCount' => $tenant->customers()->count(), 'routerCount' => $tenant->routers()->count(),
+            'overview' => app(TenantOperationalOverview::class)->forTenant($tenant, true),
             'notes' => TenantNote::query()->where('tenant_id', $tenant->id)->latest()->limit(30)->get(),
             'events' => TenantAdminEvent::query()->where('tenant_id', $tenant->id)->latest()->limit(50)->get(),
             'invoices' => SkybaseInvoice::query()->where('tenant_id', $tenant->id)->latest()->limit(20)->get(),
         ]);
 
         return view('modules.owner.show', $data + ['tenant' => $tenant, 'packages' => app(SkybasePackageCatalog::class)->all()]);
+    }
+
+    public function destroy(DeleteTenantRequest $request, Tenant $tenant, SkybaseBillingService $billing): RedirectResponse
+    {
+        Gate::authorize('delete-owner-tenants');
+        app(TenantContext::class)->run($tenant->id, function () use ($tenant, $billing): void {
+            $tenant->getConnection()->transaction(function () use ($tenant, $billing): void {
+                $tenant = Tenant::query()->lockForUpdate()->findOrFail($tenant->id);
+                $billing->event($tenant->id, 'owner.deleted', 'Deletion confirmed from console', ['name' => $tenant->name]);
+                $tenant->update(['application_access_suspended' => true]);
+                $tenant->delete();
+            });
+        });
+
+        return redirect()->route('admin.super-admin.tenants.index')->with('success', 'Tenant deleted. Access is blocked and records are retained for recovery.');
     }
 
     public function edit(Tenant $tenant): View

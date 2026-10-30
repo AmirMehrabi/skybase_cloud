@@ -4,7 +4,9 @@
 
 <a href="{{ route('admin.super-admin.tenants.index') }}" class="mb-5 inline-flex text-sm font-semibold text-teal-700">← All ISP accounts</a>
 <h1 class="mb-2 text-2xl font-bold">{{ $tenant->company_name }}</h1>
-<p class="mb-6 text-gray-600">{{ $tenant->email }} · {{ $tenant->application_access_suspended ? 'Application suspended' : $tenant->status }} {{ $tenant->archived_at ? ' / Archived' : '' }} · {{ $customerCount }} customers · {{ $routerCount }} routers</p>
+<p class="mb-6 text-gray-600">{{ $tenant->email }} · {{ $tenant->application_access_suspended ? 'Application suspended' : $tenant->status }} {{ $tenant->archived_at ? ' / Archived' : '' }} · {{ $overview['customers'] }} customers · {{ $overview['subscriptions'] }} subscriptions · {{ $overview['routers'] }} routers</p>
+<div class="mb-7 flex justify-end"><x-tenant-delete-button :tenant="$tenant" /></div>
+<x-tenant-operational-overview :overview="$overview" />
 <div class="grid gap-6 lg:grid-cols-2">
 <section class="rounded-lg border border-gray-200 bg-white p-5"><h2 class="mb-3 text-lg font-semibold">SkyBase commercial terms</h2>
 <p>{{ $account?->package_key ?? 'Unconfigured' }} / {{ $account?->status ?? 'Unconfigured' }}</p>
