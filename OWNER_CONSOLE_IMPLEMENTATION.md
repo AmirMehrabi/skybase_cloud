@@ -85,3 +85,12 @@
 - Phase 2: added console views/actions, durable audit/notes and separate application-access suspension.
 - Phase 3: integrated simulated checkout with server-priced invoices, tenant-scoped authorities, transactional settlement, cancellation and manual renewal policy.
 - Verification: focused and regression tests pass; frontend build and interactive visual review remain explicitly unchecked above.
+
+## Dedicated console hostname
+- [x] Add console.skybase.app host boundary with a central-only identity provider.
+- [x] Keep existing central User records and MFA enrollment; no identity migration required.
+- [x] Host-only console session cookie; reject tenant credentials on console and central credentials on normal login.
+- [x] End old central sessions on tenant/public hosts and send them to console sign-in.
+- [x] Dedicated console login, shell, account navigation, readable tables and MFA screens.
+- [x] Host authentication and existing console/security regression tests.
+- [ ] Production DNS/TLS, configuration activation and live hostname verification.

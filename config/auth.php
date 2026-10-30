@@ -68,6 +68,7 @@ return [
     */
 
     'providers' => [
+        'console_users' => ['driver' => 'console-identity', 'model' => User::class],
         'users' => [
             'driver' => 'central-identity',
             'model' => env('AUTH_MODEL', User::class),

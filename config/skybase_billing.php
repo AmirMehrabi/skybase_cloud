@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'console_host_enabled' => (bool) env('SKYBASE_CONSOLE_HOST_ENABLED', false),
+    'console_host' => env('SKYBASE_CONSOLE_HOST', 'console.skybase.app'),
     'owner_console_enabled' => (bool) env('SKYBASE_OWNER_CONSOLE_ENABLED', false),
     'enabled' => (bool) env('SKYBASE_SAAS_BILLING_ENABLED', false),
     'currency' => 'USD',

@@ -22,12 +22,16 @@ class TenantLoginController extends Controller
             return redirect()->route('customer.login');
         }
 
+        if (config('skybase_billing.console_host_enabled') && request()->getHost() === config('skybase_billing.console_host')) {
+            return view('modules.owner.login');
+        }
+
         return view('auth.login');
     }
 
     public function login(TenantLoginRequest $request): RedirectResponse
     {
-        if (! Auth::guard('web')->attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+        if (! Auth::guard('web')->attemptWhen($request->only('email', 'password'), fn ($identity): bool => ! config('skybase_billing.console_host_enabled') || $request->getHost() === config('skybase_billing.console_host') || filled($identity->tenant_id), $request->boolean('remember'))) {
             return back()->withInput($request->only('email', 'remember'))
                 ->withErrors(['email' => 'These credentials do not match our records.']);
         }

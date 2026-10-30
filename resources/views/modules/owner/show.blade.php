@@ -1,7 +1,8 @@
-@extends('layouts.admin')
+@extends('layouts.console')
 @section('title', 'ISP account')
 @section('content')
-<x-owner-navigation />
+
+<a href="{{ route('admin.super-admin.tenants.index') }}" class="mb-5 inline-flex text-sm font-semibold text-teal-700">← All ISP accounts</a>
 <h1 class="mb-2 text-2xl font-bold">{{ $tenant->company_name }}</h1>
 <p class="mb-6 text-gray-600">{{ $tenant->email }} · {{ $tenant->application_access_suspended ? 'Application suspended' : $tenant->status }} {{ $tenant->archived_at ? ' / Archived' : '' }} · {{ $customerCount }} customers · {{ $routerCount }} routers</p>
 <div class="grid gap-6 lg:grid-cols-2">
@@ -12,19 +13,19 @@
 <p>Trial ends: {{ $account?->trial_ends_at?->toDateString() ?? 'None' }} · Paid through: {{ $account?->paid_through?->toDateString() ?? 'None' }}</p>
 <p class="mt-3 text-sm text-gray-600">Recorded entitlements: {{ implode(', ', $account?->features ?? []) }}</p>
 </section>
-<section class="rounded-lg border border-gray-200 bg-white p-5" x-data="{ action: 'note' }"><h2 class="mb-3 text-lg font-semibold">Manage account</h2>
+<section class="rounded-lg border border-gray-200 bg-white p-5" x-data="{ action: @js(old('action', 'note')) }"><h2 class="mb-3 text-lg font-semibold">Manage account</h2>
 <p class="mb-4 text-sm text-gray-600">Package assignment records agreed terms; it does not record payment. Suspension blocks application access and does not disconnect subscribers.</p>
 <form method="POST" action="{{ route('admin.super-admin.tenants.update', $tenant) }}" class="space-y-4">@csrf @method('PUT')
 <x-ui.input.select name="action" label="Action" x-model="action" value="note" :options="['note'=>'Internal note','contacts'=>'Edit contacts','package'=>'Assign package','trial'=>'Extend trial','limit'=>'Override subscriber allowance','suspend'=>'Suspend application access','activate'=>'Activate / restore','archive'=>'Archive account']" required />
-<div x-show="action === 'contacts'" class="space-y-3">
+<div x-cloak x-show="action === 'contacts'" class="space-y-3">
 <x-ui.input.text name="name" label="Account name" :value="old('name', $tenant->name)" />
 <x-ui.input.text name="company_name" label="ISP company" :value="old('company_name', $tenant->company_name)" />
 <x-ui.input.text name="email" type="email" label="Email" :value="old('email', $tenant->email)" />
 <x-ui.input.text name="phone" label="Phone" :value="old('phone', $tenant->phone)" />
 </div>
-<div x-show="action === 'package'"><x-ui.input.select name="package_key" label="Package" :options="collect($packages)->mapWithKeys(fn ($package, $key) => [$key => $package['name']])->all()" /></div>
-<div x-show="action === 'trial'"><x-ui.input.text name="trial_ends_at" type="date" label="Trial end" /></div>
-<div x-show="action === 'limit'"><x-ui.input.text name="subscriber_limit" type="number" label="Subscriber allowance" min="0" /></div>
+<div x-cloak x-show="action === 'package'"><x-ui.input.select name="package_key" label="Package" :options="collect($packages)->mapWithKeys(fn ($package, $key) => [$key => $package['name']])->all()" /></div>
+<div x-cloak x-show="action === 'trial'"><x-ui.input.text name="trial_ends_at" type="date" label="Trial end" /></div>
+<div x-cloak x-show="action === 'limit'"><x-ui.input.text name="subscriber_limit" type="number" label="Subscriber allowance" min="0" /></div>
 <x-ui.input.textarea name="reason" label="Reason / internal note" :value="old('reason')" required />
 <button class="rounded-lg bg-teal-800 px-5 py-2 text-white">Save action</button>
 </form></section>

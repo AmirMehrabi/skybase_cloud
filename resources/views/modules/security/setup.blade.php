@@ -1,4 +1,4 @@
-@extends('layouts.auth')
+@extends(config('skybase_billing.console_host_enabled') && request()->getHost() === config('skybase_billing.console_host') ? 'layouts.console' : 'layouts.auth')
 @section('title', 'Set up multi-factor authentication')
 @section('content')
 <x-ui.card title="Protect your account">

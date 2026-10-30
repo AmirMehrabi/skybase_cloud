@@ -1,9 +1,9 @@
-@extends('layouts.admin')
+@extends('layouts.console')
 @section('title', 'SkyBase owner console')
 @section('content')
-<x-owner-navigation />
+
 <h1 class="mb-2 text-2xl font-bold">ISP accounts</h1>
-<p class="mb-6 text-gray-600">{{ $tenants->total() }} matching accounts. Operational counts are live; commercial terms are independent of ISP service plans.</p>
+<p class="mb-6 text-gray-600">{{ $tenants->total() }} matching accounts. Search ISP accounts, review account activity and manage access.</p>
 <p class="mb-5 text-sm text-gray-600">Active: {{ $totals['active'] }} · Suspended: {{ $totals['suspended'] }} · Archived: {{ $totals['archived'] }}</p>
 <form method="GET" class="mb-6 grid gap-4 rounded-lg border border-gray-200 bg-white p-5 md:grid-cols-4">
 <x-ui.input.text name="search" label="ISP name" :value="request('search')" />

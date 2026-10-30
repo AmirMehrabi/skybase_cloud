@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckTenantStatus;
+use App\Http\Middleware\ConsoleHost;
+use App\Http\Middleware\ConsoleSessionBoundary;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureGolestanEnabled;
 use App\Http\Middleware\EnsureMultiFactorAuthentication;
@@ -25,7 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prependToPriorityList(AuthenticatesRequests::class, EnsureGolestanEnabled::class);
-        $middleware->web(append: [ScanUploads::class]);
+        $middleware->prepend(ConsoleHost::class);
+        $middleware->web(append: [ConsoleSessionBoundary::class, ScanUploads::class]);
         $middleware->append(SecurityHeaders::class);
         $middleware->prependToPriorityList(SubstituteBindings::class, InitializeTenancy::class);
         $middleware->alias([
