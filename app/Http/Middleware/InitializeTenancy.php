@@ -15,6 +15,9 @@ class InitializeTenancy
     {
         $guard = Auth::guard($request->routeIs('customer.*') ? 'customer' : 'web');
         $user = $guard->user();
+        if ($user?->isCentralAdmin() && $request->routeIs('dashboard') && config('skybase_billing.owner_console_enabled')) {
+            return redirect()->route('admin.super-admin.tenants.index');
+        }
         abort_unless($user && filled($user->tenant_id), 403);
         $tenant = Tenant::query()->find($user->tenant_id);
         abort_unless($tenant && (string) $user->tenant_id === (string) $tenant->id, 403);
