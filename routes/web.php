@@ -525,6 +525,7 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
 // Owner console uses central identity; tenant context is selected explicitly per operation.
 Route::middleware(['auth', 'email.verified', 'active_account', 'auth.session', EnsureOwnerConsole::class])->domain(config('skybase_billing.console_host_enabled') ? config('skybase_billing.console_host') : null)->prefix('admin/super-admin')->name('admin.super-admin.')->group(function (): void {
     Route::get('/tenants', [SuperAdminTenantController::class, 'index'])->name('tenants.index');
+    Route::post('/tenants/bulk-delete', [SuperAdminTenantController::class, 'bulkDestroy'])->name('tenants.bulk-destroy');
     Route::get('/tenants/{tenant}', [SuperAdminTenantController::class, 'show'])->name('tenants.show');
     Route::get('/tenants/{tenant}/edit', [SuperAdminTenantController::class, 'edit'])->name('tenants.edit');
     Route::put('/tenants/{tenant}', [SuperAdminTenantController::class, 'update'])->name('tenants.update');

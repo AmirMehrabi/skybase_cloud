@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Owner\BulkDeleteTenantRequest;
 use App\Http\Requests\Owner\DeleteTenantRequest;
 use App\Http\Requests\Owner\ManageTenantRequest;
 use App\Models\SkybaseAccount;
@@ -18,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TenantController extends Controller
@@ -88,14 +90,44 @@ class TenantController extends Controller
         Gate::authorize('delete-owner-tenants');
         app(TenantContext::class)->run($tenant->id, function () use ($tenant, $billing): void {
             $tenant->getConnection()->transaction(function () use ($tenant, $billing): void {
-                $tenant = Tenant::query()->lockForUpdate()->findOrFail($tenant->id);
-                $billing->event($tenant->id, 'owner.deleted', 'Deletion confirmed from console', ['name' => $tenant->name]);
-                $tenant->update(['application_access_suspended' => true]);
-                $tenant->delete();
+                $lockedTenant = Tenant::query()->lockForUpdate()->findOrFail($tenant->id);
+                $this->deleteTenant($lockedTenant, $billing);
             });
         });
 
         return redirect()->route('admin.super-admin.tenants.index')->with('success', 'Tenant deleted. Access is blocked and records are retained for recovery.');
+    }
+
+    public function bulkDestroy(BulkDeleteTenantRequest $request, SkybaseBillingService $billing): RedirectResponse
+    {
+        Gate::authorize('delete-owner-tenants');
+        $tenantIds = $request->validated('tenant_ids');
+        $tenants = Tenant::query()->whereIn('id', $tenantIds)->orderBy('id')->get();
+        if ($tenants->count() !== count($tenantIds)) {
+            throw ValidationException::withMessages(['tenant_ids' => 'One or more selected tenants are no longer available. Refresh the list and try again.']);
+        }
+
+        $tenants->first()->getConnection()->transaction(function () use ($tenantIds, $billing): void {
+            $lockedTenants = Tenant::query()->whereIn('id', $tenantIds)->orderBy('id')->lockForUpdate()->get();
+            if ($lockedTenants->count() !== count($tenantIds)) {
+                throw ValidationException::withMessages(['tenant_ids' => 'One or more selected tenants are no longer available. Refresh the list and try again.']);
+            }
+
+            foreach ($lockedTenants as $tenant) {
+                app(TenantContext::class)->run($tenant->id, function () use ($tenant, $billing): void {
+                    $this->deleteTenant($tenant, $billing);
+                });
+            }
+        });
+
+        return redirect()->route('admin.super-admin.tenants.index')->with('success', count($tenantIds).' tenants deleted. Access is blocked and records are retained for recovery.');
+    }
+
+    private function deleteTenant(Tenant $tenant, SkybaseBillingService $billing): void
+    {
+        $billing->event($tenant->id, 'owner.deleted', 'Deletion confirmed from console', ['name' => $tenant->name]);
+        $tenant->update(['application_access_suspended' => true]);
+        $tenant->delete();
     }
 
     public function edit(Tenant $tenant): View
