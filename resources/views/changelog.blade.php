@@ -11,6 +11,42 @@
 @php
     $releases = [
         [
+            'version' => '1.0.0',
+            'date' => 'October 30, 2026',
+            'title' => 'A Clearer Start and More Control Over Daily Operations',
+            'summary' => 'SkyBase 1.0 brings together a guided first-subscriber setup, customer communications, deeper service insights, and more flexible account management. This release also improves billing accuracy, usage reporting, and account security across everyday ISP workflows.',
+            'sections' => [
+                'Added' => [
+                    'A step-by-step getting started guide for PPPoE and Hotspot subscribers, with screenshots, Winbox and RouterOS instructions, and connection checks.',
+                    'Customer communication campaigns, reusable message templates, configurable SMS gateways, delivery tracking, and email connection testing.',
+                    'Notification incident tracking and automation to help teams follow network and service events.',
+                    'Detailed IPDR traffic graphs within subscription pages, with subscription ownership history and router analytics.',
+                    'Multiple organization assignments for customers and subscriptions, with a primary organization for billing and ownership.',
+                    'A Customer Portal setting that lets providers control whether customers can see billing information.',
+                    'More precise student searches in the Golestan integration, including additional search criteria and ranges.',
+                    'Email verification for new cloud accounts and team notifications when users sign up.',
+                ],
+                'Changed' => [
+                    'User Group access now extends to plans, helping teams see the services relevant to their responsibilities.',
+                    'Subscription setup supports customers without an organization and makes saved IP management and address assignments easier to reuse.',
+                    'Subscription activity history now includes suspension and activation events.',
+                    'Credential viewing now uses a password confirmation dialog, with optional password redaction and stronger credential protection.',
+                    'Settings, campaigns, and notification navigation have been reorganized to make common actions easier to find.',
+                    'The public website now includes practical ISP guides, product screenshots, and clearer paths to pricing, registration, and guided setup.',
+                    'Production releases now use health checks and an atomic switch, with rollback support to improve update reliability.',
+                ],
+                'Fixed' => [
+                    'Corrected usage reconciliation for tenant accounts and legacy NAS accounting records, improving the consistency of reported consumption.',
+                    'Resolved subscription editing issues with IP management settings and prefilled address assignments.',
+                    'Corrected currency display across billing pages and resolved renewal accounting compatibility issues.',
+                    'Fixed SMSPortal v3 response handling so message delivery results are interpreted correctly.',
+                    'Improved customer and staff access checks to prevent customer identities from reaching staff-only User Group checks.',
+                    'Improved router detail initialization, monitoring archive access, and production logging reliability.',
+                    'Public contact submissions now have stronger validation and protection, with notifications delivered in the background.',
+                ],
+            ],
+        ],
+        [
             'version' => '0.9.9',
             'date' => 'August 6, 2026',
             'title' => 'Live Bandwidth Insights, Clearer Support, and a Simpler Experience',
