@@ -1,0 +1,21 @@
+[Unit]
+Description=SkyBase signed GitHub webhook receiver
+After=network.target
+
+[Service]
+Type=simple
+User=skybase-hook
+Group=skybase-hook
+ExecStart=/usr/bin/python3 /usr/local/lib/skybase-deploy/skybase-webhook.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/skybase-webhook
+IPAddressDeny=any
+IPAddressAllow=localhost
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Build and activate queued SkyBase releases
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/skybase-deploy/skybase-release.py
+TimeoutStartSec=1800
+UMask=0022

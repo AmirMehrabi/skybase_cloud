@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for authenticated SkyBase deployment requests
+
+[Path]
+DirectoryNotEmpty=/var/lib/skybase-webhook/queue
+Unit=skybase-deploy.service
+
+[Install]
+WantedBy=multi-user.target
