@@ -18,6 +18,8 @@ class Tenant extends Model
 
     protected $fillable = [
         'id',
+        'archived_at',
+        'application_access_suspended',
         'name',
         'slug',
         'company_name',
@@ -64,6 +66,8 @@ class Tenant extends Model
 
     protected $casts = [
         'trial_ends_at' => 'datetime',
+        'archived_at' => 'datetime',
+        'application_access_suspended' => 'boolean',
         'dark_mode_enabled' => 'boolean',
         'maintenance_mode' => 'boolean',
     ];

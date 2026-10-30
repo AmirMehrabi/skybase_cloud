@@ -19,6 +19,8 @@ class InitializeTenancy
         $tenant = Tenant::query()->find($user->tenant_id);
         abort_unless($tenant && (string) $user->tenant_id === (string) $tenant->id, 403);
 
+        abort_if($tenant->application_access_suspended || $tenant->archived_at, 403, 'Application access is suspended.');
+
         return app(TenantContext::class)->run((string) $tenant->id, fn (): Response => $next($request));
     }
 }

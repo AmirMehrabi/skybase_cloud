@@ -61,6 +61,9 @@ class AppServiceProvider extends ServiceProvider
             });
         }
         Auth::provider('central-identity', fn ($app, array $config): CentralIdentityProvider => new CentralIdentityProvider($app['hash'], $config['model']));
+        foreach (['view-owner-console', 'manage-owner-commercial', 'suspend-owner-tenants'] as $ability) {
+            Gate::define($ability, fn (User $user): bool => $user->isCentralAdmin());
+        }
         Gate::define('manage-central-tenants', fn (User $user): bool => $user->isCentralAdmin());
         RateLimiter::for('login', fn (Request $request): array => config('security.enforce_rate_limits') ? [
             Limit::perMinute(20)->by('login-ip:'.$request->ip()),

@@ -42,6 +42,7 @@ use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SkybaseBillingController;
 use App\Http\Controllers\SmsGatewayController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SubscriptionIpdrController;
@@ -51,6 +52,8 @@ use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamContro
 use App\Http\Controllers\VpnUserController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Middleware\EnsureGolestanEnabled;
+use App\Http\Middleware\EnsureOwnerConsole;
+use App\Http\Middleware\EnsureSaasBilling;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
@@ -519,15 +522,23 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
     });
 });
 
-// Super Admin Routes (Separate from tenant routes)
-Route::middleware(['auth', 'email.verified', 'active_account', 'auth.session', 'mfa', 'can:manage-central-tenants'])->prefix('admin/super-admin')->name('admin.super-admin.')->group(function () {
+// Owner console uses central identity; tenant context is selected explicitly per operation.
+Route::middleware(['auth', 'email.verified', 'active_account', 'auth.session', EnsureOwnerConsole::class])->prefix('admin/super-admin')->name('admin.super-admin.')->group(function (): void {
     Route::get('/tenants', [SuperAdminTenantController::class, 'index'])->name('tenants.index');
     Route::get('/tenants/{tenant}', [SuperAdminTenantController::class, 'show'])->name('tenants.show');
     Route::get('/tenants/{tenant}/edit', [SuperAdminTenantController::class, 'edit'])->name('tenants.edit');
     Route::put('/tenants/{tenant}', [SuperAdminTenantController::class, 'update'])->name('tenants.update');
-    Route::post('/tenants/{tenant}/suspend', [SuperAdminTenantController::class, 'suspend'])->name('tenants.suspend');
-    Route::post('/tenants/{tenant}/activate', [SuperAdminTenantController::class, 'activate'])->name('tenants.activate');
-    Route::delete('/tenants/{tenant}', [SuperAdminTenantController::class, 'destroy'])->name('tenants.destroy');
+    Route::post('/tenants/{tenant}/suspend', [SuperAdminTenantController::class, 'update'])->defaults('action', 'suspend')->name('tenants.suspend');
+    Route::post('/tenants/{tenant}/activate', [SuperAdminTenantController::class, 'update'])->defaults('action', 'activate')->name('tenants.activate');
+    Route::delete('/tenants/{tenant}', [SuperAdminTenantController::class, 'update'])->defaults('action', 'archive')->name('tenants.destroy');
+});
+
+Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'auth.session', 'mfa', EnsureSaasBilling::class])->prefix('account/skybase-billing')->name('skybase.billing.')->controller(SkybaseBillingController::class)->group(function (): void {
+    Route::get('/', 'index')->name('index');
+    Route::post('/checkout', 'checkout')->middleware('throttle:10,1')->name('checkout');
+    Route::post('/cancel', 'cancel')->name('cancel');
+    Route::get('/payment/{authority}', 'payment')->name('payment');
+    Route::post('/payment/{authority}', 'settle')->middleware('throttle:10,1')->name('settle');
 });
 
 Route::middleware(['auth:web', 'email.verified', 'active_account', 'auth.session'])->prefix('account/security')->name('mfa.')->group(function (): void {

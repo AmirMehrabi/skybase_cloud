@@ -107,7 +107,7 @@
                 <div class="bg-white border border-slate-950/10 rounded-2xl p-8 shadow-sm hover:shadow-lg transition">
                     <h3 class="text-2xl font-bold text-slate-950 mb-2">Free</h3>
                     <div class="mb-6">
-                        <span class="text-4xl font-bold text-slate-950">$0</span>
+                        <span class="text-4xl font-bold text-slate-950">${{ number_format(config('skybase_billing.packages.free.monthly_price_minor') / 100, 0) }}</span>
                         <span class="text-slate-600"> / month</span>
                     </div>
                     <p class="text-slate-600 mb-6">Perfect for small ISPs getting started</p>
@@ -116,7 +116,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Up to 40 subscribers</span>
+                            <span>Up to {{ number_format(config('skybase_billing.packages.free.subscriber_limit')) }} subscribers</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -146,7 +146,7 @@
                 <div class="bg-white border border-slate-950/10 rounded-2xl p-8 shadow-sm hover:shadow-lg transition">
                     <h3 class="text-2xl font-bold text-slate-950 mb-2">Starter</h3>
                     <div class="mb-6">
-                        <span class="text-4xl font-bold text-slate-950">$69</span>
+                        <span class="text-4xl font-bold text-slate-950">${{ number_format(config('skybase_billing.packages.starter.monthly_price_minor') / 100, 0) }}</span>
                         <span class="text-slate-600"> / month</span>
                     </div>
                     <p class="text-slate-600 mb-6">For growing ISPs</p>
@@ -156,7 +156,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Up to 150 subscribers</span>
+                            <span>Up to {{ number_format(config('skybase_billing.packages.starter.subscriber_limit')) }} subscribers</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -189,7 +189,7 @@
                     </div>
                     <h3 class="text-2xl font-bold text-slate-950 mb-2 mt-2">Growth</h3>
                     <div class="mb-6">
-                        <span class="text-4xl font-bold text-slate-950">$129</span>
+                        <span class="text-4xl font-bold text-slate-950">${{ number_format(config('skybase_billing.packages.growth.monthly_price_minor') / 100, 0) }}</span>
                         <span class="text-slate-600"> / month</span>
                     </div>
                     <p class="text-slate-600 mb-6">Best value for scaling ISPs</p>
@@ -199,7 +199,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Up to 300 subscribers</span>
+                            <span>Up to {{ number_format(config('skybase_billing.packages.growth.subscriber_limit')) }} subscribers</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -229,7 +229,7 @@
                 <div class="bg-white border border-slate-950/10 rounded-2xl p-8 shadow-sm hover:shadow-lg transition">
                     <h3 class="text-2xl font-bold text-slate-950 mb-2">Scale</h3>
                     <div class="mb-6">
-                        <span class="text-4xl font-bold text-slate-950">$239</span>
+                        <span class="text-4xl font-bold text-slate-950">${{ number_format(config('skybase_billing.packages.scale.monthly_price_minor') / 100, 0) }}</span>
                         <span class="text-slate-600"> / month</span>
                     </div>
                     <p class="text-slate-600 mb-6">For established ISPs</p>
@@ -239,7 +239,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Up to 600 subscribers</span>
+                            <span>Up to {{ number_format(config('skybase_billing.packages.scale.subscriber_limit')) }} subscribers</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -269,7 +269,7 @@
                 <div class="bg-white border border-slate-950/10 rounded-2xl p-8 shadow-sm hover:shadow-lg transition">
                     <h3 class="text-2xl font-bold text-slate-950 mb-2">Business</h3>
                     <div class="mb-6">
-                        <span class="text-4xl font-bold text-slate-950">$399</span>
+                        <span class="text-4xl font-bold text-slate-950">${{ number_format(config('skybase_billing.packages.business.monthly_price_minor') / 100, 0) }}</span>
                         <span class="text-slate-600"> / month</span>
                     </div>
                     <p class="text-slate-600 mb-6">For large operations</p>
@@ -279,7 +279,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Up to 1,200 subscribers</span>
+                            <span>Up to {{ number_format(config('skybase_billing.packages.business.subscriber_limit')) }} subscribers</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -309,7 +309,7 @@
                 <div class="bg-white border border-slate-950/10 rounded-2xl p-8 shadow-sm hover:shadow-lg transition">
                     <h3 class="text-2xl font-bold text-slate-950 mb-2">Carrier</h3>
                     <div class="mb-6">
-                        <span class="text-4xl font-bold text-slate-950">$749</span>
+                        <span class="text-4xl font-bold text-slate-950">${{ number_format(config('skybase_billing.packages.carrier.monthly_price_minor') / 100, 0) }}</span>
                         <span class="text-slate-600"> / month</span>
                     </div>
                     <p class="text-slate-600 mb-6">For carrier-grade networks</p>
@@ -319,7 +319,7 @@
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Up to 2,400 subscribers</span>
+                            <span>Up to {{ number_format(config('skybase_billing.packages.carrier.subscriber_limit')) }} subscribers</span>
                         </li>
                         <li class="flex items-start gap-2 text-slate-600">
                             <svg class="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -1024,14 +1024,7 @@
         function pricingCalculator() {
             return {
                 subscribers: 150,
-                plans: [
-                    { name: 'Free', limit: 40, price: 0 },
-                    { name: 'Starter', limit: 150, price: 69 },
-                    { name: 'Growth', limit: 300, price: 129 },
-                    { name: 'Scale', limit: 600, price: 239 },
-                    { name: 'Business', limit: 1200, price: 399 },
-                    { name: 'Carrier', limit: 2400, price: 749 }
-                ],
+                plans: @js(app(\App\Services\SkybasePackageCatalog::class)->pricingCalculatorPlans()),
                 get selectedPlan() {
                     // Find the first plan where subscribers <= limit
                     const plan = this.plans.find(p => this.subscribers <= p.limit);

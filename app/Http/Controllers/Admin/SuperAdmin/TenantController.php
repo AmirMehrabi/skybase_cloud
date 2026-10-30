@@ -3,92 +3,130 @@
 namespace App\Http\Controllers\Admin\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\SuperAdmin\UpdateTenantRequest;
-use App\Models\Plan;
+use App\Http\Requests\Owner\ManageTenantRequest;
+use App\Models\SkybaseAccount;
+use App\Models\SkybaseInvoice;
 use App\Models\Tenant;
-use App\Services\SecurityEventLogger;
+use App\Models\TenantAdminEvent;
+use App\Models\TenantNote;
+use App\Services\SkybaseBillingService;
+use App\Services\SkybasePackageCatalog;
+use App\Services\TenantContext;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class TenantController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        Gate::authorize('manage-central-tenants');
-        $tenants = Tenant::query()
-            ->latest()
-            ->paginate(20);
+        Gate::authorize('view-owner-console');
+        $query = Tenant::query()->when($request->filled('search'), fn ($q) => $q->where(fn ($q) => $q->where('name', 'like', '%'.substr($request->string('search'), 0, 100).'%')->orWhere('company_name', 'like', '%'.substr($request->string('search'), 0, 100).'%')))
+            ->when($request->input('status') === 'suspended', fn ($q) => $q->where(fn ($q) => $q->where('status', 'suspended')->orWhere('application_access_suspended', true)))
+            ->when(in_array($request->input('status'), ['active', 'pending'], true), fn ($q) => $q->where('status', $request->input('status'))->where('application_access_suspended', false));
+        if ($request->input('archived') === 'yes') {
+            $query->whereNotNull('archived_at');
+        } else {
+            $query->whereNull('archived_at');
+        }
+        if ($request->filled('commercial') || $request->filled('activity')) {
+            $matchingIds = [];
+            (clone $query)->chunkById(100, function ($candidates) use ($request, &$matchingIds): void {
+                foreach ($candidates as $candidate) {
+                    $matches = app(TenantContext::class)->run($candidate->id, function () use ($candidate, $request): bool {
+                        $account = SkybaseAccount::query()->where('tenant_id', $candidate->id)->first();
+                        $commercial = $request->input('commercial');
+                        $commercialMatch = ! $commercial || match ($commercial) {
+                            'unconfigured' => ! $account || $account->status === 'unconfigured',
+                            'expiring_trial' => $account?->trial_ends_at?->isFuture() && $account->trial_ends_at->lte(now()->addDays(7)),
+                            'expired' => $account?->paid_through?->isPast() === true,
+                            default => $account?->status === $commercial,
+                        };
+                        $lastLogin = $candidate->users()->max('last_login_at');
+                        $activityMatch = $request->input('activity') !== 'inactive' || ! $lastLogin || Carbon::parse($lastLogin)->lt(now()->subDays(30));
 
+                        return $commercialMatch && $activityMatch;
+                    });
+                    if ($matches) {
+                        $matchingIds[] = $candidate->id;
+                    }
+                }
+            });
+            $query->whereIn('id', $matchingIds);
+        }
+        $totals = ['active' => Tenant::query()->whereNull('archived_at')->where('status', 'active')->where('application_access_suspended', false)->count(), 'suspended' => Tenant::query()->whereNull('archived_at')->where(fn ($q) => $q->where('status', 'suspended')->orWhere('application_access_suspended', true))->count(), 'archived' => Tenant::query()->whereNotNull('archived_at')->count()];
+        $tenants = $query->latest()->paginate(20)->withQueryString();
+        $summaries = [];
         foreach ($tenants as $tenant) {
-            $tenant->load(['plan', 'users'])->loadCount(['users', 'customers', 'routers']);
+            $summaries[$tenant->id] = app(TenantContext::class)->run($tenant->id, fn (): array => ['account' => SkybaseAccount::query()->where('tenant_id', $tenant->id)->first(), 'customers' => $tenant->customers()->count(), 'routers' => $tenant->routers()->count(), 'staff' => $tenant->users()->count(), 'last_login' => $tenant->users()->max('last_login_at')]);
         }
 
-        return view('admin.super-admin.tenants.index', compact('tenants'));
+        return view('modules.owner.index', compact('tenants', 'summaries', 'totals'));
     }
 
     public function show(Tenant $tenant): View
     {
-        Gate::authorize('manage-central-tenants');
-        $tenant->load(['plan', 'users', 'settings', 'roles']);
-        $userCount = $tenant->users()->count();
-        $customerCount = $tenant->customers()->count();
-        $routerCount = $tenant->routers()->count();
+        Gate::authorize('view-owner-console');
+        $data = app(TenantContext::class)->run($tenant->id, fn (): array => [
+            'account' => SkybaseAccount::query()->where('tenant_id', $tenant->id)->first(),
+            'staff' => $tenant->users()->latest()->limit(20)->get(['id', 'name', 'email', 'role', 'last_login_at']),
+            'customerCount' => $tenant->customers()->count(), 'routerCount' => $tenant->routers()->count(),
+            'notes' => TenantNote::query()->where('tenant_id', $tenant->id)->latest()->limit(30)->get(),
+            'events' => TenantAdminEvent::query()->where('tenant_id', $tenant->id)->latest()->limit(50)->get(),
+            'invoices' => SkybaseInvoice::query()->where('tenant_id', $tenant->id)->latest()->limit(20)->get(),
+        ]);
 
-        return view('admin.super-admin.tenants.show', compact('tenant', 'userCount', 'customerCount', 'routerCount'));
+        return view('modules.owner.show', $data + ['tenant' => $tenant, 'packages' => app(SkybasePackageCatalog::class)->all()]);
     }
 
     public function edit(Tenant $tenant): View
     {
-        Gate::authorize('manage-central-tenants');
-        $plans = Plan::query()->where('tenant_id', $tenant->id)->active()->ordered()->get();
-
-        return view('admin.super-admin.tenants.edit', compact('tenant', 'plans'));
+        return $this->show($tenant);
     }
 
-    public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
+    public function update(ManageTenantRequest $request, Tenant $tenant, SkybaseBillingService $billing): RedirectResponse
     {
-        Gate::authorize('manage-central-tenants');
-        $validated = $request->validated();
+        Gate::authorize($request->input('action') === 'suspend' || $request->input('action') === 'archive' ? 'suspend-owner-tenants' : 'manage-owner-commercial');
+        $data = $request->validated();
+        app(TenantContext::class)->run($tenant->id, function () use ($tenant, $data, $billing): void {
+            $tenant->getConnection()->transaction(function () use ($tenant, $data, $billing): void {
+                $tenant = Tenant::query()->lockForUpdate()->findOrFail($tenant->id);
+                $before = $tenant->only(['name', 'company_name', 'email', 'phone', 'status', 'application_access_suspended', 'archived_at']);
+                $account = $billing->account($tenant->id);
+                $before['commercial'] = $account->toArray();
+                switch ($data['action']) {
+                    case 'contacts':
+                        $tenant->update(array_intersect_key($data, array_flip(['name', 'company_name', 'email', 'phone'])));
+                        break;
+                    case 'package':
+                        $account->update($billing->terms($data['package_key']) + ['status' => 'active']);
+                        SkybaseInvoice::query()->where('tenant_id', $tenant->id)->where('status', 'pending')->update(['status' => 'void']);
+                        break;
+                    case 'trial':
+                        $account->update(['trial_ends_at' => $data['trial_ends_at'], 'status' => 'trial']);
+                        break;
+                    case 'limit':
+                        $account->update(['subscriber_limit' => $data['subscriber_limit']]);
+                        break;
+                    case 'note':
+                        TenantNote::query()->create(['tenant_id' => $tenant->id, 'actor_id' => auth()->id(), 'body' => $data['reason']]);
+                        break;
+                    case 'suspend':
+                        $tenant->update(['application_access_suspended' => true]);
+                        break;
+                    case 'activate':
+                        $tenant->update(['status' => 'active', 'application_access_suspended' => false, 'archived_at' => null]);
+                        break;
+                    case 'archive':
+                        $tenant->update(['application_access_suspended' => true, 'archived_at' => now()]);
+                        break;
+                }
+                $billing->event($tenant->id, 'owner.'.$data['action'], $data['reason'], ['before' => $before, 'after' => ['tenant' => $tenant->only(['name', 'company_name', 'email', 'phone', 'status', 'application_access_suspended', 'archived_at']), 'commercial' => $account->fresh()->toArray()]]);
+            });
+        });
 
-        $tenant->update($validated);
-        app(SecurityEventLogger::class)->record('central.tenant.updated', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
-
-        return redirect()
-            ->route('admin.super-admin.tenants.show', $tenant)
-            ->with('success', 'Tenant updated successfully.');
-    }
-
-    public function suspend(Tenant $tenant): RedirectResponse
-    {
-        Gate::authorize('manage-central-tenants');
-        $tenant->update(['status' => 'suspended']);
-        app(SecurityEventLogger::class)->record('central.tenant.suspended', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
-
-        return redirect()
-            ->route('admin.super-admin.tenants.show', $tenant)
-            ->with('success', 'Tenant has been suspended.');
-    }
-
-    public function activate(Tenant $tenant): RedirectResponse
-    {
-        Gate::authorize('manage-central-tenants');
-        $tenant->update(['status' => 'active']);
-        app(SecurityEventLogger::class)->record('central.tenant.activated', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
-
-        return redirect()
-            ->route('admin.super-admin.tenants.show', $tenant)
-            ->with('success', 'Tenant has been activated.');
-    }
-
-    public function destroy(Tenant $tenant): RedirectResponse
-    {
-        Gate::authorize('manage-central-tenants');
-        app(SecurityEventLogger::class)->record('central.tenant.deleted', ['user_id' => auth('web')->id(), 'tenant_id' => $tenant->id]);
-        $tenant->delete();
-
-        return redirect()
-            ->route('admin.super-admin.tenants.index')
-            ->with('success', 'Tenant has been deleted.');
+        return redirect()->route('admin.super-admin.tenants.show', $tenant)->with('success', 'Account updated.');
     }
 }
