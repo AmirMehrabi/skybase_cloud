@@ -113,13 +113,11 @@ def deploy():
     # The symlink and its temporary replacement are on the same filesystem.
     switch(release)
     try:
-        run(['systemctl', 'reload', 'php8.5-fpm'])
         if not healthy():
             raise RuntimeError('Live health check failed')
         recycle(release)
     except Exception:
         switch(previous)
-        run(['systemctl', 'reload', 'php8.5-fpm'])
         recycle(previous)
         raise
     (BASE / 'previous.next').unlink(missing_ok=True)
@@ -141,12 +139,15 @@ def main():
             previous = (BASE / 'previous').resolve(strict=True)
             current = (BASE / 'current').resolve(strict=True)
             switch(previous)
-            run(['systemctl', 'reload', 'php8.5-fpm'])
             if not healthy():
                 switch(current)
-                run(['systemctl', 'reload', 'php8.5-fpm'])
                 raise RuntimeError('Rollback health check failed')
             recycle(previous)
+            (BASE / 'previous.next').unlink(missing_ok=True)
+            (BASE / 'previous.next').symlink_to(current)
+            os.replace(BASE / 'previous.next', BASE / 'previous')
+            revision = (previous / 'REVISION').read_text().strip() if (previous / 'REVISION').exists() else 'legacy'
+            (BASE / 'status.json').write_text(json.dumps({'revision': revision, 'release': str(previous), 'rolled_back_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}))
             print('ROLLED BACK to ' + str(previous), flush=True)
         elif '--now' in sys.argv:
             deploy()
