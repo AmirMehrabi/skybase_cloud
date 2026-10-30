@@ -5,11 +5,19 @@ namespace App\Http\Controllers;
 use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 class PagesController extends Controller
 {
+    public function guide(Request $request): View
+    {
+        $serviceType = $request->query('service') === 'hotspot' ? 'hotspot' : 'pppoe';
+
+        return view('modules.guide.index', compact('serviceType'));
+    }
+
     public function index(): View|RedirectResponse
     {
         if (Auth::guard('customer')->check()) {

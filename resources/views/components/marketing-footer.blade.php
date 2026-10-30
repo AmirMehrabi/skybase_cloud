@@ -9,6 +9,7 @@
 
             <div class="space-y-2 text-sm">
                 <p class="font-semibold text-white">Product</p>
+                <a href="{{ route('guide') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">First subscription guide</a>
                 <a href="{{ route('features') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Features</a>
                 <a href="{{ route('seo.wisp-management-software') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">WISP management software</a>
                 <a href="{{ route('seo.wisp-crm') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">WISP CRM</a>

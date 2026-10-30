@@ -104,6 +104,7 @@ Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 
 // Features page
 Route::get('/features', [PagesController::class, 'features'])->name('features');
+Route::get('/guide', [PagesController::class, 'guide'])->name('guide');
 
 // Search landing pages
 Route::get('/wisp-management-software', [PagesController::class, 'wispManagementSoftware'])->name('seo.wisp-management-software');

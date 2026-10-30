@@ -12,6 +12,7 @@ class SitemapController extends Controller
             'home',
             'features',
             'pricing',
+            'guide',
             'seo.wisp-management-software',
             'seo.wisp-crm',
             'seo.mikrotik-isp-software',

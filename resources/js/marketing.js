@@ -46,4 +46,21 @@ if (pageName) {
     }
 }
 
+Alpine.data('firstSubscriptionGuide', () => ({
+    currentChapter: 'before-you-start',
+    updateChapter: null,
+    init() {
+        const chapters = [...this.$el.querySelectorAll('section[id]')];
+        this.updateChapter = () => {
+            const reached = chapters.filter((chapter) => chapter.getBoundingClientRect().top <= 160);
+            this.currentChapter = reached.at(-1)?.id || 'before-you-start';
+        };
+        window.addEventListener('scroll', this.updateChapter, { passive: true });
+        this.updateChapter();
+    },
+    destroy() {
+        window.removeEventListener('scroll', this.updateChapter);
+    },
+}));
+
 Alpine.start();

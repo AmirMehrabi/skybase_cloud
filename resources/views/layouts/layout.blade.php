@@ -10,6 +10,7 @@
     $navigationLinks = [
         ['label' => 'Features', 'url' => url('/features'), 'active' => $isFeaturesPage],
         ['label' => 'Pricing', 'url' => url('/pricing'), 'active' => $isPricingPage],
+        ['label' => 'Guide', 'url' => route('guide'), 'active' => request()->routeIs('guide')],
         ['label' => 'Changelog', 'url' => route('changelog'), 'active' => $isChangelogPage],
         ['label' => 'Contact', 'url' => route('contact.show'), 'active' => $isContactPage],
     ];
@@ -59,7 +60,7 @@
                     <img src="{{ asset('assets/images/logo/logo-black.png') }}" width="300" height="75" class="h-9 w-auto" alt="SkyBase Cloud">
                 </a>
 
-                <div class="hidden items-center gap-7 md:flex">
+                <div class="hidden items-center gap-7 lg:flex">
                     @foreach($navigationLinks as $navigationLink)
                         <a
                             href="{{ $navigationLink['url'] }}"
@@ -75,11 +76,11 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('auth.login') }}" class="hidden px-3 py-2.5 text-sm font-semibold text-[#52605d] transition hover:text-[#0d2f35] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 lg:inline-flex motion-reduce:transition-none">Log in</a>
+                    <a href="{{ auth()->check() ? route('home') : route('auth.login') }}" class="hidden px-3 py-2.5 text-sm font-semibold text-[#52605d] transition hover:text-[#0d2f35] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 lg:inline-flex motion-reduce:transition-none">{{ auth()->check() ? 'Workspace' : 'Log in' }}</a>
                     <a href="{{ $guidedSetupUrl }}" class="hidden rounded-xl bg-[#f5c542] px-5 py-3 text-sm font-semibold text-[#17211f] ring-1 ring-[#17211f]/10 transition hover:bg-[#ffd75c] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 sm:inline-flex motion-reduce:transition-none">Book a guided setup</a>
                     <button
                         type="button"
-                        class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[#17211f]/15 bg-white text-[#17211f] transition hover:border-[#17211f]/30 focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 md:hidden motion-reduce:transition-none"
+                        class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[#17211f]/15 bg-white text-[#17211f] transition hover:border-[#17211f]/30 focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 lg:hidden motion-reduce:transition-none"
                         x-on:click="mobileMenuOpen = ! mobileMenuOpen"
                         x-bind:aria-expanded="mobileMenuOpen.toString()"
                         aria-controls="mobile-navigation"
@@ -106,7 +107,7 @@
                 x-transition:leave-start="opacity-100 translate-y-0"
                 x-transition:leave-end="opacity-0 -translate-y-2"
                 x-on:click.outside="mobileMenuOpen = false"
-                class="pb-4 md:hidden"
+                class="pb-4 lg:hidden"
             >
                 <div class="rounded-xl border border-[#17211f]/15 bg-white p-3 shadow-lg">
                     <div class="grid gap-1">
@@ -125,7 +126,7 @@
                         @endforeach
                     </div>
                     <div class="mt-3 grid grid-cols-2 gap-3 border-t border-[#17211f]/10 pt-3">
-                        <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.login') }}" class="inline-flex items-center justify-center rounded-xl border border-[#17211f]/15 px-4 py-3 text-sm font-semibold text-[#17211f]">Log in</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ auth()->check() ? route('home') : route('auth.login') }}" class="inline-flex items-center justify-center rounded-xl border border-[#17211f]/15 px-4 py-3 text-sm font-semibold text-[#17211f]">{{ auth()->check() ? 'Workspace' : 'Log in' }}</a>
                         <a x-on:click="mobileMenuOpen = false" href="{{ $guidedSetupUrl }}" class="inline-flex items-center justify-center rounded-xl bg-[#f5c542] px-4 py-3 text-center text-sm font-semibold text-[#17211f]">Guided setup</a>
                     </div>
                 </div>

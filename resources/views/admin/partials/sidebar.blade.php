@@ -409,4 +409,11 @@
         </a>
     </li>
     @endif
+    <li>
+        <a href="{{ route('guide') }}" target="_blank" rel="noopener"
+           class="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-teal-50/85 transition hover:border-white/10 hover:bg-white/10 hover:text-white">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.25C9.3 4.6 6 4.6 3 6v14c3-1.4 6.3-1.4 9 .25M12 6.25c2.7-1.65 6-1.65 9-.25v14c-3-1.4-6.3-1.4-9 .25m0-14v14" /></svg>
+            <span>Getting started guide <span class="sr-only">(opens in a new tab)</span></span>
+        </a>
+    </li>
 </ul>

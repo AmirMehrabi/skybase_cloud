@@ -7,6 +7,10 @@
 @source '../views/contact.blade.php';
 @source '../views/changelog.blade.php';
 @source '../views/components/marketing-footer.blade.php';
+@source '../views/components/guide-screenshot.blade.php';
+@source '../views/components/guide-next.blade.php';
+@source '../views/components/guide-navigation.blade.php';
+@source '../views/modules/guide/*.blade.php';
 @source '../views/seo/*.blade.php';
 @source '../views/alternatives/*.blade.php';
 @source '../views/components/ui/input/*.blade.php';
