@@ -117,7 +117,7 @@
         <div class="absolute left-1/2 top-0 -z-10 h-72 w-72 -translate-x-1/2 rounded-full border border-white/10 bg-white/[0.03] blur-3xl"></div>
         <div class="h-full flex flex-col">
             <!-- Logo -->
-            <div class="h-[60px] flex items-center px-6 border-b border-white/10 bg-white/[0.03] backdrop-blur-xl">
+            <div class="h-[60px] flex items-center px-6 bg-white/[0.03] backdrop-blur-xl">
                 <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3 text-white">
                     @if($hasCustomNavbarLogo)
                         <img src="{{ $navbarLogoUrl }}" class="max-h-9 max-w-14 shrink-0 object-contain py-2" alt="{{ $brandName }} logo">
