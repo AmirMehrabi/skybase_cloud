@@ -106,12 +106,20 @@ Route::get('/wisp-management-software', [PagesController::class, 'wispManagement
 Route::get('/wisp-crm', [PagesController::class, 'wispCrm'])->name('seo.wisp-crm');
 Route::get('/mikrotik-isp-software', [PagesController::class, 'mikrotikIspSoftware'])->name('seo.mikrotik-isp-software');
 
+Route::get('/isp-crm', [PagesController::class, 'ispCrm'])->name('seo.isp-crm');
+Route::get('/isp-billing-software', [PagesController::class, 'ispBillingSoftware'])->name('seo.isp-billing-software');
+Route::get('/guides/choosing-isp-crm', [PagesController::class, 'choosingIspCrm'])->name('guides.choosing-isp-crm');
+Route::get('/guides/isp-software-migration', [PagesController::class, 'ispSoftwareMigration'])->name('guides.isp-software-migration');
+Route::get('/guides/mikrotik-billing', [PagesController::class, 'mikrotikBillingGuide'])->name('guides.mikrotik-billing');
+
 // Search engine discovery
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Comparison pages
 Route::get('/alternatives/splynx', [PagesController::class, 'splynxAlternative'])->name('alternatives.splynx');
 Route::get('/alternatives/sonar', [PagesController::class, 'sonarAlternative'])->name('alternatives.sonar');
+
+Route::get('/alternatives/powercode', [PagesController::class, 'powercodeAlternative'])->name('alternatives.powercode');
 
 // Changelog page
 Route::get('/changelog', [PagesController::class, 'changelog'])->name('changelog');

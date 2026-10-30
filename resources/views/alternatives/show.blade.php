@@ -5,6 +5,7 @@
 @section('meta_keywords', $page['meta_keywords'])
 @section('og_title', $page['title'])
 @section('og_description', $page['meta_description'])
+@section('og_image', asset('images/product/customer.webp'))
 @section('og_url', route($page['route']))
 @section('body_class', 'bg-[#f6f1e8] text-slate-950')
 
@@ -46,7 +47,7 @@
                         @foreach($page['cards'] as $card)
                             <div class="rounded-[1.5rem] border border-slate-950/10 bg-white p-4 shadow-sm">
                                 <p class="text-sm font-semibold text-slate-500">{{ $card['label'] }}</p>
-                                <p class="mt-3 text-3xl font-bold tracking-tight text-slate-950">{{ $card['value'] }}</p>
+                                <p class="mt-3 text-2xl font-bold tracking-tight text-slate-950">{{ $card['value'] }}</p>
                                 <p class="mt-2 text-sm leading-6 text-slate-600">{{ $card['note'] }}</p>
                             </div>
                         @endforeach
@@ -54,8 +55,8 @@
                     <div class="border-t border-slate-950/10 p-4">
                         <div class="rounded-[1.5rem] bg-[#0d2f35] p-5 text-white">
                             <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-200">Best fit</p>
-                            <p class="mt-3 text-lg font-bold">SkyBase is strongest when your ISP runs on MikroTik and needs a simple cloud operating system.</p>
-                            <p class="mt-3 text-sm leading-6 text-teal-50/75">Pricing references for {{ $page['competitor'] }} are based on public information checked on June 12, 2026. Confirm current pricing before making a buying decision.</p>
+                            <p class="mt-3 text-lg font-bold">SkyBase focuses on MikroTik ISP operations. Bring your requirements and we will check the fit together.</p>
+                            <p class="mt-3 text-sm leading-6 text-teal-50/75">Pricing references for {{ $page['competitor'] }} are based on public information checked on {{ $page['checked_at'] }}. Confirm current pricing before making a buying decision.</p>
                         </div>
                     </div>
                 </div>
@@ -68,8 +69,8 @@
             <div class="grid gap-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
                 <div>
                     <p class="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Decision guide</p>
-                    <h2 class="mt-4 text-4xl font-bold tracking-tight text-slate-950">Choose by operating model, not only by feature count.</h2>
-                    <p class="mt-5 text-lg leading-8 text-slate-600">Both products can support ISP operations. The practical question is whether your team needs a focused MikroTik cloud workflow or a broader platform with more implementation surface.</p>
+                    <h2 class="mt-4 text-4xl font-bold tracking-tight text-slate-950">Start with the jobs you need to do.</h2>
+                    <p class="mt-5 text-lg leading-8 text-slate-600">Make a list of the work your team does every week. Then check the network, billing, and integration requirements that cannot be left behind.</p>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
@@ -101,9 +102,9 @@
                     <table class="w-full min-w-[760px]">
                         <thead>
                             <tr class="border-b border-slate-950/10 bg-[#0d2f35] text-white">
-                                <th class="px-6 py-4 text-left text-sm font-bold">Area</th>
-                                <th class="px-6 py-4 text-left text-sm font-bold">SkyBase</th>
-                                <th class="px-6 py-4 text-left text-sm font-bold">{{ $page['competitor'] }}</th>
+                                <th scope="col" class="px-6 py-4 text-left text-sm font-bold">Area</th>
+                                <th scope="col" class="px-6 py-4 text-left text-sm font-bold">SkyBase</th>
+                                <th scope="col" class="px-6 py-4 text-left text-sm font-bold">{{ $page['competitor'] }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -120,9 +121,43 @@
             </div>
 
             <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900">
-                {{ $page['competitor'] }} pricing and feature descriptions can change. The comparison above summarizes public information checked on June 12, 2026 and links to the source page:
+                {{ $page['competitor'] }} pricing and feature descriptions can change. The comparison above summarizes public information checked on {{ $page['checked_at'] }} and links to the source page:
                 <a href="{{ $page['source_url'] }}" target="_blank" rel="noopener" class="font-bold underline decoration-amber-700/40 underline-offset-4">{{ $page['source_label'] }}</a>.
             </div>
+        </div>
+    </section>
+
+    @isset($page['price_examples'])
+        <section class="bg-white py-16 sm:py-20">
+            <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-bold tracking-tight">Put the same subscriber count on both quotes.</h2>
+                <div class="mt-8 overflow-x-auto">
+                    <table class="w-full min-w-[480px] text-left">
+                        <caption class="sr-only">Published monthly cloud pricing examples in USD</caption>
+                        <thead><tr class="border-b border-slate-300"><th scope="col" class="p-4">Subscribers</th><th scope="col" class="p-4">SkyBase Cloud</th><th scope="col" class="p-4">{{ $page['competitor'] }}</th></tr></thead>
+                        <tbody>
+                            @foreach($page['price_examples'] as $example)
+                                <tr class="border-b border-slate-200"><th scope="row" class="p-4">{{ $example['subscribers'] }}</th><td class="p-4">{{ $example['skybase'] }}</td><td class="p-4">{{ $example['competitor'] }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-5 text-sm leading-7 text-slate-600">{{ $page['pricing_basis'] }} Checked {{ $page['checked_at'] }}. <a href="{{ $page['source_url'] }}" class="font-semibold underline">See the {{ $page['competitor'] }} source</a> and <a href="{{ route('pricing') }}" class="font-semibold underline">SkyBase pricing</a>.</p>
+            </div>
+        </section>
+    @endisset
+
+    <x-product-screenshot image="customer" heading="Here is the customer workspace you would be using." caption="Service access and customer history sit together, with tabs for invoices, payments, tickets, and notes." />
+
+    <section class="bg-[#fffdf8] py-16 sm:py-20">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold tracking-tight">Before moving, check what needs to come with you.</h2>
+            <p class="mt-5 max-w-3xl text-lg leading-8 text-slate-600">Customers and subscriptions are a start. Opening balances, unpaid invoices, network access, payment integrations, and historical records need their own checks. Agree on a sample import, reconciliation, and rollback plan before a live cutover.</p>
+            <div class="mt-6 flex flex-col gap-4 sm:flex-row">
+                <a href="{{ route('guides.isp-software-migration') }}" class="font-semibold text-teal-800 underline underline-offset-4">Read the migration checklist</a>
+                <a href="{{ route('guides.choosing-isp-crm') }}" class="font-semibold text-teal-800 underline underline-offset-4">Bring five jobs to your demo</a>
+            </div>
+            <p class="mt-5 text-sm leading-7 text-slate-600">This comparison is written by SkyBase. Competitor information comes from the linked public source. Confirm availability, costs, and requirements with each vendor.</p>
         </div>
     </section>
 
@@ -130,7 +165,7 @@
         <div class="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8 lg:items-center">
             <div class="rounded-[2rem] bg-[#102f34] p-8 text-white shadow-xl sm:p-10">
                 <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Pricing fit</p>
-                <h2 class="mt-4 text-4xl font-bold tracking-tight">A smaller ISP should not need a large starting commitment to modernize operations.</h2>
+                <h2 class="mt-4 text-4xl font-bold tracking-tight">Try it with the work you already know.</h2>
                 <p class="mt-5 text-lg leading-8 text-teal-50/80">SkyBase starts with a free cloud plan for up to 40 subscribers. Paid plans begin at $69/month and include cloud hosting, automatic updates, and core ISP management workflows.</p>
             </div>
 
@@ -167,7 +202,7 @@
         <div class="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
             <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Compare with your own setup</p>
             <h2 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">See whether SkyBase is the right fit before you switch.</h2>
-            <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-teal-50/80">Share your customer count, routers, Radius setup, and current billing process. We will walk through pricing fit and the practical migration path.</p>
+            <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-teal-50/80">Share your customer count, routers, Radius setup, and current billing process. We will check the requirements and agree on what needs testing before you decide.</p>
             <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-full bg-[#f5c542] px-8 py-4 text-base font-bold text-slate-950 transition hover:bg-[#ffd95d]">Start Free</a>
                 <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 py-4 text-base font-bold text-white transition hover:bg-white hover:text-slate-950">Message WhatsApp</a>

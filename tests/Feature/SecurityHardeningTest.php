@@ -209,7 +209,7 @@ class SecurityHardeningTest extends TestCase
 
     public function test_security_headers_are_set_on_https_responses(): void
     {
-        $this->get('https://localhost/auth/login')->assertHeader('X-Content-Type-Options', 'nosniff')->assertHeader('Strict-Transport-Security', 'max-age=31536000')->assertHeader('Content-Security-Policy');
+        $this->get('https://localhost/auth/login')->assertHeader('X-Content-Type-Options', 'nosniff')->assertHeader('Strict-Transport-Security', 'max-age=31536000')->assertHeader('Content-Security-Policy')->assertHeader('X-Robots-Tag', 'noindex, follow');
     }
 
     private function tenant(): Tenant

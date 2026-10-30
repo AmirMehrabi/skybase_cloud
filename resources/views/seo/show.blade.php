@@ -4,8 +4,8 @@
 @section('meta_description', $page['meta_description'])
 @section('og_title', $page['title'])
 @section('og_description', $page['meta_description'])
+@section('og_image', asset('images/product/'.($page['screenshot']['image'] ?? 'dashboard').'.webp'))
 @section('og_url', route($page['route']))
-@section('canonical_url', route($page['route']))
 @section('body_class', 'bg-[#f7f3ea] text-[#17211f]')
 
 @section('content')
@@ -33,8 +33,8 @@
 
                 <div class="overflow-hidden rounded-2xl border border-[#17211f]/15 bg-white shadow-[0_24px_70px_rgba(23,33,31,0.12)]">
                     <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">One connected workspace</p>
-                        <p class="mt-1 text-xl font-semibold text-slate-900">Customer and network operations</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">The everyday work</p>
+                        <p class="mt-1 text-xl font-semibold text-slate-900">Keep the useful details close.</p>
                     </div>
                     <div class="grid gap-3 bg-slate-100 p-4 sm:grid-cols-2 sm:p-5">
                         @foreach($page['highlights'] as $highlight)
@@ -48,6 +48,10 @@
                 </div>
             </div>
         </section>
+
+        @isset($page['screenshot'])
+            <x-product-screenshot :image="$page['screenshot']['image']" :heading="$page['screenshot']['heading']" :caption="$page['screenshot']['caption']" />
+        @endisset
 
         <section class="border-b border-[#17211f]/10">
             <div class="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.75fr_1.25fr] lg:px-8 lg:py-24">
@@ -80,7 +84,7 @@
             <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
                 <div class="max-w-3xl">
                     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#145a5a]">Common questions</p>
-                    <h2 class="mt-4 text-4xl font-bold tracking-[-0.035em] sm:text-5xl">A clearer way to evaluate SkyBase.</h2>
+                    <h2 class="mt-4 text-4xl font-bold tracking-[-0.035em] sm:text-5xl">A few things you might be wondering.</h2>
                 </div>
 
                 <div class="mt-12 divide-y divide-[#17211f]/10 border-y border-[#17211f]/10">
@@ -98,7 +102,7 @@
             <div class="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.85fr_1.15fr] lg:px-8 lg:py-24">
                 <div>
                     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#145a5a]">Explore SkyBase</p>
-                    <h2 class="mt-4 text-4xl font-bold tracking-[-0.035em]">Related ISP workflows</h2>
+                    <h2 class="mt-4 text-4xl font-bold tracking-[-0.035em]">Keep looking. Make a good decision.</h2>
                     <p class="mt-5 leading-7 text-[#52605d]">See how the customer, business, and network parts of the platform work together.</p>
                 </div>
 

@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 @foreach ($routeNames as $routeName)
     <url>
-        <loc>{{ route($routeName) }}</loc>
+        <loc>{{ rtrim(config('app.url'), '/').rtrim(route($routeName, absolute: false), '/') }}</loc>
     </url>
 @endforeach
 </urlset>

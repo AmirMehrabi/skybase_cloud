@@ -26,6 +26,7 @@ class SecurityHeaders
         }
         if ($request->user() || $request->routeIs('auth.*', 'mfa.*', 'customer.login*')) {
             $response->headers->set('Cache-Control', 'no-store, private');
+            $response->headers->set('X-Robots-Tag', 'noindex, follow');
         }
 
         return $response;
