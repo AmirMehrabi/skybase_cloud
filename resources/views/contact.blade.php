@@ -56,7 +56,7 @@
                     <div>
                         <p class="text-sm font-bold uppercase tracking-[0.24em] text-teal-700">Send a message</p>
                         <h2 class="mt-3 text-3xl font-bold tracking-tight text-slate-950">Contact form</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">Your message is saved to the database and pushed to Telegram for quick follow-up.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Send us your question and we’ll email you a confirmation. Our team will get back to you shortly.</p>
                     </div>
                 </div>
 
@@ -68,6 +68,13 @@
 
                 <form action="{{ route('contact.store') }}" method="POST" class="mt-8">
                     @csrf
+                    <x-ui.input.text type="hidden" name="form_token" :value="Illuminate\Support\Facades\Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->timestamp)" />
+                    <div hidden aria-hidden="true">
+                        <x-ui.input.text name="website" label="Leave this field empty" tabindex="-1" autocomplete="off" />
+                    </div>
+                    @if ($errors->contactInquiry->hasAny(['website', 'form_token']))
+                        <p role="alert" class="mb-5 text-sm text-red-600">{{ $errors->contactInquiry->first('website') ?: $errors->contactInquiry->first('form_token') }}</p>
+                    @endif
 
                     <div class="grid gap-5 md:grid-cols-2">
                         <x-ui.input.text

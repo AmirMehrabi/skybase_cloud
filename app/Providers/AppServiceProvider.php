@@ -67,6 +67,10 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(5)->by('login-account:'.hash('sha256', strtolower((string) $request->input('tenant')).'|'.strtolower((string) $request->input('email')))),
         ] : [Limit::none()]);
         RateLimiter::for('password-changes', fn (Request $request): Limit => config('security.enforce_rate_limits') ? Limit::perMinute(6)->by((string) $request->user()?->id.'|'.$request->ip()) : Limit::none());
+        RateLimiter::for('contact-inquiries', fn (Request $request): array => [
+            Limit::perMinute(3)->by('contact-ip:'.$request->ip()),
+            Limit::perHour(5)->by('contact-email:'.hash('sha256', strtolower((string) $request->input('email')))),
+        ]);
         RateLimiter::for('public-forms', fn (Request $request): Limit => config('security.enforce_rate_limits') ? Limit::perMinute(5)->by($request->ip()) : Limit::none());
         RateLimiter::for('sensitive-actions', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->user()?->id.'|'.$request->ip()));
         foreach ([Login::class, Failed::class, Logout::class] as $event) {

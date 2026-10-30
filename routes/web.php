@@ -129,7 +129,7 @@ Route::get('/brochure/government-fa', [PagesController::class, 'governmentBrochu
 
 // Contact page
 Route::get('/contact', [PagesController::class, 'contact'])->name('contact.show');
-Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:public-forms')->name('contact.store');
+Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:contact-inquiries')->name('contact.store');
 Route::post('/demo-requests', [DemoRequestController::class, 'store'])->middleware('throttle:public-forms')->name('demo-requests.store');
 
 Route::get('/storage/settings/{path}', [BrandingAssetController::class, 'settings'])->where('path', '.*')->name('branding.asset.storage');

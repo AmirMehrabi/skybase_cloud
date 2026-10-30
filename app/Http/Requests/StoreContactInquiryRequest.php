@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use Closure;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Crypt;
 
 class StoreContactInquiryRequest extends FormRequest
 {
@@ -16,6 +19,18 @@ class StoreContactInquiryRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'website' => ['prohibited'],
+            'form_token' => ['bail', 'required', 'string', function (string $attribute, mixed $value, Closure $fail): void {
+                try {
+                    $payload = explode('|', Crypt::decryptString($value));
+                    $age = now()->timestamp - (int) ($payload[1] ?? 0);
+                    if (count($payload) !== 2 || ! hash_equals(hash('sha256', $this->session()->getId()), $payload[0]) || $age < 3 || $age > 7200) {
+                        $fail('Please refresh this page, take a moment to complete the form, and try again.');
+                    }
+                } catch (DecryptException) {
+                    $fail('Please refresh this page and try again.');
+                }
+            }],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
@@ -28,6 +43,8 @@ class StoreContactInquiryRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'website.prohibited' => 'Your submission could not be accepted.',
+            'form_token.required' => 'Please refresh this page and try again.',
             'name.required' => 'Please tell us your name.',
             'email.required' => 'Please share your email address.',
             'email.email' => 'Please enter a valid email address.',

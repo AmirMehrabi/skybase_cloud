@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendContactInquiryTelegram;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class MarketingLeadSubmissionTest extends TestCase
@@ -12,9 +16,15 @@ class MarketingLeadSubmissionTest extends TestCase
 
     public function test_contact_inquiry_is_saved_to_the_database(): void
     {
-        Http::fake();
+        Http::fake(['*' => Http::response(['ok' => true])]);
+        Mail::fake();
+        Bus::fake([SendContactInquiryTelegram::class]);
+        $this->get(route('contact.show'));
+        $this->withCookie(config('session.cookie'), session()->getId());
+        $token = Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->subSeconds(4)->timestamp);
 
         $response = $this->post(route('contact.store'), [
+            'form_token' => $token,
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
             'phone' => '+33 7 58 35 14 73',

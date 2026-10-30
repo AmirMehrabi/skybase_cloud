@@ -23,7 +23,7 @@ class TelegramLeadNotifier
             'Company: '.($contactInquiry->company_name ?: 'Not provided'),
             'Subject: '.$contactInquiry->subject,
             'Message: '.$contactInquiry->message,
-        ]));
+        ]), true);
     }
 
     public function notifyDemoRequest(DemoRequest $demoRequest): void
@@ -44,27 +44,38 @@ class TelegramLeadNotifier
         ]));
     }
 
-    private function sendMessage(string $message): void
+    private function sendMessage(string $message, bool $retryOnFailure = false): void
     {
         $botToken = (string) $this->config->get('services.telegram.bot_token', '');
         $chatId = (string) $this->config->get('services.telegram.leads_chat_id', '');
 
         if ($botToken === '' || $chatId === '') {
+            if ($retryOnFailure) {
+                throw new \RuntimeException('Telegram contact delivery is not configured.');
+            }
+
             return;
         }
 
         try {
-            Http::asForm()
-                ->timeout(10)
-                ->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
-                    'chat_id' => $chatId,
-                    'text' => $message,
-                ])
-                ->throw();
+            foreach (mb_str_split($message, 4000) as $part) {
+                $response = Http::asForm()
+                    ->timeout(10)
+                    ->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                        'chat_id' => $chatId,
+                        'text' => $part,
+                    ])
+                    ->throw();
+                if ($response->json('ok') !== true) {
+                    throw new \RuntimeException('Telegram rejected the lead notification.');
+                }
+            }
         } catch (Throwable $throwable) {
-            Log::warning('Telegram lead notification failed.', [
-                'message' => $throwable->getMessage(),
-            ]);
+            if ($retryOnFailure) {
+                throw new \RuntimeException('Telegram contact delivery failed. Check bot credentials, channel permissions, and connectivity.');
+            }
+
+            Log::warning('Telegram lead notification failed.', ['exception_type' => $throwable::class]);
         }
     }
 }
