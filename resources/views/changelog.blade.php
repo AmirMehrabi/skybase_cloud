@@ -1,12 +1,12 @@
 @extends('layouts.layout')
 
-@section('title', 'Changelog | SkyBase Cloud')
+@section('title', 'What’s new | SkyBase Cloud Changelog')
 @section('meta_description', 'Track SkyBase Cloud product updates, release notes, and platform improvements for MikroTik-focused ISP operators.')
 @section('meta_keywords', 'SkyBase changelog, ISP software updates, MikroTik ISP platform release notes, NetFlow monitoring')
 @section('og_title', 'SkyBase Cloud Changelog')
 @section('og_description', 'Release notes and product updates for SkyBase Cloud.')
 @section('og_url', url('/changelog'))
-@section('body_class', 'bg-[#f6f1e8] text-slate-950')
+@section('body_class', 'bg-[#fffdf8] text-[#17211f]')
 
 @php
     $releases = [
@@ -15,6 +15,11 @@
             'date' => 'October 30, 2026',
             'title' => 'A Clearer Start and More Control Over Daily Operations',
             'summary' => 'SkyBase 1.0 brings together a guided first-subscriber setup, customer communications, deeper service insights, and more flexible account management. This release also improves billing accuracy, usage reporting, and account security across everyday ISP workflows.',
+            'highlights' => [
+                ['title' => 'Get your first subscriber online', 'copy' => 'Follow the PPPoE or Hotspot guide, from connecting your router to testing the customer’s login.', 'route' => 'guide', 'link' => 'Follow the setup guide'],
+                ['title' => 'Keep customers informed', 'copy' => 'Send campaigns, reuse message templates, and follow email and SMS delivery from one workspace.'],
+                ['title' => 'Understand each service', 'copy' => 'See detailed traffic graphs and clearer usage history when you need to investigate a connection.'],
+            ],
             'sections' => [
                 'Added' => [
                     'A step-by-step getting started guide for PPPoE and Hotspot subscribers, with screenshots, Winbox and RouterOS instructions, and connection checks.',
@@ -500,74 +505,90 @@
 @endphp
 
 @section('content')
-    <section class="relative isolate overflow-hidden bg-[#0d2f35] py-16 text-white sm:py-20">
-        <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_18%,rgba(34,197,94,0.26),transparent_28%),radial-gradient(circle_at_82%_12%,rgba(245,197,66,0.22),transparent_30%),linear-gradient(135deg,#09252b_0%,#0d2f35_48%,#123f3d_100%)]"></div>
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl">
-                <p class="text-sm font-bold uppercase tracking-[0.24em] text-[#f5c542]">Release Notes</p>
-                <h1 class="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">SkyBase Cloud Changelog</h1>
-                <p class="mt-5 text-lg leading-8 text-teal-50/85">
-                    Product updates for ISP operators using SkyBase to manage MikroTik routers, subscribers, billing, IPAM, VPN users, and tenant operations.
+    @php
+        $latest = $releases[0];
+        $archive = array_slice($releases, 1);
+        $years = collect($archive)->map(fn ($release) => date('Y', strtotime($release['date'])))->unique()->mapWithKeys(fn ($year) => [$year => $year])->all();
+    @endphp
+
+    <main x-data="changelogArchive">
+        <header class="border-b border-[#17211f]/10 bg-[#f7f3ea]">
+            <div class="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12">
+                <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[#145a5a]">Product updates</p>
+                <h1 class="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">What’s new in SkyBase</h1>
+                <p class="mt-4 text-base leading-7 text-[#52605d]">A better start. Easier daily work. See what’s changed for you.</p>
+                <p class="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#52605d]">
+                    <span class="font-semibold text-[#145a5a]">Current version {{ $latest['version'] }}</span>
+                    <span>Updated <time datetime="{{ date('Y-m-d', strtotime($latest['date'])) }}">{{ $latest['date'] }}</time></span>
                 </p>
-                <div class="mt-8 flex flex-wrap gap-3">
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Current version {{ $releases[0]['version'] }}</span>
-                    <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white">Updated August 6, 2026</span>
-                </div>
             </div>
-        </div>
-    </section>
+        </header>
 
-    <section class="bg-[#f6f1e8] py-14 sm:py-16">
-        <div class="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8">
-            <aside class="lg:sticky lg:top-24 lg:self-start">
-                <div class="rounded-lg border border-slate-950/10 bg-white p-5 shadow-sm">
-                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Versions</p>
-                    <nav class="mt-4 space-y-2">
-                        @foreach($releases as $release)
-                            <a href="#v{{ str_replace('.', '-', $release['version']) }}" class="block rounded-lg px-3 py-2 text-sm font-bold text-slate-700 hover:bg-[#fbf7ed] hover:text-slate-950">
-                                {{ $release['version'] }}
-                                <span class="block text-xs font-medium text-slate-500">{{ $release['date'] }}</span>
-                            </a>
-                        @endforeach
-                    </nav>
+        <div class="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12">
+            <article id="v{{ str_replace('.', '-', $latest['version']) }}" class="scroll-mt-28">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-[#145a5a]">Latest release · v{{ $latest['version'] }}</p>
+                    <a href="#v{{ str_replace('.', '-', $latest['version']) }}" aria-label="Permanent link to version {{ $latest['version'] }}" class="rounded px-2 py-2 text-sm text-[#52605d] underline underline-offset-4 hover:text-[#145a5a] focus:outline-none focus:ring-2 focus:ring-[#145a5a]">Release link</a>
                 </div>
-            </aside>
+                <h2 class="mt-3 text-3xl font-bold tracking-tight">{{ $latest['title'] }}</h2>
+                <p class="mt-4 max-w-2xl text-base leading-7 text-[#52605d]">{{ preg_split('/(?<=[.!?])\s+/', $latest['summary'])[0] }}</p>
 
-            <div class="space-y-8">
-                @foreach($releases as $release)
-                    <article id="v{{ str_replace('.', '-', $release['version']) }}" class="scroll-mt-28 rounded-lg border border-slate-950/10 bg-white p-6 shadow-sm sm:p-8">
-                        <div class="flex flex-col gap-4 border-b border-slate-950/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
+                <div class="mt-8 divide-y divide-[#17211f]/10">
+                    @foreach($latest['highlights'] ?? [] as $highlight)
+                        <section class="grid gap-2 py-5 sm:grid-cols-[0.9fr_1.1fr] sm:gap-8">
+                            <h3 class="text-lg font-bold">{{ $highlight['title'] }}</h3>
                             <div>
-                                <div class="flex flex-wrap items-center gap-3">
-                                    <span class="rounded-full bg-[#0d2f35] px-3 py-1 text-sm font-bold text-white">v{{ $release['version'] }}</span>
-                                    @if($loop->first)
-                                        <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-800">Current</span>
-                                    @endif
-                                </div>
-                                <h2 class="mt-4 text-2xl font-bold text-slate-950 sm:text-3xl">{{ $release['title'] }}</h2>
-                                <p class="mt-3 max-w-3xl text-base leading-7 text-slate-600">{{ $release['summary'] }}</p>
+                                <p class="text-sm leading-7 text-[#52605d]">{{ $highlight['copy'] }}</p>
+                                @if(isset($highlight['route']))
+                                    <a href="{{ route($highlight['route']) }}" class="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#145a5a] underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-[#145a5a]">{{ $highlight['link'] }} <span aria-hidden="true">→</span></a>
+                                @endif
                             </div>
-                            <time class="shrink-0 text-sm font-bold text-slate-500">{{ $release['date'] }}</time>
-                        </div>
+                        </section>
+                    @endforeach
+                </div>
 
-                        <div class="mt-6 grid gap-6 lg:grid-cols-3">
-                            @foreach($release['sections'] as $sectionTitle => $items)
-                                <div class="rounded-lg border border-slate-950/10 bg-[#fbf7ed] p-5">
-                                    <h3 class="text-sm font-bold uppercase tracking-[0.18em] text-teal-800">{{ $sectionTitle }}</h3>
-                                    <ul class="mt-4 space-y-3">
-                                        @foreach($items as $item)
-                                            <li class="flex gap-3 text-sm leading-6 text-slate-700">
-                                                <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f5c542]"></span>
-                                                <span>{{ $item }}</span>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endforeach
-                        </div>
-                    </article>
-                @endforeach
-            </div>
+                <details class="mt-5 rounded-xl border border-[#17211f]/15 bg-white p-5 sm:p-6">
+                    <summary class="cursor-pointer rounded py-1 font-semibold text-[#145a5a] focus:outline-none focus:ring-2 focus:ring-[#145a5a]">View all changes in v{{ $latest['version'] }}</summary>
+                    <div class="mt-5"><x-release-notes :sections="$latest['sections']" /></div>
+                </details>
+            </article>
+
+            <section aria-labelledby="archive-heading" class="mt-12 border-t border-[#17211f]/15 pt-10">
+                <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+                    <div>
+                        <h2 id="archive-heading" class="text-2xl font-bold tracking-tight">Earlier updates</h2>
+                        <p class="mt-2 text-sm leading-6 text-[#52605d]">Open a release to read the full notes.</p>
+                    </div>
+                    <div x-cloak class="w-full sm:w-40">
+                        <x-ui.input.select name="release_year" label="Year" :options="$years" placeholder="All years" x-model="year" x-on:change="visibleCount = 5" />
+                    </div>
+                </div>
+                <p x-cloak aria-live="polite" aria-atomic="true" class="mt-5 text-xs text-[#52605d]" x-text="'Showing ' + visibleIds.length + ' of ' + matchingRows.length + ' earlier releases'"></p>
+
+                <div class="mt-4 divide-y divide-[#17211f]/10">
+                    @foreach($archive as $release)
+                        @php
+                            $releaseId = 'v'.str_replace('.', '-', $release['version']);
+                            $releaseYear = date('Y', strtotime($release['date']));
+                        @endphp
+                        <article id="{{ $releaseId }}" data-release-year="{{ $releaseYear }}" x-show="visibleIds.includes('{{ $releaseId }}')" class="scroll-mt-28 py-5">
+                            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-[#52605d]">
+                                <p class="flex items-center gap-3"><span class="font-bold text-[#145a5a]">v{{ $release['version'] }}</span> <time datetime="{{ date('Y-m-d', strtotime($release['date'])) }}">{{ $release['date'] }}</time></p>
+                                <a href="#{{ $releaseId }}" aria-label="Permanent link to version {{ $release['version'] }}" class="rounded px-2 py-2 underline underline-offset-4 hover:text-[#145a5a] focus:outline-none focus:ring-2 focus:ring-[#145a5a]">Release link</a>
+                            </div>
+                            <details class="mt-1">
+                                <summary class="cursor-pointer rounded py-2 focus:outline-none focus:ring-2 focus:ring-[#145a5a]">
+                                    <h3 class="inline text-lg font-bold">{{ $release['title'] }}</h3>
+                                    <span class="mt-2 block text-sm font-normal leading-7 text-[#52605d]">{{ preg_split('/(?<=[.!?])\s+/', $release['summary'])[0] }}</span>
+                                </summary>
+                                <div class="mt-4"><x-release-notes :sections="$release['sections']" /></div>
+                            </details>
+                        </article>
+                    @endforeach
+                </div>
+                <button x-cloak x-show="visibleCount < matchingRows.length" x-on:click="visibleCount += 5" type="button" class="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#145a5a]/30 px-5 py-3 text-sm font-semibold text-[#145a5a] hover:bg-[#f7f3ea] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2">Load older updates</button>
+                <noscript><p class="mt-5 text-sm text-[#52605d]">All releases are listed above. Open any release to read its notes.</p></noscript>
+            </section>
         </div>
-    </section>
+    </main>
 @endsection

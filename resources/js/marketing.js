@@ -63,4 +63,45 @@ Alpine.data('firstSubscriptionGuide', () => ({
     },
 }));
 
+Alpine.data('changelogArchive', () => ({
+    year: '',
+    visibleCount: 5,
+    rows: [],
+    hashListener: null,
+    get matchingRows() {
+        return this.rows.filter((row) => !this.year || row.year === this.year);
+    },
+    get visibleIds() {
+        return this.matchingRows.slice(0, this.visibleCount).map((row) => row.id);
+    },
+    init() {
+        this.rows = [...this.$el.querySelectorAll('[data-release-year]')].map((row) => ({
+            id: row.id,
+            year: row.dataset.releaseYear,
+        }));
+        this.hashListener = () => this.openLinkedRelease();
+        window.addEventListener('hashchange', this.hashListener);
+        this.openLinkedRelease();
+    },
+    openLinkedRelease() {
+        const target = document.getElementById(window.location.hash.slice(1));
+        if (!target || !this.$el.contains(target) || target.tagName !== 'ARTICLE') {
+            return;
+        }
+        const index = this.rows.findIndex((row) => row.id === target.id);
+        if (index >= 0) {
+            this.year = '';
+            this.visibleCount = Math.max(this.visibleCount, index + 1);
+        }
+        const notes = target.querySelector('details');
+        if (notes) {
+            notes.open = true;
+        }
+        this.$nextTick(() => target.scrollIntoView({ block: 'start' }));
+    },
+    destroy() {
+        window.removeEventListener('hashchange', this.hashListener);
+    },
+}));
+
 Alpine.start();

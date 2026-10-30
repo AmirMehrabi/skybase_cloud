@@ -6,6 +6,7 @@
 @source '../views/pricing.blade.php';
 @source '../views/contact.blade.php';
 @source '../views/changelog.blade.php';
+@source '../views/components/release-notes.blade.php';
 @source '../views/components/marketing-footer.blade.php';
 @source '../views/components/guide-screenshot.blade.php';
 @source '../views/components/guide-next.blade.php';
