@@ -14,6 +14,11 @@ return [
     |
     */
 
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
     'golestan' => [
         'enabled' => env('GOLESTAN_ENABLED', false),
         'username' => env('GOLESTAN_USERNAME'),

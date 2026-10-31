@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\Turnstile;
 use Closure;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Foundation\Http\FormRequest;
@@ -19,6 +20,7 @@ class StoreContactInquiryRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'cf-turnstile-response' => ['bail', 'required', 'string', 'max:2048', new Turnstile],
             'website' => ['prohibited'],
             'form_token' => ['bail', 'required', 'string', function (string $attribute, mixed $value, Closure $fail): void {
                 try {
@@ -43,6 +45,7 @@ class StoreContactInquiryRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'cf-turnstile-response.required' => 'Please complete the CAPTCHA verification.',
             'website.prohibited' => 'Your submission could not be accepted.',
             'form_token.required' => 'Please refresh this page and try again.',
             'name.required' => 'Please tell us your name.',

@@ -1005,6 +1005,8 @@
                     />
                 </div>
 
+                <x-turnstile error-bag="demoRequest" />
+
                 <div class="mt-6 flex flex-col gap-3 border-t border-slate-950/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-sm leading-6 text-slate-500">Your submission is saved in our database and sent to our Telegram sales channel.</p>
                     <div class="flex gap-3">

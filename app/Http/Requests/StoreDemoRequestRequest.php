@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\Turnstile;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreDemoRequestRequest extends FormRequest
@@ -16,6 +17,7 @@ class StoreDemoRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'cf-turnstile-response' => ['bail', 'required', 'string', 'max:2048', new Turnstile],
             'requested_plan' => ['required', 'string', 'max:255'],
             'business_name' => ['required', 'string', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
@@ -34,6 +36,7 @@ class StoreDemoRequestRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'cf-turnstile-response.required' => 'Please complete the CAPTCHA verification.',
             'requested_plan.required' => 'Please choose the plan you want a demo for.',
             'business_name.required' => 'Please enter your business name.',
             'contact_name.required' => 'Please enter the best contact person.',

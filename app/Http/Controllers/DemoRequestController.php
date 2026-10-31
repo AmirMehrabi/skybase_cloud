@@ -11,7 +11,7 @@ class DemoRequestController extends Controller
 {
     public function store(StoreDemoRequestRequest $request, TelegramLeadNotifier $telegramLeadNotifier): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $request->safe()->except('cf-turnstile-response');
         $sourcePage = $validated['source_page'] ?? 'pricing';
 
         $demoRequest = DemoRequest::query()->create([

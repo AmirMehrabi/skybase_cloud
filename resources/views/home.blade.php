@@ -239,6 +239,8 @@
                             </div>
                         </div>
 
+                <x-turnstile error-bag="demoRequest" />
+
                         <div class="mt-6 flex flex-col gap-4 border-t border-[#17211f]/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
                             <p class="max-w-xs text-sm leading-6 text-[#52605d]">We’ll use your contact details only to arrange the setup.</p>
                             <button type="submit" class="rounded-xl bg-[#f5c542] px-6 py-3.5 font-semibold text-[#17211f] ring-1 ring-[#17211f]/10 transition hover:bg-[#ffd75c] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 motion-reduce:transition-none">Book my guided setup</button>

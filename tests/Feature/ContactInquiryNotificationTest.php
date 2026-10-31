@@ -22,6 +22,8 @@ class ContactInquiryNotificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['services.turnstile.site_key' => 'test-site', 'services.turnstile.secret_key' => 'test-secret']);
+        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true])]);
         Mail::fake();
         Bus::fake([SendContactInquiryTelegram::class]);
         config(['contact.recipients' => ['first@example.com', 'second@example.com']]);
@@ -188,6 +190,7 @@ class ContactInquiryNotificationTest extends TestCase
         $this->withCookie(config('session.cookie'), session()->getId());
 
         return [
+            'cf-turnstile-response' => 'test-token',
             'name' => 'Test Customer',
             'email' => 'customer@example.com',
             'phone' => '+33 7 58 35 14 73',

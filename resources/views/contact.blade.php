@@ -135,6 +135,8 @@
                         />
                     </div>
 
+                <x-turnstile error-bag="contactInquiry" />
+
                     <div class="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
                         <p class="text-sm leading-6 text-slate-600">We usually respond with the right next step instead of a generic message.</p>
                         <button type="submit" class="inline-flex items-center justify-center bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-[0_16px_35px_rgba(5,150,105,0.25)] transition hover:-translate-y-0.5 hover:bg-emerald-700">

@@ -20,7 +20,7 @@ class SecurityHeaders
             $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
         }
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set(config('security.enforce_csp') ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only', "default-src 'self'; script-src 'self' 'nonce-{$nonce}' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'");
+        $response->headers->set(config('security.enforce_csp') ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only', "default-src 'self'; script-src 'self' 'nonce-{$nonce}' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'");
         if ($request->isSecure() && config('security.hsts')) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000');
         }
