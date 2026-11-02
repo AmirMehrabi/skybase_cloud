@@ -20,7 +20,7 @@ class StoreContactInquiryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cf-turnstile-response' => ['bail', 'required', 'string', 'max:2048', new Turnstile],
+            'cf-turnstile-response' => ['bail', 'required', 'string', 'max:2048', new Turnstile('contact')],
             'website' => ['prohibited'],
             'form_token' => ['bail', 'required', 'string', function (string $attribute, mixed $value, Closure $fail): void {
                 try {

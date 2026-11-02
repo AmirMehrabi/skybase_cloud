@@ -74,9 +74,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('password-changes', fn (Request $request): Limit => config('security.enforce_rate_limits') ? Limit::perMinute(6)->by((string) $request->user()?->id.'|'.$request->ip()) : Limit::none());
         RateLimiter::for('contact-inquiries', fn (Request $request): array => [
             Limit::perMinute(3)->by('contact-ip:'.$request->ip()),
+            Limit::perHour(20)->by('contact-ip-hour:'.$request->ip()),
             Limit::perHour(5)->by('contact-email:'.hash('sha256', strtolower((string) $request->input('email')))),
         ]);
-        RateLimiter::for('public-forms', fn (Request $request): Limit => config('security.enforce_rate_limits') ? Limit::perMinute(5)->by($request->ip()) : Limit::none());
+        RateLimiter::for('public-forms', fn (Request $request): array => [
+            Limit::perMinute(3)->by('public-form-ip-minute:'.$request->ip()),
+            Limit::perHour(15)->by('public-form-ip-hour:'.$request->ip()),
+            Limit::perHour(5)->by('public-form-email:'.hash('sha256', strtolower((string) $request->input('email')))),
+        ]);
         RateLimiter::for('sensitive-actions', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->user()?->id.'|'.$request->ip()));
         foreach ([Login::class, Failed::class, Logout::class] as $event) {
             Event::listen($event, function (Login|Failed|Logout $event): void {

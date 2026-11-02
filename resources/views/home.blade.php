@@ -224,6 +224,8 @@
                         @csrf
                         <input type="hidden" name="requested_plan" value="Guided setup from homepage">
                         <input type="hidden" name="source_page" value="home">
+                        <input type="hidden" name="form_token" value="{{ Illuminate\Support\Facades\Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->timestamp) }}">
+                        <div class="absolute -left-[10000px]" aria-hidden="true"><x-ui.input.text name="website" label="" tabindex="-1" autocomplete="off" /></div>
 
                         <div class="grid gap-5 sm:grid-cols-2">
                             <x-ui.input.text name="business_name" label="Business name" :value="old('business_name')" error="{{ $errors->demoRequest->first('business_name') }}" placeholder="Your business" required class="h-12 rounded-xl border-[#17211f]/20 px-4 text-base shadow-none focus:border-[#145a5a] focus:ring-[#145a5a]" />
@@ -239,7 +241,7 @@
                             </div>
                         </div>
 
-                <x-turnstile error-bag="demoRequest" />
+                <x-turnstile error-bag="demoRequest" action="demo_request" />
 
                         <div class="mt-6 flex flex-col gap-4 border-t border-[#17211f]/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
                             <p class="max-w-xs text-sm leading-6 text-[#52605d]">We’ll use your contact details only to arrange the setup.</p>

@@ -901,6 +901,8 @@
 
             <form action="{{ route('demo-requests.store') }}" method="POST" class="px-6 py-6 sm:px-8">
                 @csrf
+                <input type="hidden" name="form_token" value="{{ Illuminate\Support\Facades\Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->timestamp) }}">
+                <div class="absolute -left-[10000px]" aria-hidden="true"><x-ui.input.text name="website" label="" tabindex="-1" autocomplete="off" /></div>
 
                 <div class="grid gap-5 md:grid-cols-2">
                     <x-ui.input.text
@@ -1005,7 +1007,7 @@
                     />
                 </div>
 
-                <x-turnstile error-bag="demoRequest" />
+                <x-turnstile error-bag="demoRequest" action="demo_request" />
 
                 <div class="mt-6 flex flex-col gap-3 border-t border-slate-950/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-sm leading-6 text-slate-500">Your submission is saved in our database and sent to our Telegram sales channel.</p>

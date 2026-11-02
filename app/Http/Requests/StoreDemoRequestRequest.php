@@ -3,7 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Rules\Turnstile;
+use Closure;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Crypt;
 
 class StoreDemoRequestRequest extends FormRequest
 {
@@ -17,7 +20,19 @@ class StoreDemoRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cf-turnstile-response' => ['bail', 'required', 'string', 'max:2048', new Turnstile],
+            'cf-turnstile-response' => ['bail', 'required', 'string', 'max:2048', new Turnstile('demo_request')],
+            'website' => ['prohibited'],
+            'form_token' => ['bail', 'required', 'string', function (string $attribute, mixed $value, Closure $fail): void {
+                try {
+                    $payload = explode('|', Crypt::decryptString($value));
+                    $age = now()->timestamp - (int) ($payload[1] ?? 0);
+                    if (count($payload) !== 2 || ! hash_equals(hash('sha256', $this->session()->getId()), $payload[0]) || $age < 3 || $age > 7200) {
+                        $fail('Please refresh this page, take a moment to complete the form, and try again.');
+                    }
+                } catch (DecryptException) {
+                    $fail('Please refresh this page and try again.');
+                }
+            }],
             'requested_plan' => ['required', 'string', 'max:255'],
             'business_name' => ['required', 'string', 'max:255'],
             'contact_name' => ['required', 'string', 'max:255'],
@@ -37,6 +52,8 @@ class StoreDemoRequestRequest extends FormRequest
     {
         return [
             'cf-turnstile-response.required' => 'Please complete the CAPTCHA verification.',
+            'website.prohibited' => 'Your submission could not be accepted.',
+            'form_token.required' => 'Please refresh this page and try again.',
             'requested_plan.required' => 'Please choose the plan you want a demo for.',
             'business_name.required' => 'Please enter your business name.',
             'contact_name.required' => 'Please enter the best contact person.',

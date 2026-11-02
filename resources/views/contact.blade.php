@@ -135,7 +135,7 @@
                         />
                     </div>
 
-                <x-turnstile error-bag="contactInquiry" />
+                <x-turnstile error-bag="contactInquiry" action="contact" />
 
                     <div class="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
                         <p class="text-sm leading-6 text-slate-600">We usually respond with the right next step instead of a generic message.</p>

@@ -1,8 +1,8 @@
-@props(['errorBag'])
+@props(['errorBag', 'action' => 'contact'])
 
 <div class="mt-5">
     @if (config('services.turnstile.site_key'))
-        <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-size="flexible" data-theme="light"></div>
+        <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-action="{{ $action }}" data-size="flexible" data-theme="light"></div>
         <noscript><p role="alert">Please enable JavaScript to complete CAPTCHA verification.</p></noscript>
         @once
             @push('scripts')

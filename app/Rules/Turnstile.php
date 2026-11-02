@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Http;
 
 class Turnstile implements ValidationRule
 {
+    public function __construct(private readonly string $expectedAction = 'contact') {}
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! config('services.turnstile.secret_key') || ! config('services.turnstile.site_key')) {
@@ -26,7 +28,13 @@ class Turnstile implements ValidationRule
                 ],
             );
 
-            if (! $response->successful() || $response->json('success') !== true) {
+            $hostname = strtolower((string) $response->json('hostname'));
+            $hostnames = array_map('strtolower', config('services.turnstile.hostnames', []));
+
+            if (! $response->successful()
+                || $response->json('success') !== true
+                || ! in_array($hostname, $hostnames, true)
+                || $response->json('action') !== $this->expectedAction) {
                 $fail('Verification failed or expired. Please complete the CAPTCHA again.');
             }
         } catch (ConnectionException) {
