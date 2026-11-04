@@ -57,16 +57,17 @@
                     </p>
 
                     <div class="mt-9 flex flex-col gap-3 sm:flex-row">
-                        <a href="#guided-setup" class="inline-flex items-center justify-center rounded-xl bg-[#f5c542] px-6 py-3.5 font-semibold text-[#17211f] ring-1 ring-[#17211f]/10 transition hover:bg-[#ffd75c] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 motion-reduce:transition-none">
-                            Book a guided setup
+                        <a href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-xl bg-[#f5c542] px-6 py-3.5 font-semibold text-[#17211f] ring-1 ring-[#17211f]/10 transition hover:bg-[#ffd75c] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 motion-reduce:transition-none">
+                            Try SkyBase
                             <span class="ml-2" aria-hidden="true">→</span>
                         </a>
-                        <a href="#pricing" class="inline-flex items-center justify-center rounded-xl border border-[#0d2f35]/20 bg-white px-6 py-3.5 font-semibold text-[#0d2f35] transition hover:border-[#0d2f35]/40 focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 motion-reduce:transition-none">
-                            See pricing
+                        <a href="#guided-setup" class="inline-flex items-center justify-center rounded-xl border border-[#0d2f35]/20 bg-white px-6 py-3.5 font-semibold text-[#0d2f35] transition hover:border-[#0d2f35]/40 focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 motion-reduce:transition-none">
+                            Book a guided setup
                         </a>
                     </div>
 
-                    <p class="mt-4 text-sm font-medium text-[#52605d]">Free for up to 40 subscribers.</p>
+                    <p class="mt-4 text-sm font-medium text-[#52605d]">14-day trial. No credit card required. Free plan available for up to 40 subscribers.</p>
+                    <p class="mt-2 text-sm text-[#52605d]">Explore on your own, or let us help you get started.</p>
                 </div>
 
                 <div class="overflow-hidden rounded-2xl border border-[#17211f]/15 bg-white shadow-[0_24px_70px_rgba(23,33,31,0.12)]">

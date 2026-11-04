@@ -5,7 +5,6 @@
     $isPricingPage = request()->is('pricing');
     $isContactPage = request()->is('contact');
     $isChangelogPage = request()->is('changelog');
-    $guidedSetupUrl = $isHomePage ? '#guided-setup' : url('/#guided-setup');
 
     $navigationLinks = [
         ['label' => 'Features', 'url' => url('/features'), 'active' => $isFeaturesPage],
@@ -77,7 +76,7 @@
 
                 <div class="flex items-center gap-2">
                     <a href="{{ auth()->check() ? route('home') : route('auth.login') }}" class="hidden px-3 py-2.5 text-sm font-semibold text-[#52605d] transition hover:text-[#0d2f35] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 lg:inline-flex motion-reduce:transition-none">{{ auth()->check() ? 'Workspace' : 'Log in' }}</a>
-                    <a href="{{ $guidedSetupUrl }}" class="hidden rounded-xl bg-[#f5c542] px-5 py-3 text-sm font-semibold text-[#17211f] ring-1 ring-[#17211f]/10 transition hover:bg-[#ffd75c] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 sm:inline-flex motion-reduce:transition-none">Book a guided setup</a>
+                    <a href="{{ route('auth.register') }}" class="inline-flex rounded-xl bg-[#f5c542] px-5 py-3 text-sm font-semibold text-[#17211f] ring-1 ring-[#17211f]/10 transition hover:bg-[#ffd75c] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 motion-reduce:transition-none">Try SkyBase</a>
                     <button
                         type="button"
                         class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[#17211f]/15 bg-white text-[#17211f] transition hover:border-[#17211f]/30 focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-2 lg:hidden motion-reduce:transition-none"
@@ -127,7 +126,7 @@
                     </div>
                     <div class="mt-3 grid grid-cols-2 gap-3 border-t border-[#17211f]/10 pt-3">
                         <a x-on:click="mobileMenuOpen = false" href="{{ auth()->check() ? route('home') : route('auth.login') }}" class="inline-flex items-center justify-center rounded-xl border border-[#17211f]/15 px-4 py-3 text-sm font-semibold text-[#17211f]">{{ auth()->check() ? 'Workspace' : 'Log in' }}</a>
-                        <a x-on:click="mobileMenuOpen = false" href="{{ $guidedSetupUrl }}" class="inline-flex items-center justify-center rounded-xl bg-[#f5c542] px-4 py-3 text-center text-sm font-semibold text-[#17211f]">Guided setup</a>
+                        <a x-on:click="mobileMenuOpen = false" href="{{ route('auth.register') }}" class="inline-flex items-center justify-center rounded-xl bg-[#f5c542] px-4 py-3 text-center text-sm font-semibold text-[#17211f]">Try SkyBase</a>
                     </div>
                 </div>
             </div>

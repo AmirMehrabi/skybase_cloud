@@ -20,6 +20,10 @@ class MarketingTrustContentTest extends TestCase
         $response->assertSee('Abbie Barlowe');
         $response->assertSee('Ultech Solutions');
         $response->assertSee('Capable where it matters. Quiet everywhere else.');
+        $response->assertSee('Try SkyBase');
+        $response->assertSee('href="'.route('auth.register').'"', false);
+        $response->assertSee('14-day trial. No credit card required. Free plan available for up to 40 subscribers.');
+        $response->assertSee('Explore on your own, or let us help you get started.');
         $response->assertSee('Book a guided setup');
         $response->assertSee('Book my guided setup');
         $response->assertDontSee('Illustrative workspace');

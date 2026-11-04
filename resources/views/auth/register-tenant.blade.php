@@ -17,6 +17,7 @@
     <div class="text-center mb-8">
         <h2 class="text-2xl font-bold text-slate-950">Create Your Free Account</h2>
         <p class="mt-1 text-slate-600">14-day trial. No credit card required.</p>
+        <p class="mt-2 text-sm text-slate-600">Free plan available for up to 40 subscribers.</p>
     </div>
 
     <form method="POST" action="{{ route('auth.register.store') }}" @submit="loading = true">
