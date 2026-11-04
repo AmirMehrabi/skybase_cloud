@@ -21,6 +21,10 @@
 
     <form method="POST" action="{{ route('auth.register.store') }}" @submit="loading = true">
         @csrf
+        <input type="hidden" name="form_token" value="{{ Illuminate\Support\Facades\Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->timestamp) }}">
+        <div class="absolute -left-[10000px]" aria-hidden="true"><x-ui.input.text name="website" label="" tabindex="-1" autocomplete="off" /></div>
+
+        <x-turnstile error-bag="default" action="signup" />
 
         <x-input.text
             id="company_name"

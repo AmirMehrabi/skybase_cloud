@@ -162,7 +162,7 @@ Route::get('/branding-assets/{asset}', BrandingAssetController::class)->name('br
 // Authentication Routes (Guest only)
 Route::middleware(['guest'])->prefix('auth')->name('auth.')->group(function () {
     Route::get('/register', [TenantRegistrationController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [TenantRegistrationController::class, 'register'])->middleware('throttle:public-forms')->name('register.store');
+    Route::post('/register', [TenantRegistrationController::class, 'register'])->middleware('throttle:cloud-signups')->name('register.store');
     Route::get('/login', [TenantLoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [TenantLoginController::class, 'login'])->middleware('throttle:login')->name('login.store');
 });

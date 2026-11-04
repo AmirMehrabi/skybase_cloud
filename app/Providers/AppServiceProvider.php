@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\CloudSignupVerified;
 use App\Models\IpAddress;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
@@ -14,6 +15,7 @@ use App\Services\TenantNotificationService;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        Event::listen(Verified::class, CloudSignupVerified::class);
         Event::listen('eloquent.updated: '.Subscription::class, function (Subscription $subscription): void {
             $event = $subscription->wasChanged('status') && $subscription->status === 'cancelled' ? 'subscription.cancelled' : ($subscription->wasChanged('plan_id') ? 'subscription.plan_changed' : null);
             if ($event) {
@@ -81,6 +84,11 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(3)->by('public-form-ip-minute:'.$request->ip()),
             Limit::perHour(15)->by('public-form-ip-hour:'.$request->ip()),
             Limit::perHour(5)->by('public-form-email:'.hash('sha256', strtolower((string) $request->input('email')))),
+        ]);
+        RateLimiter::for('cloud-signups', fn (Request $request): array => [
+            Limit::perMinute(2)->by('cloud-signup-ip-minute:'.$request->ip()),
+            Limit::perHour(5)->by('cloud-signup-ip-hour:'.$request->ip()),
+            Limit::perDay(3)->by('cloud-signup-email:'.hash('sha256', strtolower((string) $request->input('email')))),
         ]);
         RateLimiter::for('sensitive-actions', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->user()?->id.'|'.$request->ip()));
         foreach ([Login::class, Failed::class, Logout::class] as $event) {

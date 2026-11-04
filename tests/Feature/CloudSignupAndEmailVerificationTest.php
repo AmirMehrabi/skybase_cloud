@@ -10,6 +10,8 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
@@ -26,13 +28,17 @@ class CloudSignupAndEmailVerificationTest extends TestCase
         config([
             'app.cloud.enabled' => true,
             'contact.recipients' => ['alerts@skybase.test', 'founder@skybase.test'],
+            'services.turnstile.site_key' => 'test-site',
+            'services.turnstile.secret_key' => 'test-secret',
+            'services.turnstile.hostnames' => ['skybase.app'],
         ]);
+        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true, 'hostname' => 'skybase.app', 'action' => 'signup'])]);
         Mail::fake();
         Notification::fake();
         Bus::fake([SendCloudSignupTelegram::class]);
     }
 
-    public function test_cloud_signup_requires_email_verification_and_notifies_the_team(): void
+    public function test_cloud_signup_requires_email_verification_before_notifying_the_team(): void
     {
         $response = $this->post(route('auth.register.store'), $this->registrationPayload());
 
@@ -46,15 +52,8 @@ class CloudSignupAndEmailVerificationTest extends TestCase
         $this->assertAuthenticatedAs($user);
 
         Notification::assertSentTo($user, VerifyEmail::class);
-        Mail::assertQueuedCount(2);
-        foreach (config('contact.recipients') as $recipient) {
-            Mail::assertQueued(CloudSignupReceived::class, fn (CloudSignupReceived $mail): bool => $mail->hasTo($recipient)
-                && $mail->signupDetails['business_name'] === 'Clear Sky Fiber'
-                && $mail->signupDetails['phone'] === '+33 7 58 35 14 73');
-        }
-        Bus::assertDispatched(SendCloudSignupTelegram::class, fn (SendCloudSignupTelegram $job): bool => $job->signupDetails['email'] === 'jane@example.com'
-            && $job->signupDetails['business_name'] === 'Clear Sky Fiber'
-            && $job->queue === 'notifications');
+        Mail::assertNothingQueued();
+        Bus::assertNotDispatched(SendCloudSignupTelegram::class);
 
         $this->assertDatabaseHas('users', [
             'email' => 'jane@example.com',
@@ -92,6 +91,14 @@ class CloudSignupAndEmailVerificationTest extends TestCase
             ->assertRedirect(route('dashboard'));
 
         $this->assertTrue($user->hasVerifiedEmail());
+        foreach (config('contact.recipients') as $recipient) {
+            Mail::assertQueued(CloudSignupReceived::class, fn (CloudSignupReceived $mail): bool => $mail->hasTo($recipient)
+                && $mail->signupDetails['business_name'] === 'Clear Sky Fiber'
+                && $mail->signupDetails['phone'] === '+33 7 58 35 14 73');
+        }
+        Bus::assertDispatched(SendCloudSignupTelegram::class, fn (SendCloudSignupTelegram $job): bool => $job->signupDetails['email'] === 'jane@example.com'
+            && $job->signupDetails['business_name'] === 'Clear Sky Fiber'
+            && $job->queue === 'notifications');
         $this->assertDatabaseHas('users', [
             'id' => $user->getKey(),
             'email_verified_at' => $user->email_verified_at,
@@ -128,6 +135,9 @@ class CloudSignupAndEmailVerificationTest extends TestCase
     private function registrationPayload(): array
     {
         return [
+            'cf-turnstile-response' => 'test-token',
+            'website' => '',
+            'form_token' => Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->subSeconds(4)->timestamp),
             'company_name' => 'Clear Sky Fiber',
             'owner_name' => 'Jane Doe',
             'email' => 'jane@example.com',
