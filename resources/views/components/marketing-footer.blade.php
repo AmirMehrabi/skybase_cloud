@@ -1,41 +1,63 @@
+@php
+    $footerSections = [
+        'Product' => [
+            ['route' => 'features', 'label' => 'Features'],
+            ['route' => 'pricing', 'label' => 'Pricing'],
+            ['route' => 'changelog', 'label' => 'Changelog'],
+            ['route' => 'auth.register', 'label' => 'Start free'],
+        ],
+        'Solutions' => [
+            ['route' => 'seo.isp-crm', 'label' => 'ISP CRM'],
+            ['route' => 'seo.wisp-crm', 'label' => 'WISP CRM'],
+            ['route' => 'seo.wisp-management-software', 'label' => 'WISP management software'],
+            ['route' => 'seo.isp-billing-software', 'label' => 'ISP billing software'],
+            ['route' => 'seo.mikrotik-isp-software', 'label' => 'MikroTik ISP software'],
+        ],
+        'Guides' => [
+            ['route' => 'guide', 'label' => 'First subscription guide'],
+            ['route' => 'guides.choosing-isp-crm', 'label' => 'Choosing an ISP CRM'],
+            ['route' => 'guides.isp-software-migration', 'label' => 'Migration checklist'],
+            ['route' => 'guides.mikrotik-billing', 'label' => 'MikroTik billing guide'],
+        ],
+        'Compare' => [
+            ['route' => 'alternatives.visp', 'label' => 'Visp alternative'],
+            ['route' => 'alternatives.splynx', 'label' => 'Splynx alternative'],
+            ['route' => 'alternatives.sonar', 'label' => 'Sonar alternative'],
+            ['route' => 'alternatives.powercode', 'label' => 'Powercode alternative'],
+        ],
+    ];
+@endphp
+
 <footer class="border-t border-white/10 bg-[#17211f] text-white">
-        <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1fr_auto_auto] lg:px-8">
-            <div>
-                <a href="{{ route('home') }}" class="inline-flex focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-4 focus:ring-offset-[#17211f]" aria-label="SkyBase Cloud home">
-                    <img src="{{ asset('assets/images/logo/logo-white.png') }}" width="300" height="75" loading="lazy" decoding="async" alt="SkyBase Cloud" class="h-8 w-auto">
-                </a>
-                <p class="mt-4 max-w-sm text-sm leading-6 text-white/60">Straightforward ISP operations for MikroTik networks.</p>
-            </div>
-
-            <div class="space-y-2 text-sm">
-                <p class="font-semibold text-white">Product</p>
-                <a href="{{ route('guide') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">First subscription guide</a>
-                <a href="{{ route('features') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Features</a>
-                <a href="{{ route('seo.wisp-management-software') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">WISP management software</a>
-                <a href="{{ route('seo.wisp-crm') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">WISP CRM</a>
-                <a href="{{ route('seo.isp-crm') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">ISP CRM</a>
-                <a href="{{ route('seo.isp-billing-software') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">ISP billing software</a>
-                <a href="{{ route('seo.mikrotik-isp-software') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">MikroTik ISP software</a>
-                <a href="{{ route('pricing') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Pricing</a>
-                <a href="{{ route('changelog') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Changelog</a>
-                <a href="{{ route('auth.register') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Start free</a>
-            </div>
-
-            <div class="space-y-2 text-sm">
-                <p class="font-semibold text-white">Talk to us</p>
-                <a href="{{ route('contact.show') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Contact</a>
-                <a href="{{ route('alternatives.visp') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Visp alternative</a>
-                <a href="{{ route('alternatives.splynx') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Splynx alternative</a>
-                <a href="{{ route('alternatives.sonar') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Sonar alternative</a>
-                <a href="{{ route('alternatives.powercode') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Powercode alternative</a>
-                <a href="{{ route('guides.choosing-isp-crm') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Choosing an ISP CRM</a>
-                <a href="{{ route('guides.isp-software-migration') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Migration checklist</a>
-                <a href="{{ route('guides.mikrotik-billing') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">MikroTik billing guide</a>
+    <div class="mx-auto grid max-w-6xl gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[0.8fr_2fr] lg:px-8 lg:py-16">
+        <div>
+            <a href="{{ route('home') }}" class="inline-flex rounded-sm focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-4 focus:ring-offset-[#17211f]" aria-label="SkyBase Cloud home">
+                <img src="{{ asset('assets/images/logo/logo-white.png') }}" width="300" height="75" loading="lazy" decoding="async" alt="SkyBase Cloud" class="h-8 w-auto">
+            </a>
+            <p class="mt-4 max-w-sm text-sm leading-6 text-white/70">Straightforward ISP operations for MikroTik networks.</p>
+            <div class="mt-6 flex flex-col items-start gap-3 text-sm">
+                <a href="{{ route('contact.show') }}" class="rounded-sm font-semibold text-white underline decoration-white/30 underline-offset-4 transition hover:decoration-white focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-4 focus:ring-offset-[#17211f] motion-reduce:transition-none">Contact us</a>
+                <a href="mailto:support@skybase.app" class="rounded-sm text-white/70 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-4 focus:ring-offset-[#17211f] motion-reduce:transition-none">support@skybase.app</a>
             </div>
         </div>
 
-        <div class="mx-auto flex max-w-6xl flex-col justify-between gap-3 border-t border-white/10 px-4 py-6 text-xs text-white/50 sm:flex-row sm:px-6 lg:px-8">
-            <p>&copy; {{ now()->year }} SkyBase Cloud</p>
-            <a href="mailto:support@skybase.app" class="transition hover:text-white motion-reduce:transition-none">support@skybase.app</a>
-        </div>
-    </footer>
+        <nav aria-label="Footer navigation" class="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach($footerSections as $sectionLabel => $sectionLinks)
+                <section aria-labelledby="footer-{{ Str::slug($sectionLabel) }}">
+                    <h2 id="footer-{{ Str::slug($sectionLabel) }}" class="text-sm font-semibold text-white">{{ $sectionLabel }}</h2>
+                    <ul class="mt-4 flex flex-col gap-3 text-sm">
+                        @foreach($sectionLinks as $sectionLink)
+                            <li>
+                                <a href="{{ route($sectionLink['route']) }}" class="inline-block rounded-sm leading-6 text-white/70 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-4 focus:ring-offset-[#17211f] motion-reduce:transition-none">{{ $sectionLink['label'] }}</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endforeach
+        </nav>
+    </div>
+
+    <div class="mx-auto max-w-6xl border-t border-white/10 px-4 py-6 text-xs text-white/60 sm:px-6 lg:px-8">
+        <p>&copy; {{ now()->year }} SkyBase Cloud</p>
+    </div>
+</footer>
