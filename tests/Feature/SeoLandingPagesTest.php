@@ -9,11 +9,11 @@ class SeoLandingPagesTest extends TestCase
     public function test_search_landing_pages_are_public_and_self_canonicalize(): void
     {
         $pages = [
-            'seo.wisp-management-software' => 'Your WISP has enough moving parts. Keep the work together.',
-            'seo.wisp-crm' => 'The customer is on the phone. You have the whole story.',
-            'seo.mikrotik-isp-software' => 'Your MikroTik network. Your customers. Finally on the same page.',
-            'seo.isp-crm' => 'One place to pick up where the last conversation left off.',
-            'seo.isp-billing-software' => 'Billing day should feel like an ordinary day.',
+            'seo.wisp-management-software' => 'WISP management software for subscribers, billing, and support',
+            'seo.wisp-crm' => 'WISP CRM for subscriber locations, installations, and support',
+            'seo.mikrotik-isp-software' => 'MikroTik ISP software for RADIUS, PPPoE, and billing',
+            'seo.isp-crm' => 'ISP CRM for customer accounts, subscriptions, and billing',
+            'seo.isp-billing-software' => 'ISP billing software for recurring invoices and payments',
             'guides.choosing-isp-crm' => 'Bring a normal working day to the demo.',
             'guides.isp-software-migration' => 'Changing software is a project. Give it a plan.',
             'guides.mikrotik-billing' => 'An unpaid invoice and a broken connection need different answers.',
@@ -37,11 +37,38 @@ class SeoLandingPagesTest extends TestCase
         $response->assertOk();
         $response->assertSee('Run your ISP.');
         $response->assertSee('Not your software.');
-        $response->assertSee('WISP & ISP Management for MikroTik Operators');
+        $response->assertSee('ISP & WISP CRM Software for MikroTik Networks | SkyBase');
         $response->assertSee('<link rel="canonical" href="'.route('home').'">', false);
         $response->assertSee(route('seo.wisp-management-software', absolute: false));
         $response->assertSee(route('seo.wisp-crm', absolute: false));
         $response->assertSee(route('seo.mikrotik-isp-software', absolute: false));
+    }
+
+    public function test_homepage_explains_product_fit_and_links_to_workflows(): void
+    {
+        $response = $this->get(route('home'));
+
+        $response->assertOk();
+        $response->assertSee('ISP and WISP CRM for MikroTik operators');
+        $response->assertSee('How do the 14-day trial and Free plan differ?');
+        $response->assertSee('Will my payment provider and currency work?');
+        $response->assertSee(route('guide'), false);
+        $response->assertSee(route('guides.mikrotik-billing'), false);
+        $response->assertSee(route('guides.isp-software-migration'), false);
+        $response->assertDontSee('<meta name="keywords"', false);
+    }
+
+    public function test_visp_comparison_is_public_sourced_and_self_canonical(): void
+    {
+        $response = $this->get(route('alternatives.visp'));
+
+        $response->assertOk();
+        $response->assertSee('SkyBase vs Visp for ISP customer management and billing');
+        $response->assertSee('<link rel="canonical" href="'.route('alternatives.visp').'">', false);
+        $response->assertSee('https://visp.net/', false);
+        $response->assertSee('November 7, 2026');
+        $response->assertSee('not affiliated with Visp');
+        $response->assertSee('Do not assume feature parity.');
     }
 
     public function test_sitemap_contains_only_public_marketing_pages(): void
@@ -54,7 +81,7 @@ class SeoLandingPagesTest extends TestCase
         $response->assertSee(route('seo.wisp-management-software'), false);
         $response->assertSee(route('seo.wisp-crm'), false);
         $response->assertSee(route('seo.mikrotik-isp-software'), false);
-        foreach (['seo.isp-crm', 'seo.isp-billing-software', 'alternatives.powercode', 'guides.choosing-isp-crm', 'guides.isp-software-migration', 'guides.mikrotik-billing'] as $routeName) {
+        foreach (['seo.isp-crm', 'seo.isp-billing-software', 'alternatives.visp', 'alternatives.powercode', 'guides.choosing-isp-crm', 'guides.isp-software-migration', 'guides.mikrotik-billing'] as $routeName) {
             $response->assertSee(route($routeName), false);
         }
 
@@ -106,7 +133,7 @@ class SeoLandingPagesTest extends TestCase
     {
         $response = $this->get(route('home'));
 
-        foreach (['seo.isp-crm', 'seo.isp-billing-software', 'alternatives.powercode', 'guides.choosing-isp-crm', 'guides.isp-software-migration', 'guides.mikrotik-billing'] as $routeName) {
+        foreach (['seo.isp-crm', 'seo.isp-billing-software', 'alternatives.visp', 'alternatives.powercode', 'guides.choosing-isp-crm', 'guides.isp-software-migration', 'guides.mikrotik-billing'] as $routeName) {
             $response->assertSee(route($routeName), false);
         }
     }

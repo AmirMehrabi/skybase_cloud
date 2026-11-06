@@ -15,11 +15,13 @@ class MarketingTrustContentTest extends TestCase
         $response->assertSee('Not your software.');
         $response->assertSee('For small and growing MikroTik ISPs');
         $response->assertSee('Free forever');
-        $response->assertSee('Representative SkyBase dashboard');
+        $response->assertSee(asset('images/product/customer.webp'), false);
+        $response->assertSee(asset('images/product/billing.webp'), false);
+        $response->assertSee('Private details have been redacted.');
         $response->assertSee('A note from the founder');
         $response->assertSee('Abbie Barlowe');
         $response->assertSee('Ultech Solutions');
-        $response->assertSee('Capable where it matters. Quiet everywhere else.');
+        $response->assertSee('Customer management, billing, and network operations for ISPs');
         $response->assertSee('Try SkyBase');
         $response->assertSee('href="'.route('auth.register').'"', false);
         $response->assertSee('14-day trial. No credit card required. Free plan available for up to 40 subscribers.');

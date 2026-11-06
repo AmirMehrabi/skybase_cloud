@@ -17,12 +17,12 @@ class MarketingLeadSubmissionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.turnstile.site_key' => 'test-site', 'services.turnstile.secret_key' => 'test-secret']);
+        config(['services.turnstile.site_key' => 'test-site', 'services.turnstile.secret_key' => 'test-secret', 'services.turnstile.hostnames' => ['localhost']]);
     }
 
     public function test_contact_inquiry_is_saved_to_the_database(): void
     {
-        Http::fake(['*' => Http::response(['ok' => true, 'success' => true])]);
+        Http::fake(['*' => Http::response(['ok' => true, 'success' => true, 'hostname' => 'localhost', 'action' => 'contact'])]);
         Mail::fake();
         Bus::fake([SendContactInquiryTelegram::class]);
         $this->get(route('contact.show'));
@@ -53,10 +53,15 @@ class MarketingLeadSubmissionTest extends TestCase
 
     public function test_demo_request_is_saved_to_the_database(): void
     {
-        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true]), '*' => Http::response()]);
+        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true, 'hostname' => 'localhost', 'action' => 'demo_request']), '*' => Http::response()]);
+
+        $this->get(route('pricing'));
+        $this->withCookie(config('session.cookie'), session()->getId());
+        $token = Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->subSeconds(4)->timestamp);
 
         $response = $this->post(route('demo-requests.store'), [
             'cf-turnstile-response' => 'test-token',
+            'form_token' => $token,
             'requested_plan' => 'Standard',
             'business_name' => 'SkyNet Fiber',
             'contact_name' => 'Jane Doe',
@@ -84,10 +89,15 @@ class MarketingLeadSubmissionTest extends TestCase
 
     public function test_homepage_guided_setup_request_returns_to_the_form(): void
     {
-        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true]), '*' => Http::response()]);
+        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true, 'hostname' => 'localhost', 'action' => 'demo_request']), '*' => Http::response()]);
+
+        $this->get(route('home'));
+        $this->withCookie(config('session.cookie'), session()->getId());
+        $token = Crypt::encryptString(hash('sha256', session()->getId()).'|'.now()->subSeconds(4)->timestamp);
 
         $response = $this->post(route('demo-requests.store'), [
             'cf-turnstile-response' => 'test-token',
+            'form_token' => $token,
             'requested_plan' => 'Guided setup from homepage',
             'business_name' => 'Clear Sky Fiber',
             'contact_name' => 'Jane Doe',
@@ -112,7 +122,7 @@ class MarketingLeadSubmissionTest extends TestCase
 
     public function test_homepage_guided_setup_requires_a_phone_number(): void
     {
-        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true]), '*' => Http::response()]);
+        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true, 'hostname' => 'localhost', 'action' => 'demo_request']), '*' => Http::response()]);
         $payload = [
             'cf-turnstile-response' => 'test-token',
             'requested_plan' => 'Guided setup from homepage',

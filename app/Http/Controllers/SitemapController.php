@@ -22,6 +22,7 @@ class SitemapController extends Controller
             'guides.isp-software-migration',
             'guides.mikrotik-billing',
             'alternatives.powercode',
+            'alternatives.visp',
             'alternatives.splynx',
             'alternatives.sonar',
             'changelog',

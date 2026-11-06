@@ -109,6 +109,11 @@ class PagesController extends Controller
         return $this->alternativePage('splynx');
     }
 
+    public function vispAlternative(): View|RedirectResponse
+    {
+        return $this->alternativePage('visp');
+    }
+
     public function sonarAlternative(): View|RedirectResponse
     {
         return $this->alternativePage('sonar');
@@ -156,7 +161,7 @@ class PagesController extends Controller
                 'title' => 'WISP Management Software for MikroTik ISPs | SkyBase',
                 'meta_description' => 'Manage subscribers, billing, MikroTik routers, RADIUS, support, and network operations with straightforward cloud WISP management software.',
                 'eyebrow' => 'WISP management software',
-                'headline' => 'Your WISP has enough moving parts. Keep the work together.',
+                'headline' => 'WISP management software for subscribers, billing, and support',
                 'intro' => 'A new installation. An overdue invoice. A customer who needs help getting back online. SkyBase keeps customers, billing, MikroTik services, and support together, so the next job is easier to pick up.',
                 'summary_title' => 'Less time piecing things together.',
                 'summary' => 'General-purpose CRMs understand contacts but not subscriber services, routers, sessions, IP pools, or service status. SkyBase connects the customer and network sides of the business in one operating workflow.',
@@ -183,19 +188,19 @@ class PagesController extends Controller
                 'title' => 'WISP CRM & Subscriber Management Software | SkyBase',
                 'meta_description' => 'Keep WISP customers, subscriptions, billing history, support, usage, and service status together in a CRM designed for internet providers.',
                 'eyebrow' => 'WISP CRM',
-                'headline' => 'The customer is on the phone. You have the whole story.',
-                'intro' => 'A customer calls about their connection. Is the service active? Is an invoice unpaid? Has someone already opened a ticket? SkyBase keeps those answers with the customer, so your team can get on with helping.',
+                'headline' => 'WISP CRM for subscriber locations, installations, and support',
+                'intro' => 'A wireless installation starts with a service location and continues through activation, billing, and support. SkyBase connects subscriber records to appointments, work orders, MikroTik services, and account history so your WISP team can follow the job from the first visit to ongoing service.',
                 'summary_title' => 'Keep the details. Spare the customer the repetition.',
                 'summary' => 'A WISP customer relationship includes a physical location, an active service, network credentials, recurring billing, support history, and often on-site work. SkyBase keeps those relationships visible without forcing teams to reconstruct them from separate tools.',
                 'highlights' => [
                     ['title' => 'Complete subscriber profiles', 'copy' => 'See contact details, service locations, plans, subscription state, balances, usage, and history together.'],
-                    ['title' => 'Clear team ownership', 'copy' => 'Use roles, groups, assignments, notes, tickets, and work orders to keep responsibility and next actions visible.'],
+                    ['title' => 'Installation and field work', 'copy' => 'Coordinate appointments, assigned technicians, work orders, and materials for subscriber installations. Keep notes with the customer for the next visit.'],
                     ['title' => 'Billing context', 'copy' => 'Review invoices, payment status, credit, and service information while speaking with the customer.'],
                     ['title' => 'Customer self-service', 'copy' => 'Give subscribers a portal for service details, invoices, notifications, profile updates, and support requests.'],
                 ],
                 'workflow_title' => 'A customer should not have to explain everything twice.',
                 'workflow' => [
-                    ['number' => '01', 'title' => 'Sales captures the service', 'copy' => 'Record the customer, location, selected plan, and the information required for activation.'],
+                    ['number' => '01', 'title' => 'Plan the installation', 'copy' => 'Record the subscriber location and selected plan. Arrange the appointment and work order so the technician has the service details before the visit.'],
                     ['number' => '02', 'title' => 'Operations activates it', 'copy' => 'Connect the subscription to its site, router, credentials, IP assignment, and service state.'],
                     ['number' => '03', 'title' => 'Support sees the full picture', 'copy' => 'Handle questions with billing, connection, usage, ticket, and previous activity context in view.'],
                 ],
@@ -210,7 +215,7 @@ class PagesController extends Controller
                 'title' => 'MikroTik ISP Software for RADIUS, PPPoE & Billing | SkyBase',
                 'meta_description' => 'Connect MikroTik routers, RADIUS, PPPoE subscribers, IP pools, billing, monitoring, and support in cloud ISP management software.',
                 'eyebrow' => 'MikroTik ISP software',
-                'headline' => 'Your MikroTik network. Your customers. Finally on the same page.',
+                'headline' => 'MikroTik ISP software for RADIUS, PPPoE, and billing',
                 'intro' => 'A session tells you someone is connected. A customer record tells you who they are and what they need. SkyBase brings both together: MikroTik routers, RADIUS access, subscriptions, billing, and support.',
                 'summary_title' => 'Know which service you are looking after.',
                 'summary' => 'Network tools can show sessions and device state but rarely explain the customer, plan, invoice, or support issue behind them. SkyBase connects those records so teams can understand what changed and take the appropriate action.',
@@ -240,8 +245,8 @@ class PagesController extends Controller
                 'title' => 'ISP CRM Software for Customers, Billing & Support | SkyBase',
                 'meta_description' => 'An ISP CRM that keeps customers, subscriptions, invoices, support, and MikroTik services together. See the product and start free with up to 40 subscribers.',
                 'eyebrow' => 'ISP CRM software',
-                'headline' => 'One place to pick up where the last conversation left off.',
-                'intro' => 'Your billing team knows the balance. Your technicians know the connection. Support needs both. SkyBase gives your internet service provider a shared customer record, with the service and the work attached.',
+                'headline' => 'ISP CRM for customer accounts, subscriptions, and billing',
+                'intro' => 'Manage individual subscribers and business accounts with an ISP CRM that connects each customer to their subscriptions, invoices, payments, and support history. When an account has multiple services, open the relevant subscription to check its plan, router, and service state.',
                 'summary_title' => 'A contact is only the beginning.',
                 'summary' => 'For an ISP, a customer also means subscriptions, service locations, network access, invoices, and support history. SkyBase keeps these connected. Your team can answer a question without asking three colleagues to reconstruct the account.',
                 'highlights' => [
@@ -253,7 +258,7 @@ class PagesController extends Controller
                 'workflow_title' => 'From the first call to the next renewal.',
                 'workflow' => [
                     ['number' => '01', 'title' => 'Record the agreement', 'copy' => 'Create the customer and subscription with the selected plan and billing details.'],
-                    ['number' => '02', 'title' => 'Connect the service', 'copy' => 'Associate network access and the router with the subscription. Check the setup before activation.'],
+                    ['number' => '02', 'title' => 'Manage each subscription', 'copy' => 'Keep each service attached to the customer with its own plan, network assignment, and status. Open the relevant subscription when a business account has more than one connection.'],
                     ['number' => '03', 'title' => 'Keep the history', 'copy' => 'Follow invoices, payments, support requests, and service changes from the same account.'],
                 ],
                 'faqs' => [
@@ -267,7 +272,7 @@ class PagesController extends Controller
                 'title' => 'ISP Billing Software for Recurring Invoices & Payments | SkyBase',
                 'meta_description' => 'Keep ISP invoices, payments, balances, and subscription billing together. Explore recurring billing and overdue service controls for MikroTik ISPs and WISPs.',
                 'eyebrow' => 'ISP billing software',
-                'headline' => 'Billing day should feel like an ordinary day.',
+                'headline' => 'ISP billing software for recurring invoices and payments',
                 'intro' => 'Keep invoices, payments, and subscription billing in one place. SkyBase helps your ISP see what is due, record what has been paid, and follow up with the right customer.',
                 'summary_title' => 'The invoice belongs with the service.',
                 'summary' => 'A balance means more when you can see the subscription behind it. SkyBase connects billing to the customer and service, including billing dates, grace periods, and configured suspension controls. Your team can check the facts before taking action.',
@@ -406,6 +411,38 @@ class PagesController extends Controller
         }
 
         $pages = [
+            'visp' => [
+                'competitor' => 'Visp',
+                'route' => 'alternatives.visp',
+                'title' => 'Visp Alternative for MikroTik ISPs | SkyBase vs Visp',
+                'meta_description' => 'Compare SkyBase and Visp for ISP customer management, billing, and network operations. Review pricing models, integration requirements, and migration checks.',
+                'meta_keywords' => '',
+                'eyebrow' => 'Visp alternative',
+                'headline' => 'SkyBase vs Visp for ISP customer management and billing',
+                'intro' => 'Evaluating a Visp CRM alternative? SkyBase offers customer records, subscriptions, invoices, support, and MikroTik operations in a cloud workspace. Compare your actual billing and network workflows before deciding whether to switch.',
+                'best_for_skybase' => 'Small and growing MikroTik operators looking for a cloud workspace with a free plan for up to 40 subscribers and published subscriber bands.',
+                'best_for_competitor' => 'Operators using Visp billing automation, activation servers, subscriber self-service, or its advertised Preseem and Saisei integrations. Check these dependencies before moving.',
+                'pricing_note' => 'Visp advertises $1.30 per subscriber per month for its 0–3,000 subscriber tier. Its homepage also describes a $500 onboarding deposit that becomes credits after 30 days. Confirm billing minimums, onboarding terms, and required services directly with Visp.',
+                'source_url' => 'https://visp.net/',
+                'source_label' => 'Visp official features and pricing',
+                'cards' => [
+                    ['label' => 'SkyBase Free', 'value' => '$0/month', 'note' => 'Up to 40 subscribers'],
+                    ['label' => 'SkyBase Starter', 'value' => '$69/month', 'note' => 'Up to 150 subscribers'],
+                    ['label' => 'Compare the fit', 'value' => 'Guided setup', 'note' => 'Test your billing and access workflows'],
+                ],
+                'rows' => [
+                    ['feature' => 'Pricing model', 'skybase' => 'Free plan and paid monthly subscriber bands', 'competitor' => 'Published per-subscriber monthly tiers; confirm onboarding terms'],
+                    ['feature' => 'Customer operations', 'skybase' => 'Customers, subscriptions, invoices, payments, tickets, and customer portal', 'competitor' => 'Billing automation, subscriber self-management, and communication services'],
+                    ['feature' => 'Network operations', 'skybase' => 'MikroTik and RADIUS workflows; confirm each required integration', 'competitor' => 'Authentication, provisioning, activation servers, and advertised Preseem and Saisei integrations'],
+                    ['feature' => 'Migration planning', 'skybase' => 'Review exports and test service access and billing before cutover', 'competitor' => 'Identify the exports and automation dependencies in your existing Visp setup'],
+                ],
+                'faqs' => [
+                    ['question' => 'Is this a comparison with Visp.net?', 'answer' => 'Yes. Visp here refers to the ISP software vendor Visp.net, not the general term virtual internet service provider. SkyBase is a separate product and is not affiliated with Visp.'],
+                    ['question' => 'Can SkyBase replace every Visp integration?', 'answer' => 'Do not assume feature parity. List your payment gateways, network integrations, tax requirements, and service enforcement rules. Check each requirement during guided setup.'],
+                    ['question' => 'Can I migrate from Visp to SkyBase?', 'answer' => 'We need to review your available exports, account relationships, balances, and access methods first. Agree on a sample migration and reconciliation checks before committing to a cutover.'],
+                ],
+                'checked_at' => 'November 7, 2026',
+            ],
             'splynx' => [
                 'competitor' => 'Splynx',
                 'route' => 'alternatives.splynx',

@@ -24,6 +24,7 @@
             <div class="space-y-2 text-sm">
                 <p class="font-semibold text-white">Talk to us</p>
                 <a href="{{ route('contact.show') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Contact</a>
+                <a href="{{ route('alternatives.visp') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Visp alternative</a>
                 <a href="{{ route('alternatives.splynx') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Splynx alternative</a>
                 <a href="{{ route('alternatives.sonar') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Sonar alternative</a>
                 <a href="{{ route('alternatives.powercode') }}" class="block text-white/60 transition hover:text-white motion-reduce:transition-none">Powercode alternative</a>

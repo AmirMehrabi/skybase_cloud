@@ -124,6 +124,7 @@ Route::get('/guides/mikrotik-billing', [PagesController::class, 'mikrotikBilling
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Comparison pages
+Route::get('/alternatives/visp', [PagesController::class, 'vispAlternative'])->name('alternatives.visp');
 Route::get('/alternatives/splynx', [PagesController::class, 'splynxAlternative'])->name('alternatives.splynx');
 Route::get('/alternatives/sonar', [PagesController::class, 'sonarAlternative'])->name('alternatives.sonar');
 

@@ -1,9 +1,8 @@
 @extends('layouts.layout')
 
-@section('title', 'SkyBase Cloud | WISP & ISP Management for MikroTik Operators')
-@section('meta_description', 'Straightforward WISP and ISP management software for customers, subscriptions, MikroTik routers, RADIUS, billing, and support. Free for up to 40 subscribers.')
-@section('meta_keywords', 'ISP management software, MikroTik management, RADIUS server, WISP software, ISP billing, PPPoE management')
-@section('og_title', 'SkyBase Cloud - Run Your ISP, Not Your Software')
+@section('title', 'ISP & WISP CRM Software for MikroTik Networks | SkyBase')
+@section('meta_description', 'Manage subscribers, billing, MikroTik routers, RADIUS, and support with SkyBase ISP and WISP CRM software. Free for up to 40 subscribers.')
+@section('og_title', 'ISP & WISP CRM Software for MikroTik Networks | SkyBase')
 @section('og_description', 'Straightforward cloud operations for small and growing MikroTik ISPs, with a free plan and direct founder support.')
 @section('og_url', url('/'))
 @section('body_class', 'bg-[#f7f3ea] text-[#17211f]')
@@ -11,16 +10,22 @@
 @php
     $capabilities = [
         [
-            'title' => 'Customers & subscriptions',
-            'copy' => 'Keep account details, plans, service state, usage, and next actions together.',
+            'title' => 'ISP CRM and subscriber management',
+            'copy' => 'Open a customer record to review subscriptions, service status, invoices, payments, and support history. Give billing and support teams the context they need when a subscriber calls.',
+            'route' => 'seo.isp-crm',
+            'link' => 'Explore ISP CRM',
         ],
         [
-            'title' => 'MikroTik & RADIUS',
-            'copy' => 'Connect routers, authenticate subscribers, provision services, and inspect active sessions.',
+            'title' => 'MikroTik management and RADIUS authentication',
+            'copy' => 'Connect subscriber accounts to their routers and network access. Manage provisioning and inspect active sessions alongside the subscription behind each connection.',
+            'route' => 'seo.mikrotik-isp-software',
+            'link' => 'Explore MikroTik ISP software',
         ],
         [
-            'title' => 'Billing & payments',
-            'copy' => 'Generate invoices, follow payment status, and keep recurring billing work moving.',
+            'title' => 'ISP billing and payment tracking',
+            'copy' => 'Generate invoices, record payments, and follow unpaid balances from the customer account. Keep recurring billing and service information available to the same team.',
+            'route' => 'seo.isp-billing-software',
+            'link' => 'Explore ISP billing',
         ],
         [
             'title' => 'Network operations',
@@ -28,7 +33,9 @@
         ],
         [
             'title' => 'Support & field work',
-            'copy' => 'Track tickets, assignments, appointments, notes, materials, and provisioning work.',
+            'copy' => 'Coordinate wireless installations and follow-up visits with tickets, assignments, appointments, notes, and materials. Keep the work connected to the subscriber and service location.',
+            'route' => 'seo.wisp-crm',
+            'link' => 'Explore WISP CRM',
         ],
         [
             'title' => 'Customer portal',
@@ -49,11 +56,11 @@
             <div class="mx-auto grid max-w-6xl gap-14 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:px-8 lg:py-28">
                 <div>
                     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#145a5a]">For small and growing MikroTik ISPs</p>
-                    <h1 class="mt-5 text-5xl font-bold leading-[0.98] tracking-[-0.055em] text-[#17211f] sm:text-6xl lg:text-7xl">
-                        Run your ISP.<br>Not your software.
+                    <h1 class="mt-5 text-4xl font-bold leading-tight tracking-[-0.035em] text-[#17211f] sm:text-5xl lg:text-6xl">
+                        ISP and WISP CRM for MikroTik operators
                     </h1>
                     <p class="mt-7 max-w-xl text-lg leading-8 text-[#52605d]">
-                        SkyBase keeps customers, subscriptions, routers, billing, and support in one straightforward workspace—so your team can spend less time maintaining systems and more time serving customers.
+                        Manage subscribers, subscriptions, invoices, MikroTik routers, RADIUS authentication, and support in one cloud workspace. SkyBase helps small and growing internet service providers keep customer records connected to the services they deliver.
                     </p>
 
                     <div class="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -67,76 +74,15 @@
                     </div>
 
                     <p class="mt-4 text-sm font-medium text-[#52605d]">14-day trial. No credit card required. Free plan available for up to 40 subscribers.</p>
-                    <p class="mt-2 text-sm text-[#52605d]">Explore on your own, or let us help you get started.</p>
+                    <p class="mt-2 text-sm text-[#52605d]">Run your ISP. Not your software. Explore on your own, or let us help you get started.</p>
                 </div>
 
-                <div class="overflow-hidden rounded-2xl border border-[#17211f]/15 bg-white shadow-[0_24px_70px_rgba(23,33,31,0.12)]">
-                    <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-5">
-                        <div class="flex gap-1.5" aria-hidden="true">
-                            <span class="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
-                            <span class="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
-                            <span class="h-2.5 w-2.5 rounded-full bg-slate-300"></span>
-                        </div>
-                        <p class="text-xs font-semibold text-slate-500">Representative SkyBase dashboard</p>
-                    </div>
-
-                    <div class="grid bg-slate-100 sm:grid-cols-[126px_1fr]">
-                        <aside class="hidden bg-[#0d2f35] p-4 text-white sm:block">
-                            <p class="text-base font-semibold">SkyBase</p>
-                            <div class="mt-8 space-y-2 text-[10px] font-semibold text-teal-50/70">
-                                <p class="rounded-lg bg-white/10 px-3 py-2.5 text-white">Dashboard</p>
-                                <p class="px-3 py-2">Customers</p>
-                                <p class="px-3 py-2">Subscriptions</p>
-                                <p class="px-3 py-2">Routers</p>
-                                <p class="px-3 py-2">Billing</p>
-                                <p class="px-3 py-2">Support</p>
-                            </div>
-                        </aside>
-
-                        <div class="p-3 sm:p-5">
-                            <div class="rounded-xl bg-[#132e37] p-4 text-white">
-                                <p class="text-[10px] uppercase tracking-[0.18em] text-sky-100/70">Tenant dashboard</p>
-                                <div class="mt-2 flex items-end justify-between gap-4">
-                                    <p class="text-xl font-semibold">Today at your ISP</p>
-                                    <span class="rounded-full bg-emerald-400/15 px-2 py-1 text-[9px] font-semibold text-emerald-100">Active</span>
-                                </div>
-                            </div>
-
-                            <div class="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-4">
-                                @foreach([
-                                    ['label' => 'Customers', 'value' => 'In one place'],
-                                    ['label' => 'Subscriptions', 'value' => 'Clear status'],
-                                    ['label' => 'Routers', 'value' => 'Health visible'],
-                                    ['label' => 'Billing', 'value' => 'Follow-up ready'],
-                                ] as $dashboardItem)
-                                    <div class="rounded-xl border border-slate-200 bg-white p-3">
-                                        <p class="text-[9px] font-semibold uppercase tracking-wider text-slate-400">{{ $dashboardItem['label'] }}</p>
-                                        <p class="mt-2 text-base font-semibold text-slate-900 sm:text-lg">{{ $dashboardItem['value'] }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="mt-3 grid gap-3 xl:grid-cols-[1.35fr_0.65fr]">
-                                <div class="rounded-xl border border-slate-200 bg-white p-4">
-                                    <p class="text-xs font-semibold text-slate-800">Recent activity</p>
-                                    <div class="mt-4 space-y-3" aria-hidden="true">
-                                        <div class="h-2 rounded-full bg-slate-100"><div class="h-2 w-4/5 rounded-full bg-sky-500"></div></div>
-                                        <div class="h-2 rounded-full bg-slate-100"><div class="h-2 w-3/5 rounded-full bg-emerald-500"></div></div>
-                                        <div class="h-2 rounded-full bg-slate-100"><div class="h-2 w-2/3 rounded-full bg-amber-400"></div></div>
-                                    </div>
-                                </div>
-                                <div class="rounded-xl border border-slate-200 bg-white p-4">
-                                    <p class="text-xs font-semibold text-slate-800">Router health</p>
-                                    <div class="mt-4 space-y-2 text-[10px]">
-                                        <p class="flex justify-between"><span>Core router</span><span class="text-emerald-600">Online</span></p>
-                                        <p class="flex justify-between"><span>Edge router</span><span class="text-emerald-600">Online</span></p>
-                                        <p class="flex justify-between"><span>IP pools</span><span class="text-slate-500">Visible</span></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <figure class="min-w-0">
+                    <a href="{{ asset('images/product/customer.webp') }}" class="block rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-4" aria-label="Open full-size SkyBase customer workspace screenshot">
+                        <img src="{{ asset('images/product/customer.webp') }}" alt="SkyBase customer record showing service status, subscription access, and tabs for invoices, payments, and tickets. Private details are redacted." width="905" height="605" fetchpriority="high" class="h-auto w-full rounded-2xl border border-[#17211f]/15">
+                    </a>
+                    <figcaption class="mt-4 text-sm leading-6 text-[#52605d]">The SkyBase customer workspace, captured from a working instance. Private details have been redacted. Select the image to see it full size.</figcaption>
+                </figure>
             </div>
         </section>
 
@@ -144,7 +90,7 @@
             <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
                 <div class="max-w-2xl">
                     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#145a5a]">The work in one place</p>
-                    <h2 class="mt-4 text-4xl font-bold tracking-[-0.035em] sm:text-5xl">Capable where it matters. Quiet everywhere else.</h2>
+                    <h2 class="mt-4 text-4xl font-bold tracking-[-0.035em] sm:text-5xl">Customer management, billing, and network operations for ISPs</h2>
                     <p class="mt-5 text-lg leading-8 text-[#52605d]">SkyBase is built around the daily operating work of a MikroTik ISP—not a checklist made for every kind of business.</p>
                 </div>
 
@@ -152,10 +98,30 @@
                     @foreach($capabilities as $capability)
                         <article class="grid gap-3 py-7 md:grid-cols-[0.7fr_1.3fr]">
                             <h3 class="text-2xl font-semibold">{{ $capability['title'] }}</h3>
-                            <p class="leading-7 text-[#52605d]">{{ $capability['copy'] }}</p>
+                            <div>
+                                <p class="leading-7 text-[#52605d]">{{ $capability['copy'] }}</p>
+                                @isset($capability['route'])
+                                    <a href="{{ route($capability['route']) }}" class="mt-3 inline-flex font-semibold text-[#145a5a] underline underline-offset-4">{{ $capability['link'] }} →</a>
+                                @endisset
+                            </div>
                         </article>
                     @endforeach
                 </div>
+            </div>
+        </section>
+
+        <x-product-screenshot image="billing" heading="See invoices and payment status in your ISP billing workspace" caption="Filter invoices by status and date, review amounts, and open the customer account behind a balance." />
+
+        <section class="border-b border-[#17211f]/10">
+            <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+                <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">From a new subscriber to ongoing service</h2>
+                <ol class="mt-8 grid gap-8 md:grid-cols-3">
+                    <li><h3 class="text-xl font-semibold">1. Create the customer</h3><p class="mt-3 leading-7 text-[#52605d]">Record contact details and the service location, then add a subscription with the agreed plan and billing settings.</p></li>
+                    <li><h3 class="text-xl font-semibold">2. Connect the service</h3><p class="mt-3 leading-7 text-[#52605d]">Associate the subscription with its router and network settings. Check authentication and service access before handing over to the customer.</p></li>
+                    <li><h3 class="text-xl font-semibold">3. Manage billing and support</h3><p class="mt-3 leading-7 text-[#52605d]">Follow invoices, payments, and tickets from the customer record so the next person can pick up the work.</p></li>
+                </ol>
+                <p class="mt-8"><a href="{{ route('guide') }}" class="font-semibold text-[#145a5a] underline underline-offset-4">Follow the first subscription guide →</a></p>
+                <p class="mt-4"><a href="{{ route('guides.mikrotik-billing') }}" class="font-semibold text-[#145a5a] underline underline-offset-4">Read the MikroTik billing checklist →</a></p>
             </div>
         </section>
 
@@ -184,7 +150,7 @@
                 <div class="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#145a5a]">Simple cloud pricing</p>
-                        <h2 class="mt-4 max-w-3xl text-4xl font-bold tracking-[-0.035em] sm:text-5xl">Start small. Pay more when you grow.</h2>
+                        <h2 class="mt-4 max-w-3xl text-4xl font-bold tracking-[-0.035em] sm:text-5xl">ISP CRM pricing — free for up to 40 subscribers</h2>
                     </div>
                     <a href="{{ route('pricing') }}" class="font-semibold text-[#145a5a] underline decoration-[#145a5a]/30 underline-offset-4 transition hover:decoration-[#145a5a] focus:outline-none focus:ring-2 focus:ring-[#145a5a] focus:ring-offset-4 motion-reduce:transition-none">See every plan →</a>
                 </div>
@@ -197,6 +163,20 @@
                             <p class="mt-4 text-[#52605d]">{{ $pricingPlan['limit'] }}. {{ $pricingPlan['note'] }}.</p>
                         </article>
                     @endforeach
+                </div>
+            </div>
+        </section>
+
+        <section class="border-b border-[#17211f]/10 bg-[#fffdf8]">
+            <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+                <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Common questions about SkyBase ISP CRM</h2>
+                <div class="mt-8 divide-y divide-[#17211f]/10">
+                    <article class="py-6"><h3 class="text-xl font-semibold">What is an ISP CRM?</h3><p class="mt-3 leading-7 text-[#52605d]">An ISP CRM connects customer records to internet subscriptions, billing, network access, and support. SkyBase gives your team a shared account history when a subscriber asks about an invoice or connection.</p></article>
+                    <article class="py-6"><h3 class="text-xl font-semibold">Is SkyBase suitable for a wireless ISP?</h3><p class="mt-3 leading-7 text-[#52605d]">SkyBase is built for small and growing MikroTik operators, including wireless internet service providers (WISPs). Keep subscriber locations, installations, subscriptions, and support work connected. <a href="{{ route('seo.wisp-management-software') }}" class="font-semibold text-[#145a5a] underline underline-offset-4">See WISP management workflows.</a></p></article>
+                    <article class="py-6"><h3 class="text-xl font-semibold">How does SkyBase work with MikroTik and RADIUS?</h3><p class="mt-3 leading-7 text-[#52605d]">Customer subscriptions connect to network settings and service access. RADIUS handles authentication, authorization, and accounting; billing records handle invoices and payments. Review your access method and router requirements during guided setup.</p></article>
+                    <article class="py-6"><h3 class="text-xl font-semibold">How do the 14-day trial and Free plan differ?</h3><p class="mt-3 leading-7 text-[#52605d]">The trial gives you 14 days to evaluate SkyBase without a credit card. The Free plan has no monthly charge and supports up to 40 subscribers. Choose the Free plan if its limits fit your operation, or contact us about a paid plan before your trial ends. <a href="{{ route('pricing') }}" class="font-semibold text-[#145a5a] underline underline-offset-4">Compare plan features and limits.</a></p></article>
+                    <article class="py-6"><h3 class="text-xl font-semibold">Can I move existing subscribers to SkyBase?</h3><p class="mt-3 leading-7 text-[#52605d]">Start with your subscriber count, export format, billing balances, and network dependencies. We will review the fit during guided setup; transfer support depends on the records and integrations involved. <a href="{{ route('guides.isp-software-migration') }}" class="font-semibold text-[#145a5a] underline underline-offset-4">Use the ISP migration checklist.</a></p></article>
+                    <article class="py-6"><h3 class="text-xl font-semibold">Will my payment provider and currency work?</h3><p class="mt-3 leading-7 text-[#52605d]">Bring your payment provider, settlement currency, and invoicing requirements to guided setup so we can confirm compatibility. Invoice and payment tracking alone does not mean a particular online payment gateway is supported.</p></article>
                 </div>
             </div>
         </section>

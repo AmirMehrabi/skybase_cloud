@@ -21,7 +21,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="@yield('meta_description', 'SkyBase Cloud - Cloud operations for MikroTik ISPs.')">
-    <meta name="keywords" content="@yield('meta_keywords', 'ISP management software, MikroTik management, RADIUS server')">
     <meta name="author" content="SkyBase Cloud">
 
     <meta property="og:title" content="@yield('og_title', 'SkyBase Cloud')">
