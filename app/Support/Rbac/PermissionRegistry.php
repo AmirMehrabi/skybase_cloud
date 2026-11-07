@@ -357,6 +357,8 @@ class PermissionRegistry
             'support.tickets.view-scope' => 'support_tickets.read',
             'ipam.pools.destroy' => 'ipam.delete',
 
+            'sites.coverage' => 'sites.write',
+            'sites.coverage.save' => 'sites.write',
             'sites.index' => 'sites.read',
             'sites.data' => 'sites.read',
             'sites.stats' => 'sites.read',

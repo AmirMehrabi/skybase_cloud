@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Site\StoreSiteRequest;
 use App\Http\Requests\Site\UpdateSiteRequest;
+use App\Models\CoverageArea;
 use App\Models\Site;
 use App\Models\UserGroup;
 use App\Services\UserGroupAssignmentService;
@@ -17,7 +18,7 @@ class SiteController extends Controller
 {
     public function index(): View
     {
-        return view('sites.index');
+        return view('modules.sites.index');
     }
 
     public function data(Request $request): JsonResponse
@@ -70,12 +71,18 @@ class SiteController extends Controller
                 'edit_url' => route('sites.edit', $site),
             ]);
 
-        return response()->json(['sites' => $sites]);
+        $coverage = CoverageArea::query()->whereIn('site_id', $sites->pluck('id'))->whereNotNull('published_revision_id')->with('revisions')->get()->map(function ($area): ?array {
+            $revision = $area->revisions->firstWhere('id', $area->published_revision_id);
+
+            return $revision ? ['type' => 'Feature', 'geometry' => $revision->snapshot['geometry'], 'properties' => ['name' => $revision->snapshot['name']]] : null;
+        })->filter()->values();
+
+        return response()->json(['sites' => $sites, 'coverage' => ['type' => 'FeatureCollection', 'features' => $coverage]]);
     }
 
     public function create(): View
     {
-        return view('sites.create', [
+        return view('modules.sites.create', [
             'site' => new Site,
             'userGroups' => UserGroup::query()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -121,14 +128,14 @@ class SiteController extends Controller
                 'routers as offline_routers_count' => fn ($query) => $query->where('status', 'offline'),
             ]);
 
-        return view('sites.show', ['site' => $site]);
+        return view('modules.sites.show', ['site' => $site]);
     }
 
     public function edit(Site $site): View
     {
         $this->authorizeTenantAccess($site);
 
-        return view('sites.edit', [
+        return view('modules.sites.edit', [
             'site' => $site->load('userGroups'),
             'userGroups' => UserGroup::query()->orderBy('name')->get(['id', 'name']),
         ]);

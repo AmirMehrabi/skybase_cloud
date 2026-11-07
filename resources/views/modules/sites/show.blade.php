@@ -10,6 +10,7 @@
             <p class="text-sm text-gray-500 mt-1">{{ $site->code }} · {{ $site->address ?: 'No address set' }}</p>
         </div>
         <div class="flex items-center gap-3">
+<a href="{{ route('sites.coverage', $site) }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Manage coverage</a>
             <a href="{{ route('sites.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Back</a>
             <a href="{{ route('sites.edit', $site) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Edit Site</a>
         </div>

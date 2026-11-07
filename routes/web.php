@@ -41,6 +41,7 @@ use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SiteCoverageController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SkybaseBillingController;
 use App\Http\Controllers\SmsGatewayController;
@@ -441,6 +442,8 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
     });
 
     Route::prefix('sites')->name('sites.')->group(function () {
+        Route::get('/{site}/coverage', [SiteCoverageController::class, 'index'])->name('coverage');
+        Route::post('/{site}/coverage/{area?}', [SiteCoverageController::class, 'save'])->whereNumber('area')->name('coverage.save');
         Route::get('/', [SiteController::class, 'index'])->name('index');
         Route::get('/data', [SiteController::class, 'data'])->name('data');
         Route::get('/stats', [SiteController::class, 'stats'])->name('stats');

@@ -198,6 +198,8 @@ function sitesIndex() {
             const response = await fetch('{{ route('sites.map-data') }}');
             const data = await response.json();
             this.mapSites = data.sites;
+            if (this.coverageLayer) this.map.removeLayer(this.coverageLayer);
+            if (this.map && data.coverage) this.coverageLayer = window.L.geoJSON(data.coverage, { style: { color: '#2563eb', weight: 2, fillOpacity: 0.12 }, onEachFeature: (feature, layer) => { const label = document.createElement('span'); label.textContent = feature.properties.name; layer.bindTooltip(label); } }).addTo(this.map);
             this.renderMarkers();
         },
         renderMarkers() {

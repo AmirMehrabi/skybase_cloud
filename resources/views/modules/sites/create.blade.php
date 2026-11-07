@@ -15,7 +15,7 @@
 
     <form action="{{ route('sites.store') }}" method="POST" class="space-y-6">
         @csrf
-        @include('sites.partials.form')
+        @include('modules.sites.partials.form')
 
         <div class="fixed bottom-0 right-0 left-0 lg:left-64 bg-white border-t border-gray-200 shadow-lg p-4 z-40">
             <div class="flex items-center justify-end gap-3">
