@@ -359,6 +359,7 @@ class PermissionRegistry
 
             'sites.coverage' => 'sites.write',
             'sites.coverage.save' => 'sites.write',
+            'sites.sharing' => 'sites.write',
             'sites.index' => 'sites.read',
             'sites.data' => 'sites.read',
             'sites.stats' => 'sites.read',

@@ -31,6 +31,7 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/css/marketing.css',
                 'resources/js/marketing.js',
+                'resources/js/public-coverage.js',
             ],
             refresh: true,
         }),

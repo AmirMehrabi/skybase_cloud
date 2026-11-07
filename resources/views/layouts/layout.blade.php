@@ -9,6 +9,7 @@
     $navigationLinks = [
         ['label' => 'Features', 'url' => url('/features'), 'active' => $isFeaturesPage],
         ['label' => 'Pricing', 'url' => url('/pricing'), 'active' => $isPricingPage],
+        ['label' => 'API Docs', 'url' => route('api-docs'), 'active' => request()->routeIs('api-docs')],
         ['label' => 'Guide', 'url' => route('guide'), 'active' => request()->routeIs('guide')],
         ['label' => 'Changelog', 'url' => route('changelog'), 'active' => $isChangelogPage],
         ['label' => 'Contact', 'url' => route('contact.show'), 'active' => $isContactPage],

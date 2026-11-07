@@ -32,6 +32,17 @@
         </div>
     </div>
 
+    @if(auth()->user()->isOwner())
+        @php($sharing = \App\Models\Setting::get('coverage.public', false, tenant()->id))
+        <details class="rounded-xl border bg-white p-4">
+            <summary class="cursor-pointer font-semibold">Website coverage map · {{ $sharing ? 'Public' : 'Private' }}</summary>
+            <p class="my-3 text-sm">Sharing makes all published coverage boundaries, area names, technologies, evidence and availability for this tenant visible to anyone.</p>
+            <form action="{{ route('sites.sharing') }}" method="post">@csrf @method($sharing ? 'DELETE' : 'PUT')
+                <button class="rounded-lg border px-3 py-2">{{ $sharing ? 'Disable public sharing' : 'Enable public sharing' }}</button>
+                <a class="ml-3 text-blue-700" href="{{ route('api-docs', ['isp'=>tenant()->slug]) }}">Website installation guide</a>
+            </form>
+        </details>
+    @endif
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <template x-for="card in statCards" :key="card.label">
             <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">

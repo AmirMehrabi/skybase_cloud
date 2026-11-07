@@ -1,41 +1,87 @@
 window.siteCoverage = (config) => ({
-    areas: config.areas, selected: null, form: {}, dirty: false, busy: false, error: '', notice: '', mode: '', points: [], undoStack: [], importText: '',
+    recovery: null, fieldErrors: {}, removedCorner: null, editing: false, tool: 'polygon', redoStack: [], showPublished: false, tileFailed: false, areas: config.areas, selected: null, form: {}, dirty: false, busy: false, error: '', notice: '', mode: '', points: [], undoStack: [], importText: '',
     init() {
         this.reset();
         // Leaflet objects stay outside Alpine's reactive proxy.
         this.$nextTick(() => {
             this.map = L.map(this.$refs.map).setView([config.latitude, config.longitude], 12);
             Object.defineProperty(this.map, '__v_skip', { value: true });
-            L.tileLayer(config.tiles, { attribution: config.attribution, maxZoom: 19 }).addTo(this.map);
+            this.tiles = L.tileLayer(config.tiles || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: config.attribution, maxZoom: 19 }).addTo(this.map);
+            this.tiles.on('tileerror', () => { this.tileFailed = true; });
             L.circleMarker([config.latitude, config.longitude], { radius: 7 }).addTo(this.map).bindTooltip(config.name);
             this.layers = L.layerGroup().addTo(this.map);
             Object.defineProperty(this.layers, '__v_skip', { value: true });
-            this.map.on('click', e => { if (this.mode) { this.points.push([e.latlng.lng, e.latlng.lat]); this.render(); } });
+            this.map.on('click', e => { if (this.mode) { this.dirty = true; this.points.push([e.latlng.lng, e.latlng.lat]); this.render(); } });
             this.reset();
+            try { this.recovery = JSON.parse(sessionStorage.getItem(config.draftKey)); } catch {}
+            this.$watch('form', () => this.persistDraft());
+            this.$watch('points', () => this.persistDraft());
+            this.map.on('mousemove', event => {
+                this.guide?.remove();
+                if (!this.mode || !this.points.length) return;
+                const [lng, lat] = this.points.at(-1);
+                this.guide = L.polyline([[lat,lng], event.latlng], {interactive:false, dashArray:'4 6'}).addTo(this.layers);
+            });
         });
         this.leave = e => { if (this.dirty) { e.preventDefault(); e.returnValue = ''; } };
         window.addEventListener('beforeunload', this.leave);
     },
+    persistDraft() {
+        if (!this.editing || !this.dirty) return;
+        try { sessionStorage.setItem(config.draftKey, JSON.stringify({ id:this.selected?.id, version:this.selected?.version, form:this.form, points:this.points, mode:this.mode, tool:this.tool })); } catch {}
+    },
+    recover() {
+        const draft = this.recovery;
+        const area = this.areas.find(item => item.id === draft.id);
+        if (draft.id && area?.version !== draft.version) { this.error = 'The saved area changed. Recovering your work as a new area.'; }
+        this.selected = area?.version === draft.version ? area : null;
+        this.form = draft.form; this.points = draft.points; this.mode = draft.mode; this.tool = draft.tool;
+        this.editing = true; this.dirty = true; this.recovery = null; this.render(); this.fit();
+    },
+    discardRecovery() { this.recovery = null; try { sessionStorage.removeItem(config.draftKey); } catch {} },
     destroy() { window.removeEventListener('beforeunload', this.leave); this.map?.remove(); },
     canLeave() { return !this.dirty || confirm('Discard your unsaved changes?'); },
     reset() {
         this.selected = null;
         this.form = { name: '', technology: 'wireless', evidence: 'declared', availability: 'survey_required', status: 'draft', access_point_id: '', notes: '', verified_on: '', geometry: null, shape: { type: 'polygon', radius: 1000, azimuth: 0, angle: 90 } };
-        this.dirty = false; this.error = ''; this.mode = ''; this.points = []; this.undoStack = []; this.render();
+        this.dirty = false; this.error = ''; this.mode = ''; this.points = []; this.undoStack = []; this.redoStack = []; this.render();
     },
-    create() { if (this.canLeave()) this.reset(); },
+    create() {
+        if (!this.canLeave()) return;
+        this.reset(); this.editing = true; this.tool = 'polygon';
+        this.form.name = config.name + ' coverage';
+    },
+    status(area) {
+        const latest = area.revisions[0];
+        if (latest.snapshot.status === 'archived') return 'Archived';
+        if (!area.published_revision_id) return 'Draft — never published';
+        return latest.id === area.published_revision_id ? 'Published' : 'Unpublished changes';
+    },
+    fit() {
+        if (this.form.geometry) this.map.fitBounds(L.geoJSON(this.form.geometry).getBounds(), { padding: [25,25] });
+        else this.centerSite();
+    },
+    centerSite() { this.map.setView([config.latitude, config.longitude], 13); },
+    cancelDrawing() { this.mode = ''; this.points = []; this.notice = ''; this.render(); },
+    edit() { this.editing = true; this.render(); },
+    choose(tool) {
+        if (this.points.length && !confirm('Discard unfinished corners?')) return;
+        this.cancelDrawing(); this.tool = tool;
+        if (tool === 'polygon') this.draw('polygon');
+    },
     open(area) {
         if (!this.canLeave()) return;
-        this.selected = area;
+        this.editing = false; this.redoStack = []; this.showPublished = false; this.selected = area;
         this.form = JSON.parse(JSON.stringify(area.revisions[0].snapshot));
         this.form.shape ||= { type: 'polygon', radius: 1000, azimuth: 0, angle: 90 };
-        this.form.verified_on ||= ''; this.form.notes ||= ''; this.form.access_point_id ||= '';
+        this.tool = this.form.shape.type; this.form.verified_on ||= ''; this.form.notes ||= ''; this.form.access_point_id ||= '';
         this.dirty = false; this.mode = ''; this.points = []; this.undoStack = []; this.error = ''; this.render();
         if (this.form.geometry) this.map.fitBounds(L.geoJSON(this.form.geometry).getBounds(), { padding: [25, 25] });
     },
-    checkpoint() { this.undoStack.push(JSON.stringify(this.form.geometry)); this.dirty = true; },
-    undo() { if (this.mode) { this.points.pop(); } else if (this.undoStack.length) { this.form.geometry = JSON.parse(this.undoStack.pop()); this.dirty = true; } this.render(); },
-    draw(mode) { this.mode = mode; this.points = []; this.notice = mode === 'hole' ? 'Click inside the area to outline an exclusion, then Finish.' : 'Click the map to place corners, then Finish.'; },
+    checkpoint() { this.redoStack = []; this.undoStack.push(JSON.stringify(this.form)); this.dirty = true; },
+    undo() { if (this.mode) { this.points.pop(); } else if (this.undoStack.length) { this.redoStack.push(JSON.stringify(this.form)); this.form = JSON.parse(this.undoStack.pop()); this.tool = this.form.shape.type; this.dirty = true; } this.render(); },
+    redo() { if (!this.redoStack.length) return; this.undoStack.push(JSON.stringify(this.form)); this.form = JSON.parse(this.redoStack.pop()); this.tool = this.form.shape.type; this.dirty = true; this.render(); },
+    draw(mode) { if (mode === 'polygon' && this.form.geometry && !confirm('Replace this boundary when you finish drawing?')) return; this.mode = mode; this.points = []; this.notice = mode === 'hole' ? 'Click inside the area to outline an exclusion, then Finish.' : 'Click the map to place corners, then Finish.'; },
     finish() {
         if (this.points.length < 3) { this.error = 'Place at least three corners.'; return; }
         this.checkpoint();
@@ -48,9 +94,11 @@ window.siteCoverage = (config) => ({
         this.form.shape.type = 'polygon'; this.mode = ''; this.points = []; this.notice = ''; this.error = ''; this.render();
     },
     generate() {
-        this.checkpoint();
-        const s = this.form.shape, radius = Number(s.radius), angle = s.type === 'circle' ? 360 : Number(s.angle), azimuth = Number(s.azimuth);
+        const s = this.form.shape, radius = Number(s.radius), angle = (this.tool === 'circle' || s.type === 'circle' && !this.editing) ? 360 : Number(s.angle), azimuth = Number(s.azimuth);
         if (!(radius >= 1 && radius <= 100000 && angle >= 1 && angle <= 360 && azimuth >= 0 && azimuth <= 360)) { this.error = 'Check radius (1–100,000 m), bearing and beam angle.'; return; }
+        if (this.form.geometry && !confirm('Replace this boundary and mark its coverage as estimated?')) return;
+        this.checkpoint();
+        if (this.editing) s.type = this.tool;
         const lat = config.latitude * Math.PI / 180, lon = config.longitude * Math.PI / 180, distance = radius / 6371008.8;
         const ring = angle < 360 ? [[config.longitude, config.latitude]] : [];
         for (let i = 0; i <= 72; i++) {
@@ -63,13 +111,18 @@ window.siteCoverage = (config) => ({
     },
     render() {
         if (!this.layers) return;
-        this.layers.clearLayers();
+        this.layers.clearLayers(); this.removedCorner = null;
+        if (this.mode && this.points.length) { const [lng,lat] = this.points[0]; L.circleMarker([lat,lng], {radius:8,bubblingMouseEvents:false}).addTo(this.layers).bindTooltip("Finish boundary").on("click", () => this.finish()); }
         this.areas.forEach(area => {
             const rev = area.revisions.find(r => r.id === area.published_revision_id);
-            if (rev && area.id !== this.selected?.id) L.geoJSON(rev.snapshot.geometry, { style: { color: '#94a3b8', weight: 1, fillOpacity: .08 } }).addTo(this.layers);
+            if (rev && (area.id !== this.selected?.id || this.showPublished)) L.geoJSON(rev.snapshot.geometry, { style: { color: '#94a3b8', weight: 1, fillOpacity: .08 } }).addTo(this.layers);
         });
         if (this.form.geometry) {
             L.geoJSON(this.form.geometry, { style: { color: '#2563eb', weight: 2, fillOpacity: .18 } }).addTo(this.layers);
+            if (!this.editing || this.mode) {
+                if (this.points.length) L.polyline(this.points.map(p => [p[1], p[0]]), {dashArray:"5 5"}).addTo(this.layers);
+                return;
+            }
             const polygons = this.form.geometry.type === 'Polygon' ? [this.form.geometry.coordinates] : this.form.geometry.coordinates;
             polygons.forEach(rings => rings.forEach(ring => ring.slice(0, -1).forEach((point, index) => {
                 const next = ring[index + 1];
@@ -78,10 +131,21 @@ window.siteCoverage = (config) => ({
                 const marker = L.marker([point[1], point[0]], { draggable: true, icon: L.divIcon({ className: '', html: '<span style="display:block;width:12px;height:12px;background:white;border:2px solid #2563eb;border-radius:50%"></span>', iconSize: [12, 12] }) }).addTo(this.layers);
                 marker.on('dragstart', () => this.checkpoint());
                 marker.on('dragend', e => { const p = e.target.getLatLng(); ring[index] = [p.lng, p.lat]; ring[ring.length - 1] = [...ring[0]]; this.form.shape.type = 'polygon'; this.render(); });
+                marker.on('click', () => { this.removedCorner = () => { if (ring.length <= 4) return; this.checkpoint(); ring.splice(index, 1); ring[ring.length-1] = [...ring[0]]; this.form.shape.type='polygon'; this.render(); }; });
                 marker.on('contextmenu', () => { if (ring.length <= 4) return; this.checkpoint(); ring.splice(index, 1); ring[ring.length - 1] = [...ring[0]]; this.form.shape.type = 'polygon'; this.render(); });
             })));
         }
         if (this.points.length) L.polyline(this.points.map(p => [p[1], p[0]]), { dashArray: '5 5' }).addTo(this.layers);
+    },
+    applyAccessPoint(id) {
+        const ap = config.aps.find(item => String(item.id) === String(id));
+        if (ap?.azimuth != null) this.form.shape.azimuth = Number(ap.azimuth);
+        if (ap?.coverage_angle != null) this.form.shape.angle = Number(ap.coverage_angle);
+    },
+    async loadFile(file) {
+        if (!file) return;
+        if (file.size > 200000) { this.error = 'Choose a file under 200 KB.'; return; }
+        this.importText = await file.text(); this.importGeometry();
     },
     importGeometry() {
         try {
@@ -119,12 +183,13 @@ window.siteCoverage = (config) => ({
     async save(status) {
         if (this.busy) return;
         if (this.mode) { this.error = 'Finish or cancel drawing before saving.'; return; }
-        this.busy = true; this.error = ''; this.notice = '';
+        this.fieldErrors = {}; this.busy = true; this.error = ''; this.notice = '';
         try {
             const response = await fetch(config.saveUrl + (this.selected ? '/' + this.selected.id : ''), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': config.csrf }, body: JSON.stringify({ ...this.form, status, version: this.selected?.version || 0, access_point_id: this.form.access_point_id || null, verified_on: this.form.verified_on || null }) });
             const data = await response.json();
+            if (!response.ok) this.fieldErrors = data.errors || {};
             if (!response.ok) throw Error(Object.values(data.errors || {}).flat().join(' ') || data.message || 'Unable to save. Try again.');
-            this.areas = data.areas; this.dirty = false; this.open(this.areas.find(a => a.id === data.id)); this.notice = status === 'published' ? 'Coverage published.' : status === 'archived' ? 'Coverage archived.' : 'Draft saved. Published coverage stays in place.';
+            this.discardRecovery(); this.areas = data.areas; this.dirty = false; this.open(this.areas.find(a => a.id === data.id)); this.notice = status === 'published' ? 'Coverage published.' : status === 'archived' ? 'Coverage archived.' : 'Draft saved at ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         } catch (e) { this.error = e.message; } finally { this.busy = false; }
     },
 });

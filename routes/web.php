@@ -36,6 +36,7 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicCoverageController;
 use App\Http\Controllers\ReportController as GeneralReportController;
 use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
@@ -107,6 +108,9 @@ Route::get('/', [PagesController::class, 'index'])->name('home');
 Route::get('/pricing', [PagesController::class, 'pricing'])->name('pricing');
 
 // Features page
+Route::view('/api-docs', 'api-docs')->name('api-docs');
+Route::view('/api-docs/legacy', 'legacy-api-docs')->name('api-docs.legacy');
+
 Route::get('/features', [PagesController::class, 'features'])->name('features');
 Route::get('/guide', [PagesController::class, 'guide'])->name('guide');
 
@@ -442,6 +446,7 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
     });
 
     Route::prefix('sites')->name('sites.')->group(function () {
+        Route::match(['put', 'delete'], '/public-sharing', [PublicCoverageController::class, 'sharing'])->name('sharing');
         Route::get('/{site}/coverage', [SiteCoverageController::class, 'index'])->name('coverage');
         Route::post('/{site}/coverage/{area?}', [SiteCoverageController::class, 'save'])->whereNumber('area')->name('coverage.save');
         Route::get('/', [SiteController::class, 'index'])->name('index');
