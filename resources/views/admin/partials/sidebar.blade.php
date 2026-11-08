@@ -1,4 +1,3 @@
-<x-owner-navigation />
 @php
     $currentRoute = request()->route()->getName() ?? '';
     $sidebarUser = auth()->user();
