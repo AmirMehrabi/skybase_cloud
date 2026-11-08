@@ -22,12 +22,24 @@
                 <dd class="mt-1 font-mono text-sm text-gray-900">{{ $vpnUser->username }}</dd>
             </div>
             <div>
-                <dt class="text-sm font-medium text-gray-500">Status</dt>
+                <dt class="text-sm font-medium text-gray-500">Account Access</dt>
                 <dd class="mt-1">
                     <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium {{ $vpnUser->active ? 'border-green-200 bg-green-100 text-green-800' : 'border-gray-200 bg-gray-100 text-gray-700' }}">
-                        {{ $vpnUser->active ? 'Active' : 'Inactive' }}
+                        {{ $vpnUser->active ? 'Enabled' : 'Disabled' }}
                     </span>
                 </dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Connection</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ $vpnUser->connectionState() }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">VPN IP / Reserved IP</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ $vpnUser->monitoringFresh() && $vpnUser->online ? $vpnUser->vpn_ip : '—' }} / {{ $vpnUser->reserved_vpn_ip ?? '—' }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm font-medium text-gray-500">Last Observed / Snapshot (UTC)</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ $vpnUser->last_seen_at?->format('M d, Y H:i') ?? '—' }} / {{ $vpnUser->observed_at?->format('M d, Y H:i') ?? '—' }}</dd>
             </div>
             <div>
                 <dt class="text-sm font-medium text-gray-500">Last Login</dt>

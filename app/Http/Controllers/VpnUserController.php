@@ -33,11 +33,15 @@ class VpnUserController extends Controller
                 'id' => $vpnUser->id,
                 'username' => $vpnUser->username,
                 'active' => $vpnUser->active,
-                'online' => $vpnUser->online,
-                'vpn_ip' => $vpnUser->vpn_ip,
-                'real_ip' => $vpnUser->real_ip,
-                'bytes_received' => $vpnUser->bytes_received,
-                'bytes_sent' => $vpnUser->bytes_sent,
+                'online' => $vpnUser->monitoringFresh() ? $vpnUser->online : null,
+                'connection_state' => $vpnUser->connectionState(),
+                'reserved_vpn_ip' => $vpnUser->reserved_vpn_ip,
+                'observed_at' => $vpnUser->observed_at?->toIso8601String(),
+                'duration_seconds' => $vpnUser->monitoringFresh() && $vpnUser->online && $vpnUser->connected_at ? max(0, (int) $vpnUser->connected_at->diffInSeconds(now())) : null,
+                'vpn_ip' => $vpnUser->monitoringFresh() && $vpnUser->online ? $vpnUser->vpn_ip : null,
+                'real_ip' => $vpnUser->monitoringFresh() && $vpnUser->online ? $vpnUser->real_ip : null,
+                'bytes_received' => $vpnUser->monitoringFresh() && $vpnUser->online ? $vpnUser->bytes_received : null,
+                'bytes_sent' => $vpnUser->monitoringFresh() && $vpnUser->online ? $vpnUser->bytes_sent : null,
                 'last_login_at' => $vpnUser->last_login_at?->format('M d, Y H:i'),
                 'last_seen_at' => $this->lastSeenAt($vpnUser),
                 'connected_at' => $vpnUser->connected_at?->format('M d, Y H:i'),
@@ -49,6 +53,10 @@ class VpnUserController extends Controller
 
         return response()->json([
             'vpnUsers' => $vpnUsers->items(),
+            'monitoring' => [
+                'last_updated_at' => VpnUser::query()->max('observed_at'),
+                'freshness_seconds' => config('vpn.freshness_seconds'),
+            ],
             'pagination' => [
                 'current_page' => $vpnUsers->currentPage(),
                 'last_page' => $vpnUsers->lastPage(),
@@ -123,6 +131,10 @@ class VpnUserController extends Controller
             $updates['password_hash'] = Hash::make($validated['password']);
         }
 
+        if ($vpnUser->username !== $validated['username']) {
+            $updates = array_merge($updates, ['observed_at' => null, 'last_seen_at' => null, 'reserved_vpn_ip' => null, 'online' => false, 'vpn_ip' => null, 'real_ip' => null, 'connected_at' => null, 'disconnected_at' => null, 'last_login_at' => null, 'bytes_received' => 0, 'bytes_sent' => 0]);
+        }
+
         $vpnUser->update($updates);
 
         return redirect()
@@ -150,9 +162,7 @@ class VpnUserController extends Controller
 
     private function lastSeenAt(VpnUser $vpnUser): ?string
     {
-        return ($vpnUser->online ? $vpnUser->connected_at : $vpnUser->disconnected_at)
-            ?->format('M d, Y H:i')
-            ?? $vpnUser->last_login_at?->format('M d, Y H:i');
+        return $vpnUser->last_seen_at?->format('M d, Y H:i');
     }
 
     /**

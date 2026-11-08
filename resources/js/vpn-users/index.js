@@ -1,8 +1,12 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('vpnUsersIndex', () => ({
         vpnUsers: [],
-        stats: { total: 0, active: 0, inactive: 0, online: 0, offline: 0, recentLogins: 0 },
+        stats: { total: 0, active: 0, inactive: 0, online: 0, offline: 0, recentLogins: 0, unknown: 0 },
 
+        monitoring: { last_updated_at: null, freshness_seconds: 180 },
+        refreshTimer: null,
+        requestId: 0,
+        refreshError: false,
         search: '',
         active: '',
         online: '',
@@ -25,6 +29,13 @@ document.addEventListener('alpine:init', () => {
                 this.fetchVpnUsers(),
             ]);
 
+            this.refreshTimer = setInterval(() => {
+                if (!document.hidden && !this.loading) {
+                    this.fetchVpnUsers();
+                    this.fetchStats();
+                }
+            }, 30000);
+
             this.$watch('search', () => this.debounceFetch());
             this.$watch('active', () => {
                 this.currentPage = 1;
@@ -37,6 +48,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async fetchVpnUsers() {
+            const requestId = ++this.requestId;
             this.loading = true;
 
             try {
@@ -49,21 +61,27 @@ document.addEventListener('alpine:init', () => {
                 });
 
                 const response = await fetch(`/vpn-users/data?${params}`);
+                if (!response.ok) throw new Error('VPN data request failed');
                 const data = await response.json();
+                if (requestId !== this.requestId) return;
+                this.monitoring = data.monitoring;
+                this.refreshError = false;
 
                 this.vpnUsers = data.vpnUsers;
                 this.pagination = data.pagination;
                 this.currentPage = data.pagination.current_page;
             } catch (error) {
+                if (requestId === this.requestId) this.refreshError = true;
                 console.error('Error fetching VPN users:', error);
             } finally {
-                this.loading = false;
+                if (requestId === this.requestId) this.loading = false;
             }
         },
 
         async fetchStats() {
             try {
                 const response = await fetch('/vpn-users/stats');
+                if (!response.ok) throw new Error('VPN stats request failed');
                 this.stats = await response.json();
             } catch (error) {
                 console.error('Error fetching VPN user stats:', error);
@@ -119,7 +137,33 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        destroy() {
+            clearInterval(this.refreshTimer);
+            clearTimeout(this.debounceTimer);
+        },
+
+        get monitoringMessage() {
+            if (this.refreshError) return 'Refresh failed. Displayed measurements may be outdated.';
+            const updated = this.monitoring.last_updated_at;
+            if (!updated) return 'Monitoring unavailable — awaiting the first successful snapshot.';
+            const age = (Date.now() - new Date(updated.replace(' ', 'T') + (updated.includes('Z') || updated.includes('+') ? '' : 'Z')).getTime()) / 1000;
+            if (age > this.monitoring.freshness_seconds) return 'Monitoring unavailable — last update ' + updated + ' UTC. Connection state is unknown.';
+            return 'Last updated ' + updated + ' UTC · refreshed every minute · traffic totals reset on reconnect';
+        },
+
+        stateFor(user) {
+            if (this.refreshError || !user.observed_at || (Date.now() - new Date(user.observed_at).getTime()) / 1000 > this.monitoring.freshness_seconds) return 'Unknown';
+            return user.connection_state;
+        },
+
+        formatDuration(seconds) {
+            if (seconds === null || seconds === undefined) return '—';
+            const minutes = Math.floor(seconds / 60);
+            return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+        },
+
         formatBytes(bytes) {
+            if (bytes === null || bytes === undefined) return '—';
             if (!bytes) {
                 return '0 B';
             }

@@ -1,0 +1,15 @@
+[Unit]
+Description=Publish read-only OpenVPN monitoring snapshots for SkyBase
+After=openvpn-server@server.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/libexec/skybase-vpn-status.py
+User=root
+Group=root
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/skybase-vpn

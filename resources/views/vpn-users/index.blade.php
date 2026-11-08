@@ -87,21 +87,24 @@
         </div>
     </div>
 
+    <p role="status" class="text-sm text-gray-600" x-text="monitoringMessage"></p>
+    <p class="text-sm text-gray-600">Unknown connections: <span x-text="stats.unknown"></span></p>
+
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <p class="text-sm font-medium text-gray-500">Total Users</p>
             <p class="mt-2 text-3xl font-bold text-gray-900" x-text="stats.total"></p>
         </div>
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <p class="text-sm font-medium text-gray-500">Online</p>
+            <p class="text-sm font-medium text-gray-500">Connected</p>
             <p class="mt-2 text-3xl font-bold text-green-600" x-text="stats.online"></p>
         </div>
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <p class="text-sm font-medium text-gray-500">Offline</p>
+            <p class="text-sm font-medium text-gray-500">Disconnected</p>
             <p class="mt-2 text-3xl font-bold text-gray-900" x-text="stats.offline"></p>
         </div>
         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <p class="text-sm font-medium text-gray-500">Active Accounts</p>
+            <p class="text-sm font-medium text-gray-500">Enabled Accounts</p>
             <p class="mt-2 text-3xl font-bold text-blue-600" x-text="stats.active"></p>
         </div>
     </div>
@@ -125,8 +128,9 @@
             </select>
             <select x-model="online" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 <option value="">All Connections</option>
-                <option value="1">Online</option>
-                <option value="0">Offline</option>
+                <option value="1">Connected</option>
+                <option value="0">Disconnected</option>
+                <option value="unknown">Unknown</option>
             </select>
         </div>
     </div>
@@ -138,10 +142,10 @@
                     <tr>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Username</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Connection</th>
-                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Last Seen</th>
-                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Connected</th>
-                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Disconnected</th>
-                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Traffic</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Last Observed (UTC)</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Session Duration</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Disconnect Observed (UTC)</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Current Session Traffic</th>
                         <th class="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
                     </tr>
                 </thead>
@@ -151,25 +155,27 @@
                             <td class="px-6 py-4">
                                 <div class="flex flex-col">
                                     <span class="font-mono text-sm font-medium text-gray-900" x-text="vpnUser.username"></span>
-                                    <span class="text-xs" :class="vpnUser.active ? 'text-green-600' : 'text-gray-500'" x-text="vpnUser.active ? 'Active account' : 'Inactive account'"></span>
+                                    <span class="text-xs" :class="vpnUser.active ? 'text-green-600' : 'text-gray-500'" x-text="vpnUser.active ? 'Enabled account' : 'Disabled account'"></span>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex flex-col gap-1">
-                                    <span class="inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium" :class="vpnUser.online ? 'border-green-200 bg-green-100 text-green-800' : 'border-gray-200 bg-gray-100 text-gray-700'">
-                                        <span class="h-1.5 w-1.5 rounded-full" :class="vpnUser.online ? 'bg-green-500' : 'bg-gray-400'"></span>
-                                        <span x-text="vpnUser.online ? 'Online' : 'Offline'"></span>
+                                    <span class="inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium" :class="stateFor(vpnUser) === 'Connected' ? 'border-green-200 bg-green-100 text-green-800' : 'border-gray-200 bg-gray-100 text-gray-700'">
+                                        <span class="h-1.5 w-1.5 rounded-full" :class="stateFor(vpnUser) === 'Connected' ? 'bg-green-500' : 'bg-gray-400'"></span>
+                                        <span x-text="stateFor(vpnUser)"></span>
                                     </span>
-                                    <span class="font-mono text-xs text-gray-500" x-text="vpnUser.vpn_ip || vpnUser.real_ip || 'No IP recorded'"></span>
+                                    <span class="font-mono text-xs text-gray-500" x-text="stateFor(vpnUser) === 'Connected' && vpnUser.vpn_ip ? 'VPN: ' + vpnUser.vpn_ip : 'VPN: —'"></span>
+                                    <span class="font-mono text-xs text-gray-500" x-text="'Reserved: ' + (vpnUser.reserved_vpn_ip || '—')"></span>
+                                    <span class="font-mono text-xs text-gray-500" x-text="'Endpoint: ' + (stateFor(vpnUser) === 'Connected' ? (vpnUser.real_ip || '—') : '—')"></span>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-600" x-text="vpnUser.last_seen_at || 'Never'"></td>
-                            <td class="px-6 py-4 text-sm text-gray-600" x-text="vpnUser.connected_at || 'Not connected'"></td>
-                            <td class="px-6 py-4 text-sm text-gray-600" x-text="vpnUser.disconnected_at || 'Not disconnected'"></td>
+                            <td class="px-6 py-4 text-sm text-gray-600" x-text="vpnUser.last_seen_at || '—'"></td>
+                            <td class="px-6 py-4 text-sm text-gray-600" x-text="stateFor(vpnUser) === 'Connected' ? formatDuration(vpnUser.duration_seconds) : '—'"></td>
+                            <td class="px-6 py-4 text-sm text-gray-600" x-text="vpnUser.disconnected_at || '—'"></td>
                             <td class="px-6 py-4">
                                 <div class="flex flex-col text-sm">
-                                    <span class="text-gray-900">Rx <span class="font-semibold" x-text="formatBytes(vpnUser.bytes_received)"></span></span>
-                                    <span class="text-gray-600">Tx <span class="font-semibold" x-text="formatBytes(vpnUser.bytes_sent)"></span></span>
+                                    <span class="text-gray-900">Uploaded <span class="font-semibold" x-text="formatBytes(stateFor(vpnUser) === 'Connected' ? vpnUser.bytes_received : null)"></span></span>
+                                    <span class="text-gray-600">Downloaded <span class="font-semibold" x-text="formatBytes(stateFor(vpnUser) === 'Connected' ? vpnUser.bytes_sent : null)"></span></span>
                                 </div>
                             </td>
                             <td class="px-6 py-4">

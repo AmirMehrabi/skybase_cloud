@@ -64,3 +64,5 @@ Schedule::command('security:harden-storage --prune')->daily()->withoutOverlappin
 Schedule::command('ipdr:sync')->everyMinute()->withoutOverlapping(30)->when(fn () => config('ipdr.enabled'));
 
 Schedule::command('communications:process')->everyMinute()->withoutOverlapping(10);
+
+Schedule::command('vpn:sync-status')->everyMinute()->withoutOverlapping();
