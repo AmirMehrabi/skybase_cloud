@@ -75,6 +75,21 @@ class IpamPoolReleaseTest extends TestCase
         ]);
     }
 
+    public function test_releasing_a_legacy_assignment_restores_its_pool_reservation(): void
+    {
+        [, $user, $pool, $ipAddress, $subscription] = $this->createAssignedIpFixture();
+        $ipAddress->update(['metadata' => ['legacy_pool_reservation' => 'Legacy pool exclusion']]);
+
+        $this->actingAs($user)->patch(route('ipam.pools.ip-addresses.release', [$pool, $ipAddress]))
+            ->assertRedirect();
+
+        $this->assertNull($subscription->fresh()->ip_address);
+        $this->assertSame('reserved', $ipAddress->fresh()->status);
+        $this->assertSame('Legacy pool exclusion', $ipAddress->fresh()->notes);
+        $this->assertSame(1, $pool->fresh()->reserved_ips);
+        $this->assertSame(0, $pool->fresh()->available_ips);
+    }
+
     private function createAssignedIpFixture(): array
     {
         $tenant = $this->createTenant('alpha-net', 'AlphaNet Communications');

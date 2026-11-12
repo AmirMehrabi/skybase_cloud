@@ -137,14 +137,21 @@ class IpAddress extends Model
      */
     public function release(): bool
     {
+        $metadata = $this->metadata;
+        $reservation = $this->isAssigned() ? ($metadata['legacy_pool_reservation'] ?? null) : null;
+        if ($reservation === null) {
+            unset($metadata['legacy_pool_reservation']);
+        }
+
         return $this->update([
-            'status' => 'available',
+            'status' => $reservation === null ? 'available' : 'reserved',
             'customer_id' => null,
             'mac_address' => null,
             'subscription_code' => null,
             'assigned_at' => null,
             'released_at' => now(),
-            'notes' => null,
+            'notes' => $reservation,
+            'metadata' => $metadata ?: null,
         ]);
     }
 
