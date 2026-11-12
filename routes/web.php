@@ -42,6 +42,7 @@ use App\Http\Controllers\PublicCoverageController;
 use App\Http\Controllers\ReportController as GeneralReportController;
 use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
+use App\Http\Controllers\RouterHotspotController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteCoverageController;
@@ -445,6 +446,9 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
         Route::get('/{router}/monitoring/data', [RouterController::class, 'monitoringData'])->name('monitoring.data');
         Route::get('/{router}/sessions', [RouterController::class, 'sessions'])->name('sessions');
         Route::get('/{router}/queues', [RouterController::class, 'queues'])->name('queues');
+        Route::get('/{router}/hotspot', [RouterHotspotController::class, 'show'])->name('hotspot.show');
+        Route::get('/{router}/hotspot/profiles', [RouterHotspotController::class, 'sync'])->name('hotspot.sync');
+        Route::post('/{router}/hotspot/profiles', [RouterHotspotController::class, 'mutate'])->name('hotspot.mutate');
         Route::get('/{router}/profiles', [RouterController::class, 'profiles'])->name('profiles');
         Route::get('/{router}/interfaces', [RouterController::class, 'interfaces'])->name('interfaces');
         Route::get('/{router}/ip-pools', [RouterController::class, 'ipPools'])->name('ip-pools');

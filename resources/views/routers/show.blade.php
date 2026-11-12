@@ -219,6 +219,16 @@
         </div>
     </div>
 
+    @if ($router->isMikrotik())
+        <a href="{{ route('routers.hotspot.show', $router) }}" class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-emerald-500">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-950">HotSpot login page</h2>
+                <p class="mt-1 text-sm text-slate-600">Manage RouterOS profiles and design the Wi-Fi sign-in experience.</p>
+            </div>
+            <span class="font-semibold text-emerald-700">Manage HotSpot &rarr;</span>
+        </a>
+    @endif
+
     <!-- NetFlow Monitor -->
     <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">

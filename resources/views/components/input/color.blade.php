@@ -4,6 +4,7 @@
     'label' => null,
     'value' => null,
     'required' => false,
+    'xModel' => null,
 ])
 
 <div>
@@ -21,13 +22,15 @@
             name="{{ $name }}"
             value="{{ old($name, $value) }}"
             @if($required) required @endif
+            @if($xModel) x-model="{{ $xModel }}" @endif
             class="h-10 w-20 rounded border border-gray-300 cursor-pointer"
         >
         <input
             type="text"
             value="{{ old($name, $value) }}"
+            @if($xModel) :value="{{ $xModel }}" @endif
             readonly
-            class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            class="min-w-0 flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         >
     </div>
 

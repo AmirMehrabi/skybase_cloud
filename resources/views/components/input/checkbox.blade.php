@@ -16,7 +16,7 @@
                 type="checkbox"
                 id="{{ $id }}"
                 name="{{ $name }}"
-                value="1"
+                value="{{ $value ?? 1 }}"
                 {{ $checked ? 'checked' : '' }}
                 @if($xModel) x-model="{{ $xModel }}" @endif
                 class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
