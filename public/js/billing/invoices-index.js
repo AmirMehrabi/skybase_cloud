@@ -110,10 +110,7 @@ function invoicesIndex() {
         },
 
         formatCurrency(value, currency = null) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: currency || this.selectedInvoice?.currency || document.querySelector('meta[name="tenant-currency"]')?.content || 'USD'
-            }).format(value);
+            return window.formatMoney(value, currency || this.selectedInvoice?.currency || undefined);
         },
 
         getInvoiceStatusClass(status) {

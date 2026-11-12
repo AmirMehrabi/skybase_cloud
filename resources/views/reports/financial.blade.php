@@ -362,21 +362,17 @@ function financialReports() {
         },
 
         formatCurrency(amount) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency,
+            return window.formatMoney(amount, currency, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
-            }).format(amount);
+            });
         },
 
         formatCompactCurrency(amount) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency,
+            return window.formatMoney(amount, currency, {
                 notation: 'compact',
                 maximumFractionDigits: 1
-            }).format(amount);
+            });
         },
 
         formatPercent(value) {

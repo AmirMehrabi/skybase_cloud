@@ -15,7 +15,7 @@ class TenantCurrencyDisplayTest extends TestCase
     use RefreshDatabase;
 
     #[DataProvider('currencies')]
-    public function test_admin_pages_use_the_authenticated_tenants_currency(string $currency): void
+    public function test_admin_pages_use_the_authenticated_tenants_currency(string $currency, string $currencyLabel): void
     {
         $tenant = $this->createTenant('currency-tenant', $currency);
         $otherTenant = $this->createTenant('other-tenant', 'GBP');
@@ -46,36 +46,38 @@ class TenantCurrencyDisplayTest extends TestCase
                 ->assertSee('<meta name="tenant-currency" content="'.$currency.'">', false);
 
             if (in_array($path, ['/billing/reports', '/billing/dashboard'], true)) {
-                $response->assertSee($currency.' 200k')
+                $response->assertSee($currencyLabel.' 200k')
                     ->assertDontSee('$200k');
             }
         }
 
-        app(TenantContext::class)->run($tenant->id, function () use ($currency): void {
+        app(TenantContext::class)->run($tenant->id, function () use ($currencyLabel): void {
             $this->view('billing.reports')
-                ->assertSee($currency.' 200k')
+                ->assertSee($currencyLabel.' 200k')
                 ->assertDontSee('$200k');
         });
 
         $this->get('/subscriptions/create')
             ->assertOk()
             ->assertSee('<meta name="tenant-currency" content="'.$currency.'">', false)
-            ->assertSee('Local Currency Plan - '.$currency.' 19.99')
+            ->assertSee('Local Currency Plan - '.$currencyLabel.' 19.99')
             ->assertDontSee('Other Tenant Plan')
             ->assertDontSee('$19.99', false)
             ->assertDontSee("'\$' + formatCurrency", false);
 
         $this->get('/plans/create')
             ->assertOk()
+            ->assertSee('<option value="IRR">IRR ﷼</option>', false)
             ->assertSee("currency: '".$currency."'", false);
     }
 
     public static function currencies(): array
     {
         return [
-            'South African rand' => ['ZAR'],
-            'euro' => ['EUR'],
-            'US dollar' => ['USD'],
+            'South African rand' => ['ZAR', 'ZAR'],
+            'Iranian rial' => ['IRR', '﷼'],
+            'euro' => ['EUR', 'EUR'],
+            'US dollar' => ['USD', 'USD'],
         ];
     }
 

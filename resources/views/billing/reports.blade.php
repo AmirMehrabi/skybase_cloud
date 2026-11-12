@@ -177,11 +177,11 @@
 
                 <!-- Y-axis labels -->
                 <div class="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-gray-400 -ml-1">
-                    <span>{{ tenant()?->currency ?? 'USD' }} 200k</span>
-                    <span>{{ tenant()?->currency ?? 'USD' }} 150k</span>
-                    <span>{{ tenant()?->currency ?? 'USD' }} 100k</span>
-                    <span>{{ tenant()?->currency ?? 'USD' }} 50k</span>
-                    <span>{{ tenant()?->currency ?? 'USD' }} 0</span>
+                    <span>{{ \App\Support\Currency::label() }} 200k</span>
+                    <span>{{ \App\Support\Currency::label() }} 150k</span>
+                    <span>{{ \App\Support\Currency::label() }} 100k</span>
+                    <span>{{ \App\Support\Currency::label() }} 50k</span>
+                    <span>{{ \App\Support\Currency::label() }} 0</span>
                 </div>
             </div>
         </div>

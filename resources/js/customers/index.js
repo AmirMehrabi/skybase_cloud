@@ -373,11 +373,7 @@ document.addEventListener('alpine:init', () => {
 
         // Helper methods
         formatBalance(amount) {
-            const formatted = new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: document.querySelector('meta[name="tenant-currency"]')?.content || 'USD',
-            }).format(amount);
-            return formatted;
+            return window.formatMoney(amount);
         },
 
         formatValues(values) {

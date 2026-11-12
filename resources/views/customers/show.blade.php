@@ -668,10 +668,7 @@ function customerShow(customer, subscriptions, invoices, payments, tickets, acti
         },
 
         formatBalance(amount) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: document.querySelector('meta[name="tenant-currency"]')?.content || 'USD',
-            }).format(Number(amount || 0));
+            return window.formatMoney(Number(amount || 0));
         },
 
         formatStatus(status) {

@@ -49,7 +49,7 @@
             <div>
                 <p class="text-blue-100 text-xs uppercase tracking-wider">Balance</p>
                 <p class="text-lg font-semibold mt-1 {{ $customer['balance'] < 0 ? 'text-green-300' : 'text-red-300' }}">
-                    ${{ number_format($customer['balance'], 2) }}
+                    {{ \App\Support\Currency::label(null, '$') }}{{ number_format($customer['balance'], 2) }}
                 </p>
             </div>
             <div>
@@ -157,12 +157,12 @@
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Balance</span>
                                     <span class="font-semibold {{ $customer['balance'] < 0 ? 'text-green-600' : 'text-red-600' }}">
-                                        ${{ number_format($customer['balance'], 2) }}
+                                        {{ \App\Support\Currency::label(null, '$') }}{{ number_format($customer['balance'], 2) }}
                                     </span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Credit Limit</span>
-                                    <span class="font-medium text-gray-900">${{ number_format($customer['credit_limit'], 2) }}</span>
+                                    <span class="font-medium text-gray-900">{{ \App\Support\Currency::label(null, '$') }}{{ number_format($customer['credit_limit'], 2) }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Billing Cycle</span>
@@ -259,7 +259,7 @@
                                     @foreach($this->invoices as $invoice)
                                         <tr class="hover:bg-gray-50">
                                             <td class="px-6 py-4 text-sm font-medium text-blue-600">{{ $invoice['number'] }}</td>
-                                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">${{ number_format($invoice['amount'], 2) }}</td>
+                                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ \App\Support\Currency::label(null, '$') }}{{ number_format($invoice['amount'], 2) }}</td>
                                             <td class="px-6 py-4 text-sm text-gray-500">{{ $invoice['due_date'] }}</td>
                                             <td class="px-6 py-4">
                                                 <x-ui.badge :status="$invoice['status']">{{ ucfirst($invoice['status']) }}</x-ui-badge>

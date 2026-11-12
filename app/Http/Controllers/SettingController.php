@@ -23,6 +23,7 @@ use App\Services\NotificationPreferenceService;
 use App\Services\PayfastGateway;
 use App\Services\RadiusProvisioningService;
 use App\Services\TaxResolverService;
+use App\Support\Currency;
 use App\Support\CustomerPortalSettings;
 use App\Support\Notifications\NotificationEventRegistry;
 use Illuminate\Http\JsonResponse;
@@ -515,6 +516,7 @@ class SettingController extends Controller
             'AUD' => 'AUD - Australian Dollar (A$)',
             'CHF' => 'CHF - Swiss Franc (Fr)',
             'CNY' => 'CNY - Chinese Yuan (¥)',
+            'IRR' => 'IRR - Iranian Rial ('.Currency::RIAL_SIGN.')',
             'INR' => 'INR - Indian Rupee (₹)',
             'BRL' => 'BRL - Brazilian Real (R$)',
             'MXN' => 'MXN - Mexican Peso ($)',

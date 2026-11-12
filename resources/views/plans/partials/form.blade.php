@@ -335,6 +335,7 @@
                         <option value="EUR">EUR</option>
                         <option value="GBP">GBP</option>
                         <option value="ZAR">ZAR</option>
+                        <option value="IRR">IRR {{ \App\Support\Currency::RIAL_SIGN }}</option>
                     </select>
                 </div>
                 @error('price')

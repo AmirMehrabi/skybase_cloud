@@ -189,7 +189,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span class="text-sm font-semibold {{ $customer['balance'] < 0 ? 'text-green-600' : ($customer['balance'] > 0 ? 'text-red-600' : 'text-gray-600') }}">
-                                    ${{ number_format($customer['balance'], 2) }}
+                                    {{ \App\Support\Currency::label(null, '$') }}{{ number_format($customer['balance'], 2) }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">

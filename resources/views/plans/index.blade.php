@@ -462,10 +462,7 @@ function plansModule() {
         },
 
         formatCurrency(price, currency) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: currency
-            }).format(price);
+            return window.formatMoney(price, currency);
         },
 
         capitalize(str) {

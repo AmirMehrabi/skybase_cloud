@@ -8,6 +8,7 @@ use App\Models\IpPool;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Support\Currency;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -489,7 +490,7 @@ class DashboardController extends Controller
             'TZS' => 'TZS ',
         ];
 
-        $prefix = $symbols[$currency] ?? $currency.' ';
+        $prefix = Currency::label($currency, $symbols[$currency] ?? $currency.' ');
 
         return $prefix.number_format($amount, 2);
     }

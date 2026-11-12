@@ -18,6 +18,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="tenant-currency" content="{{ tenant()?->currency ?? 'USD' }}">
+        <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
+            window.formatMoney = function (amount, currency = document.querySelector('meta[name="tenant-currency"]')?.content || 'USD', options = {}) {
+                const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency, ...options });
+
+                if (currency.toUpperCase() === 'IRR') {
+                    return formatter.formatToParts(amount)
+                        .map(part => part.type === 'currency' ? @js(\App\Support\Currency::RIAL_SIGN) : part.value)
+                        .join('');
+                }
+
+                return formatter.format(amount);
+            };
+        </script>
         <title>@yield('title', 'Dashboard') - {{ $brandName }}</title>
         <link rel="icon" href="{{ $brandingTenant?->faviconUrl() ?? asset('favicon.ico') }}">
 

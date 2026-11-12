@@ -20,6 +20,7 @@ class SettingsGeneralTest extends TestCase
         $response = $this->actingAs($admin)->get(route('settings.section', ['section' => 'general']));
 
         $response->assertOk();
+        $response->assertSee('IRR - Iranian Rial (﷼)');
         $response->assertSee('SLE - Sierra Leonean Leone (Le)');
         $response->assertSee('Africa/Freetown');
     }
@@ -46,7 +47,7 @@ class SettingsGeneralTest extends TestCase
             'date_format' => 'd/m/Y',
             'time_format' => '24h',
             'first_day_of_week' => 'monday',
-            'currency' => 'SLE',
+            'currency' => 'IRR',
             'currency_symbol_position' => 'before',
             'thousands_separator' => ',',
             'decimal_separator' => '.',
@@ -64,7 +65,7 @@ class SettingsGeneralTest extends TestCase
         $this->assertSame('Africa/Freetown', $updatedTenant->timezone);
         $this->assertSame('24h', $updatedTenant->time_format);
         $this->assertSame('monday', $updatedTenant->first_day_of_week);
-        $this->assertSame('SLE', $updatedTenant->currency);
+        $this->assertSame('IRR', $updatedTenant->currency);
         $this->assertSame('en', $updatedTenant->locale);
         $this->assertTrue($updatedTenant->maintenance_mode);
         $this->assertSame('settings.alpha.test', $updatedTenant->custom_domain);

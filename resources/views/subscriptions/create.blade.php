@@ -167,7 +167,7 @@
                     <select name="plan_id" id="plan_id" x-model="form.plan_id" @change="updatePlanPrice()" :disabled="!!selectedOrganizationBilling" :class="hasValidationError('plan_id') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full rounded-lg shadow-sm sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50" required>
                         <option value="">Select a plan</option>
                         @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}" data-price="{{ $plan->price }}" data-billing-cycle="{{ $plan->billing_cycle }}" data-grace-period="{{ $plan->grace_period_days }}">{{ $plan->name }} - {{ tenant()?->currency ?? 'USD' }} {{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
+                            <option value="{{ $plan->id }}" data-price="{{ $plan->price }}" data-billing-cycle="{{ $plan->billing_cycle }}" data-grace-period="{{ $plan->grace_period_days }}">{{ $plan->name }} - {{ \App\Support\Currency::label() }} {{ number_format($plan->price, 2) }}/{{ $plan->billing_cycle }}</option>
                         @endforeach
                     </select>
                     @error('plan_id')
@@ -536,7 +536,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
                         <div class="relative">
-                            <span class="absolute left-3 top-2 text-gray-500">{{ tenant()?->currency ?? 'USD' }}</span>
+                            <span class="absolute left-3 top-2 text-gray-500">{{ \App\Support\Currency::label() }}</span>
                             <input type="number" step="0.01" x-model="items[0].unit_price" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-14 pr-3 border disabled:bg-gray-50">
                         </div>
                     </div>
@@ -546,7 +546,7 @@
                             <input type="number" step="0.01" x-model="items[0].discount_amount" @input="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border disabled:bg-gray-50">
                             <select x-model="items[0].discount_type" @change="calculateItemTotal(0)" :disabled="!!selectedOrganizationBilling" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white disabled:bg-gray-50">
                                 <option value="none">None</option>
-                                <option value="fixed">{{ tenant()?->currency ?? 'USD' }}</option>
+                                <option value="fixed">{{ \App\Support\Currency::label() }}</option>
                                 <option value="percentage">%</option>
                             </select>
                         </div>
@@ -588,7 +588,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
                             <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-500">{{ tenant()?->currency ?? 'USD' }}</span>
+                                <span class="absolute left-3 top-2 text-gray-500">{{ \App\Support\Currency::label() }}</span>
                                 <input type="number" step="0.01" x-model="item.unit_price" @input="calculateAdditionalItemTotal(index)" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 pl-14 pr-3 border">
                             </div>
                         </div>
@@ -598,7 +598,7 @@
                                 <input type="number" step="0.01" x-model="item.discount_amount" @input="calculateAdditionalItemTotal(index)" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
                                 <select x-model="item.discount_type" @change="calculateAdditionalItemTotal(index)" class="w-28 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border bg-white">
                                     <option value="none">None</option>
-                                    <option value="fixed">{{ tenant()?->currency ?? 'USD' }}</option>
+                                    <option value="fixed">{{ \App\Support\Currency::label() }}</option>
                                     <option value="percentage">%</option>
                                 </select>
                             </div>
@@ -1190,10 +1190,7 @@ function subscriptionCreateForm() {
         },
 
         formatCurrency(value) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: document.querySelector('meta[name="tenant-currency"]')?.content || 'USD',
-            }).format(Number(value || 0));
+            return window.formatMoney(Number(value || 0));
         },
 
         // IP Address validation

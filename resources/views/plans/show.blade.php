@@ -96,7 +96,7 @@ $getVisibilityBadgeClass = static function ($visibility): string
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-6 pt-6 border-t border-gray-200">
             <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide">Price</p>
-                <p class="text-xl font-bold text-gray-900 mt-1">${{ number_format($plan['price'], 2) }} / {{ $plan['billing_cycle'] }}</p>
+                <p class="text-xl font-bold text-gray-900 mt-1">{{ \App\Support\Currency::label($plan['currency'], '$') }}{{ number_format($plan['price'], 2) }} / {{ $plan['billing_cycle'] }}</p>
             </div>
             <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wide">Speed</p>
@@ -303,7 +303,7 @@ $getVisibilityBadgeClass = static function ($visibility): string
             <dl class="space-y-4">
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Price</dt>
-                    <dd class="text-sm font-medium text-gray-900">${{ number_format($plan['price'], 2) }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ \App\Support\Currency::label($plan['currency'], '$') }}{{ number_format($plan['price'], 2) }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Currency</dt>
@@ -315,7 +315,7 @@ $getVisibilityBadgeClass = static function ($visibility): string
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Setup Fee</dt>
-                    <dd class="text-sm font-medium text-gray-900">${{ number_format($plan['setup_fee'], 2) }}</dd>
+                    <dd class="text-sm font-medium text-gray-900">{{ \App\Support\Currency::label($plan['currency'], '$') }}{{ number_format($plan['setup_fee'], 2) }}</dd>
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500">Tax Profile</dt>

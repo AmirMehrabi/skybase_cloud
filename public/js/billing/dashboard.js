@@ -34,10 +34,7 @@ function billingDashboard() {
         recentInvoices: dashboard.recentInvoices || [],
 
         formatCurrency(value) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: document.querySelector('meta[name="tenant-currency"]')?.content || 'USD'
-            }).format(toFiniteNumber(value));
+            return window.formatMoney(toFiniteNumber(value));
         },
 
         getInvoiceStatusClass(status) {

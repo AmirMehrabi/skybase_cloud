@@ -20,10 +20,7 @@ function billingReports() {
         },
 
         formatCurrency(value) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: document.querySelector('meta[name="tenant-currency"]')?.content || 'USD'
-            }).format(value || 0);
+            return window.formatMoney(value || 0);
         }
     }
 }

@@ -54,7 +54,7 @@
                 <option value="">Select a service</option>
                 @foreach($plans as $plan)
                     <option value="{{ $plan->id }}" @selected((string) old('default_plan_id', $organization->default_plan_id ?? '') === (string) $plan->id)>
-                        {{ $plan->name }} - ${{ number_format((float) $plan->price, 2) }}/{{ $plan->billing_cycle }}
+                        {{ $plan->name }} - {{ \App\Support\Currency::label($plan->currency, '$') }}{{ number_format((float) $plan->price, 2) }}/{{ $plan->billing_cycle }}
                     </option>
                 @endforeach
             </select>

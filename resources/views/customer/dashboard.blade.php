@@ -37,7 +37,7 @@
         <div class="rounded-2xl border border-slate-900/10 bg-white p-5 shadow-sm">
             <p class="text-sm text-slate-500">Unpaid invoices</p>
             <p class="mt-2 text-3xl font-bold text-slate-950">{{ $stats['unpaid_invoices'] }}</p>
-            <p class="mt-1 text-xs text-slate-500">Balance {{ number_format((float) $stats['current_balance'], 2) }}</p>
+            <p class="mt-1 text-xs text-slate-500">Balance {{ \App\Support\Currency::label(null, '') }}{{ number_format((float) $stats['current_balance'], 2) }}</p>
         </div>
         @endif
         <div class="rounded-2xl border border-slate-900/10 bg-white p-5 shadow-sm">

@@ -81,7 +81,7 @@
             <dl class="mt-5 space-y-5">
                 <div>
                     <dt class="text-sm text-slate-500">Recurring price</dt>
-                    <dd class="mt-1 text-xl font-bold text-slate-950">${{ number_format((float) $subscription->total_price, 2) }}</dd>
+                    <dd class="mt-1 text-xl font-bold text-slate-950">{{ \App\Support\Currency::label(null, '$') }}{{ number_format((float) $subscription->total_price, 2) }}</dd>
                 </div>
                 <div>
                     <dt class="text-sm text-slate-500">Billing cycle</dt>
@@ -140,7 +140,7 @@
                         <tr>
                             <td class="py-3 text-sm font-medium text-slate-900">{{ $invoice->invoice_number }}</td>
                             <td class="px-4 py-3 text-sm text-slate-600">{{ $invoice->issue_date?->format('M d, Y') }}</td>
-                            <td class="px-4 py-3 text-sm text-slate-600">${{ number_format((float) $invoice->total, 2) }}</td>
+                            <td class="px-4 py-3 text-sm text-slate-600">{{ \App\Support\Currency::label($invoice->currency, '$') }}{{ number_format((float) $invoice->total, 2) }}</td>
                             <td class="py-3 text-right text-sm capitalize text-slate-600">{{ $invoice->status }}</td>
                         </tr>
                     @empty

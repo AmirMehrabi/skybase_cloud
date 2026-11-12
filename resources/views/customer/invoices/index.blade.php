@@ -28,7 +28,7 @@
                         <td class="px-5 py-4 text-sm text-slate-600">{{ $invoice->subscription?->subscription_code ?? 'N/A' }}</td>
                         <td class="px-5 py-4 text-sm text-slate-600">{{ $invoice->issue_date?->format('M d, Y') }}</td>
                         <td class="px-5 py-4 text-sm text-slate-600">{{ $invoice->due_date?->format('M d, Y') }}</td>
-                        <td class="px-5 py-4 text-sm font-semibold text-slate-950">{{ number_format((float) $invoice->total, 2) }}</td>
+                        <td class="px-5 py-4 text-sm font-semibold text-slate-950">{{ \App\Support\Currency::label($invoice->currency, '') }}{{ number_format((float) $invoice->total, 2) }}</td>
                         <td class="px-5 py-4 text-sm"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-700">{{ str_replace('_', ' ', $invoice->status) }}</span></td>
                         <td class="px-5 py-4 text-sm">
                             @if(app(\App\Services\PayfastGateway::class)->ready($gatewaySettings) && tenant()->currency === 'ZAR' && in_array($invoice->status, ['issued', 'partially_paid', 'overdue']) && (float) $invoice->balance_due >= 5)

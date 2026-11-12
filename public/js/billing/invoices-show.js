@@ -43,10 +43,7 @@ function invoiceShow() {
         },
 
         formatCurrency(value) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: this.invoice.currency || document.querySelector('meta[name="tenant-currency"]')?.content || 'USD'
-            }).format(value || 0);
+            return window.formatMoney(value || 0, this.invoice.currency || undefined);
         },
 
         getInvoiceStatusClass(status) {
