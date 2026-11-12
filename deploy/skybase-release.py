@@ -27,10 +27,14 @@ def run(args, cwd=None, build=False, capture=False, env=None):
                           stdout=subprocess.PIPE if capture else None, env=env).stdout
 
 
-def artisan(release, *args):
+def artisan(release, *args, runtime=False):
     environment = os.environ.copy()
     environment['VIEW_COMPILED_PATH'] = str(release / 'bootstrap/cache/views')
-    run(['php', 'artisan', *args, '--no-interaction'], cwd=release, build=True, env=environment)
+    command = ['php', 'artisan', *args, '--no-interaction']
+    if runtime:
+        run(['runuser', '-u', 'www-data', '--', *command], cwd=release, env=environment)
+    else:
+        run(command, cwd=release, build=True, env=environment)
 
 
 def verify_vite_assets(release):
@@ -80,9 +84,9 @@ def healthy():
 
 
 def recycle(release):
-    artisan(release, 'horizon:terminate')
-    artisan(release, 'queue:restart')
-    artisan(release, 'schedule:interrupt')
+    artisan(release, 'horizon:terminate', runtime=True)
+    artisan(release, 'queue:restart', runtime=True)
+    artisan(release, 'schedule:interrupt', runtime=True)
     run(['supervisorctl', 'restart', 'skybase-cloud-scheduler'])
 
 
