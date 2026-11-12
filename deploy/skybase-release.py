@@ -12,7 +12,9 @@ import time
 
 BASE = Path('/srv/skybase')
 QUEUE = Path('/var/lib/skybase-webhook/queue')
-LEGACY = Path('/var/www/html/skybase_cloud')
+LEGACY = Path(os.environ.get('SKYBASE_LEGACY_PATH', '/var/www/html/skybase_cloud'))
+HEALTH_HOST = os.environ.get('SKYBASE_HEALTH_HOST', 'skybase.app')
+GIT_USER = os.environ.get('SKYBASE_GIT_USER')
 REPOSITORY = BASE / 'repository.git'
 USER = 'skybase-build'
 
@@ -69,7 +71,7 @@ def healthy():
     for attempt in range(10):
         try:
             run(['curl', '--fail', '--silent', '--show-error', '--max-time', '10',
-                 '--resolve', 'skybase.app:443:127.0.0.1', 'https://skybase.app/up'], capture=True)
+                 '--resolve', f'{HEALTH_HOST}:443:127.0.0.1', f'https://{HEALTH_HOST}/up'], capture=True)
             return True
         except subprocess.CalledProcessError:
             time.sleep(2)
@@ -84,9 +86,16 @@ def recycle(release):
     run(['supervisorctl', 'restart', 'skybase-cloud-scheduler'])
 
 
-def deploy():
-    run(['git', '--git-dir', REPOSITORY, 'fetch', '--quiet', 'origin', 'master:refs/heads/master'])
-    revision = run(['git', '--git-dir', REPOSITORY, 'rev-parse', 'refs/heads/master'], capture=True).strip()
+def git_command(*args, capture=False):
+    command = ['git', '--git-dir', REPOSITORY, *args]
+    if GIT_USER:
+        command = ['runuser', '-u', GIT_USER, '--', *command]
+    return run(command, capture=capture)
+
+
+def deploy(prepare_only=False):
+    git_command('fetch', '--quiet', 'origin', 'master:refs/heads/master')
+    revision = git_command('rev-parse', 'refs/heads/master', capture=True).strip()
     previous = (BASE / 'current').resolve()
     if (previous / 'REVISION').exists() and (previous / 'REVISION').read_text().strip() == revision:
         print('Latest master is already active', flush=True)
@@ -94,7 +103,10 @@ def deploy():
     name = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S') + '-' + revision[:12]
     release = BASE / 'releases' / name
     release.mkdir()
-    archive = subprocess.Popen(['git', '--git-dir', str(REPOSITORY), 'archive', revision], stdout=subprocess.PIPE)
+    archive_command = ['git', '--git-dir', str(REPOSITORY), 'archive', revision]
+    if GIT_USER:
+        archive_command = ['runuser', '-u', GIT_USER, '--', *archive_command]
+    archive = subprocess.Popen(archive_command, stdout=subprocess.PIPE)
     try:
         subprocess.run(['tar', '-x', '-C', str(release)], stdin=archive.stdout, check=True)
     finally:
@@ -127,7 +139,7 @@ def deploy():
     server = subprocess.Popen(['runuser', '-u', USER, '--', 'php', '-S', '127.0.0.1:19109', '-t', 'public', 'public/index.php'], cwd=release, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for attempt in range(15):
-            probe = subprocess.run(['curl', '-fsS', '--max-time', '5', '-H', 'Host: skybase.app', 'http://127.0.0.1:19109/up'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            probe = subprocess.run(['curl', '-fsS', '--max-time', '5', '-H', f'Host: {HEALTH_HOST}', 'http://127.0.0.1:19109/up'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if probe.returncode == 0:
                 break
             time.sleep(1)
@@ -139,6 +151,12 @@ def deploy():
     # Runtime code is read-only to both the web user and build user after preparation.
     run(['chown', '-R', '--no-dereference', 'root:www-data', release])
     run(['chmod', '-R', 'g+rwX', release / 'bootstrap/cache'])
+    if prepare_only:
+        prepared = BASE / 'prepared'
+        prepared.unlink(missing_ok=True)
+        prepared.symlink_to(release)
+        print('PREPARED ' + revision, flush=True)
+        return
     # The symlink and its temporary replacement are on the same filesystem.
     switch(release)
     try:
@@ -178,6 +196,8 @@ def main():
             revision = (previous / 'REVISION').read_text().strip() if (previous / 'REVISION').exists() else 'legacy'
             (BASE / 'status.json').write_text(json.dumps({'revision': revision, 'release': str(previous), 'rolled_back_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}))
             print('ROLLED BACK to ' + str(previous), flush=True)
+        elif '--prepare' in sys.argv:
+            deploy(prepare_only=True)
         elif '--now' in sys.argv:
             deploy()
         else:

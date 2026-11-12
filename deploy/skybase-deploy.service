@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+EnvironmentFile=-/etc/skybase-deploy/release.env
 ExecStart=/usr/bin/python3 /usr/local/lib/skybase-deploy/skybase-release.py
 TimeoutStartSec=1800
 UMask=0022
