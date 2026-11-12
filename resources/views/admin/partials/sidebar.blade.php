@@ -70,6 +70,11 @@
     </li>
     @endif
 
+    @if(tenant()?->acs_enabled)
+    <x-sidebar-menu title="Customer Devices" icon="network" id="sidebar-acs" :active="request()->routeIs('acs.*')" :items="[
+        ['label' => 'Device inventory', 'route' => 'acs.index', 'active' => request()->routeIs('acs.index', 'acs.show')],
+    ]" />
+    @endif
     <!-- Subscriptions -->
     @if($can('subscriptions.index'))
     <li>

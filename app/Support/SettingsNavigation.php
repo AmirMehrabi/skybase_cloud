@@ -10,6 +10,7 @@ class SettingsNavigation
         $sections = [
             'general' => ['title' => 'Company & localization', 'description' => 'Company details, contact information, currency, language and timezone.', 'icon' => 'building', 'group' => 'Workspace'],
             'branding' => ['title' => 'Branding & appearance', 'description' => 'Make SkyBase your own with company logos, brand colors and portal assets.', 'icon' => 'palette', 'group' => 'Workspace'],
+            'payment-gateway' => ['title' => 'Payment Gateway', 'description' => 'Configure PayFast checkout and accepted payment methods.', 'icon' => 'receipt', 'group' => 'Workspace'],
             'billing' => ['title' => 'Billing & taxes', 'description' => 'Set default tax rates, invoice labels and billing preferences.', 'icon' => 'receipt', 'group' => 'Workspace'],
             'customer-portal' => ['title' => 'Customer portal', 'description' => 'Choose which account and billing details customers can see in their portal.', 'icon' => 'users', 'group' => 'Workspace'],
             'email' => ['title' => 'Email connections', 'description' => 'Connect outgoing SMTP and incoming mailboxes, then test authentication and delivery.', 'icon' => 'mail', 'group' => 'Communication'],
@@ -20,6 +21,9 @@ class SettingsNavigation
             'user-groups' => ['title' => 'User groups', 'description' => 'Organize staff groups and control which customer and network data they can access.', 'icon' => 'layers', 'group' => 'Access & integrations', 'route' => 'admin.tenant.user-groups.index'],
             'ldap' => ['title' => 'Directory integration', 'description' => 'Connect Active Directory or LDAP and configure synchronization and authentication.', 'icon' => 'network', 'group' => 'Access & integrations'],
         ];
+        if (tenant()?->acs_enabled && auth()->user()?->isOwner()) {
+            $sections['acs'] = ['title' => 'ACS integration', 'description' => 'Connect GenieACS and enroll customer equipment.', 'icon' => 'network', 'group' => 'Access & integrations', 'route' => 'acs.settings'];
+        }
         foreach ($sections as $key => &$section) {
             $section['route'] ??= $key === 'sms' ? 'settings.sms' : 'settings.section';
             $section['parameters'] = $section['route'] === 'settings.section' ? ['section' => $key] : [];

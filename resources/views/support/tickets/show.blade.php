@@ -17,6 +17,9 @@
 @endphp
 
 @section('content')
+@if(tenant()?->acs_enabled && auth()->user()->hasPermission('acs.read') && $ticket->customer_id)
+<div class="mb-5 flex justify-end"><a class="text-sm font-medium text-teal-700" href="{{ route('acs.index', array_filter(['customer' => $ticket->customer_id, 'subscription' => $ticket->subscription_id])) }}">Customer devices →</a></div>
+@endif
 <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
     <section class="min-w-0 space-y-5">
         <div class="rounded-2xl border border-slate-900/10 bg-white p-5 shadow-sm sm:p-6">

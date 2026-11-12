@@ -5,6 +5,7 @@ namespace App\Http\Requests\Subscription;
 use App\Services\SafeRouterUsername;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateSubscriptionRequest extends FormRequest
 {
@@ -19,6 +20,7 @@ class UpdateSubscriptionRequest extends FormRequest
         $effectiveRouterId = $this->input('router_id', $this->route('subscription')->router_id);
 
         return [
+            ...SubscriptionNetworkRules::rules(),
             'plan_id' => ['nullable', Rule::exists('plans', 'id')->where('tenant_id', $tenantId)],
             'name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:255',
@@ -55,6 +57,11 @@ class UpdateSubscriptionRequest extends FormRequest
             'ip_routes.*.ip_address' => 'nullable|ip|max:255',
             'ip_routes.*.cidr' => 'nullable|integer|min:1|max:32',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $validator) => SubscriptionNetworkRules::validate($this, $validator));
     }
 
     public function messages(): array

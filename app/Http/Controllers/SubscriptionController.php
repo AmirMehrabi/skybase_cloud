@@ -38,6 +38,7 @@ use App\Services\RadiusAccountingUsageService;
 use App\Services\SecurityEventLogger;
 use App\Services\SmsGatewayService;
 use App\Services\SubscriptionDeletionService;
+use App\Services\SubscriptionIpAllocationService;
 use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionRenewalService;
 use App\Services\SubscriptionSessionDisconnectService;
@@ -65,6 +66,7 @@ class SubscriptionController extends Controller
         protected SubscriptionSessionDisconnectService $disconnectService,
         protected SubscriptionUsageService $subscriptionUsage,
         protected TaxResolverService $taxResolver,
+        protected SubscriptionIpAllocationService $ipAllocator,
     ) {}
 
     /**
@@ -241,6 +243,9 @@ class SubscriptionController extends Controller
         $validated['next_billing_date'] = $validated['start_date'] ?? now()->toDateString();
         $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : now();
 
+        $reservedIpAddresses = $validated['reserved_ip_addresses'] ?? [];
+        unset($validated['reserved_ip_addresses']);
+
         $items = $validated['items'];
         unset($validated['items']);
 
@@ -250,13 +255,16 @@ class SubscriptionController extends Controller
             unset($validated['ip_address']);
         }
 
-        [$subscription, $invoice] = DB::transaction(function () use ($validated, $organizationIds, $items, $primaryIpAddress, $ipRoutes, $plan): array {
+        [$subscription, $invoice] = DB::transaction(function () use ($validated, $organizationIds, $items, $primaryIpAddress, $ipRoutes, $plan, $reservedIpAddresses): array {
             $subscription = Subscription::create($validated);
+            if ($subscription->usesSessionIpAllocation()) {
+                $this->ipAllocator->configure($subscription, ['reserved_ip_addresses' => $reservedIpAddresses]);
+            }
             $subscription->organizations()->syncWithPivotValues($organizationIds, [
                 'tenant_id' => $subscription->tenant_id,
             ]);
 
-            if ($subscription->isSystemManagedIp()) {
+            if ($subscription->isSystemManagedIp() && ! $subscription->usesSessionIpAllocation()) {
                 $assignedPrimaryIp = $subscription->assignIpAddress($primaryIpAddress);
 
                 if (filled($primaryIpAddress) && ! $assignedPrimaryIp) {
@@ -342,7 +350,7 @@ class SubscriptionController extends Controller
     public function show(ShowSubscriptionRequest $request, Subscription $subscription): View
     {
         $filters = $request->validated();
-        $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments', 'restrictions']);
+        $subscription->load(['customer.organization', 'plan', 'router', 'ipPool.router', 'ipRoutes.ipPool', 'items', 'invoices.payments', 'restrictions', 'ipLeases' => fn ($query) => $query->whereNull('released_at')]);
         $currentUsageCycle = $subscription->usageCycles()->whereNull('closed_at')->with('adjustments')->first();
         $allowanceSummary = $this->allowanceSummary($subscription, $currentUsageCycle);
         $plans = Plan::query()
@@ -463,6 +471,9 @@ class SubscriptionController extends Controller
         $originalBillingEnabled = (bool) $subscription->billing_enabled;
 
         $validated = $request->validated();
+        if ($subscription->concurrent_devices === null && (int) ($validated['concurrent_devices'] ?? 1) === 1 && ($validated['ip_allocation'] ?? 'fixed') === 'fixed') {
+            unset($validated['concurrent_devices'], $validated['ip_allocation']);
+        }
         if (! $request->filled('pppoe_password')) {
             unset($validated['pppoe_password']);
         }
@@ -490,6 +501,8 @@ class SubscriptionController extends Controller
             if (array_key_exists('billing_enabled', $validated)) {
                 $validated['billing_disabled_at'] = $validated['billing_enabled'] ? null : ($subscription->billing_disabled_at ?? now());
             }
+
+            $this->ipAllocator->configure($subscription, $validated);
 
             $ipManagementChanged = isset($validated['ip_management']) && $validated['ip_management'] !== $subscription->ip_management;
 
@@ -520,7 +533,7 @@ class SubscriptionController extends Controller
             $subscription->update($validated);
             $subscription->refresh();
 
-            if ($ipAddressProvided) {
+            if ($ipAddressProvided && ! $subscription->usesSessionIpAllocation()) {
                 $updatedIp = $subscription->updateIpAddress($ipAddress);
 
                 if ($subscription->isSystemManagedIp() && filled($ipAddress) && ! $updatedIp) {

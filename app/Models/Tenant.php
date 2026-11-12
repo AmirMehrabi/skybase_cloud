@@ -21,6 +21,7 @@ class Tenant extends Model
         'id',
         'archived_at',
         'application_access_suspended',
+        'acs_enabled',
         'name',
         'slug',
         'company_name',
@@ -69,6 +70,7 @@ class Tenant extends Model
         'trial_ends_at' => 'datetime',
         'archived_at' => 'datetime',
         'application_access_suspended' => 'boolean',
+        'acs_enabled' => 'boolean',
         'dark_mode_enabled' => 'boolean',
         'maintenance_mode' => 'boolean',
     ];

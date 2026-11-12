@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Subscription;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SubscriptionDeletionService
 {
@@ -60,6 +61,17 @@ class SubscriptionDeletionService
 
                 if (! $suppressActivityLogs) {
                     $this->disconnectService->recordActivity($freshSubscription, $disconnectResult);
+                }
+
+                if ($freshSubscription->usesSessionIpAllocation()) {
+                    $allocator = app(SubscriptionIpAllocationService::class);
+                    if ($disconnectResult->wasSuccessful()) {
+                        $allocator->releaseAll($freshSubscription);
+                    }
+                    if ($forceDelete && $freshSubscription->ipLeases()->whereNull('released_at')->exists()) {
+                        throw ValidationException::withMessages(['subscription' => 'Disconnect active sessions before permanently deleting this subscription.']);
+                    }
+                    $allocator->releaseReservations($freshSubscription);
                 }
 
                 if ($freshSubscription->isSystemManagedIp()) {

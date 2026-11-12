@@ -122,6 +122,9 @@
 @endpush
 
 @section('content')
+@if(tenant()?->acs_enabled && auth()->user()->hasPermission('acs.read'))
+<div class="mb-5 flex justify-end"><a class="text-sm font-medium text-teal-700" href="{{ route('acs.index', ['customer' => $customer->id]) }}">Customer devices →</a></div>
+@endif
 <div class="space-y-6" x-data="customerShow(@js($customerData), @js($subscriptions), @js($invoices), @js($payments), @js($tickets), @js($activity), @js(route('billing.payments.store')))" x-cloak>
     <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

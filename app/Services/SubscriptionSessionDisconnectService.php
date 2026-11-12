@@ -39,6 +39,9 @@ class SubscriptionSessionDisconnectService
 
         $subscription->loadMissing('router');
         $router = $subscription->router;
+        if ($subscription->usesSessionIpAllocation()) {
+            return $this->disconnectConcurrentSessions($subscription, $username);
+        }
         $radiusSession = $this->activeRadiusSession($subscription);
 
         if (! $subscription->isPppoe()) {
@@ -104,6 +107,36 @@ class SubscriptionSessionDisconnectService
             $router->id,
             $router->name,
         );
+    }
+
+    private function disconnectConcurrentSessions(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
+    {
+        $leases = $subscription->ipLeases()->whereNull('released_at')->get();
+        $removed = 0;
+        $failures = [];
+        foreach ($leases as $lease) {
+            if (! $lease->confirmed_at) {
+                $failures[] = 'A connection is still being established. Retry after it connects or expires.';
+
+                continue;
+            }
+            $result = $this->disconnectViaCoa($subscription, $username, (object) [
+                'acctsessionid' => null,
+                'nasipaddress' => null,
+                'framedipaddress' => $lease->ip_address,
+            ]);
+            if ($result->wasSuccessful()) {
+                app(SubscriptionIpAllocationService::class)->release($subscription, $lease->token);
+                $removed++;
+            } else {
+                $failures[] = $result->message;
+            }
+        }
+        if ($failures !== []) {
+            return SubscriptionSessionDisconnectResult::failed(implode(' ', array_unique($failures)), 'routeros-coa', $subscription->router_id, $subscription->router?->name);
+        }
+
+        return SubscriptionSessionDisconnectResult::success("Disconnected {$removed} active session(s).", 'routeros-coa', $subscription->router_id, $subscription->router?->name, $removed);
     }
 
     public function recordActivity(Subscription $subscription, SubscriptionSessionDisconnectResult $result, ?User $causer = null): void

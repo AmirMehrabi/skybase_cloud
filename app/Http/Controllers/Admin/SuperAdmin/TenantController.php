@@ -143,10 +143,13 @@ class TenantController extends Controller
         app(TenantContext::class)->run($tenant->id, function () use ($tenant, $data, $billing): void {
             $tenant->getConnection()->transaction(function () use ($tenant, $data, $billing): void {
                 $tenant = Tenant::query()->lockForUpdate()->findOrFail($tenant->id);
-                $before = $tenant->only(['name', 'company_name', 'email', 'phone', 'status', 'application_access_suspended', 'archived_at']);
+                $before = $tenant->only(['name', 'company_name', 'email', 'phone', 'status', 'application_access_suspended', 'archived_at', 'acs_enabled']);
                 $account = $billing->account($tenant->id);
                 $before['commercial'] = $account->toArray();
                 switch ($data['action']) {
+                    case 'acs':
+                        $tenant->update(['acs_enabled' => (bool) $data['acs_enabled']]);
+                        break;
                     case 'contacts':
                         $tenant->update(array_intersect_key($data, array_flip(['name', 'company_name', 'email', 'phone'])));
                         break;
@@ -173,7 +176,7 @@ class TenantController extends Controller
                         $tenant->update(['application_access_suspended' => true, 'archived_at' => now()]);
                         break;
                 }
-                $billing->event($tenant->id, 'owner.'.$data['action'], $data['reason'], ['before' => $before, 'after' => ['tenant' => $tenant->only(['name', 'company_name', 'email', 'phone', 'status', 'application_access_suspended', 'archived_at']), 'commercial' => $account->fresh()->toArray()]]);
+                $billing->event($tenant->id, 'owner.'.$data['action'], $data['reason'], ['before' => $before, 'after' => ['tenant' => $tenant->only(['name', 'company_name', 'email', 'phone', 'status', 'application_access_suspended', 'archived_at', 'acs_enabled']), 'commercial' => $account->fresh()->toArray()]]);
             });
         });
 

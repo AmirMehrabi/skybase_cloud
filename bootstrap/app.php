@@ -62,5 +62,5 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code', 'twilio.token', 'smsportal.secret', 'kavenegar.api_key']);
+        $exceptions->dontFlash(['parameters', 'sandbox.merchant_key', 'sandbox.passphrase', 'live.merchant_key', 'live.passphrase', 'current_password', 'password', 'password_confirmation', 'pppoe_password', 'api_password', 'coa_secret', 'incoming_password', 'outgoing_password', 'code', 'recovery_code', 'twilio.token', 'smsportal.secret', 'kavenegar.api_key']);
     })->create();

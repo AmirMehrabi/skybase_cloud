@@ -10,6 +10,7 @@ use App\Http\Requests\Setting\UpdateEmailSettingRequest;
 use App\Http\Requests\Setting\UpdateGeneralSettingRequest;
 use App\Http\Requests\Setting\UpdateLdapSettingRequest;
 use App\Http\Requests\Setting\UpdateNotificationSettingRequest;
+use App\Models\GatewayPaymentAttempt;
 use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
@@ -19,6 +20,7 @@ use App\Services\EmailConnectionTester;
 use App\Services\Ldap\LdapConnectionFactory;
 use App\Services\Ldap\LdapSyncService;
 use App\Services\NotificationPreferenceService;
+use App\Services\PayfastGateway;
 use App\Services\RadiusProvisioningService;
 use App\Services\TaxResolverService;
 use App\Support\CustomerPortalSettings;
@@ -37,7 +39,7 @@ class SettingController extends Controller
     {
         if ($request->filled('tab')) {
             $section = $request->query('tab');
-            abort_unless(is_string($section) && in_array($section, ['general', 'branding', 'billing', 'customer-portal', 'email', 'notifications', 'ldap'], true), 404);
+            abort_unless(is_string($section) && in_array($section, ['general', 'branding', 'billing', 'payment-gateway', 'customer-portal', 'email', 'notifications', 'ldap'], true), 404);
 
             return redirect()->route('settings.section', ['section' => $section]);
         }
@@ -47,7 +49,7 @@ class SettingController extends Controller
 
     public function section(string $section): View
     {
-        abort_unless(in_array($section, ['general', 'branding', 'billing', 'customer-portal', 'email', 'notifications', 'ldap'], true), 404);
+        abort_unless(in_array($section, ['general', 'branding', 'billing', 'payment-gateway', 'customer-portal', 'email', 'notifications', 'ldap'], true), 404);
         $tenant = $this->getTenant();
         $data = match ($section) {
             'general' => ['timezones' => \DateTimeZone::listIdentifiers(), 'currencies' => $this->getCurrencies(), 'locales' => $this->getLocales()],
@@ -55,6 +57,7 @@ class SettingController extends Controller
             'ldap' => ['ldapSettings' => app(LdapSyncService::class)->settingsForTenant($tenant->id)],
             'notifications' => ['notificationSettings' => app(NotificationPreferenceService::class)->tenantSettings($tenant->id), 'notificationEvents' => NotificationEventRegistry::events()],
             'billing' => ['taxSettings' => app(TaxResolverService::class)->settings($tenant->id)],
+            'payment-gateway' => ['gatewaySettings' => app(PayfastGateway::class)->settings($tenant->id), 'gatewayAttempts' => GatewayPaymentAttempt::query()->latest('id')->limit(20)->get()],
             'customer-portal' => ['showBilling' => CustomerPortalSettings::showsBilling($tenant->id)],
             default => [],
         };

@@ -372,6 +372,10 @@
                 </div>
             </div>
 
+            <div class="mb-6">
+                <x-input.concurrent-devices />
+            </div>
+
             <!-- IP Management -->
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-3">
@@ -383,7 +387,7 @@
                         <span>Choose how IP addresses are managed</span>
                     </div>
                 </div>
-                <x-input.ip-management />
+                <x-input.ip-management system-only="Number(form.concurrent_devices) > 1" />
 
                 <div x-show="form.ip_management === 'router'" x-transition class="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4">
                     <label for="manual_ip_address" class="block text-sm font-medium text-gray-700 mb-1">Manual IP Address</label>
@@ -427,8 +431,10 @@
                     </div>
                 </div>
 
+                <x-input.subscription-ip-allocation />
+
                 <!-- Primary IP Address -->
-                <div class="mt-4">
+                <div class="mt-4" x-show="Number(form.concurrent_devices) === 1">
                     <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">Primary IP Address</label>
                     <select name="ip_address" id="ip_address" x-model="form.ip_address" :class="hasValidationError('ip_address') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'" class="block w-full max-w-md rounded-lg border bg-white px-3 py-2 text-sm font-mono shadow-sm">
                         <option value="">Auto-assign next available IP</option>
@@ -445,7 +451,7 @@
                     </template>
                 </div>
 
-                <div class="mt-6 rounded-xl border border-blue-100 bg-white p-4">
+                <div x-show="Number(form.concurrent_devices) === 1" class="mt-6 rounded-xl border border-blue-100 bg-white p-4">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h4 class="text-sm font-semibold text-gray-900">IP Route</h4>
@@ -874,8 +880,11 @@ function subscriptionCreateForm() {
             access_point_id: '',
             site: '',
             connection_type: 'pppoe',
-            ip_management: null,
-            ip_pool_id: '',
+            concurrent_devices: @js((int) old('concurrent_devices', 1)),
+            ip_allocation: @js(old('ip_allocation', 'fixed')),
+            reserved_ip_addresses: @js(old('reserved_ip_addresses', [])),
+            ip_management: @js(old('ip_management')),
+            ip_pool_id: @js((string) old('ip_pool_id', '')),
             mac_address: '',
             ip_address: '',
             pppoe_username: '',
@@ -1400,8 +1409,13 @@ function subscriptionCreateForm() {
             if (this.form.mac_address) formData.append('mac_address', this.form.mac_address);
             if (this.form.ip_management) formData.append('ip_management', this.form.ip_management);
             if (this.form.ip_pool_id) formData.append('ip_pool_id', this.form.ip_pool_id);
-            if (this.form.ip_address) formData.append('ip_address', this.form.ip_address);
-            if (this.form.ip_management === 'system') {
+            formData.append('concurrent_devices', this.form.concurrent_devices);
+            formData.append('ip_allocation', Number(this.form.concurrent_devices) === 1 ? 'fixed' : this.form.ip_allocation);
+            if (Number(this.form.concurrent_devices) > 1 && this.form.ip_allocation === 'reserved_set') {
+                this.form.reserved_ip_addresses.forEach(ip => formData.append('reserved_ip_addresses[]', ip || ''));
+            }
+            if (Number(this.form.concurrent_devices) === 1 && this.form.ip_address) formData.append('ip_address', this.form.ip_address);
+            if (this.form.ip_management === 'system' && Number(this.form.concurrent_devices) === 1) {
                 this.ipRoutes.forEach((route, index) => {
                     if (!route.ip_pool_id && !route.ip_address) return;
 

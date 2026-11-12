@@ -16,6 +16,7 @@ class PermissionRegistry
     public static function modules(): array
     {
         return [
+            'acs' => ['label' => 'Customer Devices', 'description' => 'Optional ACS inventory, assignments and remote operations', 'actions' => self::actions(['read', 'write', 'actions'])],
             'dashboard' => ['label' => 'Dashboard', 'description' => 'Dashboard, search, and administrative notifications', 'actions' => self::actions(['read', 'actions'])],
             'organizations' => ['label' => 'Organizations', 'description' => 'Manage customer organizations and companies', 'actions' => self::actions(['read', 'write', 'delete'])],
             'customers' => ['label' => 'Customers', 'description' => 'Customer records, notes, status, and billing settings', 'actions' => self::actions()],
@@ -187,6 +188,7 @@ class PermissionRegistry
     public static function routeMap(): array
     {
         return [
+            'acs.activity' => 'acs.read', 'acs.profile' => 'acs.actions', 'acs.provision' => 'acs.actions', 'acs.index' => 'acs.read', 'acs.show' => 'acs.read', 'acs.settings' => 'settings.write', 'acs.save' => 'settings.write', 'acs.test' => 'settings.write', 'acs.sync' => 'acs.actions', 'acs.assign' => 'acs.write', 'acs.action' => 'acs.actions',
             'dashboard' => 'dashboard.read',
             'search.resources' => 'dashboard.read',
             'settings.section' => 'settings.read',

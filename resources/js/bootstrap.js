@@ -7,7 +7,10 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 import Alpine from 'alpinejs';
 import { createSubscriptionIpdr } from './subscriptions/ipdr';
 
+import { createSubscriptionNetworkFields } from './subscriptions/network-fields';
+
 Alpine.data('subscriptionIpdr', createSubscriptionIpdr);
+Alpine.data('subscriptionNetworkFields', createSubscriptionNetworkFields);
 
 window.Alpine = Alpine;
 

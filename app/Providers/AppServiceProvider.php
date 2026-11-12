@@ -7,10 +7,14 @@ use App\Models\IpAddress;
 use App\Models\Subscription;
 use App\Models\SubscriptionIpRoute;
 use App\Models\User;
+use App\Services\AcsClient;
+use App\Services\AcsProvisioningService;
 use App\Services\CentralIdentityProvider;
 use App\Services\ConsoleIdentityProvider;
+use App\Services\GenieAcsClient;
 use App\Services\IpdrInventoryService;
 use App\Services\SecurityEventLogger;
+use App\Services\TenantContext;
 use App\Services\TenantNotificationService;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -26,9 +30,27 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->app->bind(AcsClient::class, GenieAcsClient::class);
+    }
+
     public function boot(): void
     {
         Event::listen(Verified::class, CloudSignupVerified::class);
+        Event::listen('eloquent.updated: '.Subscription::class, function (Subscription $subscription): void {
+            if (tenant()?->acs_enabled && $subscription->wasChanged(['status', 'plan_id', 'pppoe_username', 'pppoe_password'])) {
+                $subscription->getConnection()->afterCommit(function () use ($subscription): void {
+                    try {
+                        app(TenantContext::class)->run($subscription->tenant_id, function () use ($subscription): void {
+                            app(AcsProvisioningService::class)->subscriptionChanged($subscription);
+                        });
+                    } catch (\Throwable) {
+                        report(new \RuntimeException('ACS provisioning could not be scheduled for subscription '.$subscription->id));
+                    }
+                });
+            }
+        });
         Event::listen('eloquent.updated: '.Subscription::class, function (Subscription $subscription): void {
             $event = $subscription->wasChanged('status') && $subscription->status === 'cancelled' ? 'subscription.cancelled' : ($subscription->wasChanged('plan_id') ? 'subscription.plan_changed' : null);
             if ($event) {

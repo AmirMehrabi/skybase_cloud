@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Subscription\SubscriptionNetworkRules;
 use App\Models\Customer;
 use App\Models\IpAddress;
 use App\Models\Organization;
@@ -35,6 +36,7 @@ class StoreSubscriptionRequest extends FormRequest
         $tenantId = tenant_id() ?? $this->user()?->tenant_id;
 
         return [
+            ...SubscriptionNetworkRules::rules(),
             'organization_ids' => ['nullable', 'array', 'min:1'],
             'organization_ids.*' => [
                 'integer',
@@ -92,6 +94,7 @@ class StoreSubscriptionRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            SubscriptionNetworkRules::validate($this, $validator);
             $organizationIds = collect($this->input('organization_ids', []))
                 ->filter(fn (mixed $organizationId): bool => filled($organizationId))
                 ->map(fn (mixed $organizationId): int => (int) $organizationId)
@@ -211,6 +214,8 @@ class StoreSubscriptionRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
+            'concurrent_devices' => $this->input('concurrent_devices', 1),
+            'ip_allocation' => $this->input('ip_allocation', 'fixed'),
             'items' => $this->input('items', []),
             'name' => $this->input('name'),
             'service_type' => $this->input('service_type', 'hotspot'),

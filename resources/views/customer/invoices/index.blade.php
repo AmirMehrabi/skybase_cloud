@@ -17,10 +17,11 @@
                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Issue date</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Due date</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Total</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th><th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Payment</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-900/10">
+                @php($gatewaySettings = app(\App\Services\PayfastGateway::class)->settings(auth('customer')->user()->tenant_id))
                 @forelse($invoices as $invoice)
                     <tr>
                         <td class="px-5 py-4 text-sm font-medium text-slate-950">{{ $invoice->invoice_number }}</td>
@@ -29,10 +30,22 @@
                         <td class="px-5 py-4 text-sm text-slate-600">{{ $invoice->due_date?->format('M d, Y') }}</td>
                         <td class="px-5 py-4 text-sm font-semibold text-slate-950">{{ number_format((float) $invoice->total, 2) }}</td>
                         <td class="px-5 py-4 text-sm"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-700">{{ str_replace('_', ' ', $invoice->status) }}</span></td>
+                        <td class="px-5 py-4 text-sm">
+                            @if(app(\App\Services\PayfastGateway::class)->ready($gatewaySettings) && tenant()->currency === 'ZAR' && in_array($invoice->status, ['issued', 'partially_paid', 'overdue']) && (float) $invoice->balance_due >= 5)
+                                <form action="{{ route('customer.invoices.pay', $invoice) }}" method="POST" class="space-y-3">
+                                    @csrf
+                                    @if($gatewaySettings['methods'])
+                                        <x-ui.input.select name="method" label="Payment method" :options="array_intersect_key(\App\Services\PayfastGateway::METHODS, array_flip($gatewaySettings['methods']))" required />
+                                    @endif
+                                    <p class="text-xs text-slate-500">Balance: R{{ number_format((float) $invoice->balance_due, 2) }}</p>
+                                    <x-ui.button type="submit" variant="brand">{{ $gatewaySettings['label'] }}</x-ui.button>
+                                </form>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-5 py-10 text-center text-sm text-slate-500">No invoices found.</td>
+                        <td colspan="7" class="px-5 py-10 text-center text-sm text-slate-500">No invoices found.</td>
                     </tr>
                 @endforelse
             </tbody>

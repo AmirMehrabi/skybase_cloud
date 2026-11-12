@@ -22,7 +22,8 @@ class ManageTenantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', Rule::in(['contacts', 'package', 'trial', 'limit', 'note', 'suspend', 'activate', 'archive'])],
+            'action' => ['required', Rule::in(['contacts', 'package', 'trial', 'limit', 'note', 'suspend', 'activate', 'archive', 'acs'])],
+            'acs_enabled' => ['exclude_unless:action,acs', 'required_if:action,acs', 'boolean'],
             'reason' => ['required', 'string', 'max:2000'],
             'name' => ['exclude_unless:action,contacts', 'required_if:action,contacts', 'string', 'max:255'],
             'company_name' => ['exclude_unless:action,contacts', 'required_if:action,contacts', 'string', 'max:255'],

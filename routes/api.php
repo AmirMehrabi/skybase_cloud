@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\PublicCoverageController;
+use App\Http\Controllers\RadiusAllocationController;
 use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,4 +34,10 @@ Route::middleware(config('security.strict_api_access')
 Route::prefix('v1/public/{tenant:slug}/coverage')->middleware('throttle:120,1')->group(function (): void {
     Route::get('/', [PublicCoverageController::class, 'feed'])->name('coverage.public.feed');
     Route::get('/map', [PublicCoverageController::class, 'map'])->name('coverage.public.map');
+});
+
+Route::prefix('v1/radius/{tenantId}')->group(function (): void {
+    Route::post('/allocate', [RadiusAllocationController::class, 'allocate'])->name('radius.allocate');
+    Route::post('/reset', [RadiusAllocationController::class, 'reset'])->name('radius.reset');
+    Route::post('/accounting', [RadiusAllocationController::class, 'accounting'])->name('radius.accounting');
 });

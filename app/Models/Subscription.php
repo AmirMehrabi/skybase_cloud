@@ -32,7 +32,7 @@ class Subscription extends Model implements LdapImportable
     use HasFactory, ImportableFromLdap, LogsTenantActivity, SoftDeletes;
     use HashesPasswordCredentials;
 
-    protected $fillable = ['tenant_id', 'user_group_id', 'customer_id', 'organization_id', 'subscription_code', 'name', 'phone', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'auto_suspension_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
+    protected $fillable = ['tenant_id', 'user_group_id', 'customer_id', 'organization_id', 'subscription_code', 'name', 'phone', 'service_type', 'plan_id', 'router_id', 'access_point_id', 'site', 'connection_type', 'concurrent_devices', 'ip_allocation', 'reserved_ip_addresses', 'ip_address', 'mac_address', 'ip_pool_id', 'ip_management', 'pppoe_username', 'pppoe_password', 'connection_status', 'connection_status_checked_at', 'base_price', 'discount_amount', 'discount_type', 'tax_amount', 'total_price', 'billing_cycle', 'billing_enabled', 'auto_suspension_enabled', 'grace_period_days', 'next_billing_date', 'last_billed_at', 'billing_disabled_at', 'status', 'start_date', 'end_date', 'activation_date', 'suspended_at', 'cancelled_at', 'notes', 'ldap_guid', 'ldap_domain', 'ldap_dn', 'ldap_synced_at', 'activated_by', 'suspended_by'];
 
     protected function activityLogExcept(): array
     {
@@ -54,6 +54,8 @@ class Subscription extends Model implements LdapImportable
     protected function casts(): array
     {
         return [
+            'concurrent_devices' => 'integer',
+            'reserved_ip_addresses' => 'array',
             'pppoe_password' => CompatibleSecretCast::class,
 
             'base_price' => 'decimal:2',
@@ -170,6 +172,16 @@ class Subscription extends Model implements LdapImportable
         static::deleted(function (Subscription $subscription): void {
             app(RadiusProvisioningService::class)->removeSubscription($subscription);
         });
+    }
+
+    public function ipLeases(): HasMany
+    {
+        return $this->hasMany(SubscriptionIpLease::class);
+    }
+
+    public function usesSessionIpAllocation(): bool
+    {
+        return ($this->concurrent_devices ?? 1) > 1 && in_array($this->ip_allocation, ['dynamic_pool', 'reserved_set'], true);
     }
 
     public function getLdapGuidColumn(): string
@@ -454,7 +466,7 @@ class Subscription extends Model implements LdapImportable
      */
     public function assignIpAddress(?string $specificIp = null): ?IpAddress
     {
-        if (! $this->ip_pool_id || $this->ip_management !== 'system') {
+        if ($this->usesSessionIpAllocation() || ! $this->ip_pool_id || $this->ip_management !== 'system') {
             return null;
         }
 
@@ -462,7 +474,7 @@ class Subscription extends Model implements LdapImportable
 
         if ($specificIp) {
             // Assign specific IP
-            $ip = $pool->ipAddresses()->where('ip_address', $specificIp)->first();
+            $ip = $pool->ipAddresses()->where('ip_address', $specificIp)->lockForUpdate()->first();
 
             if (! $ip || ! $ip->isAvailable()) {
                 return null;
@@ -475,7 +487,7 @@ class Subscription extends Model implements LdapImportable
         }
 
         // Auto-assign next available IP
-        $ip = $pool->availableAddresses()->first();
+        $ip = $pool->availableAddresses()->lockForUpdate()->first();
 
         if (! $ip) {
             return null;
@@ -495,7 +507,7 @@ class Subscription extends Model implements LdapImportable
      */
     public function suggestIpAddress(): ?IpAddress
     {
-        if (! $this->ip_pool_id || $this->ip_management !== 'system') {
+        if ($this->usesSessionIpAllocation() || ! $this->ip_pool_id || $this->ip_management !== 'system') {
             return null;
         }
 
@@ -514,6 +526,10 @@ class Subscription extends Model implements LdapImportable
      */
     public function updateIpAddress(?string $ipAddress): ?IpAddress
     {
+        if ($this->usesSessionIpAllocation()) {
+            return null;
+        }
+
         if (! $this->isSystemManagedIp()) {
             $this->update(['ip_address' => $ipAddress]);
 
@@ -528,7 +544,7 @@ class Subscription extends Model implements LdapImportable
 
         $assignedIp = $this->ipPool?->ipAddresses()
             ->where('ip_address', $ipAddress)
-            ->first();
+            ->lockForUpdate()->first();
 
         if (! $assignedIp) {
             return null;

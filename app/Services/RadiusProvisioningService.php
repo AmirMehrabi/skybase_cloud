@@ -53,7 +53,7 @@ class RadiusProvisioningService
 
                 $this->removeUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
 
-                if ($subscription->status === 'suspended' || $subscription->customer?->status === 'suspended') {
+                if ($subscription->status === 'suspended' || $subscription->customer?->status === 'suspended' || $subscription->usesSessionIpAllocation()) {
                     $this->rejectUsername((string) $subscription->tenant_id, (string) $subscription->pppoe_username);
                 }
 
@@ -103,7 +103,7 @@ class RadiusProvisioningService
                 );
             }
 
-            if (! empty($subscription->ip_address)) {
+            if (! $subscription->usesSessionIpAllocation() && ! empty($subscription->ip_address)) {
                 RadiusReply::withoutGlobalScopes()->updateOrCreate(
                     [
                         'tenant_id' => $tenantId,
@@ -121,6 +121,15 @@ class RadiusProvisioningService
                     ->where('username', $username)
                     ->where('attribute', 'Framed-IP-Address')
                     ->delete();
+            }
+
+            if ($subscription->service_type === 'hotspot' && $subscription->concurrent_devices !== null) {
+                RadiusReply::withoutGlobalScopes()->updateOrCreate(
+                    ['tenant_id' => $tenantId, 'username' => $username, 'attribute' => 'Port-Limit'],
+                    ['op' => ':=', 'value' => (string) $subscription->concurrent_devices],
+                );
+            } else {
+                RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->where('attribute', 'Port-Limit')->delete();
             }
 
             $rateLimit = $this->rateLimitForPlan($plan);
@@ -254,6 +263,10 @@ class RadiusProvisioningService
 
     public function provisioningSkipReason(Subscription $subscription): ?string
     {
+        if ($subscription->usesSessionIpAllocation() && ! SubscriptionIpAllocationService::isConfiguredForTenant((string) $subscription->tenant_id)) {
+            return 'Session IP allocation is not connected for this tenant.';
+        }
+
         if (app(TenantContext::class)->id() === null) {
             $subscription->unsetRelation('plan')->unsetRelation('router')->unsetRelation('customer');
 

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ class InitializeTenancy
     {
         $guard = Auth::guard($request->routeIs('customer.*') ? 'customer' : 'web');
         $user = $guard->user();
-        if ($user?->isCentralAdmin() && $request->routeIs('dashboard') && config('skybase_billing.owner_console_enabled')) {
+        if ($user instanceof User && $user->isCentralAdmin() && $request->routeIs('dashboard') && config('skybase_billing.owner_console_enabled')) {
             return redirect()->route('admin.super-admin.tenants.index');
         }
         abort_unless($user && filled($user->tenant_id), 403);

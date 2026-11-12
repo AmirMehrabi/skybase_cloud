@@ -36,6 +36,9 @@
 <div class="space-y-6 pb-24" x-data="subscriptionEditForm({
     routerId: @js((string) $currentRouterId),
     accessPointId: @js((string) old('access_point_id', $subscription->access_point_id ?? '')),
+    concurrentDevices: @js((int) old('concurrent_devices', $subscription->concurrent_devices ?? 1)),
+    ipAllocation: @js(old('ip_allocation', $subscription->ip_allocation ?? 'fixed')),
+    reservedIpAddresses: @js(old('reserved_ip_addresses', $subscription->reserved_ip_addresses ?? [])),
     ipManagement: @js($currentIpManagement),
     ipPoolId: @js((string) $currentIpPoolId),
     ipAddress: @js((string) $currentIpAddress),
@@ -150,8 +153,12 @@
                     @error('site')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div class="md:col-span-2 lg:col-span-3">
+                    <x-input.concurrent-devices :legacy="$subscription->concurrent_devices === null" />
+                    <input type="hidden" name="ip_allocation" value="fixed" :disabled="Number(form.concurrent_devices) > 1">
+                </div>
+                <div class="md:col-span-2 lg:col-span-3">
                     <h3 class="text-lg font-semibold text-gray-900 mb-3">IP Management</h3>
-                    <x-input.ip-management :value="$currentIpManagement" x-change="handleIpManagementChange()" />
+                    <x-input.ip-management system-only="Number(form.concurrent_devices) > 1" :value="$currentIpManagement" x-change="handleIpManagementChange()" />
                 </div>
                 <fieldset x-show="form.ip_management === 'system'" :disabled="form.ip_management !== 'system'" class="min-w-0 md:col-span-2 lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                     <input type="hidden" name="sync_ip_routes" value="1">
@@ -163,7 +170,7 @@
                                     <span x-text="selectedIpPool?.name"></span>
                                 </span>
                             </div>
-                            <p class="text-xs text-gray-500">Select a pool for this router, then choose the primary IP from that pool. Routes below use their own IPAM row and can include a subnet.</p>
+                            <p class="text-xs text-gray-500"><span x-show="Number(form.concurrent_devices) === 1">Select a pool for this router, then choose the primary IP from that pool. Routes below use their own IPAM row and can include a subnet.</span><span x-show="Number(form.concurrent_devices) > 1">Select a pool for this router. Each connection receives a different available address.</span></p>
                             <div class="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <label for="ip_pool_id" class="block text-sm font-medium text-gray-700 mb-1">IP Pool</label>
@@ -177,21 +184,21 @@
                                 </div>
                                 <div class="rounded-xl border border-blue-100 bg-white p-4 text-sm text-gray-600">
                                     <div class="flex items-center justify-between gap-4">
-                                        <span>Current IP</span>
-                                        <span class="font-mono text-gray-900" x-text="form.ip_address || 'Not set'"></span>
+                                        <span x-text="Number(form.concurrent_devices) > 1 ? 'IP Allocation' : 'Current IP'"></span>
+                                        <span class="font-mono text-gray-900" x-text="Number(form.concurrent_devices) > 1 ? 'Per connection' : (form.ip_address || 'Not set')"></span>
                                     </div>
                                     <div class="flex items-center justify-between gap-4 mt-2">
                                         <span>Available</span>
                                         <span class="font-medium text-gray-900" x-text="selectedIpPool ? selectedIpPool.available_ips : '0'"></span>
                                     </div>
-                                    <div class="mt-3 min-h-5 text-xs" :class="ipMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'">
+                                    <div x-show="Number(form.concurrent_devices) === 1" class="mt-3 min-h-5 text-xs" :class="ipMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'">
                                         <span x-text="ipMessage.text"></span>
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <div x-show="Number(form.concurrent_devices) === 1" class="flex flex-col gap-3 sm:flex-row sm:items-center">
                                 <div class="sm:max-w-md flex-1">
-                                    <select name="ip_address" id="ip_address" x-model="form.ip_address" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <select :disabled="Number(form.concurrent_devices) > 1" name="ip_address" id="ip_address" x-model="form.ip_address" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                         <option value="">Release primary IP</option>
                                         <template x-for="address in availablePrimaryAddresses()" :key="address.id">
                                             <option :value="address.ip_address" :selected="address.ip_address === form.ip_address" x-text="address.ip_address"></option>
@@ -218,7 +225,9 @@
                         </div>
                     </div>
 
-                    <div class="mt-6 rounded-xl border border-blue-100 bg-white p-4">
+                    <x-input.subscription-ip-allocation :original-pool-id="$subscription->ip_pool_id" :owned-addresses="array_values(array_unique(array_filter([...($subscription->reserved_ip_addresses ?? []), $subscription->ip_address])))" />
+
+                    <fieldset x-show="Number(form.concurrent_devices) === 1" :disabled="Number(form.concurrent_devices) > 1" class="mt-6 min-w-0 rounded-xl border border-blue-100 bg-white p-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <h4 class="text-sm font-semibold text-gray-900">IP Route</h4>
@@ -275,7 +284,7 @@
                                 </div>
                             </template>
                         </div>
-                    </div>
+                    </fieldset>
                 </fieldset>
                 <template x-if="form.ip_management === 'router'">
                     <div class="md:col-span-2 lg:col-span-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -387,9 +396,12 @@
 
 @push('scripts')
 <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
-function subscriptionEditForm({ routerId, ipManagement, ipPoolId, ipAddress, ipPools, ipRoutes, accessPointId, billingEnabled, autoSuspensionEnabled }) {
+function subscriptionEditForm({ concurrentDevices, ipAllocation, reservedIpAddresses, routerId, ipManagement, ipPoolId, ipAddress, ipPools, ipRoutes, accessPointId, billingEnabled, autoSuspensionEnabled }) {
     return {
         form: {
+            concurrent_devices: concurrentDevices,
+            ip_allocation: ipAllocation,
+            reserved_ip_addresses: reservedIpAddresses,
             router_id: routerId || '',
             access_point_id: accessPointId || '',
             ip_management: ipManagement,

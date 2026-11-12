@@ -66,3 +66,7 @@ Schedule::command('ipdr:sync')->everyMinute()->withoutOverlapping(30)->when(fn (
 Schedule::command('communications:process')->everyMinute()->withoutOverlapping(10);
 
 Schedule::command('vpn:sync-status')->everyMinute()->withoutOverlapping();
+
+Schedule::command('subscriptions:release-expired-ip-leases')->everyMinute()->withoutOverlapping();
+
+Schedule::command('acs:sync')->everyFiveMinutes()->withoutOverlapping();

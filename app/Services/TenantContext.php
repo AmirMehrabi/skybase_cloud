@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class TenantContext
@@ -25,7 +26,7 @@ class TenantContext
     public function run(string $tenantId, callable $callback): mixed
     {
         $currentId = $this->id();
-        abort_if($currentId !== null && $currentId !== $tenantId && ! Auth::guard('web')->user()?->isCentralAdmin(), 403);
+        abort_if($currentId !== null && $currentId !== $tenantId && ! (Auth::guard('web')->user() instanceof User && Auth::guard('web')->user()->isCentralAdmin()), 403);
         $previous = app()->bound('current_tenant') ? app('current_tenant') : null;
         $contract = \Stancl\Tenancy\Contracts\Tenant::class;
         $previousContract = app()->bound($contract) ? app($contract) : null;

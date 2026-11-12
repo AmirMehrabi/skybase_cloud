@@ -1,10 +1,10 @@
-@props(['value' => null, 'xModel' => 'form.ip_management', 'xChange' => ''])
+@props(['value' => null, 'xModel' => 'form.ip_management', 'xChange' => '', 'systemOnly' => 'false'])
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <!-- Router Managed -->
     <label class="relative cursor-pointer">
-        <input type="radio" name="ip_management" value="router" x-model="{{ $xModel }}" @change="{{ $xChange }}" @checked($value === 'router') class="peer sr-only">
-        <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+        <input type="radio" name="ip_management" value="router" :disabled="{{ $systemOnly }}" x-model="{{ $xModel }}" @change="{{ $xChange }}" @checked($value === 'router') class="peer sr-only">
+        <div class="p-4 border-2 rounded-xl transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 hover:border-gray-300">
             <div class="flex items-start gap-3">
                 <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
                     <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

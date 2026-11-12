@@ -659,7 +659,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                     <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
                         <span
                             class="rounded-lg bg-white px-3 py-2 font-mono text-gray-900 ring-1 ring-inset ring-gray-200">
-                            {{ $subscription['ip_address'] }}
+                            {{ $subscriptionModel->usesSessionIpAllocation() ? $subscriptionModel->concurrent_devices.' concurrent devices' : $subscription['ip_address'] }}
                         </span>
                         <span>{{ $subscriptionModel->isSystemManagedIp() ? 'System managed' : 'Router managed' }}</span>
                         @if ($subscriptionModel->ipPool)
@@ -669,7 +669,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <button type="button" @click="openIpModal()"
+                    <button type="button" @disabled($subscriptionModel->usesSessionIpAllocation()) @click="openIpModal()"
                         class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -946,7 +946,11 @@ $getStatusBadgeClass = static function (mixed $status): mixed
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm">
             <div class="border-b border-gray-200">
                 <nav class="flex -mb-px overflow-x-auto" aria-label="Tabs">
+                    @if(tenant()?->acs_enabled && auth()->user()->hasPermission('acs.read'))
+                    <a href="{{ route('acs.index', ['subscription' => $subscription['id']]) }}" class="whitespace-nowrap border-b-2 border-transparent px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">Customer devices</a>
+                    @endif
                     <button @click="tab = 'overview'"
+
                         :class="tab === 'overview' ? 'border-blue-500 text-blue-600' :
                             'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                         class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors">
@@ -1080,10 +1084,30 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                     <dt class="text-sm text-gray-500">Router/Device</dt>
                                     <dd class="text-sm font-medium text-gray-900">{{ $subscription['router'] }}</dd>
                                 </div>
+                                <div class="flex justify-between gap-4">
+                                    <dt class="text-sm text-gray-500">Concurrent Devices</dt>
+                                    <dd class="text-sm font-medium text-gray-900">{{ $subscriptionModel->concurrent_devices ?? 'Router default' }}</dd>
+                                </div>
+                                @if($subscriptionModel->usesSessionIpAllocation())
+                                    <div class="flex justify-between gap-4">
+                                        <dt class="text-sm text-gray-500">IP Allocation</dt>
+                                        <dd class="text-right text-sm font-medium text-gray-900">{{ $subscriptionModel->ip_allocation === 'reserved_set' ? 'Reserved subscription IPs' : 'Automatic from pool' }}<span class="mt-1 block text-xs font-normal text-gray-500">{{ $subscriptionModel->ipPool?->name }}</span></dd>
+                                    </div>
+                                    <div class="rounded-xl border border-blue-100 bg-blue-50 p-3">
+                                        <p class="text-sm font-medium text-blue-900">{{ $subscriptionModel->ipLeases->whereNotNull('confirmed_at')->count() }} of {{ $subscriptionModel->concurrent_devices }} devices connected</p>
+                                        @if($subscriptionModel->ip_allocation === 'reserved_set')
+                                            <p class="mt-2 break-words font-mono text-xs leading-5 text-blue-700">{{ implode(', ', $subscriptionModel->reserved_ip_addresses ?? []) }}</p>
+                                        @endif
+                                        @foreach($subscriptionModel->ipLeases as $lease)
+                                            <div class="mt-2 flex justify-between gap-3 text-xs text-blue-800"><span class="font-mono">{{ $lease->ip_address }}</span><span>{{ $lease->confirmed_at ? 'Connected' : 'Connecting' }}</span></div>
+                                        @endforeach
+                                    </div>
+                                @else
                                 <div class="flex justify-between">
                                     <dt class="text-sm text-gray-500">IP Address</dt>
                                     <dd class="text-sm font-medium text-gray-900">{{ $subscription['ip_address'] }}</dd>
                                 </div>
+                                @endif
                                 <div class="flex justify-between">
                                     <dt class="text-sm text-gray-500">MAC Address</dt>
                                     <dd class="text-sm font-medium text-gray-900">{{ $subscription['mac_address'] }}</dd>

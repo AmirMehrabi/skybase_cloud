@@ -37,7 +37,11 @@
 <section class="rounded-lg border border-gray-200 bg-white p-5" x-data="{ action: @js(old('action', 'note')) }"><h2 class="mb-3 text-lg font-semibold">Manage account</h2>
 <p class="mb-4 text-sm text-gray-600">Package assignment records agreed terms; it does not record payment. Suspension blocks application access and does not disconnect subscribers.</p>
 <form method="POST" action="{{ route('admin.super-admin.tenants.update', $tenant) }}" class="space-y-4" x-on:submit="if (['suspend', 'archive'].includes(action) &amp;&amp; !confirm('This will block application access for this ISP. Continue?')) $event.preventDefault()">@csrf @method('PUT')
-<x-ui.input.select name="action" label="Action" x-model="action" value="note" :options="['note'=>'Internal note','contacts'=>'Edit contacts','package'=>'Assign package','trial'=>'Extend trial','limit'=>'Override subscriber allowance','suspend'=>'Suspend application access','activate'=>'Activate / restore','archive'=>'Archive account']" required />
+<div x-show="action === 'acs'" x-cloak>
+<x-ui.input.select name="acs_enabled" label="ACS access" :options="[0 => 'Disabled', 1 => 'Enabled']" :value="old('acs_enabled', (int) $tenant->acs_enabled)" />
+<p class="mt-2 text-sm text-gray-500">Disabling stops new SkyBase operations. Commands already accepted by the ACS and independent ACS presets require separate review.</p>
+</div>
+<x-ui.input.select name="action" label="Action" x-model="action" value="note" :options="['acs'=>'Enable / disable ACS','note'=>'Internal note','contacts'=>'Edit contacts','package'=>'Assign package','trial'=>'Extend trial','limit'=>'Override subscriber allowance','suspend'=>'Suspend application access','activate'=>'Activate / restore','archive'=>'Archive account']" required />
 <div x-cloak x-show="action === 'contacts'" class="space-y-3">
 <x-ui.input.text name="name" label="Account name" :value="old('name', $tenant->name)" />
 <x-ui.input.text name="company_name" label="ISP company" :value="old('company_name', $tenant->company_name)" />

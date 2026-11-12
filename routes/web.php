@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccessPointController;
+use App\Http\Controllers\AcsController;
 use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\Admin\Tenant\RoleController;
 use App\Http\Controllers\Admin\Tenant\UserController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PagesController;
+use App\Http\Controllers\PaymentGatewayController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicCoverageController;
@@ -53,11 +55,14 @@ use App\Http\Controllers\Support\TicketController as SupportTicketController;
 use App\Http\Controllers\Support\TicketTeamController as SupportTicketTeamController;
 use App\Http\Controllers\VpnUserController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Middleware\EnsureAcsEnabled;
 use App\Http\Middleware\EnsureGolestanEnabled;
 use App\Http\Middleware\EnsureOwnerConsole;
 use App\Http\Middleware\EnsureSaasBilling;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -78,6 +83,8 @@ $customerPortalRoutes = function (): void {
         Route::get('/subscriptions/{subscription}/bandwidth/history', [CustomerPortalSubscriptionController::class, 'bandwidthHistory'])->whereNumber('subscription')->name('subscriptions.bandwidth.history');
         Route::get('/profile', [CustomerPortalProfileController::class, 'show'])->name('profile.show');
         Route::patch('/profile/password', [CustomerPortalProfileController::class, 'updatePassword'])->middleware('throttle:password-changes')->name('profile.password.update');
+        Route::post('/invoices/{invoice}/pay', [PaymentGatewayController::class, 'checkout'])->middleware('throttle:10,1')->name('invoices.pay');
+        Route::get('/payments/{reference}', [PaymentGatewayController::class, 'status'])->name('payments.status');
         Route::get('/invoices', [CustomerPortalInvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/notifications', [CustomerPortalNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('/notifications/read-all', [CustomerPortalNotificationController::class, 'readAll'])->name('notifications.read-all');
@@ -183,6 +190,19 @@ Route::middleware([EnsureGolestanEnabled::class, 'auth', 'email.verified', 'init
 
 // Protected Routes (Require Authentication & Tenancy)
 Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
+    Route::prefix('acs')->name('acs.')->middleware(EnsureAcsEnabled::class)->controller(AcsController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/settings', 'settings')->name('settings');
+        Route::put('/settings', 'save')->name('save');
+        Route::post('/test', 'test')->middleware('throttle:sensitive-actions')->name('test');
+        Route::post('/sync', 'sync')->middleware('throttle:sensitive-actions')->name('sync');
+        Route::get('/devices/{device}', 'show')->name('show');
+        Route::get('/devices/{device}/activity', 'activity')->name('activity');
+        Route::post('/devices/{device}/profile', 'profile')->name('profile');
+        Route::post('/devices/{device}/provision', 'provision')->middleware('throttle:sensitive-actions')->name('provision');
+        Route::put('/devices/{device}/assignment', 'assign')->name('assign');
+        Route::post('/devices/{device}/actions', 'action')->middleware('throttle:sensitive-actions')->name('action');
+    });
 
     Route::prefix('campaigns')->name('campaigns.')->group(function (): void {
         Route::get('/', [CampaignController::class, 'index'])->name('index');
@@ -257,6 +277,7 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
     // Settings Routes
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingController::class, 'index'])->name('index');
+        Route::put('/payment-gateway', [PaymentGatewayController::class, 'update'])->name('update.payment-gateway');
         Route::put('/general', [SettingController::class, 'updateGeneral'])->name('update.general');
         Route::put('/branding', [SettingController::class, 'updateBranding'])->name('update.branding');
         Route::put('/billing-tax', [SettingController::class, 'updateBillingTax'])->name('update.billing-tax');
@@ -273,7 +294,7 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
         Route::post('/ldap/preview', [SettingController::class, 'previewLdap'])->name('preview.ldap');
         Route::post('/ldap/sync', [SettingController::class, 'syncLdap'])->name('sync.ldap');
         Route::match(['post', 'delete'], '/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
-        Route::get('/{section}', [SettingController::class, 'section'])->whereIn('section', ['general', 'branding', 'billing', 'customer-portal', 'email', 'notifications', 'ldap'])->name('section');
+        Route::get('/{section}', [SettingController::class, 'section'])->whereIn('section', ['general', 'branding', 'billing', 'payment-gateway', 'customer-portal', 'email', 'notifications', 'ldap'])->name('section');
     });
 
     Route::prefix('support')->name('support.')->group(function () {
@@ -557,3 +578,5 @@ Route::middleware(['auth:web', 'email.verified', 'active_account', 'auth.session
     Route::get('/challenge', [MultiFactorController::class, 'challenge'])->name('challenge');
     Route::post('/challenge', [MultiFactorController::class, 'verify'])->middleware('throttle:6,1')->name('verify');
 });
+
+Route::post('/payments/payfast/notify/{token}', [PaymentGatewayController::class, 'notify'])->withoutMiddleware([ValidateCsrfToken::class, PreventRequestForgery::class])->name('payfast.notify');

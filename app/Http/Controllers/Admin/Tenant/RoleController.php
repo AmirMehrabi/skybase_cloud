@@ -34,7 +34,7 @@ class RoleController extends Controller
     {
         return view('admin.tenant.roles.create', [
             'role' => new Role(['permissions' => []]),
-            'modules' => PermissionRegistry::modules(),
+            'modules' => collect(PermissionRegistry::modules())->except(tenant()?->acs_enabled ? [] : ['acs'])->all(),
         ]);
     }
 
@@ -58,7 +58,7 @@ class RoleController extends Controller
 
         return view('admin.tenant.roles.show', [
             'role' => $role->setAttribute('users_count', $this->assignedUsersCount((string) $role->tenant_id, $role)),
-            'modules' => PermissionRegistry::modules(),
+            'modules' => collect(PermissionRegistry::modules())->except(tenant()?->acs_enabled ? [] : ['acs'])->all(),
         ]);
     }
 
@@ -68,7 +68,7 @@ class RoleController extends Controller
 
         return view('admin.tenant.roles.edit', [
             'role' => $role,
-            'modules' => PermissionRegistry::modules(),
+            'modules' => collect(PermissionRegistry::modules())->except(tenant()?->acs_enabled ? [] : ['acs'])->all(),
         ]);
     }
 
