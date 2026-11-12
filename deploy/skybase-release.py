@@ -70,8 +70,9 @@ def switch(target):
 def healthy():
     for attempt in range(10):
         try:
-            run(['curl', '--fail', '--silent', '--show-error', '--max-time', '10',
-                 '--resolve', f'{HEALTH_HOST}:443:127.0.0.1', f'https://{HEALTH_HOST}/up'], capture=True)
+            for path in ('/up', '/auth/login'):
+                run(['curl', '--fail', '--silent', '--show-error', '--max-time', '10',
+                     '--resolve', f'{HEALTH_HOST}:443:127.0.0.1', f'https://{HEALTH_HOST}{path}'], capture=True)
             return True
         except subprocess.CalledProcessError:
             time.sleep(2)
@@ -80,7 +81,6 @@ def healthy():
 
 def recycle(release):
     artisan(release, 'horizon:terminate')
-    run(['supervisorctl', 'signal', 'TERM', 'skybase-cloud-horizon'])
     artisan(release, 'queue:restart')
     artisan(release, 'schedule:interrupt')
     run(['supervisorctl', 'restart', 'skybase-cloud-scheduler'])
