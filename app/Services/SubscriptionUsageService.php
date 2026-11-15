@@ -90,12 +90,15 @@ class SubscriptionUsageService
         $cycle->refresh();
         $allowance = $cycle->effectiveAllowanceBytes();
 
-        if (! $cycle->isExempt() && $allowance !== null && $cycle->usedBytes() >= $allowance) {
-            $cycle->update(['quota_reached_at' => $cycle->quota_reached_at ?? now()]);
+        $quotaReached = ! $cycle->isExempt() && $allowance !== null && $cycle->usedBytes() >= $allowance;
+        $cycle->update(['quota_reached_at' => $quotaReached ? ($cycle->quota_reached_at ?? now()) : null]);
+
+        $subscription->loadMissing('plan');
+        $enforcesQuota = in_array($subscription->plan?->data_cap_action, ['throttle', 'suspend'], true);
+        if ($quotaReached && $enforcesQuota) {
             $this->restrictions->restrict($subscription, 'quota', 'The subscription reached its cycle data allowance.', ['usage_cycle_id' => $cycle->id]);
         } else {
-            $cycle->update(['quota_reached_at' => null]);
-            $this->restrictions->clear($subscription, 'quota', 'The subscription has available cycle data.');
+            $this->restrictions->clear($subscription, 'quota', 'The subscription has no enforceable quota restriction.');
         }
 
         return $cycle->fresh();

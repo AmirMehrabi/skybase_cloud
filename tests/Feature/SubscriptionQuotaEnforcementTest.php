@@ -40,6 +40,22 @@ class SubscriptionQuotaEnforcementTest extends TestCase
         $this->assertSame(0, RadiusUserGroup::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', 'quota.user')->where('groupname', 'skybase-restricted')->count());
     }
 
+    public function test_a_plan_with_no_cap_action_tracks_exhausted_usage_without_restricting_access(): void
+    {
+        [$subscription, $tenant] = $this->subscriptionWithOneMegabyteLimit();
+        $subscription->plan->update(['data_cap_action' => 'none']);
+        DB::table('radacct')->insert([
+            'acctsessionid' => 'observe-session', 'acctuniqueid' => 'observe-unique',
+            'username' => $subscription->pppoe_username, 'acctstarttime' => now()->subMinute(),
+            'acctupdatetime' => now(), 'acctinputoctets' => 1048576, 'acctoutputoctets' => 0,
+        ]);
+
+        $cycle = app(SubscriptionUsageService::class)->reconcile($subscription);
+
+        $this->assertNotNull($cycle->quota_reached_at);
+        $this->assertDatabaseMissing('radusergroup', ['tenant_id' => $tenant->id, 'username' => 'quota.user', 'groupname' => 'skybase-restricted']);
+    }
+
     private function subscriptionWithOneMegabyteLimit(): array
     {
         $tenant = Tenant::create([
