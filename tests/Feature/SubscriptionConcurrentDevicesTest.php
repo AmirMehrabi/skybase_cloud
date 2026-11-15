@@ -108,11 +108,49 @@ class SubscriptionConcurrentDevicesTest extends TestCase
         $this->assertDatabaseHas('ip_addresses', ['tenant_id' => $this->subscription->tenant_id, 'ip_address' => $lease->ip_address, 'status' => 'assigned', 'subscription_code' => $this->subscription->subscription_code]);
     }
 
-    public function test_allocation_settings_cannot_change_while_a_lease_is_active(): void
+    public function test_pool_and_device_limit_can_change_while_a_lease_is_active(): void
     {
-        $this->allocator->allocate($this->subscription, $this->subscription->router_id, 'login-1');
-        $this->putJson(route('subscriptions.update', $this->subscription), ['concurrent_devices' => 3])->assertUnprocessable()->assertJsonValidationErrors('concurrent_devices');
-        $this->assertSame(2, $this->subscription->fresh()->concurrent_devices);
+        $oldPool = $this->pool;
+        $tenantId = $this->subscription->tenant_id;
+        $routerId = $this->subscription->router_id;
+        $newPool = IpPool::factory()->create(['tenant_id' => $tenantId, 'router_id' => $routerId, 'status' => 'active', 'network_address' => '10.1.0.0']);
+        $newIp = IpAddress::factory()->available()->create(['tenant_id' => $tenantId, 'ip_pool_id' => $newPool->id, 'ip_address' => '10.1.0.21']);
+        $oldLease = $this->allocator->allocate($this->subscription, $routerId, 'login-1');
+        $this->allocator->confirm($this->subscription, $oldLease->token);
+        $this->subscription->update(['connection_status' => 'online']);
+
+        $this->put(route('subscriptions.update', $this->subscription), [
+            'ip_management' => 'system', 'ip_pool_id' => $newPool->id, 'concurrent_devices' => 3, 'ip_allocation' => 'dynamic_pool',
+        ])->assertRedirect(route('subscriptions.show', $this->subscription))->assertSessionHasNoErrors();
+
+        $subscription = $this->subscription->fresh();
+        $this->assertSame(3, $subscription->concurrent_devices);
+        $this->assertSame($newPool->id, $subscription->ip_pool_id);
+        $this->assertNull($oldLease->fresh()->released_at);
+        $this->assertSame($oldLease->id, $this->allocator->allocate($subscription, $routerId, 'login-1')->id);
+        $this->assertSame($newIp->ip_address, $this->allocator->allocate($subscription, $routerId, 'login-2')->ip_address);
+
+        $this->allocator->release($subscription, $oldLease->token);
+
+        $this->assertDatabaseHas('ip_addresses', ['ip_pool_id' => $oldPool->id, 'ip_address' => $oldLease->ip_address, 'status' => 'available']);
+        $this->assertSame('assigned', $newIp->fresh()->status);
+    }
+
+    public function test_a_removed_reserved_address_stays_assigned_until_the_session_ends(): void
+    {
+        $this->put(route('subscriptions.update', $this->subscription), [
+            'ip_allocation' => 'reserved_set', 'reserved_ip_addresses' => ['10.0.0.21', '10.0.0.22'],
+        ])->assertSessionHasNoErrors();
+        $subscription = $this->subscription->fresh();
+        $lease = $this->allocator->allocate($subscription, $subscription->router_id, 'login-1');
+        $this->allocator->confirm($subscription, $lease->token);
+
+        $this->put(route('subscriptions.update', $subscription), ['ip_allocation' => 'dynamic_pool'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('ip_addresses', ['ip_pool_id' => $this->pool->id, 'ip_address' => $lease->ip_address, 'status' => 'assigned']);
+
+        $this->allocator->release($subscription->fresh(), $lease->token);
+
+        $this->assertDatabaseHas('ip_addresses', ['ip_pool_id' => $this->pool->id, 'ip_address' => $lease->ip_address, 'status' => 'available']);
     }
 
     public function test_validation_rejects_incomplete_duplicate_and_foreign_reservations(): void

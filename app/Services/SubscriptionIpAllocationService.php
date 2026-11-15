@@ -34,11 +34,14 @@ class SubscriptionIpAllocationService
             foreach ($subscription->ipLeases()->whereNull('released_at')->whereNull('confirmed_at')->where('pending_until', '<', now())->get() as $expired) {
                 $this->release($subscription, $expired->token, onlyExpiredPending: true);
             }
-            if ($subscription->ipLeases()->whereNull('released_at')->exists()) {
-                throw ValidationException::withMessages(['concurrent_devices' => 'Disconnect all active sessions before changing IP allocation or the device limit.']);
+            $activeLeases = $subscription->ipLeases()->whereNull('released_at');
+            $changesSessionIdentity = collect(['router_id', 'pppoe_username'])
+                ->contains(fn (string $key): bool => array_key_exists($key, $attributes) && $attributes[$key] != $subscription->$key);
+            if ($changesSessionIdentity && $activeLeases->exists()) {
+                throw ValidationException::withMessages(['router_id' => 'Disconnect active sessions before changing the router or login username.']);
             }
-            if ($subscription->connection_status === 'online') {
-                throw ValidationException::withMessages(['concurrent_devices' => 'Disconnect the subscription before changing IP allocation or the device limit.']);
+            if (! $subscription->usesSessionIpAllocation() && filled($subscription->ip_address) && $subscription->connection_status === 'online') {
+                throw ValidationException::withMessages(['ip_address' => 'Disconnect the active fixed-IP session before switching to per-session allocation.']);
             }
             $previous = $subscription->reserved_ip_addresses ?? [];
             $mode = $attributes['ip_allocation'] ?? $subscription->ip_allocation ?? 'fixed';
@@ -55,6 +58,7 @@ class SubscriptionIpAllocationService
             }
             $released = IpAddress::query()->where('tenant_id', $subscription->tenant_id)
                 ->where('subscription_code', $subscription->subscription_code)->whereIn('ip_address', $previous)
+                ->whereNotIn('id', $activeLeases->whereNotNull('ip_address_id')->select('ip_address_id'))
                 ->where(function ($query) use ($poolId, $addresses): void {
                     $query->where('ip_pool_id', '!=', $poolId)->orWhereNotIn('ip_address', $addresses);
                 })->get();
@@ -87,10 +91,6 @@ class SubscriptionIpAllocationService
                 || (int) $subscription->router_id !== $routerId) {
                 throw ValidationException::withMessages(['username' => 'This subscription is not available for session IP allocation.']);
             }
-            $pool = IpPool::query()->where('tenant_id', $subscription->tenant_id)->lockForUpdate()->findOrFail($subscription->ip_pool_id);
-            if ($pool->status === 'disabled') {
-                throw ValidationException::withMessages(['ip_pool_id' => 'The IP pool is disabled.']);
-            }
             foreach ($subscription->ipLeases()->whereNull('released_at')->whereNull('confirmed_at')->where('pending_until', '<', now())->get() as $expired) {
                 $this->release($subscription, $expired->token, onlyExpiredPending: true);
             }
@@ -101,6 +101,10 @@ class SubscriptionIpAllocationService
             }
             if ($subscription->ipLeases()->whereNull('released_at')->count() >= $subscription->concurrent_devices) {
                 throw ValidationException::withMessages(['concurrent_devices' => 'Device limit reached. Disconnect a device before connecting another.']);
+            }
+            $pool = IpPool::query()->where('tenant_id', $subscription->tenant_id)->lockForUpdate()->findOrFail($subscription->ip_pool_id);
+            if ($pool->status === 'disabled') {
+                throw ValidationException::withMessages(['ip_pool_id' => 'The IP pool is disabled.']);
             }
             $ip = IpAddress::query()->where('tenant_id', $subscription->tenant_id)->where('ip_pool_id', $pool->id)
                 ->when($subscription->ip_allocation === 'reserved_set',
@@ -163,7 +167,6 @@ class SubscriptionIpAllocationService
     {
         $subscription->getConnection()->transaction(function () use ($subscription, $token, $onlyExpiredPending, $seenBefore): void {
             $subscription = Subscription::query()->withTrashed()->where('tenant_id', $subscription->tenant_id)->lockForUpdate()->findOrFail($subscription->id);
-            $pool = IpPool::query()->where('tenant_id', $subscription->tenant_id)->lockForUpdate()->find($subscription->ip_pool_id);
             $lease = $subscription->ipLeases()->where('token', $token)->whereNull('released_at')->lockForUpdate()->first();
             if (! $lease || ($onlyExpiredPending && ($lease->confirmed_at || ! $lease->pending_until?->isPast()))
                 || ($seenBefore && $lease->last_seen_at->greaterThan($seenBefore))) {
@@ -171,7 +174,11 @@ class SubscriptionIpAllocationService
             }
             $ip = IpAddress::query()->where('tenant_id', $subscription->tenant_id)->find($lease->ip_address_id);
             $lease->update(['released_at' => now(), 'session_key' => null, 'ip_address_id' => null]);
-            if ($subscription->ip_allocation === 'dynamic_pool' && $ip?->subscription_code === $subscription->subscription_code) {
+            $remainsReserved = $ip && (int) $ip->ip_pool_id === (int) $subscription->ip_pool_id
+                && ($subscription->ip_address === $ip->ip_address
+                    || in_array($ip->ip_address, $subscription->reserved_ip_addresses ?? [], true));
+            if ($ip?->subscription_code === $subscription->subscription_code && ! $remainsReserved) {
+                $pool = IpPool::query()->where('tenant_id', $subscription->tenant_id)->lockForUpdate()->find($ip->ip_pool_id);
                 $ip->release();
                 $pool?->updateStatistics();
             }
