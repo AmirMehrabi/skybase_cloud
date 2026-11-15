@@ -84,8 +84,7 @@ class SubscriptionIpAllocationService
             $subscription = Subscription::query()->withTrashed()->where('tenant_id', $subscription->tenant_id)->lockForUpdate()->findOrFail($subscription->id);
             if ($subscription->trashed() || ! $subscription->usesSessionIpAllocation() || $subscription->status !== 'active'
                 || $subscription->customer?->status !== 'active'
-                || (int) $subscription->router_id !== $routerId
-                || ($subscription->end_date && $subscription->end_date->isPast())) {
+                || (int) $subscription->router_id !== $routerId) {
                 throw ValidationException::withMessages(['username' => 'This subscription is not available for session IP allocation.']);
             }
             $pool = IpPool::query()->where('tenant_id', $subscription->tenant_id)->lockForUpdate()->findOrFail($subscription->ip_pool_id);

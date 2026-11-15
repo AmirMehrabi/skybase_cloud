@@ -78,6 +78,15 @@ class SubscriptionConcurrentDevicesTest extends TestCase
         $this->allocator->allocate($this->subscription, $this->subscription->router_id, 'login-3');
     }
 
+    public function test_active_subscriptions_keep_access_with_an_imported_end_date(): void
+    {
+        $this->subscription->update(['end_date' => now()->subYear()]);
+
+        $lease = $this->allocator->allocate($this->subscription, $this->subscription->router_id, 'legacy-end-date');
+
+        $this->assertSame($this->subscription->id, $lease->subscription_id);
+    }
+
     public function test_released_dynamic_address_is_available_and_a_late_stop_cannot_release_a_new_lease(): void
     {
         $first = $this->allocator->allocate($this->subscription, $this->subscription->router_id, 'login-1');

@@ -132,6 +132,18 @@ class RadiusProvisioningService
                 RadiusReply::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('username', $username)->where('attribute', 'Port-Limit')->delete();
             }
 
+            $allocationMarker = [
+                'tenant_id' => $tenantId,
+                'username' => $username,
+                'attribute' => 'Class',
+                'value' => 'skybase-system-pool',
+            ];
+            if ($subscription->usesSessionIpAllocation()) {
+                RadiusReply::withoutGlobalScopes()->updateOrCreate($allocationMarker, ['op' => '+=']);
+            } else {
+                RadiusReply::withoutGlobalScopes()->where($allocationMarker)->delete();
+            }
+
             $rateLimit = $this->rateLimitForPlan($plan);
             if ($rateLimit !== null) {
                 RadiusReply::withoutGlobalScopes()->updateOrCreate(
