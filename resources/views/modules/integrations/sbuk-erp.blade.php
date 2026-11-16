@@ -13,6 +13,10 @@
                 <x-ui.input.select name="router_id" label="Router" :options="$routers->pluck('name', 'id')->all()" required />
                 <x-ui.input.select name="ip_pool_id" label="IPAM pool" :options="$ipPools->mapWithKeys(fn ($pool) => [$pool->id => $pool->name.' · '.$pool->available_ips.' available'])->all()" required />
             </div>
+            <div class="grid gap-4 md:grid-cols-2">
+                <x-ui.input.select name="pppoe_username_source" label="PPPoE username source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="mobile" required x-bind:disabled="loading || activeRun" @change="clearPreview()" />
+                <x-ui.input.select name="pppoe_password_source" label="PPPoE password source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="national_id" required x-bind:disabled="loading || activeRun" @change="clearPreview()" />
+            </div>
             <p class="text-sm text-gray-500">Imports create missing customer accounts and non-billable subscriptions. New subscriptions remain pending until an administrator completes the connection profile and activation. Existing subscriptions are preserved; missing ERP records never cause removals.</p>
             <div class="flex flex-wrap gap-3">
                 <x-ui.button type="submit" variant="brand" x-bind:disabled="loading || activeRun"><span x-text="loading ? 'Fetching preview…' : 'Fetch & preview'">Fetch & preview</span></x-ui.button>
@@ -121,11 +125,15 @@ function sbukSyncPage(initialStatusUrl = null) {
         init() {
             if (this.statusUrl) { this.poll(); this.poller = setInterval(() => this.poll(), 3000); }
         },
-        async preview(form) {
-            this.loading = true; this.error = ''; this.previewData = null; this.previewToken = null;
+        clearPreview() {
+            this.error = ''; this.previewData = null; this.previewToken = null;
             this.previewRows = []; this.recordsOpen = false;
+        },
+        async preview(form) {
+            this.clearPreview();
             try {
                 const data = Object.fromEntries(new FormData(form).entries());
+                this.loading = true;
                 const result = await this.send(@js(route('integrations.sbuk-erp.preview')), data);
                 this.previewRows = result.rows;
                 this.previewData = result.summary; this.previewToken = result.preview_token;

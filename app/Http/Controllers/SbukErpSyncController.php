@@ -67,6 +67,10 @@ class SbukErpSyncController extends Controller
             'plan_id' => (int) $plan->id,
             'router_id' => (int) $router->id,
             'ip_pool_id' => (int) $pool->id,
+            'pppoe_mapping' => [
+                'username' => $validated['pppoe_username_source'] ?? 'mobile',
+                'password' => $validated['pppoe_password_source'] ?? 'national_id',
+            ],
             'records' => $preview['records'],
             'summary' => $preview['summary'],
         ], JSON_THROW_ON_ERROR)), now()->addMinutes(20));
@@ -114,7 +118,9 @@ class SbukErpSyncController extends Controller
                     'total_records' => $snapshot['summary']['total_records'],
                     'valid_records' => $snapshot['summary']['valid_records'],
                     'personnel_snapshot' => json_encode($snapshot['records'], JSON_THROW_ON_ERROR),
-                    'preview_summary' => $snapshot['summary'],
+                    'preview_summary' => $snapshot['summary'] + [
+                        'pppoe_mapping' => $snapshot['pppoe_mapping'] ?? [],
+                    ],
                 ]);
                 ProcessSbukSyncJob::dispatch($run->id, $tenantId);
 

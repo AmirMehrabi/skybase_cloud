@@ -245,11 +245,14 @@ class SbukPersonnelImportService
             if ($router->status !== 'online' || ! $this->poolSupportsRouter($pool, $router->id, $run->tenant_id)) {
                 throw ValidationException::withMessages(['router_id' => 'The selected router or pool is no longer usable.']);
             }
+            $mapping = $run->preview_summary['pppoe_mapping'] ?? [];
             $subscription = Subscription::query()->create([
                 'tenant_id' => $run->tenant_id,
                 'customer_id' => $customer->id,
                 'name' => $customer->name,
                 'phone' => $customer->mobile,
+                'pppoe_username' => $person[$mapping['username'] ?? 'mobile'],
+                'pppoe_password' => $person[$mapping['password'] ?? 'national_id'],
                 'plan_id' => $plan->id,
                 'router_id' => $run->router_id,
                 'ip_pool_id' => $pool->id,
