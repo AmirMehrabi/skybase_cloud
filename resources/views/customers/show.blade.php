@@ -34,7 +34,7 @@
         'billing_cycle' => $activeSubscription?->billing_cycle ?? 'monthly',
         'activated_at' => optional($activeSubscription?->activation_date ?? $activeSubscription?->created_at)->format('M d, Y'),
         'subscriptions_count' => $customer->subscriptions->count(),
-        'open_balance' => (float) $customer->invoices->sum('balance_due'),
+        'open_balance' => (float) $customer->invoices->filter->isOutstanding()->sum('balance_due'),
         'create_ticket_url' => route('support.tickets.create', ['customer_id' => $customer->id]),
     ];
 
@@ -68,7 +68,8 @@
             'number' => $invoice->invoice_number,
             'amount' => (float) $invoice->total,
             'paid_amount' => (float) $invoice->paid_amount,
-            'balance_due' => (float) $invoice->balance_due,
+            'balance_due' => $invoice->status === 'void' ? 0.0 : (float) $invoice->balance_due,
+            'is_outstanding' => $invoice->isOutstanding(),
             'due_date' => optional($invoice->due_date)->format('Y-m-d'),
             'issue_date' => optional($invoice->issue_date)->format('Y-m-d'),
             'status' => $invoice->status,
@@ -394,7 +395,7 @@
                                         <td class="px-6 py-4">
                                             <div class="flex items-center justify-end gap-2">
                                                 <a :href="invoice.url" class="text-sm font-medium text-blue-600 hover:text-blue-700">View</a>
-                                                <button type="button" x-show="Number(invoice.balance_due) > 0" @click="openPayment(invoice)" class="text-sm font-medium text-emerald-700 hover:text-emerald-800">Record Payment</button>
+                                                <button type="button" x-show="invoice.is_outstanding" @click="openPayment(invoice)" class="text-sm font-medium text-emerald-700 hover:text-emerald-800">Record Payment</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -664,7 +665,7 @@ function customerShow(customer, subscriptions, invoices, payments, tickets, acti
         },
 
         get outstandingInvoices() {
-            return this.invoices.filter((invoice) => Number(invoice.balance_due || 0) > 0);
+            return this.invoices.filter((invoice) => invoice.is_outstanding);
         },
 
         formatBalance(amount) {

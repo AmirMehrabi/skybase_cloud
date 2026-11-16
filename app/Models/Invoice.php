@@ -12,12 +12,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class Invoice extends Model
 {
     use BelongsToTenant;
     use BelongsToUserGroup;
     use HasFactory, LogsTenantActivity, SoftDeletes;
+
+    private const OUTSTANDING_STATUSES = ['issued', 'partially_paid', 'overdue'];
 
     protected $fillable = [
         'tenant_id',
@@ -83,13 +86,31 @@ class Invoice extends Model
 
     public function scopeOutstanding(Builder $query): Builder
     {
-        return $query->whereIn('status', ['issued', 'partially_paid', 'overdue'])
+        return $query->whereIn('status', self::OUTSTANDING_STATUSES)
             ->where('balance_due', '>', 0);
+    }
+
+    public function isOutstanding(): bool
+    {
+        return in_array($this->status, self::OUTSTANDING_STATUSES, true) && (float) $this->balance_due > 0;
+    }
+
+    public function scopePastPaymentDeadline(Builder $query, string $date): Builder
+    {
+        return $query->where(function (Builder $query) use ($date): void {
+            $query->whereDate('grace_ends_at', '<', $date)
+                ->orWhere(fn (Builder $query) => $query->whereNull('grace_ends_at')->whereDate('due_date', '<', $date));
+        });
     }
 
     public function scopeOverdue(Builder $query): Builder
     {
-        return $query->outstanding()->where('due_date', '<', today());
+        return $query->outstanding()->whereDate('due_date', '<', self::billingToday()->toDateString());
+    }
+
+    public static function billingToday(): Carbon
+    {
+        return today(tenant()?->timezone ?: config('app.timezone'));
     }
 
     public function recalculateTotals(): void
@@ -99,13 +120,19 @@ class Invoice extends Model
         $total = (float) $this->items()->sum('total');
         $balanceDue = max(0, $total - (float) $this->paid_amount);
 
+        $pastDue = $this->due_date && $this->due_date->toDateString() < self::billingToday()->toDateString();
         $status = $this->status;
-        if ($balanceDue <= 0) {
+
+        if ($status === 'void') {
+            $balanceDue = 0;
+        } elseif ($balanceDue <= 0) {
             $status = 'paid';
-        } elseif ((float) $this->paid_amount > 0) {
-            $status = $this->due_date->isPast() ? 'overdue' : 'partially_paid';
-        } elseif ($this->due_date->isPast()) {
+        } elseif ($pastDue) {
             $status = 'overdue';
+        } elseif ((float) $this->paid_amount > 0) {
+            $status = 'partially_paid';
+        } elseif ($status === 'overdue') {
+            $status = 'issued';
         }
 
         $this->update([

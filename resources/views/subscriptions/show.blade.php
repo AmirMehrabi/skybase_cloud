@@ -753,7 +753,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                     :class="{ 'bg-gray-50': !billingEnabled }">
                     <div>
                         <label for="subscription_auto_suspension_enabled" class="text-sm font-medium text-gray-700">Auto Suspension Enabled</label>
-                        <p class="text-xs text-gray-500 mt-1">Suspend service after an unpaid invoice passes its due date.</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ config('skybase_billing.customer_full_auto_suspension') ? 'Suspend service after an unpaid invoice passes its payment deadline.' : 'Limit service after an unpaid invoice passes its payment deadline.' }}</p>
                     </div>
                     <div>
                         <input type="hidden" name="auto_suspension_enabled" value="0">
@@ -764,8 +764,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                     </div>
                 </div>
                 <div>
-                    <label for="subscription_grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Grace
-                        Days</label>
+                    <label for="subscription_grace_period_days" class="block text-sm font-medium text-gray-700 mb-1">Days to Pay</label>
                     <input type="number" id="subscription_grace_period_days" name="grace_period_days" min="0"
                         max="365" value="{{ $subscription['grace_period_days'] }}"
                         class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
@@ -913,7 +912,7 @@ $getStatusBadgeClass = static function (mixed $status): mixed
                                     <div>
                                         <label for="plan_change_auto_suspension_enabled"
                                             class="text-sm font-medium text-gray-700">Auto Suspension Enabled</label>
-                                        <p class="text-xs text-gray-500 mt-1">Suspend service after an unpaid invoice passes its due date.</p>
+                                        <p class="text-xs text-gray-500 mt-1">{{ config('skybase_billing.customer_full_auto_suspension') ? 'Suspend service after an unpaid invoice passes its payment deadline.' : 'Limit service after an unpaid invoice passes its payment deadline.' }}</p>
                                     </div>
                                     <div>
                                         <input type="hidden" name="auto_suspension_enabled" value="0">

@@ -106,7 +106,7 @@ function invoicesIndex() {
         },
 
         get outstandingAmount() {
-            return this.filteredInvoices.reduce((sum, inv) => sum + inv.balance_due, 0);
+            return this.filteredInvoices.filter((invoice) => invoice.is_outstanding).reduce((sum, inv) => sum + inv.balance_due, 0);
         },
 
         formatCurrency(value, currency = null) {
@@ -151,6 +151,10 @@ function invoicesIndex() {
         },
 
         openPaymentModal(invoice) {
+            if (!invoice.is_outstanding) {
+                return;
+            }
+
             this.selectedInvoice = invoice;
             this.paymentAmount = invoice.balance_due;
             this.paymentModalOpen = true;

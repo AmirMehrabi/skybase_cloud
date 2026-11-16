@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'customer_full_auto_suspension' => (bool) env('SKYBASE_CUSTOMER_FULL_AUTO_SUSPENSION', false),
     'console_host_enabled' => (bool) env('SKYBASE_CONSOLE_HOST_ENABLED', false),
     'console_host' => env('SKYBASE_CONSOLE_HOST', 'console.skybase.app'),
     'owner_console_enabled' => (bool) env('SKYBASE_OWNER_CONSOLE_ENABLED', false),

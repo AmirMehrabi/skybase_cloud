@@ -41,15 +41,25 @@ class InvoiceController extends Controller
         return back()->with('success', "Generated {$created} due invoice(s).");
     }
 
-    public function cancel(Invoice $invoice): JsonResponse
+    public function cancel(Invoice $invoice, BillingService $billing): JsonResponse
     {
-        if ((float) $invoice->paid_amount > 0) {
-            throw ValidationException::withMessages([
-                'invoice' => 'An invoice with recorded payments cannot be cancelled.',
-            ]);
-        }
+        $invoice = $invoice->getConnection()->transaction(function () use ($invoice, $billing): Invoice {
+            $invoice = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
 
-        $invoice->update(['status' => 'void']);
+            if ((float) $invoice->paid_amount > 0) {
+                throw ValidationException::withMessages([
+                    'invoice' => 'An invoice with recorded payments cannot be cancelled.',
+                ]);
+            }
+
+            $invoice->update(['status' => 'void', 'balance_due' => 0]);
+
+            if ($subscription = $invoice->subscription) {
+                $invoice->getConnection()->afterCommit(fn () => $billing->reconcileSubscriptionAfterPayment($subscription));
+            }
+
+            return $invoice;
+        });
 
         return response()->json([
             'message' => 'Invoice cancelled successfully.',
@@ -73,10 +83,11 @@ class InvoiceController extends Controller
             'discount' => (float) $invoice->discount_total,
             'total' => (float) $invoice->total,
             'paid_amount' => (float) $invoice->paid_amount,
-            'balance_due' => (float) $invoice->balance_due,
+            'balance_due' => $invoice->status === 'void' ? 0.0 : (float) $invoice->balance_due,
+            'is_outstanding' => $invoice->isOutstanding(),
             'status' => $invoice->status,
-            'days_overdue' => $invoice->due_date && $invoice->due_date->isPast() && $invoice->balance_due > 0
-                ? $invoice->due_date->diffInDays(today())
+            'days_overdue' => $invoice->isOutstanding() && $invoice->due_date && $invoice->due_date->toDateString() < Invoice::billingToday()->toDateString()
+                ? (int) $invoice->due_date->diffInDays(Invoice::billingToday()->toDateString())
                 : 0,
             'notes' => $invoice->notes,
         ];

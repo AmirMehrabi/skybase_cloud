@@ -119,12 +119,15 @@ class BillingInvoiceActionsTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('invoice.status', 'void');
+            ->assertJsonPath('invoice.status', 'void')
+            ->assertJsonPath('invoice.balance_due', 0)
+            ->assertJsonPath('invoice.is_outstanding', false);
 
         $this->assertDatabaseHas('invoices', [
             'id' => $invoice->id,
             'tenant_id' => $tenant->id,
             'status' => 'void',
+            'balance_due' => 0,
         ]);
     }
 

@@ -68,6 +68,9 @@ class BillingService
                 return null;
             }
 
+            $issueDate = Invoice::billingToday();
+            $dueDate = $issueDate->copy()->addDays($lockedSubscription->effectiveGracePeriodDays());
+
             try {
                 $invoice = Invoice::withoutGlobalScopes()->create([
                     'tenant_id' => $lockedSubscription->tenant_id,
@@ -76,9 +79,8 @@ class BillingService
                     'invoice_number' => $this->generateInvoiceNumber($lockedSubscription->tenant_id),
                     'billing_period_start' => $periodStart->toDateString(),
                     'billing_period_end' => $periodEnd->toDateString(),
-                    'issue_date' => now()->toDateString(),
-                    'due_date' => now()->toDateString(),
-                    'grace_ends_at' => now()->addDays($lockedSubscription->effectiveGracePeriodDays())->toDateString(),
+                    'issue_date' => $issueDate->toDateString(),
+                    'due_date' => $dueDate->toDateString(),
                     'status' => 'issued',
                 ]);
             } catch (QueryException $exception) {
@@ -143,7 +145,7 @@ class BillingService
             return $total;
         }
 
-        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
+        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : Invoice::billingToday();
         $created = 0;
 
         Subscription::withoutGlobalScopes()->where('tenant_id', tenant_id())
@@ -165,7 +167,7 @@ class BillingService
             })
             ->where(function ($query) use ($asOf) {
                 $query->whereNull('next_billing_date')
-                    ->orWhereDate('next_billing_date', '<=', $asOf);
+                    ->orWhereDate('next_billing_date', '<=', $asOf->toDateString());
             })
             ->chunkById(100, function ($subscriptions) use (&$created) {
                 foreach ($subscriptions as $subscription) {
@@ -189,11 +191,13 @@ class BillingService
             return $total;
         }
 
-        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
+        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : Invoice::billingToday();
 
         return Invoice::withoutGlobalScopes()->where('tenant_id', tenant_id())
+            ->withoutTrashed()
             ->outstanding()
-            ->whereDate('due_date', '<', $asOf)
+            ->where('status', '!=', 'overdue')
+            ->whereDate('due_date', '<', $asOf->toDateString())
             ->update(['status' => 'overdue']);
     }
 
@@ -208,59 +212,80 @@ class BillingService
             return $total;
         }
 
-        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
+        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : Invoice::billingToday();
         $suspended = 0;
 
-        Subscription::withoutGlobalScopes()->where('tenant_id', tenant_id())
+        $eligibleSubscriptions = Subscription::withoutGlobalScopes()->where('tenant_id', tenant_id())
             ->withoutTrashed()
             ->where('status', 'active')
             ->where('billing_enabled', true)
             ->where('auto_suspension_enabled', true)
             ->whereHas('customer', function ($query) {
-                $query->withoutGlobalScopes()->where('billing_enabled', true);
+                $query->withoutGlobalScopes()->where('customers.tenant_id', tenant_id())->where('billing_enabled', true);
             })
             ->where(function ($query) {
                 $query->whereDoesntHave('customer.organization', function ($query) {
-                    $query->withoutGlobalScopes()->where('billing_enabled', true);
+                    $query->withoutGlobalScopes()->where('organizations.tenant_id', tenant_id())->where('billing_enabled', true);
                 })->orWhereHas('customer.organization', function ($query) {
                     $query->withoutGlobalScopes()
                         ->where('billing_enabled', true)
+                        ->where('organizations.tenant_id', tenant_id())
                         ->whereColumn('organizations.default_plan_id', 'subscriptions.plan_id');
                 });
             })
             ->whereHas('invoices', function ($query) use ($asOf) {
                 $query->withoutGlobalScopes()
+                    ->where('invoices.tenant_id', tenant_id())
+                    ->withoutTrashed()
                     ->outstanding()
-                    ->where(function ($query) use ($asOf): void {
-                        $query->whereDate('grace_ends_at', '<', $asOf)
-                            ->orWhere(function ($query) use ($asOf): void {
-                                $query->whereNull('grace_ends_at')->whereDate('due_date', '<', $asOf);
-                            });
-                    });
-            })
-            ->chunkById(100, function ($subscriptions) use (&$suspended) {
-                foreach ($subscriptions as $subscription) {
-                    if (app(SubscriptionRestrictionService::class)->restrict($subscription, 'billing', 'Automatic restriction for invoices beyond grace.')) {
-                        $suspended++;
-                    }
-                }
+                    ->pastPaymentDeadline($asOf->toDateString());
             });
+
+        $eligibleSubscriptions->chunkById(100, function ($subscriptions) use ($eligibleSubscriptions, &$suspended): void {
+            foreach ($subscriptions as $subscription) {
+                $restricted = $subscription->getConnection()->transaction(function () use ($eligibleSubscriptions, $subscription): bool {
+                    $eligibleSubscription = (clone $eligibleSubscriptions)->whereKey($subscription->id)->lockForUpdate()->first();
+
+                    return $eligibleSubscription && app(SubscriptionRestrictionService::class)->restrict(
+                        $eligibleSubscription,
+                        'billing',
+                        'Automatic enforcement for invoices beyond the payment deadline.',
+                    );
+                });
+
+                $suspended += (int) $restricted;
+            }
+        });
 
         return $suspended;
     }
 
     public function reconcileSubscriptionAfterPayment(Subscription $subscription, ?CarbonInterface $asOf = null): void
     {
-        $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : today();
-        $hasDelinquentInvoice = $subscription->invoices()->withoutGlobalScopes()->outstanding()
-            ->where(function ($query) use ($asOf): void {
-                $query->whereDate('grace_ends_at', '<', $asOf)
-                    ->orWhere(fn ($query) => $query->whereNull('grace_ends_at')->whereDate('due_date', '<', $asOf));
-            })->exists();
+        if (app(TenantContext::class)->id() === null) {
+            app(TenantContext::class)->run($subscription->tenant_id, fn () => $this->reconcileSubscriptionAfterPayment($subscription, $asOf));
 
-        if (! $hasDelinquentInvoice) {
-            app(SubscriptionRestrictionService::class)->clear($subscription, 'billing', 'All delinquent invoices were paid.');
+            return;
         }
+
+        abort_unless(app(TenantContext::class)->id() === (string) $subscription->tenant_id, 403);
+
+        $subscription->getConnection()->transaction(function () use ($subscription, $asOf): void {
+            $subscription = Subscription::withoutGlobalScopes()->withoutTrashed()
+                ->where('tenant_id', $subscription->tenant_id)->whereKey($subscription->id)->lockForUpdate()->first();
+
+            if (! $subscription) {
+                return;
+            }
+
+            $asOf = $asOf ? Carbon::parse($asOf)->startOfDay() : Invoice::billingToday();
+            $hasDelinquentInvoice = $subscription->invoices()->withoutGlobalScopes()->where('tenant_id', $subscription->tenant_id)->withoutTrashed()->outstanding()
+                ->pastPaymentDeadline($asOf->toDateString())->exists();
+
+            if (! $hasDelinquentInvoice) {
+                app(SubscriptionRestrictionService::class)->clear($subscription, 'billing', 'No delinquent invoices remain.');
+            }
+        });
     }
 
     public function run(?CarbonInterface $asOf = null): array

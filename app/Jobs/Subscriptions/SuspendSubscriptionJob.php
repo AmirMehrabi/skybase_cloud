@@ -41,7 +41,7 @@ class SuspendSubscriptionJob implements ShouldQueue
                 ->with(['customer', 'plan', 'router'])
                 ->find($this->subscriptionId);
 
-            if (! $subscription) {
+            if (! $subscription || $subscription->status !== 'suspended') {
                 return;
             }
 

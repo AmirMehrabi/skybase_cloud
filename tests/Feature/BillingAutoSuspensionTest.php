@@ -6,9 +6,11 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\BillingService;
 use App\Services\SubscriptionRestrictionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -73,6 +75,69 @@ class BillingAutoSuspensionTest extends TestCase
 
         $this->assertFalse($subscription->restrictions()->active()->where('type', 'billing')->exists());
         $this->assertTrue($subscription->restrictions()->active()->where('type', 'manual')->exists());
+    }
+
+    public function test_full_auto_suspension_restores_service_after_the_last_delinquent_invoice_is_voided(): void
+    {
+        config(['skybase_billing.customer_full_auto_suspension' => true]);
+        [$tenant, $customer] = $this->createTenantContext('full-suspension');
+        $subscription = $this->createSubscription($tenant, $customer, true);
+        $invoice = $this->createOverdueInvoice($tenant, $customer, $subscription);
+        $billing = app(BillingService::class);
+
+        $this->assertSame(1, $billing->suspendOverdueSubscriptions(today()));
+        $this->assertSame('suspended', $subscription->fresh()->status);
+        $this->assertSame(0, $billing->suspendOverdueSubscriptions(today()));
+
+        $invoice->update(['status' => 'void', 'balance_due' => 0]);
+        $billing->reconcileSubscriptionAfterPayment($subscription, today());
+
+        $this->assertSame('active', $subscription->fresh()->status);
+        $this->assertFalse($subscription->restrictions()->active()->where('type', 'billing')->exists());
+    }
+
+    public function test_billing_reconciliation_preserves_an_operator_suspension(): void
+    {
+        config(['skybase_billing.customer_full_auto_suspension' => true]);
+        [$tenant, $customer] = $this->createTenantContext('operator-suspension');
+        $subscription = $this->createSubscription($tenant, $customer, true);
+        $invoice = $this->createOverdueInvoice($tenant, $customer, $subscription);
+        $operator = User::factory()->create(['tenant_id' => $tenant->id]);
+        $billing = app(BillingService::class);
+
+        $this->assertSame(1, $billing->suspendOverdueSubscriptions(today()));
+        $subscription->fresh()->suspend(userId: $operator->id);
+        $invoice->update(['status' => 'paid', 'paid_amount' => 100, 'balance_due' => 0]);
+        $billing->reconcileSubscriptionAfterPayment($subscription, today());
+
+        $this->assertSame('suspended', $subscription->fresh()->status);
+        $this->assertFalse($subscription->restrictions()->active()->where('type', 'billing')->exists());
+    }
+
+    public function test_recurring_invoice_is_due_through_the_last_day_of_its_payment_term(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-10 12:00:00'));
+        [$tenant, $customer] = $this->createTenantContext('payment-term');
+        $subscription = $this->createSubscription($tenant, $customer, true);
+        $subscription->update(['grace_period_days' => 7]);
+        $subscription->items()->create([
+            'tenant_id' => $tenant->id,
+            'item_type' => 'plan',
+            'description' => 'Monthly service',
+            'quantity' => 1,
+            'unit_price' => 100,
+            'subtotal' => 100,
+            'total' => 100,
+            'recurring' => true,
+        ]);
+        $billing = app(BillingService::class);
+
+        $invoice = $billing->createInvoiceForSubscription($subscription);
+        $this->assertSame('2026-11-10', $invoice->issue_date->toDateString());
+        $this->assertSame('2026-11-17', $invoice->due_date->toDateString());
+        $this->assertSame('issued', $invoice->status);
+        $this->assertSame(0, $billing->markOverdueInvoices($invoice->due_date));
+        $this->assertSame(1, $billing->markOverdueInvoices($invoice->due_date->addDay()));
     }
 
     public function test_new_subscription_defaults_to_auto_suspension_enabled(): void

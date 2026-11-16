@@ -15,7 +15,7 @@ class InvoicePaymentRecorder
             $invoice = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             $billing = app(BillingService::class);
             $notifications = app(TenantNotificationService::class);
-            if (! in_array($invoice->status, ['issued', 'partially_paid', 'overdue'], true) || (float) $invoice->balance_due <= 0) {
+            if (! $invoice->isOutstanding()) {
                 throw ValidationException::withMessages([
                     'invoice_id' => 'A payment can only be recorded for an outstanding invoice.',
                 ]);
@@ -41,8 +41,8 @@ class InvoicePaymentRecorder
             $invoice->increment('paid_amount', $payment->amount);
             $invoice = $invoice->fresh(['customer']);
             $invoice->recalculateTotals();
-            if ($invoice->subscription) {
-                $billing->reconcileSubscriptionAfterPayment($invoice->subscription);
+            if ($subscription = $invoice->subscription) {
+                $invoice->getConnection()->afterCommit(fn () => $billing->reconcileSubscriptionAfterPayment($subscription));
             }
             $payment = $payment->fresh(['customer', 'invoice']);
 
