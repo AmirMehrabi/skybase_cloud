@@ -71,7 +71,23 @@ class SbukErpSyncController extends Controller
             'summary' => $preview['summary'],
         ], JSON_THROW_ON_ERROR)), now()->addMinutes(20));
 
-        return response()->json(['preview_token' => $previewToken, 'summary' => $preview['summary']]);
+        $rows = [];
+        foreach ($rawRecords as $index => $record) {
+            $rows[] = [
+                'first_name' => (string) ($record['FNAME'] ?? ''),
+                'last_name' => (string) ($record['LNAME'] ?? ''),
+                'mobile' => (string) ($record['MOBILE'] ?? ''),
+                'national_id' => (string) ($record['NATIONALID'] ?? ''),
+                'external_index' => is_scalar($record['index_'] ?? null) ? (string) $record['index_'] : null,
+                'error' => $preview['records'][$index]['error'],
+            ];
+        }
+
+        return response()->json([
+            'preview_token' => $previewToken,
+            'summary' => $preview['summary'],
+            'rows' => $rows,
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     public function start(StartRequest $request): JsonResponse

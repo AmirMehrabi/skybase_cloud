@@ -33,6 +33,40 @@
             </template>
         </dl>
         <p class="mt-4 text-sm text-gray-600" x-show="previewData" x-cloak>IP allocations needed: <strong x-text="previewData?.estimated_ip_allocations ?? 0"></strong> · Available in pool: <strong x-text="previewData?.available_ip_addresses ?? 'Unknown'"></strong></p>
+        <template x-if="previewData">
+            <details class="mt-4" @toggle="recordsOpen = $event.currentTarget.open">
+                <summary class="cursor-pointer text-sm font-medium">ERP records (<span x-text="previewRows.length"></span>)</summary>
+                <template x-if="recordsOpen">
+                    <div class="mt-2 max-h-96 overflow-auto">
+                        <p class="text-sm text-gray-500" x-show="!previewRows.length">No ERP records were returned.</p>
+                        <table class="w-full text-left text-sm" x-show="previewRows.length">
+                            <thead class="border-b text-gray-500">
+                                <tr>
+                                    <th scope="col" class="p-2">First name</th>
+                                    <th scope="col" class="p-2">Last name</th>
+                                    <th scope="col" class="p-2">Mobile</th>
+                                    <th scope="col" class="p-2">National ID</th>
+                                    <th scope="col" class="p-2">ERP index</th>
+                                    <th scope="col" class="p-2">Validation issue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(row, index) in previewRows" :key="index">
+                                    <tr class="border-b border-gray-100">
+                                        <td class="p-2" x-text="row.first_name || '—'"></td>
+                                        <td class="p-2" x-text="row.last_name || '—'"></td>
+                                        <td class="p-2" x-text="row.mobile || '—'"></td>
+                                        <td class="p-2" x-text="row.national_id || '—'"></td>
+                                        <td class="p-2" x-text="row.external_index || '—'"></td>
+                                        <td class="p-2" x-text="row.error || '—'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+            </details>
+        </template>
     </x-ui.card>
 
     <x-ui.card title="Synchronization progress" x-show="runData" x-cloak>
@@ -71,6 +105,7 @@
 function sbukSyncPage(initialStatusUrl = null) {
     return {
         loading: false, error: '', previewData: null, previewToken: null, activeRun: Boolean(initialStatusUrl), runData: null, poller: null, statusUrl: initialStatusUrl,
+        previewRows: [], recordsOpen: false,
         summaryItems: [
             { key: 'total_records', label: 'ERP records' }, { key: 'valid_records', label: 'Valid records' },
             { key: 'new_users', label: 'New customers' }, { key: 'existing_users', label: 'Existing customers' },
@@ -88,9 +123,11 @@ function sbukSyncPage(initialStatusUrl = null) {
         },
         async preview(form) {
             this.loading = true; this.error = ''; this.previewData = null; this.previewToken = null;
+            this.previewRows = []; this.recordsOpen = false;
             try {
                 const data = Object.fromEntries(new FormData(form).entries());
                 const result = await this.send(@js(route('integrations.sbuk-erp.preview')), data);
+                this.previewRows = result.rows;
                 this.previewData = result.summary; this.previewToken = result.preview_token;
             } catch (error) { this.error = error.message; }
             finally { this.loading = false; }
