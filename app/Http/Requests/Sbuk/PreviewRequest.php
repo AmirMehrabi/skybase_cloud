@@ -28,6 +28,8 @@ class PreviewRequest extends FormRequest
             'ip_pool_id' => ['required', 'integer'],
             'pppoe_username_source' => ['sometimes', 'required', 'in:mobile,national_id'],
             'pppoe_password_source' => ['sometimes', 'required', 'in:mobile,national_id'],
+            'existing_customers' => ['sometimes', 'required', 'in:skip,update'],
+            'existing_subscriptions' => ['sometimes', 'required', 'in:skip,update'],
         ];
     }
 }

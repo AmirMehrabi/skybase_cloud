@@ -132,15 +132,15 @@ class SbukPersonnelImportService
                 $detail = $person['error'];
             } else {
                 try {
-                    $result = $this->processPerson($run, $person);
-                    foreach ($result as $counter) {
-                        $this->incrementRunCounter($run, $counter);
+                    [$customerCounter, $outcome] = $this->processPerson($run, $person);
+                    $this->incrementRunCounter($run, $customerCounter);
+                    if ($outcome === 'subscription_created') {
+                        $this->incrementRunCounter($run, 'created_subscriptions');
+                    } elseif ($outcome === 'subscription_skipped') {
+                        $this->incrementRunCounter($run, 'skipped_subscriptions');
                     }
-                    $outcome = in_array('created_subscriptions', $result, true) ? 'subscription_created'
-                        : (in_array('skipped_subscriptions', $result, true) ? 'subscription_skipped'
-                            : (in_array('created_customers', $result, true) ? 'created' : 'already_exists'));
-                    $detail = in_array('created_subscriptions', $result, true)
-                        ? 'Pending activation: the ERP response does not include a connection profile or service credentials.'
+                    $detail = $outcome === 'subscription_created'
+                        ? 'Pending administrator activation.'
                         : null;
                 } catch (\Throwable $exception) {
                     $this->incrementRunCounter($run, 'failed_records');
@@ -173,11 +173,8 @@ class SbukPersonnelImportService
 
     private function processPerson(SbukSyncRun $run, array $person): array
     {
-        if ($person['error'] !== null) {
-            return ['failed_records'];
-        }
-
         return DB::transaction(function () use ($run, $person): array {
+            $existingRecords = $run->preview_summary['existing_records'] ?? [];
             $hash = $this->identityHash($person['national_id']);
             $identity = SbukPersonnelIdentity::query()->where('tenant_id', $run->tenant_id)
                 ->where('identity_hash', $hash)->lockForUpdate()->first();
@@ -203,7 +200,7 @@ class SbukPersonnelImportService
                     'status' => 'active',
                     'billing_enabled' => false,
                 ]);
-            } else {
+            } elseif (($existingRecords['customers'] ?? 'update') === 'update') {
                 $customer->update([
                     'first_name' => $person['first_name'],
                     'last_name' => $person['last_name'],
@@ -224,20 +221,36 @@ class SbukPersonnelImportService
             $managedSubscription = Subscription::query()->where('tenant_id', $run->tenant_id)
                 ->where('customer_id', $customer->id)->where('notes', 'like', 'SBUK ERP:%')
                 ->whereIn('status', ['pending', 'active'])->lockForUpdate()->first();
-            if ($managedSubscription) {
-                if ((int) $managedSubscription->plan_id !== (int) $run->plan_id
-                    || (int) $managedSubscription->router_id !== (int) $run->router_id
-                    || (int) $managedSubscription->ip_pool_id !== (int) $run->ip_pool_id) {
-                    throw ValidationException::withMessages(['subscription' => 'Existing SBUK subscription configuration conflict.']);
-                }
-
-                return [$created ? 'created_customers' : 'matched_customers', 'skipped_subscriptions'];
+            if ($managedSubscription && ((int) $managedSubscription->plan_id !== (int) $run->plan_id
+                || (int) $managedSubscription->router_id !== (int) $run->router_id
+                || (int) $managedSubscription->ip_pool_id !== (int) $run->ip_pool_id)) {
+                throw ValidationException::withMessages(['subscription' => 'Existing SBUK subscription configuration conflict.']);
             }
-            $existing = Subscription::query()->where('tenant_id', $run->tenant_id)
+            $existing = $managedSubscription ?? Subscription::query()->where('tenant_id', $run->tenant_id)
                 ->where('customer_id', $customer->id)->where('plan_id', $run->plan_id)
                 ->whereIn('status', ['pending', 'active'])->lockForUpdate()->first();
+            $customerCounter = $created ? 'created_customers' : 'matched_customers';
+            $mapping = $run->preview_summary['pppoe_mapping'] ?? [];
+            $credentials = [
+                'pppoe_username' => $person[$mapping['username'] ?? 'mobile'],
+                'pppoe_password' => $person[$mapping['password'] ?? 'national_id'],
+            ];
             if ($existing) {
-                return [$created ? 'created_customers' : 'matched_customers', 'skipped_subscriptions'];
+                if (($existingRecords['subscriptions'] ?? 'skip') === 'update' && $existing->isPppoe()) {
+                    $changes = array_filter(
+                        $credentials,
+                        fn (?string $value, string $field): bool => filled($value) && $value !== $existing->getAttribute($field),
+                        ARRAY_FILTER_USE_BOTH,
+                    );
+                    if ($changes !== []) {
+                        $this->ensureUsernameAvailable($run->tenant_id, $credentials['pppoe_username'] ?? $existing->pppoe_username, $existing);
+                        $existing->update($changes);
+
+                        return [$customerCounter, 'subscription_updated'];
+                    }
+                }
+
+                return [$customerCounter, 'subscription_skipped'];
             }
             $plan = Plan::query()->where('tenant_id', $run->tenant_id)->active()->findOrFail($run->plan_id);
             $router = Router::query()->where('tenant_id', $run->tenant_id)->findOrFail($run->router_id);
@@ -245,14 +258,13 @@ class SbukPersonnelImportService
             if ($router->status !== 'online' || ! $this->poolSupportsRouter($pool, $router->id, $run->tenant_id)) {
                 throw ValidationException::withMessages(['router_id' => 'The selected router or pool is no longer usable.']);
             }
-            $mapping = $run->preview_summary['pppoe_mapping'] ?? [];
+            $this->ensureUsernameAvailable($run->tenant_id, $credentials['pppoe_username']);
             $subscription = Subscription::query()->create([
                 'tenant_id' => $run->tenant_id,
                 'customer_id' => $customer->id,
                 'name' => $customer->name,
                 'phone' => $customer->mobile,
-                'pppoe_username' => $person[$mapping['username'] ?? 'mobile'],
-                'pppoe_password' => $person[$mapping['password'] ?? 'national_id'],
+                ...$credentials,
                 'plan_id' => $plan->id,
                 'router_id' => $run->router_id,
                 'ip_pool_id' => $pool->id,
@@ -272,8 +284,17 @@ class SbukPersonnelImportService
                 throw ValidationException::withMessages(['ip_pool_id' => 'No available IP address could be allocated.']);
             }
 
-            return [$created ? 'created_customers' : 'matched_customers', 'created_subscriptions'];
+            return [$customerCounter, 'subscription_created'];
         }, 3);
+    }
+
+    private function ensureUsernameAvailable(string $tenantId, ?string $username, ?Subscription $subscription = null): void
+    {
+        if (filled($username) && Subscription::query()->where('tenant_id', $tenantId)
+            ->where('pppoe_username', $username)
+            ->when($subscription, fn ($query) => $query->whereKeyNot($subscription->id))->exists()) {
+            throw ValidationException::withMessages(['subscription' => 'The mapped PPPoE username is already in use.']);
+        }
     }
 
     private function customersForIdentity(string $tenantId, string $nationalId): Collection

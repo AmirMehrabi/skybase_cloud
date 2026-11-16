@@ -71,6 +71,10 @@ class SbukErpSyncController extends Controller
                 'username' => $validated['pppoe_username_source'] ?? 'mobile',
                 'password' => $validated['pppoe_password_source'] ?? 'national_id',
             ],
+            'existing_records' => [
+                'customers' => $validated['existing_customers'] ?? 'skip',
+                'subscriptions' => $validated['existing_subscriptions'] ?? 'skip',
+            ],
             'records' => $preview['records'],
             'summary' => $preview['summary'],
         ], JSON_THROW_ON_ERROR)), now()->addMinutes(20));
@@ -120,6 +124,7 @@ class SbukErpSyncController extends Controller
                     'personnel_snapshot' => json_encode($snapshot['records'], JSON_THROW_ON_ERROR),
                     'preview_summary' => $snapshot['summary'] + [
                         'pppoe_mapping' => $snapshot['pppoe_mapping'] ?? [],
+                        'existing_records' => $snapshot['existing_records'] ?? [],
                     ],
                 ]);
                 ProcessSbukSyncJob::dispatch($run->id, $tenantId);
@@ -139,7 +144,10 @@ class SbukErpSyncController extends Controller
         return response()->json($run->only([
             'id', 'status', 'total_records', 'valid_records', 'processed_records', 'created_customers',
             'matched_customers', 'created_subscriptions', 'skipped_subscriptions', 'failed_records', 'error_summary', 'started_at', 'completed_at',
-        ]) + ['records' => $run->records()->latest('row_number')->limit(100)->get(['row_number', 'outcome', 'detail'])]);
+        ]) + [
+            'updated_subscriptions' => $run->records()->where('outcome', 'subscription_updated')->count(),
+            'records' => $run->records()->latest('row_number')->limit(100)->get(['row_number', 'outcome', 'detail']),
+        ]);
     }
 
     private function authorizeAdmin(Request $request): void

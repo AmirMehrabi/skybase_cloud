@@ -17,7 +17,11 @@
                 <x-ui.input.select name="pppoe_username_source" label="PPPoE username source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="mobile" required x-bind:disabled="loading || activeRun" @change="clearPreview()" />
                 <x-ui.input.select name="pppoe_password_source" label="PPPoE password source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="national_id" required x-bind:disabled="loading || activeRun" @change="clearPreview()" />
             </div>
-            <p class="text-sm text-gray-500">Imports create missing customer accounts and non-billable subscriptions. New subscriptions remain pending until an administrator completes the connection profile and activation. Existing subscriptions are preserved; missing ERP records never cause removals.</p>
+            <div class="grid gap-4 md:grid-cols-2">
+                <x-ui.input.select name="existing_customers" label="Existing customers" :options="['skip' => 'Skip', 'update' => 'Update']" value="skip" required hint="Update refreshes the name and available mobile number." x-bind:disabled="loading || activeRun" @change="clearPreview()" />
+                <x-ui.input.select name="existing_subscriptions" label="Existing subscriptions" :options="['skip' => 'Skip', 'update' => 'Update']" value="skip" required hint="Update applies the selected PPPoE mapping. This can change active network logins." x-bind:disabled="loading || activeRun" @change="clearPreview()" />
+            </div>
+            <p class="text-sm text-gray-500">Imports create missing customer accounts and pending, non-billable subscriptions. Missing ERP records never cause removals.</p>
             <div class="flex flex-wrap gap-3">
                 <x-ui.button type="submit" variant="brand" x-bind:disabled="loading || activeRun"><span x-text="loading ? 'Fetching preview…' : 'Fetch & preview'">Fetch & preview</span></x-ui.button>
                 <x-ui.button type="button" variant="secondary" x-show="previewData" x-cloak x-bind:disabled="loading || activeRun" @click="start()">Start synchronization</x-ui.button>
@@ -78,7 +82,7 @@
             <p>Status: <strong x-text="runData?.status"></strong></p>
             <p>Processed: <strong x-text="`${runData?.processed_records ?? 0} / ${runData?.total_records ?? 0}`"></strong></p>
             <p>Customers created / matched: <strong x-text="`${runData?.created_customers ?? 0} / ${runData?.matched_customers ?? 0}`"></strong></p>
-            <p>Subscriptions created / skipped: <strong x-text="`${runData?.created_subscriptions ?? 0} / ${runData?.skipped_subscriptions ?? 0}`"></strong></p>
+            <p>Subscriptions created / updated / skipped: <strong x-text="`${runData?.created_subscriptions ?? 0} / ${runData?.updated_subscriptions ?? 0} / ${runData?.skipped_subscriptions ?? 0}`"></strong></p>
             <p>Failed records: <strong x-text="runData?.failed_records ?? 0"></strong></p>
             <p class="text-amber-800" x-show="runData?.error_summary" x-text="runData?.error_summary"></p>
             <div class="overflow-x-auto" x-show="runData?.records?.length">
