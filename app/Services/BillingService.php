@@ -69,7 +69,7 @@ class BillingService
             }
 
             $issueDate = Invoice::billingToday();
-            $dueDate = $issueDate->copy()->addDays($lockedSubscription->effectiveGracePeriodDays());
+            $dueDate = $issueDate->copy()->addDays(max(1, $lockedSubscription->effectiveGracePeriodDays()));
 
             try {
                 $invoice = Invoice::withoutGlobalScopes()->create([

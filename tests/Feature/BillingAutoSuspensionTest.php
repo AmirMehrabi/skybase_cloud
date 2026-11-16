@@ -12,6 +12,7 @@ use App\Services\SubscriptionRestrictionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class BillingAutoSuspensionTest extends TestCase
@@ -114,12 +115,13 @@ class BillingAutoSuspensionTest extends TestCase
         $this->assertFalse($subscription->restrictions()->active()->where('type', 'billing')->exists());
     }
 
-    public function test_recurring_invoice_is_due_through_the_last_day_of_its_payment_term(): void
+    #[DataProvider('paymentTerms')]
+    public function test_recurring_invoice_is_due_through_the_last_day_of_its_payment_term(int $days, string $dueDate): void
     {
         $this->travelTo(Carbon::parse('2026-11-10 12:00:00'));
         [$tenant, $customer] = $this->createTenantContext('payment-term');
         $subscription = $this->createSubscription($tenant, $customer, true);
-        $subscription->update(['grace_period_days' => 7]);
+        $subscription->update(['grace_period_days' => $days]);
         $subscription->items()->create([
             'tenant_id' => $tenant->id,
             'item_type' => 'plan',
@@ -134,10 +136,18 @@ class BillingAutoSuspensionTest extends TestCase
 
         $invoice = $billing->createInvoiceForSubscription($subscription);
         $this->assertSame('2026-11-10', $invoice->issue_date->toDateString());
-        $this->assertSame('2026-11-17', $invoice->due_date->toDateString());
+        $this->assertSame($dueDate, $invoice->due_date->toDateString());
         $this->assertSame('issued', $invoice->status);
         $this->assertSame(0, $billing->markOverdueInvoices($invoice->due_date));
         $this->assertSame(1, $billing->markOverdueInvoices($invoice->due_date->addDay()));
+    }
+
+    public static function paymentTerms(): array
+    {
+        return [
+            'seven days' => [7, '2026-11-17'],
+            'zero-day setting' => [0, '2026-11-11'],
+        ];
     }
 
     public function test_new_subscription_defaults_to_auto_suspension_enabled(): void
