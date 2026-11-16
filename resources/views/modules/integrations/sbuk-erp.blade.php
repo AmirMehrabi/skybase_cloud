@@ -7,7 +7,7 @@
             ERP connection: {{ $enabled && $configured ? 'Configured' : 'Not configured' }}
             @unless($enabled && $configured)<p class="mt-1">Set the server-side SBUK ERP environment values before fetching a preview.</p>@endunless
         </div>
-        <form class="space-y-5" @submit.prevent="preview()">
+        <form class="space-y-5" @submit.prevent="preview($event.currentTarget)">
             <div class="grid gap-4 md:grid-cols-3">
                 <x-ui.input.select name="plan_id" label="Service" :options="$plans->pluck('name', 'id')->all()" required />
                 <x-ui.input.select name="router_id" label="Router" :options="$routers->pluck('name', 'id')->all()" required />
@@ -86,10 +86,10 @@ function sbukSyncPage(initialStatusUrl = null) {
         init() {
             if (this.statusUrl) { this.poll(); this.poller = setInterval(() => this.poll(), 3000); }
         },
-        async preview() {
+        async preview(form) {
             this.loading = true; this.error = ''; this.previewData = null; this.previewToken = null;
             try {
-                const data = Object.fromEntries(new FormData(this.$el.querySelector('form')).entries());
+                const data = Object.fromEntries(new FormData(form).entries());
                 const result = await this.send(@js(route('integrations.sbuk-erp.preview')), data);
                 this.previewData = result.summary; this.previewToken = result.preview_token;
             } catch (error) { this.error = error.message; }
