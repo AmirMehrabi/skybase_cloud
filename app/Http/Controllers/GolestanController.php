@@ -35,9 +35,13 @@ class GolestanController extends Controller
         $syncData = [];
         if (! empty($result['records'])) {
             $tenantId = (string) tenant()->id;
+            $credentialOptions = $sync->credentialFieldOptions($result['records']);
             $syncData = [
+                'credentialOptions' => $credentialOptions,
+                'defaultCredentialFields' => GolestanSyncService::DEFAULT_CREDENTIAL_FIELDS,
                 'searchToken' => $sync->remember('search', [
                     'tenant_id' => $tenantId, 'user_id' => (int) $request->user()->id,
+                    'credential_fields' => array_keys($credentialOptions),
                     'students' => array_map($sync->normalize(...), $result['records']),
                 ]),
                 'plans' => Plan::query()->where('tenant_id', $tenantId)->active()->ordered()->pluck('name', 'id'),

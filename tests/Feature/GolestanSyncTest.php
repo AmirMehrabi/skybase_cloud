@@ -53,6 +53,9 @@ class GolestanSyncTest extends TestCase
         $this->assertSame('0012345678', $customer->national_id);
         $this->assertNull($customer->mobile);
         $this->assertSame('pending', $subscription->status);
+        $this->assertSame('pppoe', $subscription->connection_type);
+        $this->assertSame('00123', $subscription->pppoe_username);
+        $this->assertSame('0012345678', $subscription->pppoe_password);
         $this->assertFalse($subscription->billing_enabled);
 
         $replacement = Plan::factory()->create(['tenant_id' => $this->admin->tenant_id, 'status' => 'active']);
@@ -101,7 +104,7 @@ class GolestanSyncTest extends TestCase
         Queue::fake();
         $pool = IpPool::factory()->active()->create(['tenant_id' => $this->admin->tenant_id, 'router_id' => $this->router->id]);
         $options = ['ip_management' => 'system', 'ip_pool_id' => $pool->id, 'rows' => [0, 1]];
-        $token = $this->search('<Student STDNO="00123" firstname="First" name="Student"/><Student STDNO="00124" firstname="Second" name="Student"/>');
+        $token = $this->search('<Student STDNO="00123" firstname="First" name="Student" SSNO="0012345678"/><Student STDNO="00124" firstname="Second" name="Student" SSNO="0012345679"/>');
         $this->preview($token, $options)->assertOk()->assertJsonPath('preview_token', null)->assertJsonPath('needed', 2);
         foreach (['192.0.2.10', '192.0.2.11'] as $address) {
             IpAddress::factory()->create(['tenant_id' => $this->admin->tenant_id, 'ip_pool_id' => $pool->id, 'ip_address' => $address, 'status' => 'available']);
@@ -125,7 +128,7 @@ class GolestanSyncTest extends TestCase
         Customer::factory()->count(2)->create([
             'tenant_id' => $this->admin->tenant_id, 'customer_type' => 'individual', 'national_id' => '۰۰۱۲۳۴۵۶۷۸',
         ]);
-        $token = $this->search('<Student STDNO="00123" firstname="First" name="Student" SSNO="0012345678"/><Student STDNO="00124" firstname="Second" name="Student"/>');
+        $token = $this->search('<Student STDNO="00123" firstname="First" name="Student" SSNO="0012345678"/><Student STDNO="00124" firstname="Second" name="Student" SSNO="0012345679"/>');
         $preview = $this->preview($token, ['rows' => [0, 1]])->assertOk()
             ->assertJsonPath('rows.0.action', 'skip')->assertJsonPath('ready', 1);
         $start = $this->postJson(route('golestan.sync.start'), ['preview_token' => $preview->json('preview_token')])->assertOk();
@@ -133,6 +136,38 @@ class GolestanSyncTest extends TestCase
             ->assertJsonPath('outcomes.0.status', 'skipped')->assertJsonPath('outcomes.1.status', 'synced');
         $this->assertDatabaseCount('customers', 3);
         $this->assertDatabaseCount('subscriptions', 1);
+    }
+
+    public function test_custom_mapping_updates_linked_credentials_without_exposing_the_password(): void
+    {
+        config(['security.encrypt_secrets' => true]);
+        $token = $this->search('<Student STDNO="00123" firstname="First" name="Student" SSNO="0012345678" Login="student-123" AccessCode="alternate-secret"/>');
+        $this->confirm($this->preview($token)->assertOk()->json('preview_token'));
+        $mapping = ['username' => 'Login', 'password' => 'AccessCode'];
+        $preview = $this->preview($token, ['credential_fields' => $mapping])->assertOk()
+            ->assertJsonPath('rows.0.credentials_changed', true)->assertDontSee('alternate-secret');
+        $this->confirm($preview->json('preview_token'));
+
+        $subscription = Subscription::query()->sole();
+        $this->assertSame('student-123', $subscription->pppoe_username);
+        $this->assertSame('alternate-secret', $subscription->pppoe_password);
+        $this->assertNotSame('alternate-secret', $subscription->getRawOriginal('pppoe_password'));
+        $this->preview($token, ['credential_fields' => $mapping])->assertOk()->assertJsonPath('rows.0.credentials_changed', false);
+    }
+
+    public function test_missing_colliding_and_unavailable_credential_fields_are_rejected(): void
+    {
+        $token = $this->search('<Student STDNO="00123" firstname="First" name="Student" Login="shared"/><Student STDNO="00124" firstname="Second" name="Student" Login="Shared"/>');
+        $this->preview($token)->assertOk()->assertJsonPath('rows.0.message', 'The mapped PPPoE password is missing or invalid.');
+        $this->preview($token, ['credential_fields' => ['username' => 'Login', 'password' => 'Unknown']])->assertUnprocessable();
+        $this->preview($token, ['credential_fields' => []])->assertUnprocessable();
+        $mapping = ['username' => 'Login', 'password' => 'STDNO'];
+        $this->preview($token, ['rows' => [0, 1], 'credential_fields' => $mapping])->assertOk()
+            ->assertJsonPath('ready', 0)->assertJsonPath('rows.0.message', 'More than one selected student maps to this PPPoE username.');
+
+        Subscription::factory()->create(['tenant_id' => $this->admin->tenant_id, 'pppoe_username' => 'SHARED']);
+        $this->preview($token, ['credential_fields' => $mapping])->assertOk()
+            ->assertJsonPath('rows.0.message', 'The mapped PPPoE username is already used by another subscription.');
     }
 
     private function preview(string $token, array $overrides = []): TestResponse

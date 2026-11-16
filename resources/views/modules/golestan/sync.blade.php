@@ -10,6 +10,13 @@
                     x-effect="filterPools($el, router)" x-bind:required="management === 'system'" x-bind:disabled="busy || management !== 'system'" />
             </div>
         </div>
+        <fieldset class="grid gap-4 md:grid-cols-2">
+            <legend class="mb-2 text-sm font-medium text-gray-900">PPPoE field mapping</legend>
+            <x-ui.input.select name="sync_username_field" label="Username field" :options="$credentialOptions" :value="$defaultCredentialFields['username']"
+                required x-model="credentialFields.username" @change="preview = null" x-bind:disabled="busy" />
+            <x-ui.input.select name="sync_password_field" label="Password field" :options="$credentialOptions" :value="$defaultCredentialFields['password']"
+                required x-model="credentialFields.password" @change="preview = null" x-bind:disabled="busy" />
+        </fieldset>
         <x-ui.button type="submit" variant="brand" x-bind:disabled="busy || !selected.length">Preview sync</x-ui.button>
     </form>
 
@@ -37,6 +44,7 @@
                         </template>
                         <p x-show="row.current" x-text="'Current · ' + describe(row.current)"></p>
                         <p x-show="row.proposed" x-text="'Proposed · ' + describe(row.proposed)"></p>
+                        <p x-show="row.credentials_changed">PPPoE credentials will be set from the selected fields.</p>
                         <p x-show="row.session_notice" class="text-amber-700">This change may interrupt active sessions.</p>
                     </div>
                 </template>
@@ -71,6 +79,7 @@
         const routers = @js($routers);
 
         return {
+            credentialFields: @js($defaultCredentialFields),
             selected: [], choices: {}, addresses: {}, plan: '', router: '', pool: '', management: '',
             preview: null, run: null, statusUrl: null, error: '', busy: false, pollFailed: false,
             selectAll() {
@@ -120,7 +129,7 @@
                     this.preview = await this.request(@js(route('golestan.sync.preview')), 'POST', {
                         search_token: searchToken, rows: this.selected, plan_id: this.plan, router_id: this.router,
                         ip_management: this.management, ip_pool_id: this.pool, subscriptions: this.selectedValues(this.choices),
-                        addresses: this.selectedValues(this.addresses),
+                        addresses: this.selectedValues(this.addresses), credential_fields: this.credentialFields,
                     });
                     this.error = this.preview.error || '';
                 } catch (error) {

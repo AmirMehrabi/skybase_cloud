@@ -18,7 +18,10 @@ class GolestanSyncController extends Controller
         $tenantId = (string) tenant()->id;
         $userId = (int) $request->user()->id;
         $search = $service->recall('search', $input['search_token'], $tenantId, $userId);
-        $settings = $service->settings($tenantId, $input);
+        $credentialFields = $input['credential_fields'] ?? GolestanSyncService::DEFAULT_CREDENTIAL_FIELDS;
+        $service->require(array_diff($credentialFields, $search['credential_fields'] ?? GolestanSyncService::DEFAULT_CREDENTIAL_FIELDS) === [],
+            'Choose PPPoE fields from the Golestan search results.');
+        $settings = $service->settings($tenantId, $input + ['credential_fields' => $credentialFields]);
         [$plan, $router, $pool] = $settings;
         $students = collect($input['rows'])->mapWithKeys(function (int $index) use ($search, $service): array {
             $service->require(isset($search['students'][$index]), 'A selected row is missing from this search.');
@@ -30,28 +33,40 @@ class GolestanSyncController extends Controller
         $preview = [];
         $ready = [];
         $available = $pool?->availableAddresses()->count();
-        $needed = 0;
+        $allocations = [];
+        $usernames = [];
         foreach ($students as $index => $student) {
             $choice = isset($input['subscriptions'][$index]) ? (int) $input['subscriptions'][$index] : null;
             $address = $input['addresses'][$index] ?? null;
             try {
                 $service->require($numbers[$student['student_number']] === 1 && ($identities[$student['national_id']] ?? 0) <= 1,
                     'The selected results contain a duplicate student number or national ID.');
+                $student['fields'] = array_intersect_key($student['fields'] ?? [], array_flip($credentialFields));
                 $data = $service->inspect($tenantId, $student, $settings, $choice, $address);
                 $preview[$index] = $data['preview'];
                 if (isset($data['fingerprint'])) {
                     $ready[$index] = ['student' => $student, 'choice' => $choice, 'address' => $address, 'fingerprint' => $data['fingerprint']];
-                    $needed += $data['allocate'] && ($address === null || $address !== $data['subscription']?->ip_address) ? 1 : 0;
+                    $allocations[$index] = $data['allocate'] && ($address === null || $address !== $data['subscription']?->ip_address);
+                    $usernames[mb_strtolower($data['username'])][] = $index;
                 }
             } catch (ValidationException $exception) {
                 $preview[$index] = ['action' => 'skip', 'message' => collect($exception->errors())->flatten()->first()];
             }
         }
+        foreach ($usernames as $indices) {
+            if (count($indices) > 1) {
+                foreach ($indices as $index) {
+                    unset($ready[$index], $allocations[$index]);
+                    $preview[$index] = ['action' => 'skip', 'message' => 'More than one selected student maps to this PPPoE username.'];
+                }
+            }
+        }
+        $needed = count(array_filter($allocations));
         $capacityError = $available !== null && $needed > $available;
         $token = $ready !== [] && ! $capacityError && ! collect($preview)->contains('action', 'choose')
             ? $service->remember('preview', [
                 'tenant_id' => $tenantId, 'user_id' => $userId,
-                'settings' => ['plan_id' => $plan->id, 'router_id' => $router->id, 'ip_pool_id' => $pool?->id, 'ip_management' => $input['ip_management']],
+                'settings' => ['plan_id' => $plan->id, 'router_id' => $router->id, 'ip_pool_id' => $pool?->id, 'ip_management' => $input['ip_management'], 'credential_fields' => $credentialFields],
                 'rows' => collect($ready)->sortBy(fn (array $row) => $row['address'] === null)->all(),
                 'skipped' => collect($preview)->where('action', 'skip')
                     ->map(fn (array $row) => ['status' => 'skipped', 'message' => $row['message']])->all(),

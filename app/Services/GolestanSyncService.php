@@ -12,11 +12,32 @@ use App\Models\Scopes\UserGroupScope;
 use App\Models\Subscription;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class GolestanSyncService
 {
+    public const DEFAULT_CREDENTIAL_FIELDS = ['username' => 'STDNO', 'password' => 'SSNO'];
+
+    public function credentialFieldOptions(array $records): array
+    {
+        $labels = [
+            'STDNO' => 'شماره دانشجویی (STDNO)',
+            'SSNO' => 'شماره ملی (SSNO)',
+            'firstname' => 'نام (firstname)',
+            'name' => 'نام خانوادگی (name)',
+        ];
+        $options = array_intersect_key($labels, array_flip(self::DEFAULT_CREDENTIAL_FIELDS));
+        foreach ($records as $record) {
+            foreach (array_keys($record) as $field) {
+                $options[$field] = $labels[$field] ?? $field;
+            }
+        }
+
+        return $options;
+    }
+
     public function __construct(private OrganizationBillingService $billing, private SubscriptionUsageService $usage) {}
 
     public function remember(string $type, array $data): string
@@ -44,6 +65,7 @@ class GolestanSyncService
             'national_id' => $this->digits($record['SSNO'] ?? ''),
             'first_name' => trim($record['firstname'] ?? ''),
             'last_name' => trim($record['name'] ?? ''),
+            'fields' => $record,
         ];
     }
 
@@ -60,12 +82,12 @@ class GolestanSyncService
                 'Choose an active IP pool available on the selected router.');
         }
 
-        return [$plan, $router, $pool];
+        return [$plan, $router, $pool, $input['credential_fields'] ?? null];
     }
 
     public function inspect(string $tenantId, array $student, array $settings, ?int $choice, ?string $address, bool $lock = false): array
     {
-        [$plan, $router, $pool] = $settings;
+        [$plan, $router, $pool, $credentialFields] = $settings;
         $number = $student['student_number'];
         $this->require(preg_match('/^[0-9]{1,64}$/D', $number) === 1, 'The student number is missing or invalid.');
         $nationalId = $student['national_id'];
@@ -110,6 +132,37 @@ class GolestanSyncService
         $subscription = $target ? $subscriptionQuery->when($lock, fn ($query) => $query->lockForUpdate())->find($target) : null;
         $this->require(! $target || ($subscription && $subscription->status !== 'cancelled'), 'The linked subscription is cancelled or unavailable.');
 
+        $credentials = [];
+        $credentialState = [];
+        $username = null;
+        if ($credentialFields !== null) {
+            $this->require(! $subscription || $subscription->isPppoe() || blank($subscription->connection_type),
+                'The selected subscription uses a different connection type. Choose a PPPoE subscription or create a new one.');
+            $username = $this->credentialValue($student, $credentialFields['username']);
+            $password = $this->credentialValue($student, $credentialFields['password']);
+            $this->require(Validator::make(['username' => $username], [
+                'username' => ['required', 'string', 'max:255', SafeRouterUsername::validationRule()],
+            ])->passes(), 'The mapped PPPoE username is missing or invalid.');
+            $this->require(filled($password) && mb_strlen($password) <= 255 && ! preg_match('/[\x00-\x1f\x7f]/', $password),
+                'The mapped PPPoE password is missing or invalid.');
+            $usernameInUse = Subscription::query()->withoutGlobalScope(UserGroupScope::class)
+                ->where('tenant_id', $tenantId)->whereRaw('LOWER(pppoe_username) = ?', [mb_strtolower($username)])
+                ->when($subscription, fn ($query) => $query->whereKeyNot($subscription->id))->exists();
+            $this->require(! $usernameInUse, 'The mapped PPPoE username is already used by another subscription.');
+            if ($username !== $subscription?->pppoe_username) {
+                $this->require($subscription?->connection_status !== 'online' && ! $subscription?->ipLeases()->whereNull('released_at')->exists(),
+                    'Disconnect the active session before changing its PPPoE username.');
+                $credentials['pppoe_username'] = $username;
+            }
+            if ($password !== $subscription?->pppoe_password) {
+                $credentials['pppoe_password'] = $password;
+            }
+            if ($subscription?->connection_type !== 'pppoe') {
+                $credentials['connection_type'] = 'pppoe';
+            }
+            $credentialState = [$subscription?->connection_type, $subscription?->pppoe_username, $subscription?->getRawOriginal('pppoe_password')];
+        }
+
         $network = ['router_id' => $router->id, 'ip_pool_id' => $pool?->id, 'ip_management' => $pool ? 'system' : 'router'];
         $networkChanged = $subscription && collect($network)->contains(fn ($value, $key) => $value != $subscription->$key);
         $ipChanged = $address !== null && $address !== $subscription?->ip_address;
@@ -140,6 +193,7 @@ class GolestanSyncService
         }
         $fingerprint = hash('sha256', json_encode([
             $link?->id, $customer?->id, $customer?->only(['first_name', 'last_name', 'national_id']), $subscription?->id, $current, $proposed,
+            ...$credentialState,
         ], JSON_THROW_ON_ERROR));
 
         return [
@@ -152,7 +206,7 @@ class GolestanSyncService
                 },
                 'subscription_action' => match (true) {
                     $subscription === null => 'Create pending subscription',
-                    $networkChanged || $ipChanged || $allocate || $subscription->plan_id != $plan->id => 'Update subscription',
+                    $networkChanged || $ipChanged || $allocate || $credentials !== [] || $subscription->plan_id != $plan->id => 'Update subscription',
                     ! $link?->subscription_id => 'Link existing subscription',
                     default => 'Reuse subscription',
                 },
@@ -160,10 +214,11 @@ class GolestanSyncService
                 'current' => $current,
                 'proposed' => $proposed,
                 'needs_ip' => (bool) $allocate,
+                'credentials_changed' => $credentials !== [],
                 'session_notice' => $subscription?->status === 'active' && ($networkChanged || $ipChanged || $subscription->plan_id != $plan->id),
             ],
             'fingerprint' => $fingerprint, 'customer' => $customer, 'customer_fields' => $customerFields, 'subscription' => $subscription,
-            'link' => $link, 'network' => $network, 'allocate' => $allocate, 'network_changed' => $networkChanged || $ipChanged,
+            'link' => $link, 'network' => $network, 'credentials' => $credentials, 'username' => $username, 'allocate' => $allocate, 'network_changed' => $networkChanged || $ipChanged,
         ];
     }
 
@@ -192,7 +247,7 @@ class GolestanSyncService
             $subscription->releaseIpAddress();
         }
         $subscription->unsetRelations();
-        $subscription->fill(['plan_id' => $plan->id, ...$data['network']]);
+        $subscription->fill(['plan_id' => $plan->id, ...$data['network'], ...$data['credentials']]);
         if ($data['network_changed'] && ! $pool) {
             $subscription->ip_address = null;
         }
@@ -237,6 +292,15 @@ class GolestanSyncService
         if (! $condition) {
             throw ValidationException::withMessages(['sync' => $message]);
         }
+    }
+
+    private function credentialValue(array $student, string $field): string
+    {
+        return match ($field) {
+            'STDNO' => $student['student_number'],
+            'SSNO' => $student['national_id'],
+            default => trim($student['fields'][$field] ?? ''),
+        };
     }
 
     private function digits(string $value): string

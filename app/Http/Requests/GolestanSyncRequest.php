@@ -27,6 +27,9 @@ class GolestanSyncRequest extends FormRequest
             'ip_pool_id' => ['exclude_unless:ip_management,system', 'required', 'integer'],
             'subscriptions' => ['sometimes', 'array', 'max:500'],
             'subscriptions.*' => ['nullable', 'integer', 'min:0'],
+            'credential_fields' => ['sometimes', 'array:username,password', 'required_array_keys:username,password'],
+            'credential_fields.username' => ['required_with:credential_fields', 'string', 'max:255'],
+            'credential_fields.password' => ['required_with:credential_fields', 'string', 'max:255'],
             'addresses' => ['exclude_unless:ip_management,system', 'sometimes', 'array', 'max:500'],
             'addresses.*' => ['nullable', 'ipv4', 'distinct'],
         ];
@@ -35,6 +38,7 @@ class GolestanSyncRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'credential_fields.required_array_keys' => 'Select both PPPoE credential fields.',
             'rows.required' => 'Select at least one student.',
             'rows.max' => 'Select up to 500 students per sync.',
             'ip_pool_id.required' => 'Select an IP pool for system-managed addresses.',
