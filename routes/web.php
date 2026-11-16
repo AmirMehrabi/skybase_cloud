@@ -29,6 +29,7 @@ use App\Http\Controllers\CustomerPortal\TicketController as CustomerPortalTicket
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\GolestanController;
+use App\Http\Controllers\GolestanSyncController;
 use App\Http\Controllers\ImportExportController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\NetworkController;
@@ -188,6 +189,9 @@ Route::post('/auth/logout', [TenantLoginController::class, 'logout'])->name('aut
 Route::middleware([EnsureGolestanEnabled::class, 'auth', 'email.verified', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa'])->group(function (): void {
     Route::get('/admin/golestan', [GolestanController::class, 'index'])->name('golestan.index');
     Route::post('/admin/golestan', [GolestanController::class, 'search'])->middleware('throttle:10,1')->name('golestan.search');
+    Route::post('/admin/golestan/sync/preview', [GolestanSyncController::class, 'preview'])->middleware('throttle:30,1')->name('golestan.sync.preview');
+    Route::post('/admin/golestan/sync', [GolestanSyncController::class, 'start'])->middleware('throttle:10,1')->name('golestan.sync.start');
+    Route::get('/admin/golestan/sync/{run}', [GolestanSyncController::class, 'status'])->whereNumber('run')->name('golestan.sync.status');
 });
 
 // Protected Routes (Require Authentication & Tenancy)

@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\GolestanSearchRequest;
+use App\Models\IpPool;
+use App\Models\Plan;
+use App\Models\Router;
 use App\Services\GolestanService;
+use App\Services\GolestanSyncService;
 use App\Support\GolestanFilters;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -18,7 +22,7 @@ class GolestanController extends Controller
         return $this->page();
     }
 
-    public function search(GolestanSearchRequest $request, GolestanService $service): Response
+    public function search(GolestanSearchRequest $request, GolestanService $service, GolestanSyncService $sync): Response
     {
         $result = null;
         $error = null;
@@ -28,12 +32,30 @@ class GolestanController extends Controller
             $error = $exception->getMessage();
         }
 
+        $syncData = [];
+        if (! empty($result['records'])) {
+            $tenantId = (string) tenant()->id;
+            $syncData = [
+                'searchToken' => $sync->remember('search', [
+                    'tenant_id' => $tenantId, 'user_id' => (int) $request->user()->id,
+                    'students' => array_map($sync->normalize(...), $result['records']),
+                ]),
+                'plans' => Plan::query()->where('tenant_id', $tenantId)->active()->ordered()->pluck('name', 'id'),
+                'routers' => Router::query()->where('tenant_id', $tenantId)->orderBy('name')->pluck('name', 'id'),
+                'pools' => IpPool::query()->where('tenant_id', $tenantId)->whereIn('status', ['active', 'exhausted'])->with('routers:id')->orderBy('name')->get()
+                    ->map(fn (IpPool $pool): array => [
+                        'id' => $pool->id, 'name' => $pool->name, 'all' => $pool->all_devices,
+                        'routers' => [$pool->router_id, ...$pool->routers->modelKeys()],
+                    ])->values(),
+            ];
+        }
+
         return $this->page([
             'filters' => $request->validated(),
             'requestXml' => $service->requestXml($request->validated(), redactPassword: true),
             'result' => $result,
             'serviceError' => $error,
-        ]);
+        ] + $syncData);
     }
 
     /** @param array<string, mixed> $data */

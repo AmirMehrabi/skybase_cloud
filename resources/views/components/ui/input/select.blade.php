@@ -36,6 +36,7 @@ $id ??= $name;
                 {{ $option }}
             </option>
         @endforeach
+        {{ $slot }}
     </select>
 
     @if($error)

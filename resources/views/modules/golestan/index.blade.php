@@ -36,7 +36,21 @@
     @endif
     @if($result !== null)
         <x-ui.card :title="'Results ('.count($result['records']).')'">
-            @forelse($result['records'] as $record)
+            @isset($searchToken)
+                <div x-data="golestanSync(@js($searchToken), @js($pools), {{ count($result['records']) }})">
+                <div class="mb-5 flex flex-wrap items-center gap-3">
+                    <x-ui.button type="button" @click="selectAll()" x-bind:disabled="busy">Select all results</x-ui.button>
+                    <x-ui.button type="button" @click="selected = []; preview = null" x-bind:disabled="busy">Clear selection</x-ui.button>
+                    <span class="text-sm text-gray-600" x-text="selected.length + ' selected'"></span>
+                </div>
+            @endisset
+            @forelse($result['records'] as $index => $record)
+                <div class="mb-3 flex flex-wrap items-end gap-3">
+                    <x-ui.input.checkbox :name="'student-'.$index" label="Select student for sync" :value="(string) $index" checked-only x-model="selected" @change="preview = null" x-bind:disabled="busy" />
+                    <div x-cloak x-show="management === 'system' && selected.includes('{{ $index }}')">
+                        <x-ui.input.text :name="'ip-'.$index" label="Fixed IPv4 (optional)" placeholder="Automatic from pool" x-model="addresses[{{ $index }}]" @input="preview = null" x-bind:disabled="busy" />
+                    </div>
+                </div>
                 <dl class="grid gap-4 md:grid-cols-2">
                     @foreach($record as $field => $value)
                         <div class="border-b border-gray-100 pb-3">
@@ -49,6 +63,10 @@
             @empty
                 <p class="text-sm text-gray-500">No student found for these criteria.</p>
             @endforelse
+            @isset($searchToken)
+                @include('modules.golestan.sync')
+                </div>
+            @endisset
             <details class="mt-5">
                 <summary class="cursor-pointer text-sm font-medium text-gray-700">View XML response</summary>
                 <pre dir="ltr" class="mt-3 max-h-96 overflow-auto rounded-lg bg-gray-50 p-4 text-xs">{{ $result['xml'] }}</pre>
