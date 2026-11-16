@@ -36,7 +36,7 @@ class Subscription extends Model implements LdapImportable
 
     protected function activityLogExcept(): array
     {
-        return ['pppoe_password', 'pppoe_password_hash', 'updated_at', 'deleted_at'];
+        return ['name', 'phone', 'pppoe_password', 'pppoe_password_hash', 'updated_at', 'deleted_at'];
     }
 
     protected $hidden = ['pppoe_password_hash'];

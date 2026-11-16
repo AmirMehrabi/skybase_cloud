@@ -43,6 +43,7 @@ use App\Http\Controllers\ReportController as GeneralReportController;
 use App\Http\Controllers\ResourceSearchController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\RouterHotspotController;
+use App\Http\Controllers\SbukErpSyncController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteCoverageController;
@@ -191,6 +192,13 @@ Route::middleware([EnsureGolestanEnabled::class, 'auth', 'email.verified', 'init
 
 // Protected Routes (Require Authentication & Tenancy)
 Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
+    Route::prefix('admin/integrations/sbuk-erp')->name('integrations.sbuk-erp.')->controller(SbukErpSyncController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::post('/preview', 'preview')->middleware('throttle:5,1')->name('preview');
+        Route::post('/start', 'start')->middleware('throttle:3,1')->name('start');
+        Route::get('/runs/{run}', 'status')->name('status');
+    });
+
     Route::prefix('acs')->name('acs.')->middleware(EnsureAcsEnabled::class)->controller(AcsController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/settings', 'settings')->name('settings');

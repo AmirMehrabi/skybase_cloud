@@ -82,7 +82,7 @@ class Customer extends Authenticatable implements LdapImportable
 
     protected function activityLogExcept(): array
     {
-        return ['password', 'remember_token', 'updated_at', 'deleted_at'];
+        return ['password', 'remember_token', 'first_name', 'last_name', 'name', 'company_name', 'email', 'national_id', 'phone', 'mobile', 'whatsapp', 'updated_at', 'deleted_at'];
     }
 
     public function getLdapGuidColumn(): string

@@ -24,6 +24,9 @@ class SettingsNavigation
         if (tenant()?->acs_enabled && auth()->user()?->isOwner()) {
             $sections['acs'] = ['title' => 'ACS integration', 'description' => 'Connect GenieACS and enroll customer equipment.', 'icon' => 'network', 'group' => 'Access & integrations', 'route' => 'acs.settings'];
         }
+        if (auth()->user()?->isAdmin()) {
+            $sections['sbuk-erp'] = ['title' => 'SBUK ERP', 'description' => 'Preview and manually synchronize university personnel.', 'icon' => 'users', 'group' => 'Access & integrations', 'route' => 'integrations.sbuk-erp.index'];
+        }
         foreach ($sections as $key => &$section) {
             $section['route'] ??= $key === 'sms' ? 'settings.sms' : 'settings.section';
             $section['parameters'] = $section['route'] === 'settings.section' ? ['section' => $key] : [];

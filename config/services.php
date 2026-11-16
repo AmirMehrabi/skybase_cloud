@@ -26,6 +26,15 @@ return [
         'password' => env('GOLESTAN_PASSWORD'),
     ],
 
+    'sbuk_erp' => [
+        'enabled' => env('SBUK_ERP_ENABLED', false),
+        'base_url' => env('SBUK_ERP_BASE_URL', 'https://erp.uk.ac.ir'),
+        'service_id' => env('SBUK_ERP_SERVICE_ID', 2112),
+        'token' => env('SBUK_ERP_TOKEN'),
+        'connect_timeout' => env('SBUK_ERP_CONNECT_TIMEOUT', 10),
+        'timeout' => env('SBUK_ERP_TIMEOUT', 120),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
