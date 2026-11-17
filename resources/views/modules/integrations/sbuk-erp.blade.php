@@ -55,6 +55,9 @@
                                     <th scope="col" class="p-2">Mobile</th>
                                     <th scope="col" class="p-2">National ID</th>
                                     <th scope="col" class="p-2">ERP index</th>
+                                    <th scope="col" class="p-2">Employment type</th>
+                                    <th scope="col" class="p-2">Unit</th>
+                                    <th scope="col" class="p-2">Employment status</th>
                                     <th scope="col" class="p-2">Validation issue</th>
                                 </tr>
                             </thead>
@@ -66,6 +69,9 @@
                                         <td class="p-2" x-text="row.mobile || '—'"></td>
                                         <td class="p-2" x-text="row.national_id || '—'"></td>
                                         <td class="p-2" x-text="row.external_index || '—'"></td>
+                                        <td class="p-2" dir="auto" x-text="row.employment_type || '—'"></td>
+                                        <td class="p-2" dir="auto" x-text="row.unit_title || '—'"></td>
+                                        <td class="p-2" dir="auto" x-text="row.employment_status || '—'"></td>
                                         <td class="p-2" x-text="row.error || '—'"></td>
                                     </tr>
                                 </template>

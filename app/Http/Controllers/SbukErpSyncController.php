@@ -87,6 +87,9 @@ class SbukErpSyncController extends Controller
                 'mobile' => (string) ($record['MOBILE'] ?? ''),
                 'national_id' => (string) ($record['NATIONALID'] ?? ''),
                 'external_index' => is_scalar($record['index_'] ?? null) ? (string) $record['index_'] : null,
+                'employment_type' => $record['EMPLOYTYPE'] ?? null,
+                'unit_title' => $record['TITLE_UNIT'] ?? null,
+                'employment_status' => $record['EMPLOY_STATE'] ?? null,
                 'error' => $preview['records'][$index]['error'],
             ];
         }
