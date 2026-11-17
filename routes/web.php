@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\SuperAdmin\TenantController as SuperAdminTenantCo
 use App\Http\Controllers\Admin\Tenant\RoleController;
 use App\Http\Controllers\Admin\Tenant\UserController;
 use App\Http\Controllers\Admin\Tenant\UserGroupController;
+use App\Http\Controllers\Auth\GovernmentSsoController;
 use App\Http\Controllers\Auth\MultiFactorController;
 use App\Http\Controllers\Auth\TenantLoginController;
 use App\Http\Controllers\Auth\TenantRegistrationController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\GolestanController;
 use App\Http\Controllers\GolestanSyncController;
+use App\Http\Controllers\GovernmentSsoSettingsController;
 use App\Http\Controllers\ImportExportController;
 use App\Http\Controllers\IpamController;
 use App\Http\Controllers\NetworkController;
@@ -69,6 +71,11 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware(['guest:web,customer', 'throttle:20,1,government-sso'])->prefix('government-sso')->name('government-sso.')->group(function (): void {
+    Route::post('/{guard}/start', [GovernmentSsoController::class, 'start'])->whereIn('guard', ['web', 'customer'])->name('start');
+    Route::get('/callback', [GovernmentSsoController::class, 'callback'])->name('callback');
+});
 
 $customerPortalRoutes = function (): void {
     Route::middleware('guest:customer')->group(function (): void {
@@ -307,6 +314,9 @@ Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant
         Route::post('/ldap/preview', [SettingController::class, 'previewLdap'])->name('preview.ldap');
         Route::post('/ldap/sync', [SettingController::class, 'syncLdap'])->name('sync.ldap');
         Route::match(['post', 'delete'], '/assets/{asset}', [SettingController::class, 'deleteAsset'])->name('delete.asset');
+        Route::get('/government-sso', [GovernmentSsoSettingsController::class, 'show'])->name('government-sso');
+        Route::put('/government-sso', [GovernmentSsoSettingsController::class, 'update'])->name('update.government-sso');
+        Route::post('/government-sso/identity', [GovernmentSsoSettingsController::class, 'identity'])->name('government-sso.identity');
         Route::get('/{section}', [SettingController::class, 'section'])->whereIn('section', ['general', 'branding', 'billing', 'payment-gateway', 'customer-portal', 'email', 'notifications', 'ldap'])->name('section');
     });
 

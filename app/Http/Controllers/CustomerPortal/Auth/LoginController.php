@@ -75,11 +75,13 @@ class LoginController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        $providerLogout = $request->boolean('government_logout') ? $request->session()->get('government_sso.customer') : null;
+
         Auth::guard('customer')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('customer.login');
+        return $providerLogout ? redirect()->away($providerLogout) : redirect()->route('customer.login');
     }
 }

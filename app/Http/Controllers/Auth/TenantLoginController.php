@@ -62,11 +62,13 @@ class TenantLoginController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        $providerLogout = $request->boolean('government_logout') ? $request->session()->get('government_sso.web') : null;
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('auth.login');
+        return $providerLogout ? redirect()->away($providerLogout) : redirect()->route('auth.login');
     }
 }

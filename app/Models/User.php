@@ -37,6 +37,7 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     protected $hidden = [
+        'government_identity_hash',
         'password',
         'remember_token', 'mfa_secret', 'mfa_recovery_codes',
     ];

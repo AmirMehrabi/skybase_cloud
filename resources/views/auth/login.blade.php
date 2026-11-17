@@ -73,6 +73,8 @@
         </button>
     </form>
 
+    <x-government-sso-login guard="web" />
+
     @if (config('app.cloud.enabled'))
         <!-- Register Link -->
     <div class="mt-6 text-center">

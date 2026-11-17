@@ -244,12 +244,21 @@
                         
                         <!-- User Dropdown Menu -->
                         <div id="user-menu" class="hidden absolute {{ $isRtl ? 'left-0' : 'right-0' }} mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-900/10 py-1 z-50">
+                            @if (session('government_sso.web'))
+                                <div class="border-b border-slate-900/10 px-4 py-3">
+                                    <p class="truncate text-sm font-semibold text-slate-950">{{ $user->name }}</p>
+                                    <p class="truncate text-xs text-slate-500">{{ $user->email }}</p>
+                                </div>
+                            @endif
                             <a href="{{ route('profile.index') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Profile</a>
                             <a href="{{ route('mfa.setup') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Account Security</a>
                             <div class="border-t border-slate-900/10 my-1"></div>
                             <form method="POST" action="{{ route('auth.logout') }}">
                                 @csrf
                                 <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-[#fbf7ed]">Sign Out</button>
+                                @if (session('government_sso.web'))
+                                    <button type="submit" name="government_logout" value="1" class="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-[#fbf7ed]">Sign out of SkyBase and Government SSO</button>
+                                @endif
                             </form>
                         </div>
                     </div>

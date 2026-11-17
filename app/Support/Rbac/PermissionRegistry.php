@@ -192,6 +192,8 @@ class PermissionRegistry
             'dashboard' => 'dashboard.read',
             'search.resources' => 'dashboard.read',
             'settings.section' => 'settings.read',
+            'settings.government-sso' => 'settings.read',
+            'settings.government-sso.identity' => 'settings.write',
             'campaigns.templates' => 'communications.read',
             'campaigns.deliveries' => 'communications.read',
             'settings.sms' => 'settings.read',

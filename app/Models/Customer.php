@@ -62,6 +62,7 @@ class Customer extends Authenticatable implements LdapImportable
     ];
 
     protected $hidden = [
+        'government_identity_hash',
         'password',
         'remember_token',
     ];

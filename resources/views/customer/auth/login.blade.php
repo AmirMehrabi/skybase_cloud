@@ -48,5 +48,7 @@
             Sign in
         </button>
     </form>
+
+    <x-government-sso-login guard="customer" />
 </div>
 @endsection

@@ -27,6 +27,9 @@ class SettingsNavigation
         if (auth()->user()?->isAdmin()) {
             $sections['sbuk-erp'] = ['title' => 'SBUK ERP', 'description' => 'Preview and manually synchronize university personnel.', 'icon' => 'users', 'group' => 'Access & integrations', 'route' => 'integrations.sbuk-erp.index'];
         }
+        if (auth()->user()?->isOwner()) {
+            $sections['government-sso'] = ['title' => 'Government SSO', 'description' => 'Configure government sign-in for staff and customers.', 'icon' => 'shield', 'group' => 'Access & integrations', 'route' => 'settings.government-sso'];
+        }
         foreach ($sections as $key => &$section) {
             $section['route'] ??= $key === 'sms' ? 'settings.sms' : 'settings.section';
             $section['parameters'] = $section['route'] === 'settings.section' ? ['section' => $key] : [];

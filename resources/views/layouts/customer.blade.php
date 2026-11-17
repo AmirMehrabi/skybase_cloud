@@ -98,6 +98,9 @@
                                 <form method="POST" action="{{ route('customer.logout') }}">
                                     @csrf
                                     <button type="submit" class="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-[#fbf7ed]">Logout</button>
+                                    @if (session('government_sso.customer'))
+                                        <button type="submit" name="government_logout" value="1" class="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-[#fbf7ed]">Sign out of SkyBase and Government SSO</button>
+                                    @endif
                                 </form>
                             </div>
                         </div>
