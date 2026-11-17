@@ -135,6 +135,24 @@ class GovernmentSsoTest extends TestCase
         $this->get(route('auth.login'))->assertOk()->assertDontSee('Continue with Government SSO');
     }
 
+    public function test_registered_entry_starts_on_the_configured_host_and_uses_the_registered_callback(): void
+    {
+        config()->set('app.cloud.enabled', false);
+        config()->set('app.government_sso_public_url', 'https://netuser.example.test');
+        $tenant = Tenant::factory()->create();
+        $this->configure($tenant, 'customer');
+
+        $registeredEntry = 'https://netuser.example.test/auth/usw/redirect';
+        $this->post(route('government-sso.start', 'customer'), ['sso_tenant' => $tenant->slug])
+            ->assertRedirect($registeredEntry.'?guard=customer&sso_tenant='.$tenant->slug)
+            ->assertSessionMissing('government_sso.pending');
+
+        $response = $this->get($registeredEntry);
+        parse_str(parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('https://netuser.example.test/auth/usw/callback', $query['redirect_uri']);
+        $response->assertSessionHas('government_sso.pending.guard', 'customer');
+    }
+
     private function configure(Tenant $tenant, string $guard): void
     {
         app(TenantContext::class)->run($tenant->id, fn () => Setting::set(GovernmentSso::KEY, [

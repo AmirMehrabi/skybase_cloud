@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'government_sso_public_url' => env('GOVERNMENT_SSO_PUBLIC_URL'),
+
     'customer_portal_domain' => parse_url((string) env('CUSTOMER_PORTAL_DOMAIN', ''), PHP_URL_HOST) ?: env('CUSTOMER_PORTAL_DOMAIN'),
 
     'cloud' => [

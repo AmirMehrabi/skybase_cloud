@@ -15,9 +15,24 @@ use Illuminate\Support\Str;
 
 class GovernmentSsoController extends Controller
 {
+    public function entry(Request $request): RedirectResponse
+    {
+        $guard = $request->query('guard');
+        abort_unless($guard === null || in_array($guard, ['web', 'customer'], true), 404);
+
+        $slug = $request->string('sso_tenant')->trim()->limit(100, '')->toString();
+        if ($guard === null && ! GovernmentSso::tenant($slug)) {
+            return redirect()->route('customer.login');
+        }
+
+        $guard ??= GovernmentSso::loginEnabled($slug, 'customer') ? 'customer' : 'web';
+
+        return $this->start($request, $guard);
+    }
+
     public function start(Request $request, string $guard): RedirectResponse
     {
-        if ($guard === 'web' && config('skybase_billing.console_host_enabled')
+        if (config('skybase_billing.console_host_enabled')
             && $request->getHost() === config('skybase_billing.console_host')) {
             abort(404);
         }
@@ -28,9 +43,16 @@ class GovernmentSsoController extends Controller
             return $this->failed($guard, $tenant);
         }
 
+        $callback = GovernmentSso::publicUrl('government-sso.callback');
+        if ($callback !== route('government-sso.callback')) {
+            return redirect()->away(GovernmentSso::publicUrl('government-sso.entry', [
+                'guard' => $guard,
+                'sso_tenant' => $tenant->slug,
+            ]));
+        }
+
         $state = Str::random(64);
         $verifier = $settings['pkce'] ? Str::random(64) : null;
-        $callback = route('government-sso.callback');
         $request->session()->put('government_sso.pending', [
             'state' => $state,
             'tenant_id' => (string) $tenant->id,
@@ -61,7 +83,8 @@ class GovernmentSsoController extends Controller
         $pending = $request->session()->get('government_sso.pending');
         $state = $request->query('state');
         if (! $pending || ! is_string($state) || ! hash_equals($pending['state'], $state)
-            || $pending['callback'] !== route('government-sso.callback')) {
+            || $pending['callback'] !== $request->url()
+            || $pending['callback'] !== GovernmentSso::publicUrl('government-sso.callback')) {
             return $this->failed($pending['guard'] ?? 'web');
         }
 

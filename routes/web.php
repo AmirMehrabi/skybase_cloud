@@ -72,8 +72,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['guest:web,customer', 'throttle:20,1,government-sso'])->prefix('government-sso')->name('government-sso.')->group(function (): void {
+Route::middleware(['guest:web,customer', 'throttle:20,1,government-sso'])->prefix('auth/usw')->name('government-sso.')->group(function (): void {
     Route::post('/{guard}/start', [GovernmentSsoController::class, 'start'])->whereIn('guard', ['web', 'customer'])->name('start');
+    Route::get('/redirect', [GovernmentSsoController::class, 'entry'])->name('entry');
     Route::get('/callback', [GovernmentSsoController::class, 'callback'])->name('callback');
 });
 

@@ -2,11 +2,12 @@
     <x-settings-section title="USW connection" description="Enter the client credentials issued for your organization. Both sign-in methods start disabled.">
         <dl class="mb-6 space-y-3 text-sm text-slate-700">
             @foreach ([
-                'Staff sign-in URL' => route('auth.login', ['sso_tenant' => $tenant->slug]),
-                'Customer sign-in URL' => route('customer.login', ['sso_tenant' => $tenant->slug]),
-                'Callback URL' => route('government-sso.callback'),
-                'Staff landing URL' => route('dashboard'),
-                'Customer landing URL' => route('customer.dashboard'),
+                'USW login URL' => \App\Services\GovernmentSso::publicUrl('government-sso.entry'),
+                'Staff sign-in URL' => \App\Services\GovernmentSso::publicUrl('auth.login', ['sso_tenant' => $tenant->slug]),
+                'Customer sign-in URL' => \App\Services\GovernmentSso::publicUrl('customer.login', ['sso_tenant' => $tenant->slug]),
+                'Callback URL' => \App\Services\GovernmentSso::publicUrl('government-sso.callback'),
+                'Staff landing URL' => \App\Services\GovernmentSso::publicUrl('dashboard'),
+                'Customer landing URL' => \App\Services\GovernmentSso::publicUrl('customer.dashboard'),
             ] as $label => $url)
                 <div>
                     <dt class="font-semibold">{{ $label }}</dt>

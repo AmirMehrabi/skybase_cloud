@@ -14,6 +14,15 @@ class GovernmentSso
 
     public const KEY = 'government_sso';
 
+    public static function publicUrl(string $route, array $parameters = []): string
+    {
+        $origin = config('app.government_sso_public_url');
+
+        return filled($origin)
+            ? rtrim($origin, '/').route($route, $parameters, absolute: false)
+            : route($route, $parameters);
+    }
+
     public static function settings(string $tenantId): array
     {
         return Setting::get(self::KEY, [], $tenantId) + [
