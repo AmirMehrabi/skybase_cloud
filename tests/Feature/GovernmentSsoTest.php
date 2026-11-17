@@ -91,14 +91,14 @@ class GovernmentSsoTest extends TestCase
         $this->assertGuest('customer');
     }
 
-    public function test_owner_can_configure_independent_toggles_and_enroll_or_revoke_staff(): void
+    public function test_admin_can_configure_independent_toggles_and_enroll_or_revoke_staff(): void
     {
         $tenant = Tenant::factory()->create();
-        $owner = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'owner']);
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'admin']);
         $staff = User::factory()->create(['tenant_id' => $tenant->id]);
         $settings = GovernmentSso::settings($tenant->id);
 
-        $this->actingAs($owner)->withoutVite()->get(route('settings.government-sso'))->assertOk();
+        $this->actingAs($admin)->withoutVite()->get(route('settings.government-sso'))->assertOk();
         $this->put(route('settings.update.government-sso'), array_replace($settings, [
             'web_enabled' => true,
             'client_id' => 'tenant-client',
@@ -119,6 +119,20 @@ class GovernmentSsoTest extends TestCase
         $this->post(route('settings.government-sso.identity'), $account + ['operation' => 'revoke'])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertNull($staff->fresh()->government_identity_hash);
+    }
+
+    public function test_standalone_customer_sso_opens_the_customer_login_when_staff_is_the_default(): void
+    {
+        config()->set('app.cloud.enabled', false);
+        config()->set('app.cloud.guest_entry', 'admin');
+        config()->set('app.customer_portal_domain', null);
+        $tenant = Tenant::factory()->create();
+
+        $this->withoutVite()->get(route('customer.login'))->assertRedirect(route('auth.login'));
+
+        $this->configure($tenant, 'customer');
+        $this->get(route('customer.login'))->assertOk()->assertSee('Continue with Government SSO');
+        $this->get(route('auth.login'))->assertOk()->assertDontSee('Continue with Government SSO');
     }
 
     private function configure(Tenant $tenant, string $guard): void

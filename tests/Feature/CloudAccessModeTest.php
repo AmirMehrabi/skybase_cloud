@@ -4,10 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class CloudAccessModeTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_homepage_is_visible_when_cloud_mode_is_enabled(): void
     {
         config()->set('app.cloud.enabled', true);

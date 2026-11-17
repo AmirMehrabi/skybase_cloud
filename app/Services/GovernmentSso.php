@@ -33,7 +33,24 @@ class GovernmentSso
 
     public static function tenant(?string $slug): ?Tenant
     {
-        return filled($slug) ? Tenant::query()->where('slug', $slug)->first() : null;
+        if (filled($slug)) {
+            return Tenant::query()->where('slug', $slug)->first();
+        }
+
+        if (config('app.cloud.enabled')) {
+            return null;
+        }
+
+        $tenants = Tenant::query()->limit(2)->get();
+
+        return $tenants->count() === 1 ? $tenants->first() : null;
+    }
+
+    public static function loginEnabled(string $slug, string $guard): bool
+    {
+        $tenant = self::tenant($slug);
+
+        return $tenant !== null && self::enabled($tenant, self::settings((string) $tenant->id), $guard);
     }
 
     public static function enabled(?Tenant $tenant, array $settings, string $guard): bool

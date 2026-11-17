@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CustomerPortal\LoginRequest;
 use App\Models\Customer;
 use App\Models\Tenant;
+use App\Services\GovernmentSso;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    public function show(): View|RedirectResponse
+    public function show(Request $request): View|RedirectResponse
     {
         if (Auth::check()) {
             return redirect()->route('dashboard');
@@ -24,6 +25,7 @@ class LoginController extends Controller
             ! config('app.cloud.enabled')
             && config('app.cloud.guest_entry') !== 'customer'
             && blank(config('app.customer_portal_domain'))
+            && ! GovernmentSso::loginEnabled($request->string('sso_tenant')->trim()->limit(100, '')->toString(), 'customer')
         ) {
             return redirect()->route('auth.login');
         }

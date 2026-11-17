@@ -8,7 +8,7 @@ class ManageGovernmentIdentityRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->isOwner() && $this->user()->canAccessTenant((string) tenant()->id);
+        return $this->user()->isAdmin() && $this->user()->canAccessTenant((string) tenant()->id);
     }
 
     public function rules(): array

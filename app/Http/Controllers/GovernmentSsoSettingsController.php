@@ -19,7 +19,7 @@ class GovernmentSsoSettingsController extends Controller
 {
     public function show(Request $request): View
     {
-        abort_unless($request->user()->isOwner(), 403);
+        abort_unless($request->user()->isAdmin(), 403);
         $section = 'government-sso';
         $tenant = tenant();
         $settings = GovernmentSso::settings((string) $tenant->id);

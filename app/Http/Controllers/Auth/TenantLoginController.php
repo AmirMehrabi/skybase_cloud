@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TenantLoginRequest;
+use App\Services\GovernmentSso;
 use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -12,13 +13,14 @@ use Illuminate\Support\Facades\Auth;
 
 class TenantLoginController extends Controller
 {
-    public function showLoginForm(): View|RedirectResponse
+    public function showLoginForm(Request $request): View|RedirectResponse
     {
         if (Auth::guard('customer')->check()) {
             return redirect()->route('customer.dashboard');
         }
 
-        if (! config('app.cloud.enabled') && config('app.cloud.guest_entry') === 'customer') {
+        if (! config('app.cloud.enabled') && config('app.cloud.guest_entry') === 'customer'
+            && ! GovernmentSso::loginEnabled($request->string('sso_tenant')->trim()->limit(100, '')->toString(), 'web')) {
             return redirect()->route('customer.login');
         }
 
