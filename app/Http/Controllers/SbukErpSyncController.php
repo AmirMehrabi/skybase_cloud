@@ -39,10 +39,63 @@ class SbukErpSyncController extends Controller
         ])->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
-    public function preview(PreviewRequest $request, SbukErpClient $client, SbukPersonnelImportService $service): JsonResponse
+    public function fetch(Request $request, SbukErpClient $client): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        try {
+            $records = $client->personnel();
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        $token = (string) Str::uuid();
+        Cache::put($this->datasetKey($token), Crypt::encryptString(json_encode([
+            'tenant_id' => (string) $request->user()->tenant_id,
+            'user_id' => $request->user()->id,
+            'records' => $records,
+        ], JSON_THROW_ON_ERROR)), now()->addMinutes(20));
+
+        return response()->json([
+            'dataset_token' => $token,
+            'rows' => $this->displayRows($records),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
+    public function preview(PreviewRequest $request, SbukPersonnelImportService $service): JsonResponse
     {
         $tenantId = (string) $request->user()->tenant_id;
         $validated = $request->validated();
+        $encrypted = Cache::get($this->datasetKey($validated['dataset_token']));
+        abort_unless(is_string($encrypted), 422, 'The ERP records have expired. Fetch them again.');
+        $dataset = json_decode(Crypt::decryptString($encrypted), true, flags: JSON_THROW_ON_ERROR);
+        abort_unless($dataset['tenant_id'] === $tenantId && (int) $dataset['user_id'] === (int) $request->user()->id, 403);
+
+        $filters = $validated['filters'] ?? [];
+        $displayRows = $this->displayRows($dataset['records']);
+        $matched = array_filter($displayRows, function (array $row) use ($filters): bool {
+            foreach (['employment_type', 'unit_title', 'employment_status'] as $field) {
+                if (filled($filters[$field] ?? null) && $row[$field] !== $filters[$field]) {
+                    return false;
+                }
+            }
+
+            $search = trim($filters['search'] ?? '');
+            if ($search === '') {
+                return true;
+            }
+
+            foreach ($row as $value) {
+                if (is_string($value) && mb_stripos($value, $search) !== false) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+        $rawRecords = array_values(array_intersect_key($dataset['records'], $matched));
+        abort_if($rawRecords === [], 422, 'No ERP records match the selected filters.');
+
         $plan = Plan::query()->where('tenant_id', $tenantId)->active()->findOrFail($validated['plan_id']);
         $router = Router::query()->where('tenant_id', $tenantId)->findOrFail($validated['router_id']);
         $pool = IpPool::query()->where('tenant_id', $tenantId)->active()->findOrFail($validated['ip_pool_id']);
@@ -52,11 +105,6 @@ class SbukErpSyncController extends Controller
             || $pool->routers()->where('routers.tenant_id', $tenantId)->whereKey($router->id)->exists();
         abort_unless($poolSupportsRouter, 422, 'The selected IP pool is not available on the selected router.');
 
-        try {
-            $rawRecords = $client->personnel();
-        } catch (RuntimeException $exception) {
-            return response()->json(['message' => $exception->getMessage()], 422);
-        }
         $preview = $service->preview($rawRecords, $tenantId, (int) $plan->id, (int) $router->id, (int) $pool->id);
         $preview['summary']['available_ip_addresses'] = $pool->availableAddresses()->count();
         $preview['summary']['estimated_ip_allocations'] = $preview['summary']['new_subscriptions'];
@@ -79,25 +127,10 @@ class SbukErpSyncController extends Controller
             'summary' => $preview['summary'],
         ], JSON_THROW_ON_ERROR)), now()->addMinutes(20));
 
-        $rows = [];
-        foreach ($rawRecords as $index => $record) {
-            $rows[] = [
-                'first_name' => (string) ($record['FNAME'] ?? ''),
-                'last_name' => (string) ($record['LNAME'] ?? ''),
-                'mobile' => (string) ($record['MOBILE'] ?? ''),
-                'national_id' => (string) ($record['NATIONALID'] ?? ''),
-                'external_index' => is_scalar($record['index_'] ?? null) ? (string) $record['index_'] : null,
-                'employment_type' => $record['EMPLOYTYPE'] ?? null,
-                'unit_title' => $record['TITLE_UNIT'] ?? null,
-                'employment_status' => $record['EMPLOY_STATE'] ?? null,
-                'error' => $preview['records'][$index]['error'],
-            ];
-        }
-
         return response()->json([
             'preview_token' => $previewToken,
             'summary' => $preview['summary'],
-            'rows' => $rows,
+            'rows' => $this->displayRows($rawRecords, $preview['records']),
         ])->header('Cache-Control', 'no-store, private');
     }
 
@@ -156,6 +189,31 @@ class SbukErpSyncController extends Controller
     private function authorizeAdmin(Request $request): void
     {
         abort_unless($request->user()?->isAdmin(), 403);
+    }
+
+    private function displayRows(array $records, array $normalized = []): array
+    {
+        $rows = [];
+        foreach ($records as $index => $record) {
+            $rows[] = [
+                'first_name' => (string) ($record['FNAME'] ?? ''),
+                'last_name' => (string) ($record['LNAME'] ?? ''),
+                'mobile' => (string) ($record['MOBILE'] ?? ''),
+                'national_id' => (string) ($record['NATIONALID'] ?? ''),
+                'external_index' => is_scalar($record['index_'] ?? null) ? (string) $record['index_'] : null,
+                'employment_type' => is_scalar($record['EMPLOYTYPE'] ?? null) ? trim((string) $record['EMPLOYTYPE']) : null,
+                'unit_title' => is_scalar($record['TITLE_UNIT'] ?? null) ? trim((string) $record['TITLE_UNIT']) : null,
+                'employment_status' => is_scalar($record['EMPLOY_STATE'] ?? null) ? trim((string) $record['EMPLOY_STATE']) : null,
+                'error' => $normalized[$index]['error'] ?? null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function datasetKey(string $token): string
+    {
+        return 'sbuk-erp-dataset:'.hash('sha256', $token);
     }
 
     private function previewKey(string $token): string

@@ -7,47 +7,34 @@
             ERP connection: {{ $enabled && $configured ? 'Configured' : 'Not configured' }}
             @unless($enabled && $configured)<p class="mt-1">Set the server-side SBUK ERP environment values before fetching a preview.</p>@endunless
         </div>
-        <form class="space-y-5" @submit.prevent="preview($event.currentTarget)">
-            <div class="grid gap-4 md:grid-cols-3">
-                <x-ui.input.select name="plan_id" label="Service" :options="$plans->pluck('name', 'id')->all()" required />
-                <x-ui.input.select name="router_id" label="Router" :options="$routers->pluck('name', 'id')->all()" required />
-                <x-ui.input.select name="ip_pool_id" label="IPAM pool" :options="$ipPools->mapWithKeys(fn ($pool) => [$pool->id => $pool->name.' · '.$pool->available_ips.' available'])->all()" required />
-            </div>
-            <div class="grid gap-4 md:grid-cols-2">
-                <x-ui.input.select name="pppoe_username_source" label="PPPoE username source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="mobile" required x-bind:disabled="loading || activeRun" @change="clearPreview()" />
-                <x-ui.input.select name="pppoe_password_source" label="PPPoE password source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="national_id" required x-bind:disabled="loading || activeRun" @change="clearPreview()" />
-            </div>
-            <div class="grid gap-4 md:grid-cols-2">
-                <x-ui.input.select name="existing_customers" label="Existing customers" :options="['skip' => 'Skip', 'update' => 'Update']" value="skip" required hint="Update refreshes the name and available mobile number." x-bind:disabled="loading || activeRun" @change="clearPreview()" />
-                <x-ui.input.select name="existing_subscriptions" label="Existing subscriptions" :options="['skip' => 'Skip', 'update' => 'Update']" value="skip" required hint="Update applies the selected PPPoE mapping. This can change active network logins." x-bind:disabled="loading || activeRun" @change="clearPreview()" />
-            </div>
-            <p class="text-sm text-gray-500">Imports create missing customer accounts and pending, non-billable subscriptions. Missing ERP records never cause removals.</p>
-            <div class="flex flex-wrap gap-3">
-                <x-ui.button type="submit" variant="brand" x-bind:disabled="loading || activeRun"><span x-text="loading ? 'Fetching preview…' : 'Fetch & preview'">Fetch & preview</span></x-ui.button>
-                <x-ui.button type="button" variant="secondary" x-show="previewData" x-cloak x-bind:disabled="loading || activeRun" @click="start()">Start synchronization</x-ui.button>
-            </div>
-        </form>
+        <x-ui.button type="button" variant="brand" x-bind:disabled="loading || activeRun" @click="fetchRecords()">Fetch ERP records</x-ui.button>
+        <span class="ml-2 text-sm text-gray-600" x-show="loading && !datasetToken" x-cloak>Fetching ERP records…</span>
         <p class="mt-4 text-sm text-red-700" role="alert" x-text="error" x-show="error" x-cloak></p>
     </x-ui.card>
 
-    <x-ui.card title="Preview">
-        <p class="text-sm text-gray-500" x-show="!previewData">Fetch ERP records to calculate expected changes. No records are changed during preview.</p>
-        <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" x-show="previewData" x-cloak>
-            <template x-for="item in summaryItems" :key="item.key">
-                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <dt class="text-sm text-gray-500" x-text="item.label"></dt>
-                    <dd class="mt-1 text-2xl font-semibold text-gray-900" x-text="previewData?.[item.key] ?? '—'"></dd>
-                </div>
-            </template>
-        </dl>
-        <p class="mt-4 text-sm text-gray-600" x-show="previewData" x-cloak>IP allocations needed: <strong x-text="previewData?.estimated_ip_allocations ?? 0"></strong> · Available in pool: <strong x-text="previewData?.available_ip_addresses ?? 'Unknown'"></strong></p>
-        <template x-if="previewData">
+    <x-ui.card title="Filter ERP records" x-show="datasetToken" x-cloak>
+        <div class="grid gap-4 md:grid-cols-3">
+            @foreach (['employment_type' => 'Employment type', 'unit_title' => 'Unit', 'employment_status' => 'Employment status'] as $field => $label)
+                <x-ui.input.select :name="$field" :label="$label" placeholder="All" x-bind:disabled="loading || activeRun"
+                    :x-model="'filters.'.$field" @change="clearPreview()">
+                    <template x-for="option in filterOptions('{{ $field }}')" :key="option">
+                        <option :value="option" x-text="option"></option>
+                    </template>
+                </x-ui.input.select>
+            @endforeach
+        </div>
+        <div class="mt-4">
+            <x-ui.input.text name="erp_search" label="Search ERP records" placeholder="Name, mobile, national ID, ERP index, or employment details"
+                maxlength="255" x-model="filters.search" @input="clearPreview()" x-bind:disabled="loading || activeRun" />
+        </div>
+        <p class="mt-4 text-sm text-gray-600" x-text="`${filteredRows.length} of ${allRows.length} records match`"></p>
+        <template x-if="datasetToken">
             <details class="mt-4" @toggle="recordsOpen = $event.currentTarget.open">
-                <summary class="cursor-pointer text-sm font-medium">ERP records (<span x-text="previewRows.length"></span>)</summary>
+                <summary class="cursor-pointer text-sm font-medium">ERP records (<span x-text="visibleRows.length"></span>)</summary>
                 <template x-if="recordsOpen">
                     <div class="mt-2 max-h-96 overflow-auto">
-                        <p class="text-sm text-gray-500" x-show="!previewRows.length">No ERP records were returned.</p>
-                        <table class="w-full text-left text-sm" x-show="previewRows.length">
+                        <p class="text-sm text-gray-500" x-show="!visibleRows.length">No ERP records match the selected filters.</p>
+                        <table class="w-full text-left text-sm" x-show="visibleRows.length">
                             <thead class="border-b text-gray-500">
                                 <tr>
                                     <th scope="col" class="p-2">First name</th>
@@ -62,7 +49,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="(row, index) in previewRows" :key="index">
+                                <template x-for="(row, index) in pageRows" :key="index">
                                     <tr class="border-b border-gray-100">
                                         <td class="p-2" x-text="row.first_name || '—'"></td>
                                         <td class="p-2" x-text="row.last_name || '—'"></td>
@@ -77,10 +64,52 @@
                                 </template>
                             </tbody>
                         </table>
+                        <div class="mt-2 flex items-center gap-3" x-show="pageCount > 1">
+                            <x-ui.button type="button" variant="secondary" x-bind:disabled="page === 1" @click="page--">Previous</x-ui.button>
+                            <span class="text-sm" x-text="`Page ${page} of ${pageCount}`"></span>
+                            <x-ui.button type="button" variant="secondary" x-bind:disabled="page >= pageCount" @click="page++">Next</x-ui.button>
+                        </div>
                     </div>
                 </template>
             </details>
         </template>
+    </x-ui.card>
+
+    <x-ui.card title="Sync settings" x-show="datasetToken && filteredRows.length" x-cloak>
+        <form class="space-y-5" @submit.prevent="preview($event.currentTarget)" @change="clearPreview()">
+            <fieldset class="space-y-5" x-bind:disabled="loading || activeRun">
+                <div class="grid gap-4 md:grid-cols-3">
+                    <x-ui.input.select name="plan_id" label="Service" :options="$plans->pluck('name', 'id')->all()" required />
+                    <x-ui.input.select name="router_id" label="Router" :options="$routers->pluck('name', 'id')->all()" required />
+                    <x-ui.input.select name="ip_pool_id" label="IPAM pool" :options="$ipPools->mapWithKeys(fn ($pool) => [$pool->id => $pool->name.' · '.$pool->available_ips.' available'])->all()" required />
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <x-ui.input.select name="pppoe_username_source" label="PPPoE username source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="mobile" required x-bind:disabled="loading || activeRun" />
+                    <x-ui.input.select name="pppoe_password_source" label="PPPoE password source" :options="['mobile' => 'Mobile', 'national_id' => 'National ID']" value="national_id" required x-bind:disabled="loading || activeRun" />
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <x-ui.input.select name="existing_customers" label="Existing customers" :options="['skip' => 'Skip', 'update' => 'Update']" value="skip" required hint="Update refreshes the name and available mobile number." x-bind:disabled="loading || activeRun" />
+                    <x-ui.input.select name="existing_subscriptions" label="Existing subscriptions" :options="['skip' => 'Skip', 'update' => 'Update']" value="skip" required hint="Update applies the selected PPPoE mapping. This can change active network logins." x-bind:disabled="loading || activeRun" />
+                </div>
+                <p class="text-sm text-gray-500">Imports create missing customer accounts and pending, non-billable subscriptions. Missing ERP records never cause removals.</p>
+                <div class="flex flex-wrap gap-3">
+                    <x-ui.button type="submit" variant="brand" x-bind:disabled="loading || activeRun"><span x-text="loading ? 'Preparing preview…' : 'Preview sync'">Preview sync</span></x-ui.button>
+                </div>
+            </fieldset>
+        </form>
+    </x-ui.card>
+
+    <x-ui.card title="Sync preview" x-show="previewData" x-cloak>
+        <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" x-show="previewData" x-cloak>
+            <template x-for="item in summaryItems" :key="item.key">
+                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <dt class="text-sm text-gray-500" x-text="item.label"></dt>
+                    <dd class="mt-1 text-2xl font-semibold text-gray-900" x-text="previewData?.[item.key] ?? '—'"></dd>
+                </div>
+            </template>
+        </dl>
+        <p class="mt-4 text-sm text-gray-600" x-show="previewData" x-cloak>IP allocations needed: <strong x-text="previewData?.estimated_ip_allocations ?? 0"></strong> · Available in pool: <strong x-text="previewData?.available_ip_addresses ?? 'Unknown'"></strong></p>
+        <x-ui.button type="button" variant="secondary" x-show="previewData" x-cloak x-bind:disabled="loading || activeRun" @click="start()">Start synchronization</x-ui.button>
     </x-ui.card>
 
     <x-ui.card title="Synchronization progress" x-show="runData" x-cloak>
@@ -119,7 +148,19 @@
 function sbukSyncPage(initialStatusUrl = null) {
     return {
         loading: false, error: '', previewData: null, previewToken: null, activeRun: Boolean(initialStatusUrl), runData: null, poller: null, statusUrl: initialStatusUrl,
-        previewRows: [], recordsOpen: false,
+        datasetToken: null, allRows: [], previewRows: [], recordsOpen: false, page: 1,
+        filters: { employment_type: '', unit_title: '', employment_status: '', search: '' },
+        get filteredRows() {
+            const search = this.filters.search.trim().toLowerCase();
+            return this.allRows.filter(row =>
+                ['employment_type', 'unit_title', 'employment_status'].every(field => !this.filters[field] || row[field] === this.filters[field])
+                && (!search || Object.values(row).some(value => typeof value === 'string' && value.toLowerCase().includes(search)))
+            );
+        },
+        get visibleRows() { return this.previewData ? this.previewRows : this.filteredRows; },
+        get pageCount() { return Math.ceil(this.visibleRows.length / 50); },
+        get pageRows() { return this.visibleRows.slice((this.page - 1) * 50, this.page * 50); },
+        filterOptions(field) { return [...new Set(this.allRows.map(row => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b)); },
         summaryItems: [
             { key: 'total_records', label: 'ERP records' }, { key: 'valid_records', label: 'Valid records' },
             { key: 'new_users', label: 'New customers' }, { key: 'existing_users', label: 'Existing customers' },
@@ -137,20 +178,35 @@ function sbukSyncPage(initialStatusUrl = null) {
         },
         clearPreview() {
             this.error = ''; this.previewData = null; this.previewToken = null;
-            this.previewRows = []; this.recordsOpen = false;
+            this.previewRows = []; this.page = 1;
+        },
+        async fetchRecords() {
+            this.clearPreview();
+            this.datasetToken = null;
+            this.allRows = [];
+            this.recordsOpen = false;
+            this.filters = { employment_type: '', unit_title: '', employment_status: '', search: '' };
+            this.loading = true;
+            try {
+                const result = await this.send(@js(route('integrations.sbuk-erp.fetch')), {});
+                this.allRows = result.rows;
+                this.datasetToken = result.dataset_token;
+            } catch (error) { this.error = error.message; }
+            finally { this.loading = false; }
         },
         async preview(form) {
             this.clearPreview();
             try {
                 const data = Object.fromEntries(new FormData(form).entries());
                 this.loading = true;
-                const result = await this.send(@js(route('integrations.sbuk-erp.preview')), data);
+                const result = await this.send(@js(route('integrations.sbuk-erp.preview')), { ...data, dataset_token: this.datasetToken, filters: this.filters });
                 this.previewRows = result.rows;
                 this.previewData = result.summary; this.previewToken = result.preview_token;
             } catch (error) { this.error = error.message; }
             finally { this.loading = false; }
         },
         async start() {
+            if (!this.previewToken || this.loading || this.activeRun) return;
             this.loading = true; this.error = '';
             try {
                 const result = await this.send(@js(route('integrations.sbuk-erp.start')), { preview_token: this.previewToken });

@@ -206,6 +206,7 @@ Route::middleware([EnsureGolestanEnabled::class, 'auth', 'email.verified', 'init
 Route::middleware(['auth', 'email.verified', 'initialize_tenancy', 'check_tenant_status', 'active_account', 'auth.session', 'mfa', 'permission'])->group(function () {
     Route::prefix('admin/integrations/sbuk-erp')->name('integrations.sbuk-erp.')->controller(SbukErpSyncController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::post('/fetch', 'fetch')->middleware('throttle:5,1')->name('fetch');
         Route::post('/preview', 'preview')->middleware('throttle:5,1')->name('preview');
         Route::post('/start', 'start')->middleware('throttle:3,1')->name('start');
         Route::get('/runs/{run}', 'status')->name('status');

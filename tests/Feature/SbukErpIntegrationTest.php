@@ -107,15 +107,25 @@ class SbukErpIntegrationTest extends TestCase
         Queue::fake();
         Http::fake(['*' => Http::response([[
             'FNAME' => 'Ali', 'LNAME' => 'Rezaei', 'MOBILE' => '09120000000', 'NATIONALID' => '0012345678', 'index_' => 4,
+            'EMPLOYTYPE' => 'Faculty', 'TITLE_UNIT' => 'Engineering', 'EMPLOY_STATE' => 'Active',
+        ], [
+            'FNAME' => 'Sara', 'LNAME' => 'Ahmadi', 'NATIONALID' => '0012345679', 'index_' => 5,
+            'EMPLOYTYPE' => 'Staff', 'TITLE_UNIT' => 'Engineering', 'EMPLOY_STATE' => 'Active',
         ]])]);
         $user = $this->user();
         $router = Router::factory()->create(['tenant_id' => $user->tenant_id, 'status' => 'online']);
         $plan = Plan::factory()->create(['tenant_id' => $user->tenant_id]);
         $pool = IpPool::factory()->active()->create(['tenant_id' => $user->tenant_id, 'router_id' => $router->id]);
 
+        $dataset = $this->actingAs($user)->postJson(route('integrations.sbuk-erp.fetch'))
+            ->assertOk()->assertJsonCount(2, 'rows');
         $previewResponse = $this->actingAs($user)->postJson(route('integrations.sbuk-erp.preview'), [
+            'dataset_token' => $dataset->json('dataset_token'),
+            'filters' => ['employment_type' => 'Faculty', 'unit_title' => 'Engineering', 'employment_status' => 'Active', 'search' => 'ali'],
             'plan_id' => $plan->id, 'router_id' => $router->id, 'ip_pool_id' => $pool->id,
-        ])->assertOk()->assertJsonPath('summary.total_records', 1)->assertJsonPath('summary.new_users', 1);
+        ])->assertOk()->assertJsonPath('summary.total_records', 1)->assertJsonPath('summary.new_users', 1)
+            ->assertJsonCount(1, 'rows')->assertJsonPath('rows.0.first_name', 'Ali');
+        Http::assertSentCount(1);
         $this->assertDatabaseCount('customers', 0);
         $this->assertDatabaseCount('subscriptions', 0);
         $previewToken = $previewResponse->json('preview_token');
@@ -123,7 +133,8 @@ class SbukErpIntegrationTest extends TestCase
             ->assertOk()->assertJsonStructure(['run_id', 'status_url']);
         $this->assertDatabaseCount('customers', 0);
         $this->assertDatabaseCount('subscriptions', 0);
-        $this->assertSame(1, SbukSyncRun::query()->where('tenant_id', $user->tenant_id)->count());
+        $run = SbukSyncRun::query()->where('tenant_id', $user->tenant_id)->sole();
+        $this->assertSame(['Ali'], array_column(json_decode($run->personnel_snapshot, true), 'first_name'));
         Queue::assertPushed(ProcessSbukSyncJob::class);
     }
 
@@ -132,6 +143,7 @@ class SbukErpIntegrationTest extends TestCase
         Http::preventStrayRequests();
         $this->get(route('integrations.sbuk-erp.index'))->assertRedirect(route('auth.login'));
         $this->actingAs($this->user('support'))->get(route('integrations.sbuk-erp.index'))->assertForbidden();
+        $this->postJson(route('integrations.sbuk-erp.fetch'))->assertForbidden();
         Http::assertNothingSent();
     }
 
@@ -140,6 +152,7 @@ class SbukErpIntegrationTest extends TestCase
         Http::preventStrayRequests();
         $this->actingAs($this->user())->get(route('integrations.sbuk-erp.index'))
             ->assertOk()->assertSee('SBUK ERP — Personnel synchronization')->assertSee('Fetch')
+            ->assertSee('x-model="filters.employment_type"', false)
             ->assertDontSee('test-erp-token')->assertHeader('Cache-Control', 'no-store, private');
         Http::assertNothingSent();
     }

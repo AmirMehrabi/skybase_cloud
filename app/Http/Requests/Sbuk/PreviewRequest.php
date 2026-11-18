@@ -23,6 +23,12 @@ class PreviewRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'dataset_token' => ['required', 'uuid'],
+            'filters' => ['sometimes', 'array:employment_type,unit_title,employment_status,search'],
+            'filters.employment_type' => ['nullable', 'string', 'max:255'],
+            'filters.unit_title' => ['nullable', 'string', 'max:255'],
+            'filters.employment_status' => ['nullable', 'string', 'max:255'],
+            'filters.search' => ['nullable', 'string', 'max:255'],
             'plan_id' => ['required', 'integer'],
             'router_id' => ['required', 'integer'],
             'ip_pool_id' => ['required', 'integer'],
