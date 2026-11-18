@@ -43,7 +43,7 @@ class SbukErpIntegrationTest extends TestCase
         $this->assertSame('0012345678', $records[0]['NATIONALID']);
         Http::assertSent(fn (Request $request): bool => $request->url() === 'https://erp.uk.ac.ir/ServiceBuilder'
             && $request->hasHeader('Authorization', 'test-erp-token')
-            && $request->data() === ['serviceId' => 2112]);
+            && $request->data() === ['serviceId' => 2112, 'isAllRecord' => 1]);
     }
 
     public function test_erp_http_and_response_errors_are_rejected(): void

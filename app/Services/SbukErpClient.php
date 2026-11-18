@@ -30,6 +30,7 @@ class SbukErpClient
                 ])
                 ->post(rtrim((string) config('services.sbuk_erp.base_url'), '/').'/ServiceBuilder', [
                     'serviceId' => (int) config('services.sbuk_erp.service_id', 2112),
+                    'isAllRecord' => 1,
                 ]);
         } catch (ConnectionException) {
             throw new RuntimeException('SBUK ERP could not be reached. Check the connection and try again.');
