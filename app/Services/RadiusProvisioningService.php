@@ -37,6 +37,15 @@ class RadiusProvisioningService
         $subscription->loadMissing(['customer.organization', 'plan', 'restrictions']);
 
         DB::transaction(function () use ($subscription, $previousUsername): void {
+            if ($subscription->status === 'suspended' && $this->sharesPppoeUsernameWithActiveSubscription($subscription)) {
+                Log::warning('Suspended subscription shares its PPPoE username with an active subscription.', [
+                    'tenant_id' => $subscription->tenant_id,
+                    'subscription_id' => $subscription->id,
+                ]);
+
+                return;
+            }
+
             if ($previousUsername && $previousUsername !== $subscription->pppoe_username) {
                 $this->removeUsername((string) $subscription->tenant_id, $previousUsername);
             }
@@ -224,6 +233,18 @@ class RadiusProvisioningService
                     $this->syncSubscription($subscription);
                 }
             });
+    }
+
+    public function sharesPppoeUsernameWithActiveSubscription(Subscription $subscription): bool
+    {
+        return $subscription->isPppoe() && filled($subscription->pppoe_username)
+            && Subscription::withoutGlobalScopes()->withoutTrashed()
+                ->where('tenant_id', $subscription->tenant_id)
+                ->whereKeyNot($subscription->id)
+                ->where('connection_type', 'pppoe')
+                ->where('pppoe_username', $subscription->pppoe_username)
+                ->where('status', 'active')
+                ->exists();
     }
 
     public function removeUsername(string $tenantId, string $username): void

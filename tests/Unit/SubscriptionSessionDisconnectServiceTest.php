@@ -23,7 +23,7 @@ class SubscriptionSessionDisconnectServiceTest extends TestCase
         app()->instance('current_tenant', new Tenant(['id' => 'unit-test-tenant']));
     }
 
-    public function test_active_radius_session_uses_the_most_recent_open_radacct_row(): void
+    public function test_active_radius_session_uses_the_most_recent_open_radacct_row_for_the_assigned_router(): void
     {
         DB::table('radacct')->insert([
             'acctsessionid' => '8120002e',
@@ -49,15 +49,25 @@ class SubscriptionSessionDisconnectServiceTest extends TestCase
             'framedipaddress' => '10.10.10.55',
         ]);
 
+        DB::table('radacct')->insert([
+            'acctsessionid' => 'wrong-router',
+            'acctuniqueid' => 'unique-wrong-router',
+            'username' => 'john.doe',
+            'nasipaddress' => '192.168.88.2',
+            'acctstarttime' => now()->subMinute(),
+        ]);
+
         $service = app(SubscriptionSessionDisconnectService::class);
         $subscription = new Subscription([
             'pppoe_username' => 'john.doe',
         ]);
 
+        $subscription->setRelation('router', new Router(['ip_address' => '192.168.88.1']));
+
         $reflection = new ReflectionMethod($service, 'activeRadiusSession');
         $reflection->setAccessible(true);
 
-        $session = $reflection->invoke($service, $subscription);
+        $session = $reflection->invoke($service, $subscription, 'john.doe');
 
         $this->assertNotNull($session);
         $this->assertSame('8120002f', $session->acctsessionid);

@@ -74,7 +74,7 @@ class RouterOsCoaClient
                 throw new RuntimeException('RouterOS CoA endpoint returned no response.');
             }
 
-            return $this->validateResponse($response, $requestAuthenticator, $secret);
+            return $this->validateResponse($response, ord($packet[1]), $requestAuthenticator, $secret);
         } finally {
             fclose($connection);
         }
@@ -92,17 +92,15 @@ class RouterOsCoaClient
         string $secret,
     ): array {
         $identifier = random_int(0, 255);
-        $requestAuthenticator = random_bytes(16);
+        $zeroAuthenticator = str_repeat("\0", 16);
         $attributes = $this->disconnectAttributes($router, $username, $acctSessionId, $nasIpAddress, $framedIpAddress);
+        $placeholder = $this->encodeAttribute(80, $zeroAuthenticator);
+        $header = pack('CCn', 40, $identifier, 20 + strlen($attributes.$placeholder));
+        $messageAuthenticator = hash_hmac('md5', $header.$zeroAuthenticator.$attributes.$placeholder, $secret, true);
+        $attributes .= $this->encodeAttribute(80, $messageAuthenticator);
+        $requestAuthenticator = hash('md5', $header.$zeroAuthenticator.$attributes.$secret, true);
 
-        $attributesWithPlaceholder = $attributes.$this->encodeAttribute(80, str_repeat("\0", 16));
-        $packet = pack('CCn', 40, $identifier, 20 + strlen($attributesWithPlaceholder)).$requestAuthenticator.$attributesWithPlaceholder;
-        $messageAuthenticator = hash_hmac('md5', $packet, $secret, true);
-        $attributes = $attributes.$this->encodeAttribute(80, $messageAuthenticator);
-
-        $finalPacket = pack('CCn', 40, $identifier, 20 + strlen($attributes)).$requestAuthenticator.$attributes;
-
-        return [$finalPacket, $requestAuthenticator];
+        return [$header.$requestAuthenticator.$attributes, $requestAuthenticator];
     }
 
     private function disconnectAttributes(
@@ -148,7 +146,7 @@ class RouterOsCoaClient
         return $this->encodeAttribute($type, $packed);
     }
 
-    private function validateResponse(string $response, string $requestAuthenticator, string $secret): int
+    private function validateResponse(string $response, int $requestIdentifier, string $requestAuthenticator, string $secret): int
     {
         if (strlen($response) < 20) {
             throw new RuntimeException('RouterOS CoA response was incomplete.');
@@ -157,6 +155,10 @@ class RouterOsCoaClient
         $code = ord($response[0]);
         $identifier = ord($response[1]);
         $length = unpack('n', substr($response, 2, 2))[1];
+
+        if ($identifier !== $requestIdentifier || $length < 20) {
+            throw new RuntimeException('RouterOS CoA response header is invalid.');
+        }
 
         if ($length > strlen($response)) {
             throw new RuntimeException('RouterOS CoA response was truncated.');
@@ -170,12 +172,43 @@ class RouterOsCoaClient
             throw new RuntimeException('RouterOS CoA response failed validation.');
         }
 
+        $messageAuthenticator = null;
+        $errorCause = null;
+        for ($offset = 0; $offset < strlen($attributes); $offset += $attributeLength) {
+            if ($offset + 2 > strlen($attributes)) {
+                throw new RuntimeException('RouterOS CoA response contains an incomplete attribute.');
+            }
+
+            $type = ord($attributes[$offset]);
+            $attributeLength = ord($attributes[$offset + 1]);
+            if ($attributeLength < 2 || $offset + $attributeLength > strlen($attributes)) {
+                throw new RuntimeException('RouterOS CoA response contains an invalid attribute.');
+            }
+
+            if ($type === 80) {
+                if ($attributeLength !== 18 || $messageAuthenticator !== null) {
+                    throw new RuntimeException('RouterOS CoA response Message-Authenticator is invalid.');
+                }
+
+                $messageAuthenticator = substr($attributes, $offset + 2, 16);
+                $attributesForMac = substr_replace($attributes, str_repeat("\0", 16), $offset + 2, 16);
+                $mac = hash_hmac('md5', substr($response, 0, 4).$requestAuthenticator.$attributesForMac, $secret, true);
+                if (! hash_equals($mac, $messageAuthenticator)) {
+                    throw new RuntimeException('RouterOS CoA response Message-Authenticator failed validation.');
+                }
+            } elseif ($type === 101 && $attributeLength === 6) {
+                $errorCause = unpack('N', substr($attributes, $offset + 2, 4))[1];
+            }
+        }
+
         if ($code === 41) {
             return 1;
         }
 
         if ($code === 42) {
-            throw new RuntimeException($this->replyMessage($attributes) ?? 'RouterOS rejected the CoA disconnect request.');
+            $message = $this->replyMessage($attributes) ?? 'RouterOS rejected the CoA disconnect request.';
+
+            throw new RuntimeException($errorCause === null ? $message : $message.' Error-Cause '.$errorCause.'.');
         }
 
         throw new RuntimeException('Unexpected RouterOS CoA response received.');

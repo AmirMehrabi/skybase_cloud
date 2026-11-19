@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\RadiusAccountingRecord;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\RouterOs\RouterOsClient;
 use App\Services\RouterOs\RouterOsCoaClient;
 use App\Services\RouterOs\RouterOsSshClient;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -31,7 +31,21 @@ class SubscriptionSessionDisconnectService
         return $this->disconnectForUsername($subscription, (string) $subscription->pppoe_username);
     }
 
+    public function disconnectSuspended(Subscription $subscription): SubscriptionSessionDisconnectResult
+    {
+        if (app(TenantContext::class)->id() !== (string) $subscription->tenant_id || $subscription->status !== 'suspended') {
+            return SubscriptionSessionDisconnectResult::skipped('Subscription no longer requires PPPoE suspension enforcement.');
+        }
+
+        return $this->disconnectUsername($subscription, (string) $subscription->pppoe_username, enforcingSuspension: true);
+    }
+
     public function disconnectForUsername(Subscription $subscription, string $username): SubscriptionSessionDisconnectResult
+    {
+        return $this->disconnectUsername($subscription, $username, enforcingSuspension: false);
+    }
+
+    private function disconnectUsername(Subscription $subscription, string $username, bool $enforcingSuspension): SubscriptionSessionDisconnectResult
     {
         if ($subscription->trashed()) {
             return SubscriptionSessionDisconnectResult::skipped('Subscription has been deleted.');
@@ -39,10 +53,11 @@ class SubscriptionSessionDisconnectService
 
         $subscription->loadMissing('router');
         $router = $subscription->router;
-        if ($subscription->usesSessionIpAllocation()) {
+        if ($subscription->usesSessionIpAllocation() && ! $enforcingSuspension) {
             return $this->disconnectConcurrentSessions($subscription, $username);
         }
-        $radiusSession = $this->activeRadiusSession($subscription);
+
+        $radiusSession = $this->activeRadiusSession($subscription, $username);
 
         if (! $subscription->isPppoe()) {
             return SubscriptionSessionDisconnectResult::skipped('Subscription is not a PPPoE service.');
@@ -65,20 +80,36 @@ class SubscriptionSessionDisconnectService
 
         $coaResult = $this->disconnectViaCoa($subscription, $username, $radiusSession);
 
-        if ($coaResult->wasSuccessful()) {
+        if ($coaResult->wasSuccessful() && ! $enforcingSuspension) {
             return $coaResult;
         }
 
         $apiResult = $this->disconnectViaRouterOsApi($subscription, $username);
 
         if ($apiResult->wasSuccessful()) {
-            return $apiResult;
+            $removed = $coaResult->sessionsRemoved + $apiResult->sessionsRemoved;
+
+            return SubscriptionSessionDisconnectResult::success(
+                "Disconnected {$removed} active PPP session(s).",
+                $apiResult->method,
+                $router->id,
+                $router->name,
+                $removed,
+            );
+        }
+
+        if ($coaResult->wasSuccessful() && $apiResult->status === 'skipped') {
+            return $coaResult;
         }
 
         $sshResult = $this->disconnectViaRouterOsSsh($subscription, $username);
 
         if ($sshResult->wasSuccessful()) {
             return $sshResult;
+        }
+
+        if ($coaResult->wasSuccessful()) {
+            return $coaResult;
         }
 
         $message = $this->composeFailureMessage($apiResult, $coaResult);
@@ -372,28 +403,25 @@ class SubscriptionSessionDisconnectService
         }
     }
 
-    private function activeRadiusSession(Subscription $subscription): ?object
+    private function activeRadiusSession(Subscription $subscription, string $username): ?RadiusAccountingRecord
     {
-        if (! Schema::hasTable('radacct')) {
+        if (! $subscription->router || $username === '' || ! Schema::hasTable('radacct')) {
             return null;
         }
 
-        $username = (string) $subscription->pppoe_username;
+        $accounting = RadiusAccountingRecord::withoutGlobalScopes()->forUsername($username)->openSession()
+            ->where('nasipaddress', $subscription->router->ip_address);
 
-        if ($username === '') {
-            return null;
+        if (Schema::hasColumn('radacct', 'tenant_id')) {
+            $accounting->where(fn ($query) => $query->where('tenant_id', $subscription->tenant_id)->orWhereNull('tenant_id'));
         }
 
-        return DB::table('radacct')
-            ->where('username', $username)
-            ->whereNull('acctstoptime')
-            ->orderByDesc('acctstarttime')
-            ->first([
-                'acctsessionid',
-                'username',
-                'nasipaddress',
-                'framedipaddress',
-            ]);
+        return $accounting->orderByDesc('acctstarttime')->first([
+            'acctsessionid',
+            'username',
+            'nasipaddress',
+            'framedipaddress',
+        ]);
     }
 
     private function composeFailureMessage(

@@ -82,7 +82,7 @@ class CheckRouterStatuses extends Command
                                 'status' => $newStatus,
                                 'last_status_checked_at' => now(),
                                 'last_status_changed_at' => $statusChanged ? now() : $router->last_status_changed_at,
-                                'status_check_error' => $this->statusCheckError($result['error'], $result['online'], $failureCount, $offlineFailureThreshold),
+                                'status_check_error' => $this->statusCheckError($result['error'], $result['online'], $failureCount, $offlineFailureThreshold, $router),
                                 'status_check_failure_count' => $failureCount,
                             ])->save();
 
@@ -115,7 +115,7 @@ class CheckRouterStatuses extends Command
                                 'status' => $newStatus,
                                 'last_status_checked_at' => now(),
                                 'last_status_changed_at' => $previousStatus !== $newStatus ? now() : $router->last_status_changed_at,
-                                'status_check_error' => $this->statusCheckError($exception->getMessage(), false, $failureCount, $offlineFailureThreshold),
+                                'status_check_error' => $this->statusCheckError($exception->getMessage(), false, $failureCount, $offlineFailureThreshold, $router),
                                 'status_check_failure_count' => $failureCount,
                             ])->save();
 
@@ -167,8 +167,12 @@ class CheckRouterStatuses extends Command
         return $previousStatus;
     }
 
-    private function statusCheckError(?string $error, bool $online, int $failureCount, int $offlineFailureThreshold): ?string
+    private function statusCheckError(?string $error, bool $online, int $failureCount, int $offlineFailureThreshold, Router $router): ?string
     {
+        if (str_starts_with((string) $router->status_check_error, 'Management unreachable.')) {
+            return $router->status_check_error;
+        }
+
         if ($online) {
             return $error;
         }

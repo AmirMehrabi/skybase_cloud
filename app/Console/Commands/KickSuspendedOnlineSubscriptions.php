@@ -4,96 +4,77 @@ namespace App\Console\Commands;
 
 use App\Models\Subscription;
 use App\Models\Tenant;
-use App\Services\RadiusProvisioningService;
-use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\SuspendedPppoeEnforcement;
+use App\Services\TenantContext;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 #[Signature('subscriptions:kick-suspended-online {--tenant= : Only process subscriptions for a specific tenant ID} {--subscription= : Only process a specific subscription ID} {--dry-run : Show matching subscriptions without disconnecting them}')]
-#[Description('Kick online PPPoE users whose subscriptions are suspended')]
+#[Description('Verify and enforce PPPoE suspension on assigned routers')]
 class KickSuspendedOnlineSubscriptions extends Command
 {
-    /**
-     * Execute the console command.
-     */
-    public function handle(RadiusProvisioningService $radiusProvisioning, SubscriptionSessionDisconnectService $disconnectService): int
+    public function handle(SuspendedPppoeEnforcement $enforcement, TenantContext $tenancy): int
     {
-        $checked = 0;
-        $kicked = 0;
-        $skipped = 0;
-        $failed = 0;
-        $dryRun = (bool) $this->option('dry-run');
+        $counts = ['checked' => 0, 'kicked' => 0, 'verified' => 0, 'skipped' => 0, 'failed' => 0];
 
-        Log::info('Suspended online subscription kick started.', [
-            'tenant_id' => $this->option('tenant'),
-            'subscription_id' => $this->option('subscription'),
-            'dry_run' => $dryRun,
-        ]);
-
-        Tenant::query()
-            ->where('status', 'active')
-            ->when($this->option('tenant'), fn ($query, string $tenantId) => $query->where('id', $tenantId))
+        Tenant::query()->where('status', 'active')
+            ->when($this->option('tenant'), fn ($query, string $tenantId) => $query->whereKey($tenantId))
             ->orderBy('id')
-            ->each(function (Tenant $tenant) use ($radiusProvisioning, $disconnectService, $dryRun, &$checked, &$kicked, &$skipped, &$failed): void {
-                Subscription::withoutGlobalScopes()
-                    ->where('tenant_id', $tenant->id)
-                    ->where('status', 'suspended')
-                    ->where('connection_type', 'pppoe')
-                    ->where('connection_status', 'online')
-                    ->whereNotNull('pppoe_username')
-                    ->when($this->option('subscription'), fn ($query, string $subscriptionId) => $query->whereKey($subscriptionId))
-                    ->with(['router', 'customer.organization', 'plan'])
-                    ->orderBy('id')
-                    ->chunkById(100, function ($subscriptions) use ($radiusProvisioning, $disconnectService, $dryRun, &$checked, &$kicked, &$skipped, &$failed): void {
-                        foreach ($subscriptions as $subscription) {
-                            $checked++;
+            ->each(function (Tenant $tenant) use ($enforcement, $tenancy, &$counts): void {
+                $tenancy->run((string) $tenant->id, function () use ($tenant, $enforcement, &$counts): void {
+                    $activeByRouter = [];
+                    Subscription::query()->where('tenant_id', $tenant->id)
+                        ->where('status', 'suspended')
+                        ->where('connection_type', 'pppoe')
+                        ->whereNotNull('pppoe_username')
+                        ->where('pppoe_username', '!=', '')
+                        ->when($this->option('subscription'), fn ($query, string $subscriptionId) => $query->whereKey($subscriptionId))
+                        ->with('router')
+                        ->chunkById(100, function ($subscriptions) use ($enforcement, &$activeByRouter, &$counts): void {
+                            foreach ($subscriptions as $subscription) {
+                                $counts['checked']++;
+                                if ($this->option('dry-run')) {
+                                    $this->components->info("Would check {$subscription->subscription_code} ({$subscription->pppoe_username}).");
 
-                            if ($dryRun) {
-                                $this->components->info("Would kick {$subscription->subscription_code} ({$subscription->pppoe_username}).");
+                                    continue;
+                                }
 
-                                continue;
+                                $routerId = $subscription->router_id;
+                                if ($subscription->router && ! array_key_exists($routerId, $activeByRouter)) {
+                                    try {
+                                        $activeByRouter[$routerId] = array_fill_keys($enforcement->activeUsernames($subscription->router), true);
+                                    } catch (Throwable) {
+                                        $activeByRouter[$routerId] = null;
+                                    }
+                                }
+
+                                $active = isset($activeByRouter[$routerId])
+                                    ? isset($activeByRouter[$routerId][$subscription->pppoe_username])
+                                    : null;
+
+                                try {
+                                    $result = $enforcement->enforce($subscription, $active);
+                                    $count = match ($result->status) {
+                                        'success' => $result->sessionsRemoved > 0 ? 'kicked' : 'verified',
+                                        'skipped' => 'skipped',
+                                        default => 'failed',
+                                    };
+                                } catch (Throwable $exception) {
+                                    report($exception);
+                                    $count = 'failed';
+                                }
+                                $counts[$count]++;
                             }
-
-                            $radiusProvisioning->syncSubscription($subscription);
-                            $result = $disconnectService->disconnect($subscription);
-                            $disconnectService->recordActivity($subscription, $result);
-
-                            if ($result->wasSuccessful()) {
-                                $subscription->forceFill([
-                                    'connection_status' => 'offline',
-                                    'connection_status_checked_at' => now(),
-                                ])->saveQuietly();
-
-                                $kicked++;
-
-                                continue;
-                            }
-
-                            $result->status === 'skipped' ? $skipped++ : $failed++;
-
-                            Log::warning('Suspended online subscription kick did not disconnect session.', [
-                                'tenant_id' => $subscription->tenant_id,
-                                'subscription_id' => $subscription->id,
-                                'subscription_code' => $subscription->subscription_code,
-                                'pppoe_username' => $subscription->pppoe_username,
-                                ...$result->context(),
-                            ]);
-                        }
-                    }, 'id');
+                        });
+                });
             });
 
-        Log::info('Suspended online subscription kick completed.', [
-            'checked' => $checked,
-            'kicked' => $kicked,
-            'skipped' => $skipped,
-            'failed' => $failed,
-            'dry_run' => $dryRun,
-        ]);
+        Log::info('Suspended PPPoE enforcement completed.', $counts);
+        $this->components->info("Suspended PPPoE enforcement completed. Checked: {$counts['checked']}, kicked: {$counts['kicked']}, verified: {$counts['verified']}, skipped: {$counts['skipped']}, failed: {$counts['failed']}.");
 
-        $this->components->info("Suspended online subscription kick completed. Checked: {$checked}, kicked: {$kicked}, skipped: {$skipped}, failed: {$failed}.");
-
-        return ($failed + $skipped) > 0 ? self::FAILURE : self::SUCCESS;
+        return $counts['failed'] > 0 ? self::FAILURE : self::SUCCESS;
     }
 }

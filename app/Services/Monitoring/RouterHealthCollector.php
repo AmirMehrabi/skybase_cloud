@@ -5,7 +5,9 @@ namespace App\Services\Monitoring;
 use App\Models\Router;
 use App\Models\RouterMonitoringState;
 use App\Services\NotificationIncidentService;
+use App\Services\OperationalIncidentNotifier;
 use App\Services\TenantContext;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class RouterHealthCollector
@@ -32,18 +34,32 @@ class RouterHealthCollector
         ];
         $errors = array_filter([$ping['error']]);
 
-        if ($ping['online'] && $router->isMikrotik() && $router->api_username && $router->api_password) {
+        $managementError = null;
+        $expectsManagement = $router->isMikrotik() && ($router->enable_provisioning || filled($router->api_username));
+
+        if ($expectsManagement && (! $router->api_username || ! $router->api_password)) {
+            $managementError = 'API credentials are missing.';
+        } elseif ($expectsManagement) {
             try {
                 $resource = [
                     ...$resource,
                     ...$this->routerOsMonitoring->resources($router),
                 ];
             } catch (Throwable $exception) {
-                $errors[] = $exception->getMessage();
+                $managementError = str_contains(strtolower($exception->getMessage()), 'invalid user name or password')
+                    ? 'API authentication failed. Verify the saved RouterOS username and password.'
+                    : 'API connection or authenticated read failed. Verify the API service and network path.';
             }
         }
 
+        if ($managementError !== null) {
+            array_unshift($errors, 'Management unreachable. '.$managementError);
+        }
+
         $status = $this->status($ping['online'], $ping['latency_ms'], $ping['packet_loss_percent']);
+        if ($status === 'online' && $managementError !== null) {
+            $status = 'warning';
+        }
         $sample = [
             'tenant_id' => (string) $router->tenant_id,
             'router_id' => $router->id,
@@ -88,9 +104,33 @@ class RouterHealthCollector
             $sample,
         );
 
+        if ($expectsManagement) {
+            $this->observeManagement($router, $managementError);
+        }
+
         app(TenantContext::class)->run((string) $router->tenant_id, fn () => app(NotificationIncidentService::class)->observe($router, $status !== 'offline'));
 
         return $sample;
+    }
+
+    private function observeManagement(Router $router, ?string $error): void
+    {
+        $key = "last-router-api-success:{$router->tenant_id}:{$router->id}";
+        $lastSuccess = Cache::get($key);
+        if ($error === null) {
+            Cache::forever($key, now()->toIso8601String());
+        }
+
+        app(OperationalIncidentNotifier::class)->observe(
+            $router,
+            'router-management',
+            $error === null,
+            $error === null ? 'Router management recovered' : 'Router management unreachable',
+            $error === null
+                ? "{$router->name} accepted an authenticated RouterOS API check."
+                : "{$router->name}. {$error} Last successful check: ".($lastSuccess ?? 'unknown').'.',
+            route('routers.show', $router),
+        );
     }
 
     private function status(bool $online, ?float $latencyMs, float $packetLossPercent): string

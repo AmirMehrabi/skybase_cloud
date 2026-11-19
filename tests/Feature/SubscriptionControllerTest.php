@@ -876,7 +876,7 @@ class SubscriptionControllerTest extends TestCase
         $response = $this->actingAs($user)->post(route('subscriptions.suspend', $subscription));
 
         $response->assertRedirect(route('subscriptions.show', $subscription));
-        $response->assertSessionHas('success', 'Subscription suspension queued. Background processing will finish disconnecting the session and syncing RADIUS.');
+        $response->assertSessionHas('success', 'Subscription suspended. Background processing will verify that any active session is disconnected.');
 
         Queue::assertPushedOn('subscriptions', SuspendSubscriptionJob::class);
 

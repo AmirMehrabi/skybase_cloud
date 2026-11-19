@@ -30,7 +30,7 @@ class RouterOsMonitoringService
                 'memory_usage' => $this->memoryUsagePercent($resource),
                 'active_sessions_count' => count($activeSessions),
             ];
-        });
+        }, 5);
     }
 
     public function activePppInterface(Router $router, string $username, ?int $timeoutSeconds = null): ?string

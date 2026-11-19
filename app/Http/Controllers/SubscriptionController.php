@@ -35,6 +35,7 @@ use App\Services\Monitoring\RrdToolService;
 use App\Services\Monitoring\SubscriptionBandwidthCollector;
 use App\Services\OrganizationBillingService;
 use App\Services\RadiusAccountingUsageService;
+use App\Services\RadiusProvisioningService;
 use App\Services\SecurityEventLogger;
 use App\Services\SmsGatewayService;
 use App\Services\SubscriptionDeletionService;
@@ -43,6 +44,7 @@ use App\Services\SubscriptionIpRouteSyncService;
 use App\Services\SubscriptionRenewalService;
 use App\Services\SubscriptionSessionDisconnectService;
 use App\Services\SubscriptionUsageService;
+use App\Services\SuspendedPppoeEnforcement;
 use App\Services\TaxResolverService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -774,11 +776,24 @@ class SubscriptionController extends Controller
      */
     public function suspend(Request $request, Subscription $subscription): JsonResponse|RedirectResponse
     {
-        $subscription->forceFill([
-            'status' => 'suspended',
-            'suspended_at' => now(),
-            'suspended_by' => auth()->id(),
-        ])->saveQuietly();
+        $this->authorizeTenantAccess($subscription);
+
+        $subscription->getConnection()->transaction(function () use ($subscription): void {
+            $provisioning = app(RadiusProvisioningService::class);
+            if ($provisioning->sharesPppoeUsernameWithActiveSubscription($subscription)) {
+                throw ValidationException::withMessages([
+                    'pppoe_username' => 'Assign a distinct PPPoE username before suspending this subscription.',
+                ]);
+            }
+
+            $subscription->forceFill([
+                'status' => 'suspended',
+                'suspended_at' => now(),
+                'suspended_by' => auth()->id(),
+            ])->saveQuietly();
+
+            $provisioning->syncSubscription($subscription);
+        });
 
         $this->recordSubscriptionActivity($request, $subscription, 'suspended');
 
@@ -786,9 +801,9 @@ class SubscriptionController extends Controller
             $subscription->id,
             (string) $subscription->tenant_id,
             auth()->id(),
-        )->onQueue('subscriptions');
+        )->onQueue('subscriptions')->afterCommit();
 
-        $message = 'Subscription suspension queued. Background processing will finish disconnecting the session and syncing RADIUS.';
+        $message = 'Subscription suspended. Background processing will verify that any active session is disconnected.';
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -808,11 +823,16 @@ class SubscriptionController extends Controller
     {
         $this->authorizeTenantAccess($subscription);
 
-        $result = $this->disconnectService->disconnect($subscription->fresh(['router']));
-        $this->disconnectService->recordActivity($subscription, $result, $request->user());
+        $isSuspendedPppoe = $subscription->status === 'suspended' && $subscription->isPppoe();
+        if ($isSuspendedPppoe) {
+            $result = app(SuspendedPppoeEnforcement::class)->enforce($subscription, causer: $request->user());
+        } else {
+            $result = $this->disconnectService->disconnect($subscription->fresh(['router']));
+            $this->disconnectService->recordActivity($subscription, $result, $request->user());
+        }
         $this->recordSubscriptionActivity($request, $subscription, 'session_kill', $result->context());
 
-        if ($result->wasSuccessful()) {
+        if (! $isSuspendedPppoe && $result->wasSuccessful()) {
             $subscription->forceFill([
                 'connection_status' => 'offline',
                 'connection_status_checked_at' => now(),

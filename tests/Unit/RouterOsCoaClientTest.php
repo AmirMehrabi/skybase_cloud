@@ -20,7 +20,7 @@ class RouterOsCoaClientTest extends TestCase
         $reflection = new ReflectionMethod($client, 'buildDisconnectRequest');
         $reflection->setAccessible(true);
 
-        [$packet] = $reflection->invoke(
+        [$packet, $authenticator] = $reflection->invoke(
             $client,
             $router,
             'john',
@@ -38,6 +38,11 @@ class RouterOsCoaClientTest extends TestCase
         $this->assertSame('10.10.10.55', $attributes[8]);
         $this->assertArrayNotHasKey(32, $attributes);
         $this->assertArrayHasKey(80, $attributes);
+        $zeroAuthenticator = str_repeat("\0", 16);
+        $header = substr($packet, 0, 4);
+        $this->assertSame(hash('md5', $header.$zeroAuthenticator.substr($packet, 20).'VeryStrongRadiusSecret', true), $authenticator);
+        $this->assertSame($authenticator, substr($packet, 4, 16));
+        $this->assertSame(hash_hmac('md5', $header.$zeroAuthenticator.substr($packet, 20, -16).$zeroAuthenticator, 'VeryStrongRadiusSecret', true), $attributes[80]);
     }
 
     /**

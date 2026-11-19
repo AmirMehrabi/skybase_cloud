@@ -42,6 +42,8 @@ class SyncSubscriptionConnectionStatuses extends Command
             ->each(function (Tenant $tenant) use (&$checked, &$online, &$offline, &$cleared): void {
                 $subscriptions = Subscription::withoutGlobalScopes()
                     ->where('tenant_id', $tenant->id)
+                    ->whereNull('deleted_at')
+                    ->where('status', '!=', 'suspended')
                     ->orderBy('id')
                     ->get();
 

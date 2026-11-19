@@ -4,8 +4,7 @@ namespace App\Jobs\Subscriptions;
 
 use App\Models\Subscription;
 use App\Models\User;
-use App\Services\RadiusProvisioningService;
-use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\SuspendedPppoeEnforcement;
 use App\Services\TenantContext;
 use App\Services\TenantNotificationService;
 use App\Support\Notifications\NotificationEventRegistry;
@@ -30,11 +29,10 @@ class SuspendSubscriptionJob implements ShouldQueue
     ) {}
 
     public function handle(
-        RadiusProvisioningService $radiusProvisioning,
-        SubscriptionSessionDisconnectService $disconnectService,
+        SuspendedPppoeEnforcement $enforcement,
         TenantNotificationService $notifications,
     ): void {
-        app(TenantContext::class)->run($this->tenantId, function () use ($radiusProvisioning, $disconnectService, $notifications): void {
+        app(TenantContext::class)->run($this->tenantId, function () use ($enforcement, $notifications): void {
             $subscription = Subscription::withoutGlobalScopes()
                 ->withoutTrashed()
                 ->where('tenant_id', $this->tenantId)
@@ -45,10 +43,7 @@ class SuspendSubscriptionJob implements ShouldQueue
                 return;
             }
 
-            $radiusProvisioning->syncSubscription($subscription);
-
-            $disconnectResult = $disconnectService->disconnect($subscription);
-            $disconnectService->recordActivity($subscription, $disconnectResult, $this->causer());
+            $enforcement->enforce($subscription, causer: $this->causer());
 
             $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::SUBSCRIPTION_SUSPENDED, [
                 'title' => 'Subscription suspended',
@@ -64,15 +59,6 @@ class SuspendSubscriptionJob implements ShouldQueue
                     'action_url' => route('customer.subscriptions.index'),
                 ], $subscription);
             }
-
-            if ($disconnectResult->shouldAlert()) {
-                $notifications->notifyAdmins($subscription->tenant_id, NotificationEventRegistry::OPERATIONAL_FAILURE, [
-                    'title' => 'Router disconnect failed',
-                    'body' => $disconnectResult->message,
-                    'action_url' => route('subscriptions.show', $subscription),
-                ], $subscription);
-            }
-
         });
     }
 

@@ -12,12 +12,14 @@ use App\Models\RadiusUserGroup;
 use App\Models\Router;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Models\TenantNotification;
 use App\Models\User;
 use App\Services\RadiusProvisioningService;
 use App\Services\RouterOs\RouterOsClient;
-use App\Services\SubscriptionSessionDisconnectService;
+use App\Services\SuspendedPppoeEnforcement;
 use App\Services\TenantNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -138,9 +140,15 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
                 && $job->causedByUserId === $user->id;
         });
 
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Auth-Type',
+            'value' => 'Reject',
+        ]);
+
         (new SuspendSubscriptionJob($subscription->id, $tenant->id, $user->id))->handle(
-            app(RadiusProvisioningService::class),
-            app(SubscriptionSessionDisconnectService::class),
+            app(SuspendedPppoeEnforcement::class),
             app(TenantNotificationService::class),
         );
 
@@ -166,16 +174,13 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
             'connection_status_checked_at' => now()->subMinutes(5),
         ])->saveQuietly();
 
-        $this->app->instance(RouterOsClient::class, new class extends RouterOsClient
-        {
-            public function execute(Router $router, callable $callback, ?int $timeoutSeconds = null): mixed
-            {
-                return 1;
-            }
-        });
+        $client = $this->mock(RouterOsClient::class);
+        $client->shouldReceive('execute')->once()->ordered()->andReturn(['alpha.user']);
+        $client->shouldReceive('execute')->once()->ordered()->andReturn(1);
+        $client->shouldReceive('execute')->once()->ordered()->andReturn([]);
 
         $this->artisan('subscriptions:kick-suspended-online')
-            ->expectsOutputToContain('Checked: 1, kicked: 1, skipped: 0, failed: 0')
+            ->expectsOutputToContain('Checked: 1, kicked: 1, verified: 0, skipped: 0, failed: 0')
             ->assertExitCode(0);
 
         $subscription->refresh();
@@ -202,7 +207,7 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
         ])->saveQuietly();
 
         $this->artisan('subscriptions:kick-suspended-online')
-            ->expectsOutputToContain('Checked: 1, kicked: 0, skipped: 0, failed: 1')
+            ->expectsOutputToContain('Checked: 1, kicked: 0, verified: 0, skipped: 0, failed: 1')
             ->assertExitCode(1);
 
         $this->assertDatabaseHas('activity_log', [
@@ -211,6 +216,73 @@ class SubscriptionSuspensionEnforcementTest extends TestCase
             'subject_id' => $subscription->id,
             'event' => 'session_disconnect_failed',
         ]);
+    }
+
+    public function test_scheduled_enforcement_repairs_radius_and_stale_accounting_does_not_override_live_status(): void
+    {
+        [$tenant, $subscription] = $this->createPppoeSubscription();
+        $subscription->suspend();
+        RadiusCheck::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('username', $subscription->pppoe_username)->delete();
+        DB::table('radacct')->insert([
+            'username' => $subscription->pppoe_username,
+            'acctuniqueid' => 'stale-test-session',
+            'acctsessionid' => 'stale-test-session',
+            'nasipaddress' => $subscription->router->ip_address,
+            'acctstarttime' => now()->subDay(),
+        ]);
+
+        $this->mock(RouterOsClient::class)->shouldReceive('execute')->once()->andReturn([]);
+
+        $this->artisan('subscriptions:kick-suspended-online')->assertSuccessful();
+        $this->artisan('subscriptions:sync-connection-status')->assertSuccessful();
+
+        $this->assertSame('offline', $subscription->fresh()->connection_status);
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Auth-Type',
+            'value' => 'Reject',
+        ]);
+    }
+
+    public function test_shared_username_does_not_disconnect_or_remove_authentication_for_an_active_subscription(): void
+    {
+        [$tenant, $subscription] = $this->createPppoeSubscription();
+        $duplicate = $subscription->replicate();
+        $duplicate->forceFill(['subscription_code' => 'SUB-SHARED', 'status' => 'suspended']);
+        $duplicate->save();
+
+        $this->assertDatabaseHas('radcheck', [
+            'tenant_id' => $tenant->id,
+            'username' => $subscription->pppoe_username,
+            'attribute' => 'Cleartext-Password',
+        ]);
+
+        $this->mock(RouterOsClient::class)->shouldNotReceive('execute');
+        $result = app(SuspendedPppoeEnforcement::class)->enforce($duplicate);
+        $this->assertSame('failed', $result->status);
+        $this->assertStringContainsString('also assigned to an active subscription', $result->message);
+    }
+
+    public function test_suspension_alert_is_deduplicated_and_resolved_when_router_confirms_offline(): void
+    {
+        [$tenant, $subscription] = $this->createPppoeSubscription();
+        $admin = User::factory()->create(['tenant_id' => $tenant->id, 'role' => 'owner', 'status' => 'active']);
+        $subscription->suspend();
+        $client = $this->mock(RouterOsClient::class);
+        $client->shouldReceive('execute')->times(4)->andThrow(new \RuntimeException('API unavailable'));
+        $enforcement = app(SuspendedPppoeEnforcement::class);
+
+        $enforcement->enforce($subscription, true);
+        $enforcement->enforce($subscription, true);
+        $this->assertNull($subscription->fresh()->connection_status);
+
+        $alerts = TenantNotification::query()->where('tenant_id', $tenant->id)->where('notifiable_id', $admin->id);
+        $this->assertSame(1, (clone $alerts)->where('data->title', 'Suspended PPPoE session could not be verified')->count());
+
+        $enforcement->enforce($subscription, false);
+        $this->assertSame(1, (clone $alerts)->where('data->title', 'Suspended PPPoE session cleared')->count());
+        $this->assertSame('offline', $subscription->fresh()->connection_status);
     }
 
     /**

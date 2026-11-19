@@ -9,9 +9,12 @@ use App\Models\RouterMonitoringState;
 use App\Models\Subscription;
 use App\Models\SubscriptionBandwidthState;
 use App\Models\Tenant;
+use App\Models\TenantNotification;
 use App\Models\User;
 use App\Services\Monitoring\CustomerBandwidthUsageService;
+use App\Services\Monitoring\PingProbe;
 use App\Services\Monitoring\RouterHealthCollector;
+use App\Services\Monitoring\RouterOsMonitoringService;
 use App\Services\Monitoring\RrdToolService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -20,6 +23,41 @@ use Tests\TestCase;
 class MonitoringFeatureTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_management_authentication_failure_alerts_even_while_ping_is_reachable(): void
+    {
+        [$tenant, $user] = $this->tenantUser('alpha-net');
+        $router = Router::factory()->online()->create([
+            'tenant_id' => $tenant->id,
+            'vendor' => 'Mikrotik',
+            'api_username' => 'skybase',
+            'api_password' => 'test-password',
+        ]);
+
+        $this->mock(PingProbe::class)->shouldReceive('check')->times(3)->andReturn([
+            'online' => true,
+            'packet_loss_percent' => 0.0,
+            'latency_ms' => 1.0,
+            'error' => null,
+        ]);
+        $this->mock(RrdToolService::class)->shouldReceive('updateRouterHealth')->times(3);
+        $routerApi = $this->mock(RouterOsMonitoringService::class);
+        $routerApi->shouldReceive('resources')->twice()->ordered()->andThrow(new \RuntimeException('invalid user name or password (6)'));
+        $routerApi->shouldReceive('resources')->once()->ordered()->andReturn([]);
+
+        $collector = app(RouterHealthCollector::class);
+        $this->assertSame('warning', $collector->collect($router)['status']);
+        $collector->collect($router);
+
+        $router->refresh();
+        $this->assertSame('online', $router->status);
+        $this->assertStringContainsString('API authentication failed', $router->status_check_error);
+        $alerts = TenantNotification::query()->where('tenant_id', $tenant->id)->where('notifiable_id', $user->id);
+        $this->assertSame(1, (clone $alerts)->where('data->title', 'Router management unreachable')->count());
+
+        $this->assertSame('online', $collector->collect($router)['status']);
+        $this->assertSame(1, (clone $alerts)->where('data->title', 'Router management recovered')->count());
+    }
 
     public function test_network_monitoring_page_is_tenant_scoped(): void
     {
